@@ -61,7 +61,7 @@ def eliptical_gauss(p, x, y):
     rrpow=jnp.exp(-0.5*rr)
 
     return amp*rrpow
-
+@jit
 def gauss(p, x, y):
     #Gives the value of an eliptical gaussian with its center at x0, y0, evaluated at x,y, where theta1 and theta2 are the
     #FWHM of the two axes and psi is the roation angle. Amp is the amplitude
@@ -254,7 +254,7 @@ def np_conv_int_gnfw(p, xi, yi, max_R, z, m500, fwhm = 9., freq = 90e9, T_electr
     pred = jnp.moveaxis(pred, 2, 0)
     return pred
 
-	
+"""	
 #A grid of points we'll use a lot
 bound = 10*jnp.pi/(180*3600)
 x = jnp.linspace(-1*bound, bound, 20)
@@ -265,12 +265,12 @@ xx, yy = jnp.meshgrid(x, y, sparce=True)
 pars = jnp.array([0., 0., 3.5, 2.5, 0., 2.])
 
 #Below block of code is for plotting the gaussian
-"""
+
 z = jit_elip_gauss(xx,yy, 0,0, 2.5, 2.5, 0, 2)
 h = plt.contourf(x,y,z)
 plt.axis('scaled')
 plt.savefig('gauss.png')
-"""
+
 
 #Jit-ize the profile generator
 jit_elip_gauss = jit(eliptical_gauss)
@@ -321,7 +321,7 @@ pred = conv_int_gnfw(gnfw_pars,xx, yy, 10., 0.5)
 plt.imshow(pred)
 plt.savefig('plots/pred.png')
 plt.close()
-
+"""
 
 
 
