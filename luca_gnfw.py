@@ -12,8 +12,21 @@ import numpy as np
 import timeit
 import time
 
+# Constants
+# --------------------------------------------------------
+
 h70 = cosmo.H0.value/7.00E+01
 
+Tcmb = 2.7255
+kb = const.k_B.value
+me = ((const.m_e*const.c**2).to(u.keV)).value
+h  = const.h.value
+Xthom = const.sigma_T.to(u.cm**2).value
+
+Mparsec = u.Mpc.to(u.cm)
+
+# Cosmology 
+# --------------------------------------------------------
 dzline = np.linspace(0.00,5.00,1000)
 daline = cosmo.angular_diameter_distance(dzline)/u.radian
 nzline = cosmo.critical_density(dzline)
@@ -27,16 +40,39 @@ hzline = jnp.array(hzline.value)
 nzline = jnp.array(nzline.value)
 daline = jnp.array(daline.value)
 
+# Compton y to Kcmb
+# --------------------------------------------------------
 @jax.partial(jax.jit, static_argnums = (0,1))
-def y2K(freq=90e9,T_e=5.):
-    k_b=1.3806e-16 ; T_cmb=2.725 ; h=6.626e-27
-    me=511.0 # keV/c^2
-    x=freq*h/k_b/T_cmb
-    coth = lambda x : (jnp.exp(x)+jnp.exp(-x))/(jnp.exp(x)-jnp.exp(-x))
-    rel_corr=(T_e/me)*(-10. + 23.5*x*coth(x/2) - 8.4*x**2*coth(x/2)**2 +0.7*x**3*coth(x/2)**3 + 1.4*x**2*(x*coth(x/2)-3.)/(jnp.sinh(x/2)**2))
-    y2K=x*coth(x/2.)-4 + rel_corr
-    return y2K
+def y2K_CMB(freq,Te):
+  x = freq*h/kb/Tcmb
+  xt = x/jnp.tanh(0.5*x)
+  st = x/jnp.sinh(0.5*x)
+  Y0 = -4.0+xt
+  Y1 = -10.+((47./2.)+(-(42./5.)+(7./10.)*xt)*xt)*xt+st*st*(-(21./5.)+(7./5.)*xt)
+  Y2 = (-15./2.)+((1023./8.)+((-868./5.)+((329./5.)+((-44./5.)+(11./30.)*xt)*xt)*xt)*xt)*xt+ \
+       ((-434./5.)+((658./5.)+((-242./5.)+(143./30.)*xt)*xt)*xt+(-(44./5.)+(187./60.)*xt)*(st*st))*st*st
+  Y3 = (15./2.)+((2505./8.)+((-7098./5.)+((14253./10.)+((-18594./35.)+((12059./140.)+((-128./21.)+(16./105.)*xt)*xt)*xt)*xt)*xt)*xt)*xt+ \
+       (((-7098./10.)+((14253./5.)+((-102267./35.)+((156767./140.)+((-1216./7.)+(64./7.)*xt)*xt)*xt)*xt)*xt) +
+       (((-18594./35.)+((205003./280.)+((-1920./7.)+(1024./35.)*xt)*xt)*xt) +((-544./21.)+(992./105.)*xt)*st*st)*st*st)*st*st
+  Y4 = (-135./32.)+((30375./128.)+((-62391./10.)+((614727./40.)+((-124389./10.)+((355703./80.)+((-16568./21.)+((7516./105.)+((-22./7.)+(11./210.)*xt)*xt)*xt)*xt)*xt)*xt)*xt)*xt)*xt + \
+       ((-62391./20.)+((614727./20.)+((-1368279./20.)+((4624139./80.)+((-157396./7.)+((30064./7.)+((-2717./7.)+(2761./210.)*xt)*xt)*xt)*xt)*xt)*xt)*xt + \
+       ((-124389./10.)+((6046951./160.)+((-248520./7.)+((481024./35.)+((-15972./7.)+(18689./140.)*xt)*xt)*xt)*xt)*xt +\
+       ((-70414./21.)+((465992./105.)+((-11792./7.)+(19778./105.)*xt)*xt)*xt+((-682./7.)+(7601./210.)*xt)*st*st)*st*st)*st*st)*st*st
+  factor = Y0+(Te/me)*(Y1+(Te/me)*(Y2+(Te/me)*(Y3+(Te/me)*Y4)))
+  return factor*Tcmb
 
+@jax.partial(jax.jit,static_argnums=(0,))
+def K_CMB2K_RJ(freq):
+  x = freq*h/kb/Tcmb
+  return jnp.exp(x)*x*x/jnp.expm1(x)**2
+
+@jax.partial(jax.jit, static_argnums = (0,1))
+def y2K_RJ(freq,Te):
+  factor = y2K_CMB(freq,Te)
+  return factor*K_CMB2K_RJ(freq)
+
+# Beam-convolved gNFW profiel
+# --------------------------------------------------------
 def conv_int_gnfw(p,xi,yi,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=15.0*60,dr=0.5):
   x0, y0, P0, c500, alpha, beta, gamma, m500 = p
 
@@ -60,12 +96,9 @@ def conv_int_gnfw(p,xi,yi,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=1
   rr = jnp.sqrt(rr[0]**2+rr[1]**2)
   yy = jnp.interp(rr,r,pressure,right=0.)
 
-  Mparsec = 3.08568025e24 # centimeters in a megaparsec
-  Xthom = 6.6524586e-25   # Thomson cross section (cm^2)
-  mev = 5.11e2            # Electron mass (keV)
   XMpc = Xthom*Mparsec
 
-  ip = jnp.sum(yy,axis=1)*2.*XMpc/(mev*1000)
+  ip = jnp.sum(yy,axis=1)*2.*XMpc/(me*1000)
 
   x = jnp.arange(-1.5*fwhm//(dr),1.5*fwhm//(dr))*(dr)
   beam = jnp.exp(-4*np.log(2)*x**2/fwhm**2)
@@ -76,9 +109,7 @@ def conv_int_gnfw(p,xi,yi,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=1
   ipp = jnp.concatenate((ip[0:nx][::-1],ip))
   ip = jnp.convolve(ipp,beam,mode='same')[nx:]
 
-  y2K_CMB=y2K(freq=freq,T_e=T_electron)
-  T_cmb=2.725 ; CMB2RJ=1.23
-  ip = ip*y2K_CMB*T_cmb/CMB2RJ
+  ip = ip*y2K_RJ(freq=freq,Te=T_electron)
 
   dx = (xi-x0)*jnp.cos(yi)
   dy  = yi-y0
