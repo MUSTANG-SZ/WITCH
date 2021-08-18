@@ -15,7 +15,7 @@ def helper(params, tod):
     xy = [x, y]
     xy = jnp.asarray(xy)
 
-    pred, derivs = jit_conv_int_gnfw(params, xy, 0.5)
+    pred, derivs = jit_conv_int_gnfw(params, xy, z)
 
     derivs = jnp.moveaxis(derivs, 2, 0)
 
@@ -40,7 +40,7 @@ ndo       = False    # New Data Only
 odo       = False    # Old Data Only
 n_atm     = 2        # Polynomial order for fitting an atmospheric term
 chisq     = 3.0      # Roughly a factor by which the noise needs to be adjusted
-
+z         = 0.216    #Redshift of MS0735
 
 
 
@@ -169,23 +169,23 @@ dec = Angle('74:14:52 degrees')
 ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
 
 gnfw_labels = np.array(['ra', 'dec', 'P500', 'c500', 'alpha', 'beta', 'gamma', 'm500'])
-
-model_type = 'cc'
+#Label nums for ref:     0     1        2      3        4       5       6        7
+model_type = 'A10'
 
 if model_type == 'cc':
 
     #Cool Core
-    gnfw_pars = np.array([ra, dec, 1.05, 1., 1.2223, 5.49, 0.7736,3.2e14])
+    gnfw_pars = np.array([ra, dec, 8.403, 1.177, 1.2223, 5.49, 0.7736,3.2e14])
 
 if model_type == 'A10':
 
     #A10
-    gnfw_pars = np.array([ra, dec, 1.05, 1., 1.05, 5.49, 0.31,3.2e14])
+    gnfw_pars = np.array([ra, dec, 8.403, 1.177, 1.05, 5.49, 0.31,3.2e14])
 
 if model_type == 'simon':
 
     #Simon sims
-    gnfw_pars = np.array([ra, dec, 1.05, 1., 1.4063, 5.49, 0.3798,3.2e14])
+    gnfw_pars = np.array([ra, dec, 8.403, 1.177, 1.4063, 5.49, 0.3798,3.2e14])
 
 #In case we want to later add more functions to the model
 pars = np.hstack([gnfw_pars])
@@ -198,11 +198,11 @@ funs = [helper]
 
 #we can keep some parameters fixed at their input values if so desired.
 to_fit=np.ones(len(pars),dtype='bool')
-to_fit[[3,5]]=False  #C500, beta fixed
+to_fit[[2,3]]=False  #C500, beta fixed
 
 
 t1=time.time()
-pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit)
+pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 30)
 t2=time.time()
 if minkasi.myrank==0:
     print('took ',t2-t1,' seconds to fit timestreams')
