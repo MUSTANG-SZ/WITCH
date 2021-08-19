@@ -3,7 +3,7 @@ import presets_by_source as pbs
 import minkasi
 import jax
 import jax.numpy as jnp
-from luca_gnfw import jit_conv_int_gnfw
+from minkasi_jax import jit_conv_int_gnfw
 import numpy as np
 from astropy.coordinates import Angle
 from astropy import units as u

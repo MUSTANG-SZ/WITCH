@@ -1,43 +1,31 @@
 import minkasi
 import minkasi_nb
-import jax.numpy as jnp
-import matplotlib.pyplot as plt
-from jax import grad, jit, vmap, value_and_grad, partial
+
 import timeit
-import jax
+
 import numpy as np
-from astropy.cosmology import Planck15 as cosmo
+
+import jax
+import jax.numpy as jnp
 JAX_DEBUG_NANS = True
 from jax.config import config
 
 config.update("jax_debug_nans", True)
 config.update("jax_enable_x64", True)
+#Todo: find some way to make this dynamic so you're not stuck using cpu if you have a gpu
+jax.config.update('jax_platform_name','cpu')
 
-@partial(jit, static_argnums = (0,1))
-def angular_diameter_distance(z, H0 = 67.4):
-    #Calculate angular diameter distance assuming flat cosmology with Planck18 parameters
-    #Currently not working but it seems astropy angular diameter distance works with jax
-    c = 299792.458 #km/s to match H0
-    dh = c/H0
-    print(dh)
-    omega_m = 0.315
-    omega_l = 1-omega_m
-    zs = jnp.linspace(0., z)
-    E_z = lambda x: 1/jnp.sqrt(omega_m*(1+x**3)+omega_l*(1+x))
-    d_C = dh*jnp.trapz(E_z(zs))
-    
-    return d_C/(1+z)
+from astropy.cosmology import Planck15 as cosmo
+from astropy import constants as const
+from astropy import units as u
 
-@partial(jit, static_argnums = 0)
-def jit_ang_dia_dis(z):
-    return cosmo.angular_diameter_distance(z)    
 
 def eliptical_gauss(p, x, y):
-    #Gives the value of an eliptical gaussian with its center at x0, y0, evaluated at x,y, where theta1 and theta2 are the 
+    #Gives the value of an eliptical gaussian with its center at x0, y0, evaluated at x,y, where theta1 and theta2 are the
     #FWHM of the two axes and psi is the roation angle. Amp is the amplitude
     #Note x,y are at the end to make the gradient indicies make more sense i.e. grad(numarg = 0) is grad wrt x0
-    
-    x0,y0,theta1,theta2,psi,amp = p    
+
+    x0,y0,theta1,theta2,psi,amp = p
 
     theta1_inv=1/theta1
     theta2_inv=1/theta2
@@ -50,7 +38,7 @@ def eliptical_gauss(p, x, y):
     sinpsi=jnp.sin(psi)
     ss=sinpsi**2
     cs=cospsi*sinpsi
-    
+
     delx=(x-x0)*cosdec
     dely=y-y0
     xx=delx*cospsi+dely*sinpsi
@@ -61,6 +49,7 @@ def eliptical_gauss(p, x, y):
     rrpow=jnp.exp(-0.5*rr)
 
     return amp*rrpow
+
 @jit
 def gauss(p, x, y):
     #Gives the value of an eliptical gaussian with its center at x0, y0, evaluated at x,y, where theta1 and theta2 are the
@@ -91,246 +80,162 @@ def gauss(p, x, y):
     return amp*rrpow
 
 
-@jit
-def y2K(freq=90e9,T_e=5.):
-    k_b=1.3806e-16 ; T_cmb=2.725 ; h=6.626e-27
-    me=511.0 # keV/c^2
-    x=freq*h/k_b/T_cmb
-    coth = lambda x : (jnp.exp(x)+jnp.exp(-x))/(jnp.exp(x)-jnp.exp(-x))
-    rel_corr=(T_e/me)*(-10. + 23.5*x*coth(x/2) - 8.4*x**2*coth(x/2)**2 +0.7*x**3*coth(x/2)**3 + 1.4*x**2*(x*coth(x/2)-3.)/(jnp.sinh(x/2)**2))
-    y2K=x*coth(x/2.)-4 + rel_corr
-    return y2K
+
+# Constants
+# --------------------------------------------------------
+
+h70 = cosmo.H0.value/7.00E+01
+
+Tcmb = 2.7255
+kb = const.k_B.value
+me = ((const.m_e*const.c**2).to(u.keV)).value
+h  = const.h.value
+Xthom = const.sigma_T.to(u.cm**2).value
+
+Mparsec = u.Mpc.to(u.cm)
+
+# Cosmology
+# --------------------------------------------------------
+#Generate vectors of some cosmological quatities that we'll interpolate
+#so as not to make calls to the astropy functions later
+dzline = np.linspace(0.00,5.00,1000)
+daline = cosmo.angular_diameter_distance(dzline)/u.radian
+nzline = cosmo.critical_density(dzline)
+hzline = cosmo.H(dzline)/cosmo.H0
+
+daline = daline.to(u.Mpc/u.arcsec)
+nzline = nzline.to(u.Msun/u.Mpc**3)
+
+dzline = jnp.array(dzline)
+hzline = jnp.array(hzline.value)
+nzline = jnp.array(nzline.value)
+daline = jnp.array(daline.value)
+
+# Compton y to Kcmb
+# --------------------------------------------------------
+@jax.partial(jax.jit, static_argnums = (0,1))
+def y2K_CMB(freq,Te):
+  #converts compton y to delta K_CMB. Includes relativistic corrections
+  #Inputs: observation frequency, in Hz, electron temperature 
+  #note that both freq and Te are static arguments for the jit compiler:
+  #changing these arguments between calls of this function will cause it
+  # to recompile, incuring significant overhead. 
+  #Outputs: delta T_cmb corresponding to the imput y, given the frequncy 
+  #of observation and Te
+  x = freq*h/kb/Tcmb
+  xt = x/jnp.tanh(0.5*x)
+  st = x/jnp.sinh(0.5*x)
+  Y0 = -4.0+xt
+  Y1 = -10.+((47./2.)+(-(42./5.)+(7./10.)*xt)*xt)*xt+st*st*(-(21./5.)+(7./5.)*xt)
+  Y2 = (-15./2.)+((1023./8.)+((-868./5.)+((329./5.)+((-44./5.)+(11./30.)*xt)*xt)*xt)*xt)*xt+ \
+       ((-434./5.)+((658./5.)+((-242./5.)+(143./30.)*xt)*xt)*xt+(-(44./5.)+(187./60.)*xt)*(st*st))*st*st
+  Y3 = (15./2.)+((2505./8.)+((-7098./5.)+((14253./10.)+((-18594./35.)+((12059./140.)+((-128./21.)+(16./105.)*xt)*xt)*xt)*xt)*xt)*xt)*xt+ \
+       (((-7098./10.)+((14253./5.)+((-102267./35.)+((156767./140.)+((-1216./7.)+(64./7.)*xt)*xt)*xt)*xt)*xt) +
+       (((-18594./35.)+((205003./280.)+((-1920./7.)+(1024./35.)*xt)*xt)*xt) +((-544./21.)+(992./105.)*xt)*st*st)*st*st)*st*st
+  Y4 = (-135./32.)+((30375./128.)+((-62391./10.)+((614727./40.)+((-124389./10.)+((355703./80.)+((-16568./21.)+((7516./105.)+((-22./7.)+(11./210.)*xt)*xt)*xt)*xt)*xt)*xt)*xt)*xt)*xt + \
+       ((-62391./20.)+((614727./20.)+((-1368279./20.)+((4624139./80.)+((-157396./7.)+((30064./7.)+((-2717./7.)+(2761./210.)*xt)*xt)*xt)*xt)*xt)*xt)*xt + \
+       ((-124389./10.)+((6046951./160.)+((-248520./7.)+((481024./35.)+((-15972./7.)+(18689./140.)*xt)*xt)*xt)*xt)*xt +\
+       ((-70414./21.)+((465992./105.)+((-11792./7.)+(19778./105.)*xt)*xt)*xt+((-682./7.)+(7601./210.)*xt)*st*st)*st*st)*st*st)*st*st
+  factor = Y0+(Te/me)*(Y1+(Te/me)*(Y2+(Te/me)*(Y3+(Te/me)*Y4)))
+  return factor*Tcmb
+
+@jax.partial(jax.jit,static_argnums=(0,))
+def K_CMB2K_RJ(freq):
+  x = freq*h/kb/Tcmb
+  return jnp.exp(x)*x*x/jnp.expm1(x)**2
+
+@jax.partial(jax.jit, static_argnums = (0,1))
+def y2K_RJ(freq,Te):
+  factor = y2K_CMB(freq,Te)
+  return factor*K_CMB2K_RJ(freq)
 
 
-@partial(jit, static_argnums=0)
-def gnfw(max_R, p, r500, P500):
-    '''returns pressure profile with r in MPc'''
-    P0, c500,alpha,beta,gamma, m500 = p
-    dR=max_R / 2e3
-    radius=(jnp.arange(0,max_R,dR) + dR/2.0)
+# Beam-convolved gNFW profiel
+# --------------------------------------------------------
+def conv_int_gnfw(p,xi,yi,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=15.0*60,dr=0.5):
+  x0, y0, P0, c500, alpha, beta, gamma, m500 = p
 
-    x = radius / r500
-    pressure=P500*P0/((c500*x)**gamma * (1.+(c500*x)**alpha)**((beta-gamma)/alpha) )
-    return pressure,radius
+  hz = jnp.interp(z,dzline,hzline)
+  nz = jnp.interp(z,dzline,nzline)
 
-def np_gnfw(max_R, p, r500, P500):
-    '''returns pressure profile with r in MPc'''
-    P0, c500,alpha,beta,gamma = p
-    dR=max_R / 2e3
-    radius=(np.arange(0,max_R,dR) + dR/2.0)
-    print('radius ', radius)
-    x = radius / r500
-    pressure=P500*P0/((c500*x)**gamma * (1.+(c500*x)**alpha)**((beta-gamma)/alpha) )
-    print('pressure ', pressure)
-    return pressure,radius
+  ap = 0.12
 
+  r500 = (m500/(4.00*jnp.pi/3.00)/5.00E+02/nz)**(1.00/3.00)
+  P500 = 1.65E-03*(m500/(3.00E+14/h70))**(2.00/3.00+ap)*hz**(8.00/3.00)*h70**2
 
-@partial(jit, static_argnums = (2,4))
-def int_gnfw(profile, radius, z, r_map = 15.0*60, dr = 0.5):
-    r_in_arcsec = jnp.arange(1e-10,r_map,dr) 
-    r_in_Mpc = r_in_arcsec*(jit_ang_dia_dis(z)*(jnp.pi/180./3600.))
-    xx,zz = jnp.meshgrid(r_in_Mpc,r_in_Mpc)
-    rr = jnp.sqrt(xx*xx+zz*zz)
-    yy = jnp.interp(rr,radius,profile,right=0.)#2d pressue crosssection thru cluster
-    Mparsec = 3.08568025e24 # centimeters in a megaparsec
-    Xthom = 6.6524586e-25   # Thomson cross section (cm^2)
-    mev = 5.11e2            # Electron mass (keV)
-    #kev = 1.602e-9          # 1 keV in ergs.
-    XMpc = Xthom*Mparsec
-    y = jnp.sum(yy,axis=1)*2.*XMpc/(mev*1000)
-    return y,r_in_arcsec
+  dR = max_R/2e3
+  r = jnp.arange(0.00,max_R,dR)+dR/2.00
 
-def np_int_gnfw(profile, radius, z, r_map = 15.0*60, dr = 0.5):
-    r_in_arcsec = np.arange(0,r_map,dr)
-    r_in_Mpc = r_in_arcsec*(cosmo.angular_diameter_distance(z).value*(np.pi/180./3600.))
-    xx,zz = np.meshgrid(r_in_Mpc,r_in_Mpc)
-    rr = np.sqrt(xx*xx+zz*zz)
-    yy = np.interp(rr,radius,profile,right=0.)#2d pressue crosssection thru cluster
-    Mparsec = 3.08568025e24 # centimeters in a megaparsec
-    Xthom = 6.6524586e-25   # Thomson cross section (cm^2)
-    mev = 5.11e2            # Electron mass (keV)
-    #kev = 1.602e-9          # 1 keV in ergs.
-    XMpc = Xthom*Mparsec
-    y = np.sum(yy,axis=1)*2.*XMpc/(mev*1000)
-    return y,r_in_arcsec
+  x = r/r500
+  pressure = P500*P0/((c500*x)**gamma*(1.00+(c500*x)**alpha)**((beta-gamma)/alpha))
 
+  rmap = jnp.arange(1e-10,r_map,dr)
+  r_in_Mpc = rmap*(jnp.interp(z,dzline,daline))
+  rr = jnp.meshgrid(r_in_Mpc,r_in_Mpc)
+  rr = jnp.sqrt(rr[0]**2+rr[1]**2)
+  yy = jnp.interp(rr,r,pressure,right=0.)
 
-@partial(jit, static_argnums = (3,4,5,8))
-def conv_int_gnfw(p, xi, yi, max_R, z, fwhm = 9., freq = 90e9, T_electron = 5.0, r_map = 15.0*60, dr = 0.5):
-    x0, y0, P0, c500,alpha,beta,gamma,m500 = p
-    max_R_in_Mpc = 10.
-    rho_crit = (cosmo.critical_density(z)).value
-    rho_crit *= 3.086e24**3 / 1.989e33 #in M_sol / Mpc^3
-    r500 = ((m500)/(500.*4.0/3.0*jnp.pi*rho_crit))**(1.0/3.0)#in Mpc
-    ap=0.12 #eq 13 & 7 of A10 - break from self similarity
-    h_z=(cosmo.H(z)/cosmo.H0).value
-    h_70=(cosmo.H0/70.).value
-    P500 = 1.65e-3*(m500/(3e14/h_70))**(2.0/3.0+ap)*h_z**(8./3.)*h_70**2
-    
-    pressure,r=gnfw(max_R_in_Mpc,p[2:], r500, P500)
+  XMpc = Xthom*Mparsec
 
-    ip, rmap = int_gnfw(pressure, r, z, dr = dr)
+  ip = jnp.sum(yy,axis=1)*2.*XMpc/(me*1000)
 
-    #plt.plot(rmap,ip)
-    #plt.xscale('log')
-    #plt.yscale('log')
-    #plt.xlabel('r (Mpc)')
-    #plt.ylabel('y')
-    #plt.savefig('plots/comp_int_gnfw.png')
-    #plt.close()
+  x = jnp.arange(-1.5*fwhm//(dr),1.5*fwhm//(dr))*(dr)
+  beam = jnp.exp(-4*np.log(2)*x**2/fwhm**2)
+  beam = beam/jnp.sum(beam)
 
-    x = jnp.arange(-1.5*fwhm//(dr),1.5*fwhm//(dr))*(dr)
-    beam = jnp.exp(-4*np.log(2)*x**2/fwhm**2) ; beam = beam / jnp.sum(beam)
-    nx = x.shape[0]//2+1
-    ipp = jnp.concatenate((ip[0:nx][::-1],ip))#extend array to stop edge effects at cluster center
-    ip = jnp.convolve(ipp,beam,mode='same')[nx:]
-    #print(ip) 
-    #ip = jnp.concatenate((ip[:1], ip))
-    #rmap = jnp.concatenate((rmap[:1]-dr, rmap))
+  nx = x.shape[0]//2+1
 
-    profile = (ip, rmap)
+  ipp = jnp.concatenate((ip[0:nx][::-1],ip))
+  ip = jnp.convolve(ipp,beam,mode='same')[nx:]
 
-    y2K_CMB=y2K(freq=freq,T_e=T_electron)
-    T_cmb=2.725 ; CMB2RJ=1.23
-    ip*=y2K_CMB*T_cmb/CMB2RJ #conver to brightness temp
+  ip = ip*y2K_RJ(freq=freq,Te=T_electron)
 
-    #FIX HERE
-    #when working in 'flat' arcsec, you need to remove the factor of cos(y) and the radian to arcsec conversion
-    #Add back in if working with TODs
-    dx = (xi - x0)*jnp.cos(yi)
-    dy  = yi - y0
-    dr = jnp.sqrt(dx*dx + dy*dy)*180./np.pi*3600. 
-     
-    pred=jnp.interp(dr,rmap,ip,right=0.)
-    
-    return pred
+  dx = (xi-x0)*jnp.cos(yi)
+  dy  = yi-y0
+  dr = jnp.sqrt(dx*dx + dy*dy)*180./np.pi*3600.
 
-def np_conv_int_gnfw(p, xi, yi, max_R, z, m500, fwhm = 9., freq = 90e9, T_electron = 5.0, r_map = 15.0*60, dr = 0.5):
-    x0, y0, P0, c500,alpha,beta,gamma = p
-    max_R_in_Mpc = 10.
-    rho_crit = (cosmo.critical_density(z)).value
-    rho_crit *= 3.086e24**3 / 1.989e33 #in M_sol / Mpc^3
-    r500 = ((m500)/(500.*4.0/3.0*np.pi*rho_crit))**(1.0/3.0)#in Mpc
-    ap=0.12 #eq 13 & 7 of A10 - break from self similarity
-    h_z=(cosmo.H(z)/cosmo.H0).value
-    h_70=(cosmo.H0/70.).value
-    P500 = 1.65e-3*(m500/(3e14/h_70))**(2.0/3.0+ap)*h_z**(8./3.)*h_70**2
+  return jnp.interp(dr,rmap,ip,right=0.)
 
-    pressure,r=np_gnfw(max_R_in_Mpc,p[2:], r500, P500)
+# ---------------------------------------------------------------
 
-    ip, rmap = np_int_gnfw(pressure, r, z, dr = dr)
-    
-    #plt.plot(rmap,ip)
-    #plt.xscale('log')
-    #plt.yscale('log')
-    #plt.xlabel('r (Mpc)')
-    #plt.ylabel('y')
-    #plt.savefig('plots/comp_int_gnfw.png')
-    #plt.close()
+pars = jnp.array([0,0,1.,1.,1.5,4.3,0.7,3e14])
+tods = jnp.array(np.random.rand(2,int(1e4)))
 
-    x = np.arange(-1.5*fwhm//(dr),1.5*fwhm//(dr))*(dr)
-    beam = np.exp(-4*np.log(2)*x**2/fwhm**2) ; beam = beam / np.sum(beam)
-    nx = x.shape[0]//2+1
-    ipp = np.concatenate((ip[0:nx][::-1],ip))#extend array to stop edge effects at cluster center
-    ip = np.convolve(ipp,beam,mode='same')[nx:]
-    #print(ip)
-    #ip = jnp.concatenate((ip[:1], ip))
-    #rmap = jnp.concatenate((rmap[:1]-dr, rmap))
+#Some convenient functions for returning predictions, gradients, and predictions+gradients 
+@jax.partial(jax.jit,static_argnums=(3,4,5,6,7,8,))
+def val_conv_int_gnfw(p,tods,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=15.0*60,dr=0.5):
+  return conv_int_gnfw(p,tods[0],tods[1],z,max_R,fwhm,freq,T_electron,r_map,dr)
 
-    profile = (ip, rmap)
+@jax.partial(jax.jit,static_argnums=(3,4,5,6,7,8,))
+def jac_conv_int_gnfw_fwd(p,tods,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=15.0*60,dr=0.5):
+  return jax.jacfwd(conv_int_gnfw,argnums=0)(p,tods[0],tods[1],z,max_R,fwhm,freq,T_electron,r_map,dr)
 
-    y2K_CMB=y2K(freq=freq,T_e=T_electron)
-    T_cmb=2.725 ; CMB2RJ=1.23
-    ip*=y2K_CMB*T_cmb/CMB2RJ #conver to brightness temp
+@jax.partial(jax.jit,static_argnums=(3,4,5,6,7,8,))
+def jit_conv_int_gnfw(p,tods,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=15.0*60,dr=0.5):
+  pred = conv_int_gnfw(p,tods[0],tods[1],z,max_R,fwhm,freq,T_electron,r_map,dr)
+  grad = jax.jacfwd(conv_int_gnfw,argnums=0)(p,tods[0],tods[1],z,max_R,fwhm,freq,T_electron,r_map,dr)
 
-    #FIX HERE
-    #when working in 'flat' arcsec, you need to remove the factor of cos(y) and the radian to arcsec conversion
-    #Add back in if working with TODs
-    dx = (xi - x0)#*jnp.cos(yi)
-    dy  = yi - y0
-    dr = np.sqrt(dx*dx + dy*dy)#*180./np.pi*3600.
-    
-    pred=np.interp(dr,rmap,ip,right=0.)
-    pred = jnp.moveaxis(pred, 2, 0)
-    return pred
+  return pred, grad
 
-"""	
-#A grid of points we'll use a lot
-bound = 10*jnp.pi/(180*3600)
-x = jnp.linspace(-1*bound, bound, 20)
-y = jnp.linspace(-1*bound, bound, 20)
-xx, yy = jnp.meshgrid(x, y, sparce=True)
-
-#Gaussian parameters
-pars = jnp.array([0., 0., 3.5, 2.5, 0., 2.])
-
-#Below block of code is for plotting the gaussian
-
-z = jit_elip_gauss(xx,yy, 0,0, 2.5, 2.5, 0, 2)
-h = plt.contourf(x,y,z)
-plt.axis('scaled')
-plt.savefig('gauss.png')
+def helper():
+  return jit_conv_int_gnfw(pars,tods,1.00)[0].block_until_ready()
 
 
-#Jit-ize the profile generator
-jit_elip_gauss = jit(eliptical_gauss)
+if __name__ == '__main__':
+    #If you actually run this script it fires off some performance tests
+    toc = time.time(); val_conv_int_gnfw(pars,tods,1.00); tic = time.time(); print('1',tic-toc)
+    toc = time.time(); val_conv_int_gnfw(pars,tods,1.00); tic = time.time(); print('1',tic-toc)
 
-#
-gnfw_pars = jnp.array([0., 0., 1., 1., 1.3, 4.3, 0.7, 3e14])
-gnfw_labels = ['ra', 'dec', 'P500', 'c500', 'alpha', 'beta', 'delta', 'm500']
+    toc = time.time(); jac_conv_int_gnfw_fwd(pars,tods,1.00); tic = time.time(); print('2',tic-toc)
+    toc = time.time(); jac_conv_int_gnfw_fwd(pars,tods,1.00); tic = time.time(); print('2',tic-toc)
 
-#y, r = conv_int_gnfw(gnfw_pars, 10., 0.5, 3e14)
-#plt.plot(r, y)
-#plt.xscale('log')
-#plt.yscale('log')
-#plt.xlabel('r (arcsec)')
-#plt.ylabel('y')
-#plt.savefig('plots/conv_int_gnfw.png')
-#plt.close()
+    toc = time.time(); jit_conv_int_gnfw(pars,tods,1.00); tic = time.time(); print('3',tic-toc)
+    toc = time.time(); jit_conv_int_gnfw(pars,tods,1.00); tic = time.time(); print('3',tic-toc)
 
+    pars = jnp.array([0,0,1.,1.,1.5,4.3,0.7,3e14])
+    tods = jnp.array(np.random.rand(2,int(1e4)))
 
-#We need non-sparce xx and yy now
-xx, yy = jnp.meshgrid(x, y)
-
-
-#Calculating the Jacobian: fast
-jit_ell = jax.jacfwd(eliptical_gauss,argnums=0)
-
-jit_gnfw_deriv = jax.jacfwd(conv_int_gnfw, argnums = 0)
-
-out = jit_gnfw_deriv(gnfw_pars, xx, yy, 10., 0.5)
-#print(out[:,:,4])
-print(out.shape)
-for i in range(len(gnfw_pars)): 
-    #print(out[:,:,i])
-    #print(np.amax(out[:,:,i]))
-    plt.imshow(out[i,:,:])
-    plt.title('Grad wrt {}'.format(gnfw_labels[i]))
-    plt.xlabel('ra (arcsec)')
-    plt.ylabel('dec (arcsec)')
-    plt.savefig('plots/derivs_{}.png'.format(i))
-    plt.close()
-
-#pred = np.zeros(xx.shape)
-#for i in range(xx.shape[0]):
-#    for j in range(xx.shape[1]):
-#        pred[i,j] = conv_int_gnfw(gnfw_pars,xx[i,j], yy[i,j], 10., 0.5, 3e14)
-
-pred = conv_int_gnfw(gnfw_pars,xx, yy, 10., 0.5)    
-
-plt.imshow(pred)
-plt.savefig('plots/pred.png')
-plt.close()
-"""
-
-
-
-
-
-
-
-
-
+    print(timeit.timeit(helper,number=10)/10)
 
 
 
