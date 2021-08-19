@@ -50,7 +50,7 @@ def eliptical_gauss(p, x, y):
 
     return amp*rrpow
 
-@jit
+@jax.jit
 def gauss(p, x, y):
     #Gives the value of an eliptical gaussian with its center at x0, y0, evaluated at x,y, where theta1 and theta2 are the
     #FWHM of the two axes and psi is the roation angle. Amp is the amplitude

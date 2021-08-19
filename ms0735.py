@@ -3,7 +3,7 @@ import presets_by_source as pbs
 import minkasi
 import jax
 import jax.numpy as jnp
-from minkasi_jax import jit_conv_int_gnfw
+from minkasi_jax import jit_conv_int_gnfw, val_conv_int_gnfw
 import numpy as np
 from astropy.coordinates import Angle
 from astropy import units as u
@@ -170,8 +170,8 @@ ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
 
 gnfw_labels = np.array(['ra', 'dec', 'P500', 'c500', 'alpha', 'beta', 'gamma', 'm500'])
 #Label nums for ref:     0     1        2      3        4       5       6        7
-model_type = 'A10'
-
+model_type = 'cc'
+PS = True
 if model_type == 'cc':
 
     #Cool Core
@@ -187,29 +187,39 @@ if model_type == 'simon':
     #Simon sims
     gnfw_pars = np.array([ra, dec, 8.403, 1.177, 1.4063, 5.49, 0.3798,3.2e14])
 
-#In case we want to later add more functions to the model
-pars = np.hstack([gnfw_pars])
-npar = np.hstack([len(gnfw_pars)])
+ps_labels = np.array(['ra', 'dec', 'amp', 'sigma'])
+#Label nums:           8      9      10     11
+ps_pars = np.array([ra, dec, 3.8e-5,  4.2e-4])
 
+#In case we want to later add more functions to the model
+pars = np.hstack([gnfw_pars, ps_pars])
+npar = np.hstack([len(gnfw_pars), len(ps_pars)])
+labels = np.hstack([gnfw_labels, ps_labels])
 #this array of functions needs to return the model timestreams and derivatives w.r.t. parameters
 #of the timestreams.
-funs = [helper]
+funs = [helper, minkasi.derivs_from_gauss_c]
 
 
 #we can keep some parameters fixed at their input values if so desired.
 to_fit=np.ones(len(pars),dtype='bool')
-to_fit[[2,3]]=False  #C500, beta fixed
+to_fit[[2,3,4,5]]=False  #C500, beta fixed
 
 
 t1=time.time()
-pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 30)
+pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 10)
 t2=time.time()
 if minkasi.myrank==0:
     print('took ',t2-t1,' seconds to fit timestreams')
-    for i in range(len(pars_fit)):
-        print('parameter ',gnfw_labels[i],' is ',pars_fit[i],' with error ',errs[i])
+    for i in range(len(labels)):
+        print('parameter ',labels[i],' is ', pars_fit[i],' with error ',errs[i])
 
+rs = np.linspace(0, 8, 1000)
+fake_tod = np.zeros((2, len(rs)))
+for i in range(len(rs)):
+    temp = np.sqrt(rs[i])
+    fake_tod[0][i], fake_tod[1][i] = temp, temp
 
+profile = val_conv_int_gnfw(pars_fit[:8], fake_tod,z) 
 
 
 
