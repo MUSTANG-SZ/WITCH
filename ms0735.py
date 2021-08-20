@@ -7,6 +7,7 @@ from minkasi_jax import jit_conv_int_gnfw, val_conv_int_gnfw
 import numpy as np
 from astropy.coordinates import Angle
 from astropy import units as u
+from matplotlib import pyplot as plt
 
 def helper(params, tod):
     x = tod.info['dx']
@@ -187,7 +188,7 @@ if model_type == 'simon':
     #Simon sims
     gnfw_pars = np.array([ra, dec, 8.403, 1.177, 1.4063, 5.49, 0.3798,3.2e14])
 
-ps_labels = np.array(['ra', 'dec', 'amp', 'sigma'])
+ps_labels = np.array(['ra', 'dec', 'sigma', 'amp'])
 #Label nums:           8      9      10     11
 ps_pars = np.array([ra, dec, 3.8e-5,  4.2e-4])
 
@@ -216,10 +217,16 @@ if minkasi.myrank==0:
 rs = np.linspace(0, 8, 1000)
 fake_tod = np.zeros((2, len(rs)))
 for i in range(len(rs)):
-    temp = np.sqrt(rs[i])
-    fake_tod[0][i], fake_tod[1][i] = temp, temp
+    temp = np.sqrt(rs[i])*np.pi/(60*180)
+    fake_tod[0][i], fake_tod[1][i] = temp+pars_fit[0], temp+pars_fit[1]
 
 profile = val_conv_int_gnfw(pars_fit[:8], fake_tod,z) 
+
+plt.plot(rs, profile)
+plt.title('Best fit profile, MS 0735')
+plt.xlabel('Radius (arcmin)')
+plt.savefig('ms0735_profile.pdf')
+plt.close()
 
 
 
