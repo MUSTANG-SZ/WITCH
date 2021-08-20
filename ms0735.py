@@ -46,7 +46,7 @@ z         = 0.216    #Redshift of MS0735
 
 
 #find tod files we want to map
-outroot='/home/scratch/jscherer/mustang/MUSTANG2/Reductions/MS0735/num_derv'
+outroot='/home/scratch/jscherer/mustang/MUSTANG2/Reductions/MS0735/num_derv_'
 
 #Load the most resent made folder starting with 'TS_'
 if myadj is None:
@@ -225,9 +225,176 @@ profile = val_conv_int_gnfw(pars_fit[:8], fake_tod,z)
 plt.plot(rs, profile)
 plt.title('Best fit profile, MS 0735')
 plt.xlabel('Radius (arcmin)')
-plt.savefig('ms0735_profile.pdf')
+plt.savefig('profile_ms0735.pdf')
 plt.close()
 
+################################################################################################
+#                                 Begin map making                                            #
+###############################################################################################
+
+#Subtract off model from ToDs
+
+for i, tod in enumerate(todvec.tods):
+
+    temp_tod = tod.copy()
+    
+    pred = helper(pars_fit[:8], temp_tod)[1] + minkasi.derivs_from_gauss_c(pars_fit[8:], temp_tod)[1]
+
+    tod.info['dat_calib'] = tod.info['dat_calib'] - np.array(pred)
+
+    #Unclear if we need to reset the noise
+    #tod.set_noise(minkasi.NoiseSmoothedSVD)
+
+
+
+
+#get the hit count map.  We use this as a preconditioner
+#which helps small-scale convergence quite a bit.
+hits=minkasi.make_hits(todvec,map)
+if minkasi.myrank==0:
+    hits.write(outroot+'_hits.fits')
+#setup the mapset.  In general this can have many things
+#in addition to map(s) of the sky, but for now we'll just
+#use a single skymap.
+mapset=minkasi.Mapset()
+mapset.add_map(map)
+
+#make A^T N^1 d.  TODs need to understand what to do with maps
+#but maps don't necessarily need to understand what to do with TODs,
+#hence putting make_rhs in the vector of TODs.
+#Again, make_rhs is MPI-aware, so this should do the right thing
+#if you run with many processes.
+rhs=mapset.copy()
+todvec.make_rhs(rhs)
+print(rhs)
+#this is our starting guess.  Default to starting at 0,
+#but you could start with a better guess if you have one.
+x0=rhs.copy()
+x0.clear()
+
+#preconditioner is 1/ hit count map.  helps a lot for
+#convergence.
+precon=mapset.copy()
+tmp=hits.map.copy()
+ii=tmp>0
+tmp[ii]=1.0/tmp[ii]
+precon.maps[0].map[:]=tmp[:]
+
+print('here')
+#run PCG!
+mapset_out=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=40)
+
+mapset_out.maps[0].write(outroot+'_itter40.fits')
+
+#########################################################################
+m_con=mapset_out.copy()
+m_con.maps[0].map -= 1.0#0.2 #0.1 #0.1 for three pass 1.0 for 4 pass
+#m_con.maps[0].trim(0.0)
+for tod in todvec.tods:
+    dat=tod.info['dat_calib'].copy()
+    tmp=np.zeros(dat.shape)
+    m_con.maps[0].map2tod(tod,tmp)
+    tod.info['dat_calib'][:]=dat-tmp
+    tod.set_noise_smoothed_svd()
+rhs=mapset.copy()
+todvec.make_rhs(rhs)
+x0=rhs.copy()
+x0.clear()
+precon=mapset.copy()
+tmp=hits.map.copy()
+ii=tmp>0
+tmp[ii]=1.0/tmp[ii]
+precon.maps[0].map[:]=tmp[:]
+
+
+#run PCG!
+mapset_out2=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=30)
+#mapset_out2.maps[0].smooth(hits.map,fwhm=4,ng=13)
+#mapset_out2.maps[0].median()
+if minkasi.myrank==0:
+    mapset_out2.maps[0].write(outroot+'_pass2.fits') #and write out the map as a FITS file
+
+m_con2=mapset_out2.copy()
+m_con2.maps[0].map -= 0.2 # 0.05 three pass 0.2 4 pass
+#m_con2.maps[0].trim(0.0)
+for tod in todvec.tods:
+    dat=tod.info['dat_calib'].copy()
+    tmp=np.zeros(dat.shape)
+    m_con2.maps[0].map2tod(tod,tmp)
+    tod.info['dat_calib'][:]=dat-tmp
+    tod.set_noise_smoothed_svd()#,nfft=1) #3 pass
+rhs=mapset.copy()
+todvec.make_rhs(rhs)
+x0=rhs.copy()
+x0.clear()
+precon=mapset.copy()
+tmp=hits.map.copy()
+ii=tmp>0
+tmp[ii]=1.0/tmp[ii]
+precon.maps[0].map[:]=tmp[:]
+#run PCG!
+mapset_out3=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=30)
+#mapset_out3.maps[0].smooth(hits.map,fwhm=4,ng=13)
+#mapset_out3.maps[0].median()
+if minkasi.myrank==0:
+    mapset_out3.maps[0].write(outroot+'_pass3.fits') #and write out the map as a FITS file
+
+########maps 3 and 4 were very similar#########################
+m_con3=mapset_out3.copy() # this time round use full tods as noise
+m_con3.maps[0].map -= 0.01 #0.05
+#m_con3.maps[0].trim(0.00)
+for tod in todvec.tods:
+    dat=tod.info['dat_calib'].copy()
+    tmp=np.zeros(dat.shape)
+    m_con3.maps[0].map2tod(tod,tmp)
+    tod.info['dat_calib'][:]=dat-tmp
+    tod.set_noise_smoothed_svd()
+rhs=mapset.copy()
+todvec.make_rhs(rhs)
+x0=rhs.copy()
+x0.clear()
+precon=mapset.copy()
+tmp=hits.map.copy()
+ii=tmp>0
+tmp[ii]=1.0/tmp[ii]
+precon.maps[0].map[:]=tmp[:]
+#run PCG!
+mapset_out4=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=30)
+#mapset_out4.maps[0].median()
+#mapset_out4.maps[0].smooth(hits.map,fwhm=4,ng=13)
+if minkasi.myrank==0:
+    mapset_out4.maps[0].write(outroot+'_pass4.fits') #and write out the map as a FITS file
+
+#################################################################
+m_con4=mapset_out4.copy() # this time round use full tods as noise
+m_con4.maps[0].map -= 0.01 #0.05
+#m_con4.maps[0].trim(0.0)
+for tod in todvec.tods:
+    dat=tod.info['dat_calib'].copy()
+    tmp=np.zeros(dat.shape)
+    m_con4.maps[0].map2tod(tod,tmp)
+    tod.info['dat_calib'][:]=dat-tmp
+    tod.set_noise_smoothed_svd()
+rhs=mapset.copy()
+todvec.make_rhs(rhs)
+x0=rhs.copy()
+x0.clear()
+precon=mapset.copy()
+tmp=hits.map.copy()
+ii=tmp>0
+tmp[ii]=1.0/tmp[ii]
+precon.maps[0].map[:]=tmp[:]
+#run PCG!
+mapset_out5=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=30)
+#mapset_out5.maps[0].median()
+#mapset_out5.maps[0].smooth(hits.map,fwhm=4,ng=13)
+if minkasi.myrank==0:
+    mapset_out5.maps[0].write(outroot+'_pass5.fits') #and write out the map as a FITS file
+
+outmap=m_con+m_con2+m_con3+m_con4+mapset_out5
+outmap.maps[0].write(outroot+'_final.fits')
+#outmap.maps[0].smooth(hits.map,fwhm=4)
+#outmap.maps[0].write(outroot+'_final_smooth4.fits')
 
 
 
