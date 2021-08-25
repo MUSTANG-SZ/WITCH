@@ -196,6 +196,22 @@ def conv_int_gnfw(p,xi,yi,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=1
 
   return jnp.interp(dr,rmap,ip,right=0.)
 
+@jax.jit
+def potato_chip(p, xi, yi):
+  #A shitty potato chip (hyperbolic parabaloid) model for removing scan signal from maps
+  #Inputs: p, a parameter vector with entries A, the overall amplitude, c0, an overall offset
+  #c1 and c2, linear slopes, c3 and c4, parabolic amplitudes, and theta, a rotation angle.
+  # xi, yi are x and y vectors
+  #
+  # Outputs: a vector of values for this model given p at the xi, yi
+
+  #A, c0, c1, c2, c3, c4, theta = p
+  A, c1, c2, c3, c4, theta = p
+  x1, x2 = jnp.cos(theta)*xi + yi*jnp.sin(theta), -1*jnp.sin(theta)*xi + jnp.cos(theta)*yi
+  
+  #return A*(c0 + c1*x1 + c2*x2 + x1**2/c3 - x2**2/c4)
+  return A*(c1*x1 + c2*x2 + x1**2/c3 - x2**2/c4)
+
 # ---------------------------------------------------------------
 
 pars = jnp.array([0,0,1.,1.,1.5,4.3,0.7,3e14])
@@ -214,6 +230,18 @@ def jac_conv_int_gnfw_fwd(p,tods,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,
 def jit_conv_int_gnfw(p,tods,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=15.0*60,dr=0.5):
   pred = conv_int_gnfw(p,tods[0],tods[1],z,max_R,fwhm,freq,T_electron,r_map,dr)
   grad = jax.jacfwd(conv_int_gnfw,argnums=0)(p,tods[0],tods[1],z,max_R,fwhm,freq,T_electron,r_map,dr)
+
+  return pred, grad
+
+#Todo: an analytic expression for the potato gradient definitely exists, just needs to be derived + implemented
+@jax.jit
+def jac_potato_grad(p, tods):
+  return jax.jacfwd(potato_chip, argnums = 0)(p, tods[0], tods[1])
+
+@jax.jit
+def jit_potato_full(p, tods):
+  pred = potato_chip(p, tods[0], tods[1])
+  grad = jax.jacfwd(potato_chip, argnums = 0)(p, tods[0], tods[1])
 
   return pred, grad
 

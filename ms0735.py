@@ -3,7 +3,7 @@ import presets_by_source as pbs
 import minkasi
 import jax
 import jax.numpy as jnp
-from minkasi_jax import jit_conv_int_gnfw, val_conv_int_gnfw
+from minkasi_jax import jit_conv_int_gnfw, val_conv_int_gnfw, jit_potato_full
 import numpy as np
 from astropy.coordinates import Angle
 from astropy import units as u
@@ -21,6 +21,20 @@ def helper(params, tod):
     derivs = jnp.moveaxis(derivs, 2, 0)
 
     return derivs, pred
+
+def potato_helper(params, tod):
+    x = tod.info['dx']
+    y = tod.info['dy']
+
+    xy = [x, y]
+    xy = jnp.asarray(xy)
+
+    pred, derivs = jit_potato_full(params, xy)
+
+    derivs = jnp.moveaxis(derivs, 2, 0)
+
+    return derivs, pred
+
 
 name = 'MS0735'
 myadj=None # If None, then it'll select the most recently made folder with string "TS_*"
@@ -192,13 +206,17 @@ ps_labels = np.array(['ra', 'dec', 'sigma', 'amp'])
 #Label nums:           8      9      10     11
 ps_pars = np.array([ra, dec, 3.8e-5,  4.2e-4])
 
+potato_labels = np.array(['amp', 'c1', 'c2', 'c3', 'c4', 'theta'])
+#label nums:                12    13      14    15    16    17    
+potato_pars = np.array([1., 1., 1.,  1., 1., np.pi/2])
+
 #In case we want to later add more functions to the model
-pars = np.hstack([gnfw_pars, ps_pars])
-npar = np.hstack([len(gnfw_pars), len(ps_pars)])
-labels = np.hstack([gnfw_labels, ps_labels])
+pars = np.hstack([gnfw_pars, ps_pars, potato_pars])
+npar = np.hstack([len(gnfw_pars), len(ps_pars), len(potato_pars)])
+labels = np.hstack([gnfw_labels, ps_labels, potato_labels])
 #this array of functions needs to return the model timestreams and derivatives w.r.t. parameters
 #of the timestreams.
-funs = [helper, minkasi.derivs_from_gauss_c]
+funs = [helper, minkasi.derivs_from_gauss_c, potato_helper]
 
 
 #we can keep some parameters fixed at their input values if so desired.
@@ -243,7 +261,7 @@ for i, tod in enumerate(todvec.tods):
     tod.info['dat_calib'] = tod.info['dat_calib'] - np.array(pred)
 
     #Unclear if we need to reset the noise
-    #tod.set_noise(minkasi.NoiseSmoothedSVD)
+    tod.set_noise(minkasi.NoiseSmoothedSVD)
 
 
 
@@ -252,7 +270,7 @@ for i, tod in enumerate(todvec.tods):
 #which helps small-scale convergence quite a bit.
 hits=minkasi.make_hits(todvec,map)
 if minkasi.myrank==0:
-    hits.write(outroot+'_hits.fits')
+    hits.write(outroot+'resid_hits.fits')
 #setup the mapset.  In general this can have many things
 #in addition to map(s) of the sky, but for now we'll just
 #use a single skymap.
@@ -284,7 +302,7 @@ print('here')
 #run PCG!
 mapset_out=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=40)
 
-mapset_out.maps[0].write(outroot+'_itter40.fits')
+mapset_out.maps[0].write(outroot+'resid_itter40.fits')
 
 #########################################################################
 m_con=mapset_out.copy()
@@ -312,7 +330,7 @@ mapset_out2=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=30)
 #mapset_out2.maps[0].smooth(hits.map,fwhm=4,ng=13)
 #mapset_out2.maps[0].median()
 if minkasi.myrank==0:
-    mapset_out2.maps[0].write(outroot+'_pass2.fits') #and write out the map as a FITS file
+    mapset_out2.maps[0].write(outroot+'resid_pass2.fits') #and write out the map as a FITS file
 
 m_con2=mapset_out2.copy()
 m_con2.maps[0].map -= 0.2 # 0.05 three pass 0.2 4 pass
@@ -337,7 +355,7 @@ mapset_out3=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=30)
 #mapset_out3.maps[0].smooth(hits.map,fwhm=4,ng=13)
 #mapset_out3.maps[0].median()
 if minkasi.myrank==0:
-    mapset_out3.maps[0].write(outroot+'_pass3.fits') #and write out the map as a FITS file
+    mapset_out3.maps[0].write(outroot+'resid_pass3.fits') #and write out the map as a FITS file
 
 ########maps 3 and 4 were very similar#########################
 m_con3=mapset_out3.copy() # this time round use full tods as noise
@@ -363,7 +381,7 @@ mapset_out4=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=30)
 #mapset_out4.maps[0].median()
 #mapset_out4.maps[0].smooth(hits.map,fwhm=4,ng=13)
 if minkasi.myrank==0:
-    mapset_out4.maps[0].write(outroot+'_pass4.fits') #and write out the map as a FITS file
+    mapset_out4.maps[0].write(outroot+'resid_pass4.fits') #and write out the map as a FITS file
 
 #################################################################
 m_con4=mapset_out4.copy() # this time round use full tods as noise
@@ -389,10 +407,10 @@ mapset_out5=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=30)
 #mapset_out5.maps[0].median()
 #mapset_out5.maps[0].smooth(hits.map,fwhm=4,ng=13)
 if minkasi.myrank==0:
-    mapset_out5.maps[0].write(outroot+'_pass5.fits') #and write out the map as a FITS file
+    mapset_out5.maps[0].write(outroot+'resid_pass5.fits') #and write out the map as a FITS file
 
 outmap=m_con+m_con2+m_con3+m_con4+mapset_out5
-outmap.maps[0].write(outroot+'_final.fits')
+outmap.maps[0].write(outroot+'resid_final.fits')
 #outmap.maps[0].smooth(hits.map,fwhm=4)
 #outmap.maps[0].write(outroot+'_final_smooth4.fits')
 
