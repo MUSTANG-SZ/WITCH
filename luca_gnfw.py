@@ -73,9 +73,10 @@ def y2K_RJ(freq,Te):
 
 # Beam-convolved gNFW profiel
 # --------------------------------------------------------
-def conv_int_gnfw(p,xi,yi,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=15.0*60,dr=0.5):
+@jax.partial(jax.jit,static_argnums=(4,5,6,7,8,9))
+def _conv_int_gnfw(p,xi,yi,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=15.0*60,dr=0.5):
   x0, y0, P0, c500, alpha, beta, gamma, m500 = p
-
+  
   hz = jnp.interp(z,dzline,hzline)
   nz = jnp.interp(z,dzline,nzline)
 
@@ -89,7 +90,7 @@ def conv_int_gnfw(p,xi,yi,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=1
 
   x = r/r500
   pressure = P500*P0/((c500*x)**gamma*(1.00+(c500*x)**alpha)**((beta-gamma)/alpha))
-
+  
   rmap = jnp.arange(1e-10,r_map,dr) 
   r_in_Mpc = rmap*(jnp.interp(z,dzline,daline))
   rr = jnp.meshgrid(r_in_Mpc,r_in_Mpc)
@@ -110,11 +111,50 @@ def conv_int_gnfw(p,xi,yi,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=1
   ip = jnp.convolve(ipp,beam,mode='same')[nx:]
 
   ip = ip*y2K_RJ(freq=freq,Te=T_electron)
+  
+  return rmap, ip
+
+def conv_int_gnfw(p,xi,yi,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=15.0*60,dr=0.5):
+  x0, y0, P0, c500, alpha, beta, gamma, m500 = p
+  
+  rmap, ip = _conv_int_gnfw(p, xi, yi, z, max_R=max_R, fwhm=fwhm, freq=freq, T_electron=T_electron, r_map=r_map, dr=dr)
 
   dx = (xi-x0)*jnp.cos(yi)
   dy  = yi-y0
   dr = jnp.sqrt(dx*dx + dy*dy)*180./np.pi*3600. 
 
+  return jnp.interp(dr,rmap,ip,right=0.)
+
+def conv_int_gnfw_elliptical(x_scale, y_scale, theta, p,xi,yi,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=15.0*60,dr=0.5):
+  """
+  Modification of conv_int_gnfw that adds ellipticity 
+  This is a somewhat crude implementation that could be improved in the future
+
+  Arguments:
+     x_scale: Amount to scale along the x-axis (dx = dx/x_scale) 
+     
+     y_scale: Amount to scale along the y-axis (dy = dy/y_scale)
+
+     theta: Angle to rotate profile by in radians
+
+     remaining args are the same as conv_int_gnfw
+
+  Returns:
+     Elliptical gnfw profile 
+  """
+  x0, y0, P0, c500, alpha, beta, gamma, m500 = p
+
+  rmap, ip = _conv_int_gnfw(p, xi, yi, z, max_R=max_R, fwhm=fwhm, freq=freq, T_electron=T_electron, r_map=r_map, dr=dr)
+  dx = (xi-x0)*jnp.cos(yi)
+  dy  = yi-y0
+ 
+  dx = dx/x_scale
+  dy = dy/y_scale
+  dx = dx*jnp.cos(theta) + dy*jnp.sin(theta)
+  dy = -1*dx*jnp.sin(theta) + dy*jnp.cos(theta)
+
+
+  dr = jnp.sqrt(dx*dx + dy*dy)*180./np.pi*3600. 
   return jnp.interp(dr,rmap,ip,right=0.)
 
 # ---------------------------------------------------------------
@@ -137,6 +177,13 @@ def jit_conv_int_gnfw(p,tods,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_ma
 
   return pred, grad
 
+@jax.partial(jax.jit,static_argnums=(6,7,8,9,10,11,))
+def jit_conv_int_gnfw_elliptical(x_scale, y_scale, theta, p,tods,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=15.0*60,dr=0.5):
+  pred = conv_int_gnfw_elliptical(x_scale, y_scale, theta, p,tods[0],tods[1],z,max_R,fwhm,freq,T_electron,r_map,dr)
+  grad = jax.jacfwd(conv_int_gnfw_elliptical,argnums=3)(x_scale, y_scale, theta, p,tods[0],tods[1],z,max_R,fwhm,freq,T_electron,r_map,dr)
+
+  return pred, grad
+
 def helper():
   return jit_conv_int_gnfw(pars,tods,1.00)[0].block_until_ready()
 
@@ -144,13 +191,16 @@ def helper():
 if __name__ == '__main__':
     toc = time.time(); val_conv_int_gnfw(pars,tods,1.00); tic = time.time(); print('1',tic-toc)
     toc = time.time(); val_conv_int_gnfw(pars,tods,1.00); tic = time.time(); print('1',tic-toc)
-
+    
     toc = time.time(); jac_conv_int_gnfw_fwd(pars,tods,1.00); tic = time.time(); print('2',tic-toc)
     toc = time.time(); jac_conv_int_gnfw_fwd(pars,tods,1.00); tic = time.time(); print('2',tic-toc)
 
     toc = time.time(); jit_conv_int_gnfw(pars,tods,1.00); tic = time.time(); print('3',tic-toc)
     toc = time.time(); jit_conv_int_gnfw(pars,tods,1.00); tic = time.time(); print('3',tic-toc)
 
+    toc = time.time(); jit_conv_int_gnfw_elliptical(1, 1, 0, pars,tods,1.00); tic = time.time(); print('4',tic-toc)
+    toc = time.time(); jit_conv_int_gnfw_elliptical(1, 1, 0, pars,tods,1.00); tic = time.time(); print('4',tic-toc)
+    
     pars = jnp.array([0,0,1.,1.,1.5,4.3,0.7,3e14])
     tods = jnp.array(np.random.rand(2,int(1e4)))
 
