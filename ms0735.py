@@ -3,11 +3,13 @@ import presets_by_source as pbs
 import minkasi
 import jax
 import jax.numpy as jnp
-from minkasi_jax import jit_conv_int_gnfw, val_conv_int_gnfw, jit_potato_full
+from minkasi_jax import  val_conv_int_gnfw, jit_potato_full
+from luca_gnfw import jit_conv_int_gnfw_elliptical
 import numpy as np
 from astropy.coordinates import Angle
 from astropy import units as u
 from matplotlib import pyplot as plt
+from numpy.polynomial import Polynomial
 
 def helper(params, tod):
     x = tod.info['dx']
@@ -16,7 +18,7 @@ def helper(params, tod):
     xy = [x, y]
     xy = jnp.asarray(xy)
 
-    pred, derivs = jit_conv_int_gnfw(params, xy, z)
+    pred, derivs = jit_conv_int_gnfw_elliptical(params, xy, z)
 
     derivs = jnp.moveaxis(derivs, 2, 0)
 
@@ -133,8 +135,8 @@ map=minkasi.SkyMap(lims,pixsize)
 ra = Angle('07 41 44.8 hours')
 dec = Angle('74:14:52 degrees')
 ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
-gnfw_pars = np.array([ra, dec, 1., 1., 1.3, 4.3, 0.7,3e14])
-gnfw_labels = np.array(['ra', 'dec', 'P500', 'c500', 'alpha', 'beta', 'gamma', 'm500'])
+gnfw_pars = np.array([1, 1., 0.,ra, dec, 1., 1., 1.3, 4.3, 0.7,3e14])
+gnfw_labels = np.array(['x_scale', 'y_scale', 'theta', 'ra', 'dec', 'P500', 'c500', 'alpha', 'beta', 'gamma', 'm500'])
 
 d2r=np.pi/180
 sig=9/2.35/3600*d2r
@@ -146,6 +148,8 @@ iso_pars = np.array([ra, dec, theta_0,0.7,-7.2e-4])
 scale = 1
 #If sim = Ture, then the tods will be 'replaced' with the pure model output from helper
 sim = False
+#If true, fit a polynomial to tods and remove
+sub_poly = False
 for i, tod in enumerate(todvec.tods):
 
     temp_tod = tod.copy()
@@ -165,7 +169,15 @@ for i, tod in enumerate(todvec.tods):
 
         tod.info['dat_calib'] = tod.info['dat_calib'] + pred
 
+    if sub_poly:
+        tod.set_apix()
+        #Fit a simple poly model to tods to remove atmosphere
+        for i in range(tod.info['dat_calib'].shape[0]):
+            res = np.array(np.polyfit(tod.info['dat_calib'][i], tod.info['apix'][i], n_atm)) 
+            tod.info['dat_calib'][i] -= res[0] + res[1]*tod.info['apix'][i] + res[2]*tod.info['apix'][i]**2
+        
 
+    print('mean is ',np.mean(tod.info['dat_calib']))
     tod.set_noise(minkasi.NoiseSmoothedSVD)
 
 
@@ -183,45 +195,50 @@ ra = Angle('07 41 44.8 hours')
 dec = Angle('74:14:52 degrees')
 ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
 
-gnfw_labels = np.array(['ra', 'dec', 'P500', 'c500', 'alpha', 'beta', 'gamma', 'm500'])
-#Label nums for ref:     0     1        2      3        4       5       6        7
+gnfw_labels = np.array(['x_scale', 'y_scale', 'theta','ra', 'dec', 'P500', 'c500', 'alpha', 'beta', 'gamma', 'm500'])
+#Label nums for ref:     0            1          2      3     4      5       6       7         8     9        10      
 model_type = 'cc'
 PS = True
 if model_type == 'cc':
 
     #Cool Core
-    gnfw_pars = np.array([ra, dec, 8.403, 1.177, 1.2223, 5.49, 0.7736,3.2e14])
+    gnfw_pars = np.array([1., 1., 0., ra, dec, 8.403, 1.177, 1.2223, 5.49, 0.7736,3.2e14])
 
 if model_type == 'A10':
 
     #A10
-    gnfw_pars = np.array([ra, dec, 8.403, 1.177, 1.05, 5.49, 0.31,3.2e14])
+    gnfw_pars = np.array([1., 1., 0., ra, dec, 8.403, 1.177, 1.05, 5.49, 0.31,3.2e14])
 
 if model_type == 'simon':
 
     #Simon sims
-    gnfw_pars = np.array([ra, dec, 8.403, 1.177, 1.4063, 5.49, 0.3798,3.2e14])
+    gnfw_pars = np.array([1., 1., 0., ra, dec, 8.403, 1.177, 1.4063, 5.49, 0.3798,3.2e14])
 
 ps_labels = np.array(['ra', 'dec', 'sigma', 'amp'])
-#Label nums:           8      9      10     11
+#Label nums:           11    12       13     14
 ps_pars = np.array([ra, dec, 3.8e-5,  4.2e-4])
 
-potato_labels = np.array(['amp', 'c1', 'c2', 'c3', 'c4', 'theta'])
-#label nums:                12    13      14    15    16    17    
-potato_pars = np.array([1., 1., 1.,  1., 1., np.pi/2])
+potato_labels = np.array([ 'c1','theta'])
+#label nums:                15    16        
+potato_pars = np.array([ 1., np.pi/2])
 
 #In case we want to later add more functions to the model
-pars = np.hstack([gnfw_pars, ps_pars, potato_pars])
-npar = np.hstack([len(gnfw_pars), len(ps_pars), len(potato_pars)])
-labels = np.hstack([gnfw_labels, ps_labels, potato_labels])
+pars = np.hstack([gnfw_pars, ps_pars])
+npar = np.hstack([len(gnfw_pars), len(ps_pars)])
+labels = np.hstack([gnfw_labels, ps_labels])
 #this array of functions needs to return the model timestreams and derivatives w.r.t. parameters
 #of the timestreams.
-funs = [helper, minkasi.derivs_from_gauss_c, potato_helper]
+funs = [helper, minkasi.derivs_from_gauss_c]
 
+for tod in todvec.tods:
+    temp_tod = tod.copy()
+    atmos = minkasi.tsAirmass(tod, n_atm)
+    atmos.tod2map(tod, temp_tod.info['dat_calib'])
+    print(atmos.params)
 
 #we can keep some parameters fixed at their input values if so desired.
 to_fit=np.ones(len(pars),dtype='bool')
-to_fit[[2,3,4,5]]=False  #C500, beta fixed
+to_fit[[2,5,6,7,8]]=False  #C500, beta fixed
 
 
 t1=time.time()
@@ -256,7 +273,7 @@ for i, tod in enumerate(todvec.tods):
 
     temp_tod = tod.copy()
     
-    pred = helper(pars_fit[:8], temp_tod)[1] + minkasi.derivs_from_gauss_c(pars_fit[8:], temp_tod)[1]
+    pred = helper(pars_fit[:11], temp_tod)[1] + minkasi.derivs_from_gauss_c(pars_fit[11:], temp_tod)[1]# + potato_helper(pars_fit[12:], temp_tod)[1]
 
     tod.info['dat_calib'] = tod.info['dat_calib'] - np.array(pred)
 
@@ -270,7 +287,7 @@ for i, tod in enumerate(todvec.tods):
 #which helps small-scale convergence quite a bit.
 hits=minkasi.make_hits(todvec,map)
 if minkasi.myrank==0:
-    hits.write(outroot+'resid_hits.fits')
+    hits.write(outroot+'potato_resid_hits.fits')
 #setup the mapset.  In general this can have many things
 #in addition to map(s) of the sky, but for now we'll just
 #use a single skymap.
@@ -302,7 +319,7 @@ print('here')
 #run PCG!
 mapset_out=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=40)
 
-mapset_out.maps[0].write(outroot+'resid_itter40.fits')
+mapset_out.maps[0].write(outroot+'potato_resid_itter40.fits')
 
 #########################################################################
 m_con=mapset_out.copy()
@@ -330,7 +347,7 @@ mapset_out2=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=30)
 #mapset_out2.maps[0].smooth(hits.map,fwhm=4,ng=13)
 #mapset_out2.maps[0].median()
 if minkasi.myrank==0:
-    mapset_out2.maps[0].write(outroot+'resid_pass2.fits') #and write out the map as a FITS file
+    mapset_out2.maps[0].write(outroot+'potato_resid_pass2.fits') #and write out the map as a FITS file
 
 m_con2=mapset_out2.copy()
 m_con2.maps[0].map -= 0.2 # 0.05 three pass 0.2 4 pass
@@ -355,7 +372,7 @@ mapset_out3=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=30)
 #mapset_out3.maps[0].smooth(hits.map,fwhm=4,ng=13)
 #mapset_out3.maps[0].median()
 if minkasi.myrank==0:
-    mapset_out3.maps[0].write(outroot+'resid_pass3.fits') #and write out the map as a FITS file
+    mapset_out3.maps[0].write(outroot+'potato_resid_pass3.fits') #and write out the map as a FITS file
 
 ########maps 3 and 4 were very similar#########################
 m_con3=mapset_out3.copy() # this time round use full tods as noise
@@ -381,7 +398,7 @@ mapset_out4=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=30)
 #mapset_out4.maps[0].median()
 #mapset_out4.maps[0].smooth(hits.map,fwhm=4,ng=13)
 if minkasi.myrank==0:
-    mapset_out4.maps[0].write(outroot+'resid_pass4.fits') #and write out the map as a FITS file
+    mapset_out4.maps[0].write(outroot+'potato_resid_pass4.fits') #and write out the map as a FITS file
 
 #################################################################
 m_con4=mapset_out4.copy() # this time round use full tods as noise
@@ -407,10 +424,10 @@ mapset_out5=minkasi.run_pcg(rhs,x0,todvec,precon,maxiter=30)
 #mapset_out5.maps[0].median()
 #mapset_out5.maps[0].smooth(hits.map,fwhm=4,ng=13)
 if minkasi.myrank==0:
-    mapset_out5.maps[0].write(outroot+'resid_pass5.fits') #and write out the map as a FITS file
+    mapset_out5.maps[0].write(outroot+'potato_resid_pass5.fits') #and write out the map as a FITS file
 
 outmap=m_con+m_con2+m_con3+m_con4+mapset_out5
-outmap.maps[0].write(outroot+'resid_final.fits')
+outmap.maps[0].write(outroot+'potato_resid_final.fits')
 #outmap.maps[0].smooth(hits.map,fwhm=4)
 #outmap.maps[0].write(outroot+'_final_smooth4.fits')
 
