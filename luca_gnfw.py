@@ -177,9 +177,6 @@ def conv_int_gnfw(
 
 
 def conv_int_gnfw_elliptical(
-    x_scale,
-    y_scale,
-    theta,
     p,
     xi,
     yi,
@@ -196,21 +193,22 @@ def conv_int_gnfw_elliptical(
     This is a somewhat crude implementation that could be improved in the future
 
     Arguments:
-       x_scale: Amount to scale along the x-axis (dx = dx/x_scale)
+       Same as conv_int_gnfw except first 3 values of p are now:
+           x_scale: Amount to scale along the x-axis (dx = dx/x_scale)
 
-       y_scale: Amount to scale along the y-axis (dy = dy/y_scale)
+           y_scale: Amount to scale along the y-axis (dy = dy/y_scale)
 
-       theta: Angle to rotate profile by in radians
+           theta: Angle to rotate profile by in radians
 
        remaining args are the same as conv_int_gnfw
 
     Returns:
        Elliptical gnfw profile
     """
-    x0, y0, P0, c500, alpha, beta, gamma, m500 = p
+    x_scale, y_scale, theta, x0, y0, P0, c500, alpha, beta, gamma, m500 = p
 
     rmap, ip = _conv_int_gnfw(
-        p,
+        p[3:],
         xi,
         yi,
         z,
@@ -236,6 +234,7 @@ def conv_int_gnfw_elliptical(
 # ---------------------------------------------------------------
 
 pars = jnp.array([0, 0, 1.0, 1.0, 1.5, 4.3, 0.7, 3e14])
+pars_elliptical = jnp.array([1, 1, 0, 0, 0, 1.0, 1.0, 1.5, 4.3, 0.7, 3e14])
 tods = jnp.array(np.random.rand(2, int(1e4)))
 
 
@@ -337,9 +336,6 @@ def jit_conv_int_gnfw(
     ),
 )
 def jit_conv_int_gnfw_elliptical(
-    x_scale,
-    y_scale,
-    theta,
     p,
     tods,
     z,
@@ -351,9 +347,6 @@ def jit_conv_int_gnfw_elliptical(
     dr=0.5,
 ):
     pred = conv_int_gnfw_elliptical(
-        x_scale,
-        y_scale,
-        theta,
         p,
         tods[0],
         tods[1],
@@ -365,10 +358,7 @@ def jit_conv_int_gnfw_elliptical(
         r_map,
         dr,
     )
-    grad = jax.jacfwd(conv_int_gnfw_elliptical, argnums=3)(
-        x_scale,
-        y_scale,
-        theta,
+    grad = jax.jacfwd(conv_int_gnfw_elliptical, argnums=0)(
         p,
         tods[0],
         tods[1],
@@ -417,11 +407,11 @@ if __name__ == "__main__":
     print("3", tic - toc)
 
     toc = time.time()
-    jit_conv_int_gnfw_elliptical(1, 1, 0, pars, tods, 1.00)
+    jit_conv_int_gnfw_elliptical(pars_elliptical, tods, 1.00)
     tic = time.time()
     print("4", tic - toc)
     toc = time.time()
-    jit_conv_int_gnfw_elliptical(1, 1, 0, pars, tods, 1.00)
+    jit_conv_int_gnfw_elliptical(pars_elliptical, tods, 1.00)
     tic = time.time()
     print("4", tic - toc)
 
