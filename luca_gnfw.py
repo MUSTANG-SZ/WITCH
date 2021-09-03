@@ -77,9 +77,9 @@ def y2K_RJ(freq, Te):
 
 # Beam-convolved gNFW profiel
 # --------------------------------------------------------
-@jax.partial(jax.jit, static_argnums=(4, 5, 6, 7, 8, 9))
+@jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
 def _conv_int_gnfw(
-    p,
+    x0, y0, P0, c500, alpha, beta, gamma, m500,
     xi,
     yi,
     z,
@@ -90,8 +90,6 @@ def _conv_int_gnfw(
     r_map=15.0 * 60,
     dr=0.5,
 ):
-    x0, y0, P0, c500, alpha, beta, gamma, m500 = p
-
     hz = jnp.interp(z, dzline, hzline)
     nz = jnp.interp(z, dzline, nzline)
 
@@ -143,7 +141,7 @@ def _conv_int_gnfw(
 
 
 def conv_int_gnfw(
-    p,
+    x0, y0, P0, c500, alpha, beta, gamma, m500,
     xi,
     yi,
     z,
@@ -154,10 +152,8 @@ def conv_int_gnfw(
     r_map=15.0 * 60,
     dr=0.5,
 ):
-    x0, y0, P0, c500, alpha, beta, gamma, m500 = p
-
     rmap, ip = _conv_int_gnfw(
-        p,
+        x0, y0, P0, c500, alpha, beta, gamma, m500,
         xi,
         yi,
         z,
@@ -177,7 +173,7 @@ def conv_int_gnfw(
 
 
 def conv_int_gnfw_elliptical(
-    p,
+    x_scale, y_scale, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
     xi,
     yi,
     z,
@@ -208,7 +204,7 @@ def conv_int_gnfw_elliptical(
     x_scale, y_scale, theta, x0, y0, P0, c500, alpha, beta, gamma, m500 = p
 
     rmap, ip = _conv_int_gnfw(
-        p[3:],
+        x0, y0, P0, c500, alpha, beta, gamma, m500,
         xi,
         yi,
         z,
@@ -314,11 +310,12 @@ def jit_conv_int_gnfw(
     r_map=15.0 * 60,
     dr=0.5,
 ):
+    x0, y0, P0, c500, alpha, beta, gamma, m500 = p
     pred = conv_int_gnfw(
-        p, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
+        x0, y0, P0, c500, alpha, beta, gamma, m500, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
     grad = jax.jacfwd(conv_int_gnfw, argnums=0)(
-        p, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
+        x0, y0, P0, c500, alpha, beta, gamma, m500, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
 
     return pred, grad
