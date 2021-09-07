@@ -201,8 +201,6 @@ def conv_int_gnfw_elliptical(
     Returns:
        Elliptical gnfw profile
     """
-    x_scale, y_scale, theta, x0, y0, P0, c500, alpha, beta, gamma, m500 = p
-
     rmap, ip = _conv_int_gnfw(
         x0, y0, P0, c500, alpha, beta, gamma, m500,
         xi,
@@ -255,7 +253,6 @@ def val_conv_int_gnfw(
     T_electron=5.0,
     r_map=15.0 * 60,
     dr=0.5,
-    grad_args=[True, True, True, True, True, True, True, True], 
 ):
     x0, y0, P0, c500, alpha, beta, gamma, m500 = p
     return conv_int_gnfw(
@@ -272,6 +269,7 @@ def val_conv_int_gnfw(
         6,
         7,
         8,
+        9,
     ),
 )
 def jac_conv_int_gnfw_fwd(
@@ -284,13 +282,18 @@ def jac_conv_int_gnfw_fwd(
     T_electron=5.0,
     r_map=15.0 * 60,
     dr=0.5,
-    grad_args=[True, True, True, True, True, True, True, True], 
+    argnums=(0, 1, 2, 3, 4, 5, 6, 7,)
 ):
     x0, y0, P0, c500, alpha, beta, gamma, m500 = p
-    argnums = np.arange(len(p))[grad_args]
-    return jax.jacfwd(conv_int_gnfw, argnums=argnums)(
+    grad = jax.jacfwd(conv_int_gnfw, argnums=argnums)(
         x0, y0, P0, c500, alpha, beta, gamma, m500, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
+
+    if len(argnums) != len(p):
+        padded_grad = jnp.zeros(p.shape + grad[0].shape)
+        grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
+
+    return grad
 
 
 @jax.partial(
@@ -302,6 +305,7 @@ def jac_conv_int_gnfw_fwd(
         6,
         7,
         8,
+        9,
     ),
 )
 def jit_conv_int_gnfw(
@@ -314,16 +318,19 @@ def jit_conv_int_gnfw(
     T_electron=5.0,
     r_map=15.0 * 60,
     dr=0.5,
-    grad_args=[True, True, True, True, True, True, True, True], 
-):
+    argnums=(0, 1, 2, 3, 4, 5, 6, 7,)
+    ):
     x0, y0, P0, c500, alpha, beta, gamma, m500 = p
     pred = conv_int_gnfw(
         x0, y0, P0, c500, alpha, beta, gamma, m500, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
-    argnums = np.arange(len(p))[grad_args]
     grad = jax.jacfwd(conv_int_gnfw, argnums=argnums)(
         x0, y0, P0, c500, alpha, beta, gamma, m500, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
+
+    if len(argnums) != len(p):
+        padded_grad = jnp.zeros(p.shape + grad[0].shape)
+        grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
 
     return pred, grad
 
@@ -337,6 +344,7 @@ def jit_conv_int_gnfw(
         9,
         10,
         11,
+        12
     ),
 )
 def jit_conv_int_gnfw_elliptical(
@@ -349,7 +357,7 @@ def jit_conv_int_gnfw_elliptical(
     T_electron=5.0,
     r_map=15.0 * 60,
     dr=0.5,
-    grad_args=[True, True, True, True, True, True, True, True, True, True, True], 
+    argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,)
 ):
     x_scale, y_scale, theta, x0, y0, P0, c500, alpha, beta, gamma, m500 = p
     pred = conv_int_gnfw_elliptical(
@@ -364,7 +372,6 @@ def jit_conv_int_gnfw_elliptical(
         r_map,
         dr,
     )
-    argnums = np.arange(len(p))[grad_args]
     grad = jax.jacfwd(conv_int_gnfw_elliptical, argnums=argnums)(
         x_scale, y_scale, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
         tods[0],
@@ -377,6 +384,10 @@ def jit_conv_int_gnfw_elliptical(
         r_map,
         dr,
     )
+
+    if len(argnums) != len(p):
+        padded_grad = jnp.zeros(p.shape + grad[0].shape)
+        grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
 
     return pred, grad
 
@@ -413,6 +424,42 @@ if __name__ == "__main__":
     tic = time.time()
     print("3", tic - toc)
 
+    toc = time.time()
+    jit_conv_int_gnfw(pars, tods, 1.00, argnums=(0,))
+    tic = time.time()
+    print("3.1", tic - toc)
+    toc = time.time()
+    jit_conv_int_gnfw(pars, tods, 1.00, argnums=(0,))
+    tic = time.time()
+    print("3.1", tic - toc)
+    
+    toc = time.time()
+    jit_conv_int_gnfw(pars, tods, 1.00, argnums=(0, 1,))
+    tic = time.time()
+    print("3.2", tic - toc)
+    toc = time.time()
+    jit_conv_int_gnfw(pars, tods, 1.00, argnums=(0, 1,))
+    tic = time.time()
+    print("3.2", tic - toc)
+    
+    toc = time.time()
+    jit_conv_int_gnfw(pars, tods, 1.00, argnums=(0, 1, 2, 3,))
+    tic = time.time()
+    print("3.4", tic - toc)
+    toc = time.time()
+    jit_conv_int_gnfw(pars, tods, 1.00, argnums=(0, 1, 2, 3,))
+    tic = time.time()
+    print("3.4", tic - toc)
+    
+    toc = time.time()
+    jit_conv_int_gnfw(pars, tods, 1.00, argnums=(0, 1, 2, 3, 4, 5, 6,))
+    tic = time.time()
+    print("3.6", tic - toc)
+    toc = time.time()
+    jit_conv_int_gnfw(pars, tods, 1.00, argnums=(0, 1, 2, 3, 4, 5, 6,))
+    tic = time.time()
+    print("3.6", tic - toc)
+    
     toc = time.time()
     jit_conv_int_gnfw_elliptical(pars_elliptical, tods, 1.00)
     tic = time.time()
