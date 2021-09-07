@@ -255,9 +255,11 @@ def val_conv_int_gnfw(
     T_electron=5.0,
     r_map=15.0 * 60,
     dr=0.5,
+    grad_args=[True, True, True, True, True, True, True, True], 
 ):
+    x0, y0, P0, c500, alpha, beta, gamma, m500 = p
     return conv_int_gnfw(
-        p, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
+        x0, y0, P0, c500, alpha, beta, gamma, m500, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
 
 
@@ -282,9 +284,12 @@ def jac_conv_int_gnfw_fwd(
     T_electron=5.0,
     r_map=15.0 * 60,
     dr=0.5,
+    grad_args=[True, True, True, True, True, True, True, True], 
 ):
-    return jax.jacfwd(conv_int_gnfw, argnums=0)(
-        p, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
+    x0, y0, P0, c500, alpha, beta, gamma, m500 = p
+    argnums = np.arange(len(p))[grad_args]
+    return jax.jacfwd(conv_int_gnfw, argnums=argnums)(
+        x0, y0, P0, c500, alpha, beta, gamma, m500, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
 
 
@@ -309,12 +314,14 @@ def jit_conv_int_gnfw(
     T_electron=5.0,
     r_map=15.0 * 60,
     dr=0.5,
+    grad_args=[True, True, True, True, True, True, True, True], 
 ):
     x0, y0, P0, c500, alpha, beta, gamma, m500 = p
     pred = conv_int_gnfw(
         x0, y0, P0, c500, alpha, beta, gamma, m500, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
-    grad = jax.jacfwd(conv_int_gnfw, argnums=0)(
+    argnums = np.arange(len(p))[grad_args]
+    grad = jax.jacfwd(conv_int_gnfw, argnums=argnums)(
         x0, y0, P0, c500, alpha, beta, gamma, m500, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
 
@@ -342,9 +349,11 @@ def jit_conv_int_gnfw_elliptical(
     T_electron=5.0,
     r_map=15.0 * 60,
     dr=0.5,
+    grad_args=[True, True, True, True, True, True, True, True, True, True, True], 
 ):
+    x_scale, y_scale, theta, x0, y0, P0, c500, alpha, beta, gamma, m500 = p
     pred = conv_int_gnfw_elliptical(
-        p,
+        x_scale, y_scale, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
         tods[0],
         tods[1],
         z,
@@ -355,8 +364,9 @@ def jit_conv_int_gnfw_elliptical(
         r_map,
         dr,
     )
-    grad = jax.jacfwd(conv_int_gnfw_elliptical, argnums=0)(
-        p,
+    argnums = np.arange(len(p))[grad_args]
+    grad = jax.jacfwd(conv_int_gnfw_elliptical, argnums=argnums)(
+        x_scale, y_scale, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
         tods[0],
         tods[1],
         z,
