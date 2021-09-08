@@ -135,8 +135,13 @@ map=minkasi.SkyMap(lims,pixsize)
 ra = Angle('07 41 44.8 hours')
 dec = Angle('74:14:52 degrees')
 ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
-gnfw_pars = np.array([1, 1., 0.,ra, dec, 1., 1., 1.3, 4.3, 0.7,3e14])
+gnfw_pars = np.array([1, 1., 0.,ra, dec,8.403, 1.177, 1.2223, 5.49, 0.7736,3.2e14])
 gnfw_labels = np.array(['x_scale', 'y_scale', 'theta', 'ra', 'dec', 'P500', 'c500', 'alpha', 'beta', 'gamma', 'm500'])
+
+ps_labels = np.array(['ra', 'dec', 'sigma', 'amp'])
+#Label nums:           11    12       13     14
+ps_pars = np.array([ra, dec, 3.8e-5,  4.2e-4])
+
 
 d2r=np.pi/180
 sig=9/2.35/3600*d2r
@@ -147,14 +152,14 @@ iso_pars = np.array([ra, dec, theta_0,0.7,-7.2e-4])
 
 scale = 1
 #If sim = Ture, then the tods will be 'replaced' with the pure model output from helper
-sim = False
+sim = True 
 #If true, fit a polynomial to tods and remove
 sub_poly = False
 for i, tod in enumerate(todvec.tods):
 
     temp_tod = tod.copy()
     if sim:
-        ignore, pred = helper(gnfw_pars, temp_tod)
+         pred = helper(gnfw_pars, temp_tod)[1] + minkasi.derivs_from_gauss_c(ps_pars, temp_tod)[1]
 
 
 
@@ -230,15 +235,15 @@ labels = np.hstack([gnfw_labels, ps_labels])
 #of the timestreams.
 funs = [helper, minkasi.derivs_from_gauss_c]
 
-for tod in todvec.tods:
-    temp_tod = tod.copy()
-    atmos = minkasi.tsAirmass(tod, n_atm)
-    atmos.tod2map(tod, temp_tod.info['dat_calib'])
-    print(atmos.params)
+#for tod in todvec.tods:
+#    temp_tod = tod.copy()
+#    atmos = minkasi.tsAirmass(tod, n_atm)
+#    atmos.tod2map(tod, temp_tod.info['dat_calib'])
+#    print(atmos.params)
 
 #we can keep some parameters fixed at their input values if so desired.
 to_fit=np.ones(len(pars),dtype='bool')
-to_fit[[2,5,6,7,8]]=False  #C500, beta fixed
+to_fit[[0,1,2,5,6,7,8]]=False  #C500, beta fixed
 
 
 t1=time.time()
