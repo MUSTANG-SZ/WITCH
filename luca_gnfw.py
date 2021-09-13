@@ -288,9 +288,10 @@ def jac_conv_int_gnfw_fwd(
     grad = jax.jacfwd(conv_int_gnfw, argnums=argnums)(
         x0, y0, P0, c500, alpha, beta, gamma, m500, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
+    grad = jnp.array(grad)
 
     if len(argnums) != len(p):
-        padded_grad = jnp.zeros(p.shape + grad[0].shape)
+        padded_grad = jnp.zeros(p.shape + grad[0].shape) + 1e-30
         grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
 
     return grad
@@ -327,9 +328,10 @@ def jit_conv_int_gnfw(
     grad = jax.jacfwd(conv_int_gnfw, argnums=argnums)(
         x0, y0, P0, c500, alpha, beta, gamma, m500, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
+    grad = jnp.array(grad)
 
     if len(argnums) != len(p):
-        padded_grad = jnp.zeros(p.shape + grad[0].shape)
+        padded_grad = jnp.zeros(p.shape + grad[0].shape) + 1e-30
         grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
 
     return pred, grad
@@ -384,9 +386,10 @@ def jit_conv_int_gnfw_elliptical(
         r_map,
         dr,
     )
+    grad = jnp.array(grad)
 
     if len(argnums) != len(p):
-        padded_grad = jnp.zeros(p.shape + grad[0].shape)
+        padded_grad = jnp.zeros(p.shape + grad[0].shape) + 1e-30
         grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
 
     return pred, grad
