@@ -173,7 +173,7 @@ def conv_int_gnfw(
 
 
 def conv_int_gnfw_elliptical(
-    x_scale, y_scale, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
+    e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
     xi,
     yi,
     z,
@@ -190,9 +190,8 @@ def conv_int_gnfw_elliptical(
 
     Arguments:
        Same as conv_int_gnfw except first 3 values of p are now:
-           x_scale: Amount to scale along the x-axis (dx = dx/x_scale)
 
-           y_scale: Amount to scale along the y-axis (dy = dy/y_scale)
+           e: Eccentricity, fixing the semimajor
 
            theta: Angle to rotate profile by in radians
 
@@ -216,10 +215,10 @@ def conv_int_gnfw_elliptical(
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
 
-    dx = dx / x_scale
-    dy = dy / y_scale
+    _dx = jnp.array(dx, copy=True)
+    dy = dy / jnp.sqrt(1 - (abs(e)%1)**2)
     dx = dx * jnp.cos(theta) + dy * jnp.sin(theta)
-    dy = -1 * dx * jnp.sin(theta) + dy * jnp.cos(theta)
+    dy = -1 * _dx * jnp.sin(theta) + dy * jnp.cos(theta)
 
     dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
     return jnp.interp(dr, rmap, ip, right=0.0)
@@ -228,7 +227,7 @@ def conv_int_gnfw_elliptical(
 # ---------------------------------------------------------------
 
 pars = jnp.array([0, 0, 1.0, 1.0, 1.5, 4.3, 0.7, 3e14])
-pars_elliptical = jnp.array([1, 1, 0, 0, 0, 1.0, 1.0, 1.5, 4.3, 0.7, 3e14])
+pars_elliptical = jnp.array([0, 0, 0, 0, 1.0, 1.0, 1.5, 4.3, 0.7, 3e14])
 tods = jnp.array(np.random.rand(2, int(1e4)))
 
 
@@ -359,11 +358,11 @@ def jit_conv_int_gnfw_elliptical(
     T_electron=5.0,
     r_map=15.0 * 60,
     dr=0.5,
-    argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,)
+    argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9,)
 ):
-    x_scale, y_scale, theta, x0, y0, P0, c500, alpha, beta, gamma, m500 = p
+    e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500 = p
     pred = conv_int_gnfw_elliptical(
-        x_scale, y_scale, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
+        e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
         tods[0],
         tods[1],
         z,
@@ -375,7 +374,7 @@ def jit_conv_int_gnfw_elliptical(
         dr,
     )
     grad = jax.jacfwd(conv_int_gnfw_elliptical, argnums=argnums)(
-        x_scale, y_scale, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
+        e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
         tods[0],
         tods[1],
         z,
