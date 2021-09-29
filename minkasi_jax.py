@@ -9,6 +9,7 @@ import jax
 import jax.numpy as jnp
 JAX_DEBUG_NANS = True
 from jax.config import config
+import jax.scipy.optimize as sopt
 
 config.update("jax_debug_nans", True)
 config.update("jax_enable_x64", True)
@@ -111,6 +112,28 @@ hzline = jnp.array(hzline.value)
 nzline = jnp.array(nzline.value)
 daline = jnp.array(daline.value)
 
+# Filtering
+# -------------------------------------------------------
+@jax.partial(jax.jit, static_argnums = (1,))
+def tod_hi_pass(tod, N_filt):
+    #high pass filter a tod, with a tophat at N_filt
+    mask = jnp.ones(tod.shape)
+    mask = jax.ops.index_update(mask, jax.ops.index[...,:N_filt], 0.)
+    
+    ## apply the filter in fourier space
+    Ftod = jnp.fft.fft(tod)
+    Ftod_filtered = Ftod * mask
+    tod_filtered = jnp.fft.ifft(Ftod_filtered).real
+    return tod_filtered
+
+#ToD poly sub
+
+@jax.partial(jax.jit, static_argnums = (1,2,3))
+def poly(x, c0, c1, c2):
+    return c0+c1*x+c2*x**2
+
+
+
 # Compton y to Kcmb
 # --------------------------------------------------------
 @jax.partial(jax.jit, static_argnums = (0,1))
@@ -149,6 +172,23 @@ def y2K_RJ(freq,Te):
   factor = y2K_CMB(freq,Te)
   return factor*K_CMB2K_RJ(freq)
 
+#Jax atmospheric fitter
+@jax.jit
+def poly_sub(x, y):
+    #Function which fits a 2nd degree polynomial to TOD data and then returns the best fit parameters
+    #Inputs: designed to work with x = tod.info['apix'][j], y = tod.info['dat_calib'][j] - tod.info['cm']
+    #which fits apix vs data-common mode, but in principle you can fit whatever
+    #Outputs: res.x, the best fit parameters in the order c0, c1, c2 for y = c0 + c1*x + c2*x**2
+    #TODO: this can be improved to accept arbitrary functions to fit, but I think for now
+    #leaving it is fine as I suspect that would incur a performance penalty 
+
+    #compute the residual function for a 2nd degree poly, using res**2
+    poly_resid = lambda p, x, y: jnp.sum(((p[0] + p[1]*x + p[2]*x**2)-y)**2)
+    p0 = jnp.array([0.1, 0.1, 0.1])
+    #minimize the residual
+    res = sopt.minimize(poly_resid, p0, args = (x, y), method = 'BFGS')
+        
+    return res.x
 
 # Beam-convolved gNFW profiel
 # --------------------------------------------------------
@@ -206,12 +246,14 @@ def potato_chip(p, xi, yi):
   # Outputs: a vector of values for this model given p at the xi, yi
 
   #A, c0, c1, c2, c3, c4, theta = p
-  A, c1, c2, c3, c4, theta = p
+  #A, c1, c2, c3, c4, theta = p
+  c1, theta = p
   x1, x2 = jnp.cos(theta)*xi + yi*jnp.sin(theta), -1*jnp.sin(theta)*xi + jnp.cos(theta)*yi
   
   #return A*(c0 + c1*x1 + c2*x2 + x1**2/c3 - x2**2/c4)
-  return A*(c1*x1 + c2*x2 + x1**2/c3 - x2**2/c4)
-
+  #return A*(1+c1*x1 + c2*x2 + x1**2/c3 - x2**2/c4)
+  #return A*(c1*x1 + x1**2/c3 - x2**2/c4)
+  return c1*x1
 # ---------------------------------------------------------------
 
 pars = jnp.array([0,0,1.,1.,1.5,4.3,0.7,3e14])
