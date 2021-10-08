@@ -79,12 +79,12 @@ def _gnfw_bubble(
     rr = np.meshgrid(r_in_Mpc, r_in_Mpc)
     rr = np.sqrt(rr[0] ** 2 + rr[1] ** 2)
     yy = np.interp(rr, r, pressure, right=0.0)
-
+    print(rr.shape, yy.shape)
     XMpc = Xthom * Mparsec
 
     ip = np.sum(yy, axis=1) * 2.0 * XMpc / (me * 1000)
     
-    full_rmap = np.arange(-1*r_map, r_map, dr)
+    full_rmap = np.arange(-1*r_map, r_map, dr) * (np.interp(z, dzline, daline))
     xx, yy = np.meshgrid(full_rmap, full_rmap)
     full_rr = np.sqrt(xx**2 + yy**2)
 
@@ -92,13 +92,18 @@ def _gnfw_bubble(
     #yb1 *= ((3600*180)/np.pi)
     #rb1 *= 60 
     #Make a grid, centered on xb1, yb1 and size rb1, with resolution dr, and convert to Mpc
-    x_b1 = np.arange(-1*rb1+xb1-dr, rb1+xb1+dr, dr) * (np.interp(z, dzline, daline))
-    y_b1 = np.arange(-1*rb1-yb1-dr, rb1-yb1+dr, dr) * (np.interp(z, dzline, daline))
-    z_b1 = np.arange(-1*rb1-dr, rb1+dr, dr) * (np.interp(z, dzline, daline))
+    x_b1 = np.arange(-1*rb1+xb1, rb1+xb1, dr) * (np.interp(z, dzline, daline))
+    y_b1 = np.arange(-1*rb1-yb1, rb1-yb1, dr) * (np.interp(z, dzline, daline))
+    z_b1 = np.arange(-1*rb1, rb1, dr) * (np.interp(z, dzline, daline))
     #print(dr * (np.interp(z, dzline, daline)))
     xyz_b1 = np.meshgrid(x_b1, y_b1, z_b1)
+    
+   
     rr_b1 = np.sqrt(xyz_b1[0]**2 + xyz_b1[1]**2 + xyz_b1[2]**2)
-    yy_b1 = np.interp(rr_b1, rmap, ip)
+    #rr_b1 = np.sqrt(yz_b1[0]**2 + yz_b1[1]**2)
+    #print(rr - rr_b1[120:, 120:])
+    #yy_b1 = np.interp(rr_b1, rmap, ip)
+    yy_b1 = np.interp(rr_b1, r, pressure, right = 0.0) 
 
     #Set up a grid of points for computing distance from bubble center
     x_rb = np.linspace(-1,1, len(x_b1))
@@ -113,19 +118,25 @@ def _gnfw_bubble(
     yy_b1[outside_rb_flag] = 0
     test = sup*np.ones(yy_b1.shape)
     test[outside_rb_flag] = 0 
-    ip_b1 = -sup*np.sum(yy_b1, axis = -1)# * 2.0 * XMpc / (me * 1000)
+    ip_b1 = -sup*np.sum(yy_b1, axis = -1) * 2.0 * XMpc / (me * 1000)
     plt.imshow(ip_b1)
+    plt.colorbar()
     plt.savefig('bubble.png')
     plt.close()
     plt.imshow(np.sum(test, axis = -1))
+    plt.colorbar()
     #print(test.tolist())
     #print(np.sum(test, axis = ).tolist())
     plt.savefig('unweight_bubble.png')
     plt.close()
     full_map = np.interp(full_rr, rmap, ip)    
+    plt.imshow(full_map)
+    plt.colorbar()
+    plt.savefig('just_gnfw.png')
+    plt.close() 
     print(np.amax(np.abs(full_map)), np.amax(np.abs(ip_b1)))
-    full_map[int(full_map.shape[1]/2+int((-1*rb1-yb1-dr)/dr)):int(full_map.shape[1]/2+int((rb1-yb1+dr)/dr)),
-                  int(full_map.shape[0]/2+int((-1*rb1+xb1-dr)/dr)):int(full_map.shape[0]/2+int((rb1+xb1+dr)/dr))] += ip_b1
+    full_map[int(full_map.shape[1]/2+int((-1*rb1-yb1)/dr)):int(full_map.shape[1]/2+int((rb1-yb1)/dr)),
+                  int(full_map.shape[0]/2+int((-1*rb1+xb1)/dr)):int(full_map.shape[0]/2+int((rb1+xb1)/dr))] += ip_b1
     
     #full_map[int(full_map.shape[0]/2+int((-1*rb1+xb1-dr)/dr)):int(full_map.shape[0]/2+int((rb1+xb1+dr)/dr)),
     #             int(full_map.shape[1]/2+int((-1*rb1-yb1-dr)/dr)):int(full_map.shape[1]/2+int((rb1-yb1+dr)/dr))] += ip_b1
@@ -154,7 +165,7 @@ x = np.linspace(-1*bound, bound, 20)
 y = np.linspace(-1*bound, bound, 20)
 xx, yy = np.meshgrid(x, y)
 
-grid, ipmap =  _gnfw_bubble(0, 0, 8.403, 1.177, 1.2223, 5.49, 0.7736,3.2e14, 0, 0, 15, -25, 15, 20, 1.0,
+grid, ipmap =  _gnfw_bubble(0, 0, 8.403, 1.177, 1.2223, 5.49, 0.7736,3.2e14, 0, 0, 1*60, -25, 15, 20, 1.0,
     xx,
     yy,
     0.2,
