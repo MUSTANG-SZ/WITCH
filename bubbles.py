@@ -48,11 +48,23 @@ def _gnfw_bubble(
     r_map=15.0 * 60,
     dr=0.5,
 ):
+    #A function for computing a gnfw+2 bubble model. The bubbles have pressure = b*P_gnfw, and are integrated along the line of sight
+    #Inputs: 
+    #    x0, y0 cluster center location
+    #    P0, c500, alpha, beta, gamma, m500 gnfw params
+    #    xb1, yb1, rb1: bubble location and radius for bubble 1
+    #    xb2, yb2, rb2: same for bubble 2
+    #    sup: the supression factor, refered to as b above
+    #    xi, yi: the xi, yi to evaluate at
+
+    #Outputs:
+    #    full_map, a 2D map of the sz signal from the gnfw_profile + 2 bubbles
     hz = np.interp(z, dzline, hzline)
     nz = np.interp(z, dzline, nzline)
 
     ap = 0.12
 
+    #calculate some relevant contstants
     r500 = (m500 / (4.00 * np.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
     P500 = (
         1.65e-03
@@ -61,9 +73,11 @@ def _gnfw_bubble(
         * h70 ** 2
     )
 
+    #Set up an r range at which to evaluate P_gnfw for interpolating the gnfw radial profile
     dR = max_R / 2e3
     r = np.arange(0.00, max_R, dR) + dR / 2.00
 
+    #Compute the pressure as a function of radius
     x = r / r500
     pressure = (
         P500
@@ -74,35 +88,37 @@ def _gnfw_bubble(
         )
     )
 
+    #Set up 2D yz grid going out to the max radius of the map, with pixel size dr, and grid values = the radius from the center at that point
     rmap = np.arange(0, r_map, dr)
     r_in_Mpc = rmap * (np.interp(z, dzline, daline))
     rr = np.meshgrid(r_in_Mpc, r_in_Mpc)
     rr = np.sqrt(rr[0] ** 2 + rr[1] ** 2)
-    yy = np.interp(rr, r, pressure, right=0.0)
-    print(rr.shape, yy.shape)
-    XMpc = Xthom * Mparsec
 
+    #Interpolate to get the pressure at each grid point
+    yy = np.interp(rr, r, pressure, right=0.0)
+    
+    XMpc = Xthom * Mparsec
+    #integrate along the z-axis/line of sight to obtain the radial gnfw pressure proflie. Note we're missing the dz term here
     ip = np.sum(yy, axis=1) * 2.0 * XMpc / (me * 1000)
     
+    #Set up a 2d xy map which we will interpolate over to get the 2D gnfw pressure profile
     full_rmap = np.arange(-1*r_map, r_map, dr) * (np.interp(z, dzline, daline))
     xx, yy = np.meshgrid(full_rmap, full_rmap)
     full_rr = np.sqrt(xx**2 + yy**2)
+    full_map = np.interp(full_rr, rmap, ip)
 
-    #xb1 *= ((3600*180)/np.pi)
-    #yb1 *= ((3600*180)/np.pi)
-    #rb1 *= 60 
+
+
+
     #Make a grid, centered on xb1, yb1 and size rb1, with resolution dr, and convert to Mpc
     x_b1 = np.arange(-1*rb1+xb1, rb1+xb1, dr) * (np.interp(z, dzline, daline))
     y_b1 = np.arange(-1*rb1-yb1, rb1-yb1, dr) * (np.interp(z, dzline, daline))
     z_b1 = np.arange(-1*rb1, rb1, dr) * (np.interp(z, dzline, daline))
-    #print(dr * (np.interp(z, dzline, daline)))
+
     xyz_b1 = np.meshgrid(x_b1, y_b1, z_b1)
-    
-   
+
+    #Similar to above, make a 3d xyz cube with grid values = radius, and then interpolate with gnfw profile to get 3d gNFW profile
     rr_b1 = np.sqrt(xyz_b1[0]**2 + xyz_b1[1]**2 + xyz_b1[2]**2)
-    #rr_b1 = np.sqrt(yz_b1[0]**2 + yz_b1[1]**2)
-    #print(rr - rr_b1[120:, 120:])
-    #yy_b1 = np.interp(rr_b1, rmap, ip)
     yy_b1 = np.interp(rr_b1, r, pressure, right = 0.0) 
 
     #Set up a grid of points for computing distance from bubble center
@@ -116,30 +132,44 @@ def _gnfw_bubble(
     outside_rb_flag = np.sqrt(rb_grid[0]**2 + rb_grid[1]**2+rb_grid[2]**2) >=1    
    
     yy_b1[outside_rb_flag] = 0
+
+    #I make a 3D cube of just ones and apply the outside bubble filter and integrate along it's line of sight just to 
+    #make sure the bubble filter works correctly
     test = sup*np.ones(yy_b1.shape)
     test[outside_rb_flag] = 0 
+    
+    #integrated along z/line of sight to get the 2D line of sight integral. Also missing it's dz term
     ip_b1 = -sup*np.sum(yy_b1, axis = -1) * 2.0 * XMpc / (me * 1000)
+
+    #plot stuff for diagnostics
     plt.imshow(ip_b1)
     plt.colorbar()
     plt.savefig('bubble.png')
     plt.close()
     plt.imshow(np.sum(test, axis = -1))
     plt.colorbar()
-    #print(test.tolist())
-    #print(np.sum(test, axis = ).tolist())
+
+ 
     plt.savefig('unweight_bubble.png')
     plt.close()
-    full_map = np.interp(full_rr, rmap, ip)    
+
     plt.imshow(full_map)
     plt.colorbar()
     plt.savefig('just_gnfw.png')
     plt.close() 
     print(np.amax(np.abs(full_map)), np.amax(np.abs(ip_b1)))
+    
+    #Add the bubble to the full 2d gnfw profile in the appropriate location. Note there is a small sub-pixel issue here:
+    #if the bubble center and the gnfw profile center are not an integer * dr separated, then the two grids will be offset
+    #by the remainder. This could be fixed but is likely not a huge issue. 
     full_map[int(full_map.shape[1]/2+int((-1*rb1-yb1)/dr)):int(full_map.shape[1]/2+int((rb1-yb1)/dr)),
                   int(full_map.shape[0]/2+int((-1*rb1+xb1)/dr)):int(full_map.shape[0]/2+int((rb1+xb1)/dr))] += ip_b1
     
     #full_map[int(full_map.shape[0]/2+int((-1*rb1+xb1-dr)/dr)):int(full_map.shape[0]/2+int((rb1+xb1+dr)/dr)),
     #             int(full_map.shape[1]/2+int((-1*rb1-yb1-dr)/dr)):int(full_map.shape[1]/2+int((rb1-yb1+dr)/dr))] += ip_b1
+    
+    #Not yet implemented, but would have to add the second bubble, which is essentially identical, as well as the 
+    #convolution with the beam
     #x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
     #beam = jnp.exp(-4 * np.log(2) * x ** 2 / fwhm ** 2)
     #beam = beam / jnp.sum(beam)
@@ -158,6 +188,9 @@ def _gnfw_bubble(
     #return rmap, full_map
     #test = sup*np.ones(rr_b1.shape)
     #test[outside_rb_flag] = 0
+
+    #Return the full 2d gnfw+bubble profile, as well as the grid points for interpolation. Tods would then be evaluated using 
+    #this interpolation, see e.g. conv_int_gnfw in luca_gnfw.py
     return rmap, full_map
 
 bound = 10*np.pi/(180*3600)
