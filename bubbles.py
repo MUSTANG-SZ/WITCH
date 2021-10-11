@@ -105,7 +105,7 @@ def _gnfw_bubble(
     full_rmap = np.arange(-1*r_map, r_map, dr) * (np.interp(z, dzline, daline))
     xx, yy = np.meshgrid(full_rmap, full_rmap)
     full_rr = np.sqrt(xx**2 + yy**2)
-    full_map = np.interp(full_rr, rmap, ip)
+    full_map = np.interp(full_rr, r_in_Mpc, ip)
 
 
 
