@@ -318,8 +318,10 @@ def conv_int_gnfw_elliptical(
     dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
     return jnp.interp(dr, rmap, ip, right=0.0)
 
-def conv_int_gnfw_bubbles(
-    x0, y0, P0, c500, alpha, beta, gamma, m500, bubbles,
+def conv_int_gnfw_two_bubbles(
+    x0, y0, P0, c500, alpha, beta, gamma, m500,
+    xb1, yb1, rb1, sup1,
+    xb2, yb2, rb2, sup2,
     xi,
     yi,
     z,
@@ -351,27 +353,37 @@ def conv_int_gnfw_bubbles(
     full_rr = np.sqrt(xx**2 + yy**2)
     ip = np.interp(full_rr, rmap*da, ip)
     
-    for b in bubbles:
-        xb1, yb1, rb1, sup = b
-            
-        ip_b = _gnfw_bubble(
-            x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup,
-            xi,
-            yi,
-            z,
-            max_R,
-            fwhm,
-            freq,
-            T_electron,
-            r_map,
-            dr,
-        )
+    ip_b = _gnfw_bubble(
+        x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1,
+        xi,
+        yi,
+        z,
+        max_R,
+        fwhm,
+        freq,
+        T_electron,
+        r_map,
+        dr,
+    )
 
-        #Add the bubble to the full 2d gnfw profile in the appropriate location. Note there is a small sub-pixel issue here:
-        #if the bubble center and the gnfw profile center are not an integer * dr separated, then the two grids will be offset
-        #by the remainder. This could be fixed but is likely not a huge issue. 
-        ip[int(full_map.shape[1]/2+int((-1*rb1-yb1)/dr)):int(full_map.shape[1]/2+int((rb1-yb1)/dr)),
-           int(full_map.shape[0]/2+int((-1*rb1+xb1)/dr)):int(full_map.shape[0]/2+int((rb1+xb1)/dr))] += ip_b
+    ip[int(full_map.shape[1]/2+int((-1*rb1-yb1)/dr)):int(full_map.shape[1]/2+int((rb1-yb1)/dr)),
+       int(full_map.shape[0]/2+int((-1*rb1+xb1)/dr)):int(full_map.shape[0]/2+int((rb1+xb1)/dr))] += ip_b
+    
+    ip_b = _gnfw_bubble(
+        x0, y0, P0, c500, alpha, beta, gamma, m500, xb2, yb2, rb2, sup2,
+        xi,
+        yi,
+        z,
+        max_R,
+        fwhm,
+        freq,
+        T_electron,
+        r_map,
+        dr,
+    )
+
+    ip[int(full_map.shape[1]/2+int((-1*rb1-yb1)/dr)):int(full_map.shape[1]/2+int((rb1-yb1)/dr)),
+       int(full_map.shape[0]/2+int((-1*rb1+xb1)/dr)):int(full_map.shape[0]/2+int((rb1+xb1)/dr))] += ip_b
 
     x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
     beam = jnp.exp(-4 * np.log(2) * x ** 2 / fwhm ** 2)
