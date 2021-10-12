@@ -317,6 +317,74 @@ def conv_int_gnfw_elliptical(
     dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
     return jnp.interp(dr, rmap, ip, right=0.0)
 
+def conv_int_gnfw_bubbles(
+    x0, y0, P0, c500, alpha, beta, gamma, m500, bubbles,
+    xi,
+    yi,
+    z,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.5,
+):
+    rmap, ip = _conv_int_gnfw(
+        x0, y0, P0, c500, alpha, beta, gamma, m500,
+        xi,
+        yi,
+        z,
+        max_R=max_R,
+        fwhm=fwhm,
+        freq=freq,
+        T_electron=T_electron,
+        r_map=r_map,
+        dr=dr,
+    )
+
+    da = np.interp(z, dzline, daline)  
+    
+    #Set up a 2d xy map which we will interpolate over to get the 2D gnfw pressure profile
+    full_rmap = np.arange(-1*r_map, r_map, dr) * da
+    xx, yy = np.meshgrid(full_rmap, full_rmap)
+    full_rr = np.sqrt(xx**2 + yy**2)
+    ip = np.interp(full_rr, r_in_Mpc, ip)
+    
+    for b in bubbles:
+        xb1, yb1, rb1, sup = b
+            
+        ip_b = _gnfw_bubble(
+            x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup,
+            xi,
+            yi,
+            z,
+            max_R,
+            fwhm,
+            freq,
+            T_electron,
+            r_map,
+            dr,
+        )
+
+        #Add the bubble to the full 2d gnfw profile in the appropriate location. Note there is a small sub-pixel issue here:
+        #if the bubble center and the gnfw profile center are not an integer * dr separated, then the two grids will be offset
+        #by the remainder. This could be fixed but is likely not a huge issue. 
+        ip[int(full_map.shape[1]/2+int((-1*rb1-yb1)/dr)):int(full_map.shape[1]/2+int((rb1-yb1)/dr)),
+           int(full_map.shape[0]/2+int((-1*rb1+xb1)/dr)):int(full_map.shape[0]/2+int((rb1+xb1)/dr))] += ip_b
+
+    x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
+    beam = jnp.exp(-4 * np.log(2) * x ** 2 / fwhm ** 2)
+    beam = beam / jnp.sum(beam)
+
+    ip = jnp.convolve(jnp.convolve(ip, beam, mode="same"), beam.T, mode='same')
+
+    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
+
+    dx = (xi - x0) * jnp.cos(yi)
+    dy = yi - y0
+    dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
+
+    return jnp.interp(dr, rmap, ip, right=0.0)
 
 # ---------------------------------------------------------------
 
