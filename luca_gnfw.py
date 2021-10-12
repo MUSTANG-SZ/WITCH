@@ -86,7 +86,7 @@ def _gnfw_bubble(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
 ):
     #A function for computing a gnfw+2 bubble model. The bubbles have pressure = b*P_gnfw, and are integrated along the line of sight
     #Inputs: 
@@ -170,7 +170,7 @@ def _conv_int_gnfw(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
 ):
     hz = jnp.interp(z, dzline, hzline)
     nz = jnp.interp(z, dzline, nzline)
@@ -222,7 +222,7 @@ def conv_int_gnfw(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
 ):
     rmap, ip = _conv_int_gnfw(
         x0, y0, P0, c500, alpha, beta, gamma, m500,
@@ -265,7 +265,7 @@ def conv_int_gnfw_elliptical(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
 ):
     """
     Modification of conv_int_gnfw that adds ellipticity
@@ -328,7 +328,7 @@ def conv_int_gnfw_bubbles(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
 ):
     rmap, ip = _conv_int_gnfw(
         x0, y0, P0, c500, alpha, beta, gamma, m500,
@@ -414,7 +414,7 @@ def val_conv_int_gnfw(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
 ):
     x0, y0, P0, c500, alpha, beta, gamma, m500 = p
     return conv_int_gnfw(
@@ -443,7 +443,7 @@ def jac_conv_int_gnfw_fwd(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
     argnums=(0, 1, 2, 3, 4, 5, 6, 7,)
 ):
     x0, y0, P0, c500, alpha, beta, gamma, m500 = p
@@ -480,7 +480,7 @@ def jit_conv_int_gnfw(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
     argnums=(0, 1, 2, 3, 4, 5, 6, 7,)
     ):
     x0, y0, P0, c500, alpha, beta, gamma, m500 = p
@@ -520,7 +520,7 @@ def jit_conv_int_gnfw_elliptical(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
     argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9,)
 ):
     e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500 = p
