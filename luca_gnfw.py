@@ -74,6 +74,88 @@ def y2K_RJ(freq, Te):
     factor = y2K_CMB(freq, Te)
     return factor * K_CMB2K_RJ(freq)
 
+# gNFW Bubble
+@jax.partial(jax.jit, static_argnums=(15, 16, 17, 18, 19, 20))
+def _gnfw_bubble(
+    x0, y0, P0, c500, alpha, beta, gamma, m500, xb, yb, rb, sup,
+    xi,
+    yi,
+    z,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+):
+    #A function for computing a gnfw+2 bubble model. The bubbles have pressure = b*P_gnfw, and are integrated along the line of sight
+    #Inputs: 
+    #    x0, y0 cluster center location
+    #    P0, c500, alpha, beta, gamma, m500 gnfw params
+    #    xb1, yb1, rb1: bubble location and radius for bubble
+    #    sup: the supression factor, refered to as b above
+    #    xi, yi: the xi, yi to evaluate at
+
+    #Outputs:
+    #    full_map, a 2D map of the sz signal from the gnfw_profile + 2 bubbles
+    hz = jnp.interp(z, dzline, hzline)
+    nz = jnp.interp(z, dzline, nzline)
+    da = jnp.interp(z, dzline, daline)
+
+    ap = 0.12
+
+    #calculate some relevant contstants
+    r500 = (m500 / (4.00 * np.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
+    P500 = (
+        1.65e-03
+        * (m500 / (3.00e14 / h70)) ** (2.00 / 3.00 + ap)
+        * hz ** (8.00 / 3.00)
+        * h70 ** 2
+    )
+
+    #Set up an r range at which to evaluate P_gnfw for interpolating the gnfw radial profile
+    dR = max_R / 2e3
+    r = jnp.arange(0.00, max_R, dR) + dR / 2.00
+
+    #Compute the pressure as a function of radius
+    x = r / r500
+    pressure = (
+        P500
+        * P0
+        / (
+            (c500 * x) ** gamma
+            * (1.00 + (c500 * x) ** alpha) ** ((beta - gamma) / alpha)
+        )
+    )
+
+    XMpc = Xthom * Mparsec
+    
+    #Make a grid, centered on xb1, yb1 and size rb1, with resolution dr, and convert to Mpc
+    x_b = jnp.arange(-1*rb+xb, rb+xb, dr) * da
+    y_b = jnp.arange(-1*rb-yb, rb-yb, dr) * da
+    z_b = jnp.arange(-1*rb, rb, dr) * da
+
+    xyz_b = jnp.meshgrid(x_b, y_b, z_b)
+
+    #Similar to above, make a 3d xyz cube with grid values = radius, and then interpolate with gnfw profile to get 3d gNFW profile
+    rr_b = jnp.sqrt(xyz_b[0]**2 + xyz_b[1]**2 + xyz_b[2]**2)
+    yy_b = jnp.interp(rr_b, r, pressure, right = 0.0) 
+
+    #Set up a grid of points for computing distance from bubble center
+    x_rb = jnp.linspace(-1,1, len(x_b))
+    y_rb = jnp.linspace(-1,1, len(y_b))
+    z_rb = jnp.linspace(-1,1, len(z_b))
+    rb_grid = jnp.meshgrid(x_rb, y_rb, z_rb)
+
+  
+    #Zero out points outside bubble
+    outside_rb_flag = jnp.sqrt(rb_grid[0]**2 + rb_grid[1]**2+rb_grid[2]**2) >=1    
+    yy_b[outside_rb_flag] = 0
+
+    #integrated along z/line of sight to get the 2D line of sight integral. Also missing it's dz term
+    ip_b = -sup*jnp.trapz(yy_b1, dx=dr*da, axis = -1) * XMpc / (me * 1000)
+
+    return ip_b
 
 # Beam-convolved gNFW profiel
 # --------------------------------------------------------
@@ -88,11 +170,12 @@ def _conv_int_gnfw(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
 ):
     hz = jnp.interp(z, dzline, hzline)
     nz = jnp.interp(z, dzline, nzline)
-
+    da = jnp.interp(z, dzline, daline)
+    
     ap = 0.12
 
     r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
@@ -117,25 +200,14 @@ def _conv_int_gnfw(
     )
 
     rmap = jnp.arange(1e-10, r_map, dr)
-    r_in_Mpc = rmap * (jnp.interp(z, dzline, daline))
+    r_in_Mpc = rmap * da
     rr = jnp.meshgrid(r_in_Mpc, r_in_Mpc)
     rr = jnp.sqrt(rr[0] ** 2 + rr[1] ** 2)
     yy = jnp.interp(rr, r, pressure, right=0.0)
 
     XMpc = Xthom * Mparsec
 
-    ip = jnp.sum(yy, axis=1) * 2.0 * XMpc / (me * 1000)
-
-    x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
-    beam = jnp.exp(-4 * np.log(2) * x ** 2 / fwhm ** 2)
-    beam = beam / jnp.sum(beam)
-
-    nx = x.shape[0] // 2 + 1
-
-    ipp = jnp.concatenate((ip[0:nx][::-1], ip))
-    ip = jnp.convolve(ipp, beam, mode="same")[nx:]
-
-    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
+    ip = jnp.trapz(yy, dx=dr*da, axis=-1) * 2.0 * XMpc / (me * 1000)
 
     return rmap, ip
 
@@ -150,7 +222,7 @@ def conv_int_gnfw(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
 ):
     rmap, ip = _conv_int_gnfw(
         x0, y0, P0, c500, alpha, beta, gamma, m500,
@@ -164,6 +236,17 @@ def conv_int_gnfw(
         r_map=r_map,
         dr=dr,
     )
+
+    x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
+    beam = jnp.exp(-4 * np.log(2) * x ** 2 / fwhm ** 2)
+    beam = beam / jnp.sum(beam)
+
+    nx = x.shape[0] // 2 + 1
+
+    ipp = jnp.concatenate((ip[0:nx][::-1], ip))
+    ip = jnp.convolve(ipp, beam, mode="same")[nx:]
+
+    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
 
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
@@ -182,7 +265,7 @@ def conv_int_gnfw_elliptical(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
 ):
     """
     Modification of conv_int_gnfw that adds ellipticity
@@ -212,6 +295,18 @@ def conv_int_gnfw_elliptical(
         r_map=r_map,
         dr=dr,
     )
+    
+    x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
+    beam = jnp.exp(-4 * np.log(2) * x ** 2 / fwhm ** 2)
+    beam = beam / jnp.sum(beam)
+
+    nx = x.shape[0] // 2 + 1
+
+    ipp = jnp.concatenate((ip[0:nx][::-1], ip))
+    ip = jnp.convolve(ipp, beam, mode="same")[nx:]
+
+    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
+
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
 
@@ -223,6 +318,86 @@ def conv_int_gnfw_elliptical(
     dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
     return jnp.interp(dr, rmap, ip, right=0.0)
 
+def conv_int_gnfw_two_bubbles(
+    x0, y0, P0, c500, alpha, beta, gamma, m500,
+    xb1, yb1, rb1, sup1,
+    xb2, yb2, rb2, sup2,
+    xi,
+    yi,
+    z,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+):
+    rmap, ip = _conv_int_gnfw(
+        x0, y0, P0, c500, alpha, beta, gamma, m500,
+        xi,
+        yi,
+        z,
+        max_R=max_R,
+        fwhm=fwhm,
+        freq=freq,
+        T_electron=T_electron,
+        r_map=r_map,
+        dr=dr,
+    )
+
+    da = np.interp(z, dzline, daline)  
+    
+    #Set up a 2d xy map which we will interpolate over to get the 2D gnfw pressure profile
+    full_rmap = np.arange(-1*r_map, r_map, dr) * da
+    xx, yy = np.meshgrid(full_rmap, full_rmap)
+    full_rr = np.sqrt(xx**2 + yy**2)
+    ip = np.interp(full_rr, rmap*da, ip)
+    
+    ip_b = _gnfw_bubble(
+        x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1,
+        xi,
+        yi,
+        z,
+        max_R,
+        fwhm,
+        freq,
+        T_electron,
+        r_map,
+        dr,
+    )
+
+    ip = jax.ops.index_add(ip, jax.ops.index[int(full_map.shape[1]/2+int((-1*rb1-yb1)/dr)):int(full_map.shape[1]/2+int((rb1-yb1)/dr)),
+       int(full_map.shape[0]/2+int((-1*rb1+xb1)/dr)):int(full_map.shape[0]/2+int((rb1+xb1)/dr))], ip_b)
+    
+    ip_b = _gnfw_bubble(
+        x0, y0, P0, c500, alpha, beta, gamma, m500, xb2, yb2, rb2, sup2,
+        xi,
+        yi,
+        z,
+        max_R,
+        fwhm,
+        freq,
+        T_electron,
+        r_map,
+        dr,
+    )
+
+    ip = jax.ops.index_add(ip, jax.ops.index[int(full_map.shape[1]/2+int((-1*rb1-yb1)/dr)):int(full_map.shape[1]/2+int((rb1-yb1)/dr)),
+       int(full_map.shape[0]/2+int((-1*rb1+xb1)/dr)):int(full_map.shape[0]/2+int((rb1+xb1)/dr))], ip_b)
+
+    x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
+    beam = jnp.exp(-4 * np.log(2) * x ** 2 / fwhm ** 2)
+    beam = beam / jnp.sum(beam)
+
+    ip = jnp.convolve(jnp.convolve(ip, beam, mode="same"), beam.T, mode='same')
+
+    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
+
+    dx = (xi - x0) * jnp.cos(yi)
+    dy = yi - y0
+    dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
+
+    return jnp.interp(dr, rmap, ip, right=0.0)
 
 # ---------------------------------------------------------------
 
@@ -251,7 +426,7 @@ def val_conv_int_gnfw(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
 ):
     x0, y0, P0, c500, alpha, beta, gamma, m500 = p
     return conv_int_gnfw(
@@ -280,7 +455,7 @@ def jac_conv_int_gnfw_fwd(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
     argnums=(0, 1, 2, 3, 4, 5, 6, 7,)
 ):
     x0, y0, P0, c500, alpha, beta, gamma, m500 = p
@@ -317,7 +492,7 @@ def jit_conv_int_gnfw(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
     argnums=(0, 1, 2, 3, 4, 5, 6, 7,)
     ):
     x0, y0, P0, c500, alpha, beta, gamma, m500 = p
@@ -357,7 +532,7 @@ def jit_conv_int_gnfw_elliptical(
     freq=90e9,
     T_electron=5.0,
     r_map=15.0 * 60,
-    dr=0.5,
+    dr=0.1,
     argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9,)
 ):
     e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500 = p
@@ -394,6 +569,44 @@ def jit_conv_int_gnfw_elliptical(
     return pred, grad
 
 
+@jax.partial(
+    jax.jit,
+    static_argnums=(
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+    ),
+)
+def jit_conv_int_gnfw_two_bubbles(
+    p,
+    tods,
+    z,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+    argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
+    ):
+    x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 = p
+    pred = conv_int_gnfw(
+        x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
+    )
+    grad = jax.jacfwd(conv_int_gnfw, argnums=argnums)(
+        x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
+    )
+    grad = jnp.array(grad)
+
+    if len(argnums) != len(p):
+        padded_grad = jnp.zeros(p.shape + grad[0].shape) + 1e-30
+        grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
+
+    return pred, grad
 def helper():
     return jit_conv_int_gnfw(pars, tods, 1.00)[0].block_until_ready()
 
