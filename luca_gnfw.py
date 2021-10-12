@@ -366,8 +366,8 @@ def conv_int_gnfw_two_bubbles(
         dr,
     )
 
-    ip[int(full_map.shape[1]/2+int((-1*rb1-yb1)/dr)):int(full_map.shape[1]/2+int((rb1-yb1)/dr)),
-       int(full_map.shape[0]/2+int((-1*rb1+xb1)/dr)):int(full_map.shape[0]/2+int((rb1+xb1)/dr))] += ip_b
+    ip = jax.ops.index_add(ip, jax.ops.index[int(full_map.shape[1]/2+int((-1*rb1-yb1)/dr)):int(full_map.shape[1]/2+int((rb1-yb1)/dr)),
+       int(full_map.shape[0]/2+int((-1*rb1+xb1)/dr)):int(full_map.shape[0]/2+int((rb1+xb1)/dr))], ip_b)
     
     ip_b = _gnfw_bubble(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb2, yb2, rb2, sup2,
@@ -382,8 +382,8 @@ def conv_int_gnfw_two_bubbles(
         dr,
     )
 
-    ip[int(full_map.shape[1]/2+int((-1*rb1-yb1)/dr)):int(full_map.shape[1]/2+int((rb1-yb1)/dr)),
-       int(full_map.shape[0]/2+int((-1*rb1+xb1)/dr)):int(full_map.shape[0]/2+int((rb1+xb1)/dr))] += ip_b
+    ip = jax.ops.index_add(ip, jax.ops.index[int(full_map.shape[1]/2+int((-1*rb1-yb1)/dr)):int(full_map.shape[1]/2+int((rb1-yb1)/dr)),
+       int(full_map.shape[0]/2+int((-1*rb1+xb1)/dr)):int(full_map.shape[0]/2+int((rb1+xb1)/dr))], ip_b)
 
     x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
     beam = jnp.exp(-4 * np.log(2) * x ** 2 / fwhm ** 2)
