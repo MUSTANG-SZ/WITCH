@@ -61,6 +61,7 @@ def _gnfw_bubble(
     #    full_map, a 2D map of the sz signal from the gnfw_profile + 2 bubbles
     hz = np.interp(z, dzline, hzline)
     nz = np.interp(z, dzline, nzline)
+    da = np.interp(z, dzline, daline)
 
     ap = 0.12
 
@@ -90,7 +91,7 @@ def _gnfw_bubble(
 
     #Set up 2D yz grid going out to the max radius of the map, with pixel size dr, and grid values = the radius from the center at that point
     rmap = np.arange(0, r_map, dr)
-    r_in_Mpc = rmap * (np.interp(z, dzline, daline))
+    r_in_Mpc = rmap * da 
     rr = np.meshgrid(r_in_Mpc, r_in_Mpc)
     rr = np.sqrt(rr[0] ** 2 + rr[1] ** 2)
 
@@ -99,16 +100,13 @@ def _gnfw_bubble(
     
     XMpc = Xthom * Mparsec
     #integrate along the z-axis/line of sight to obtain the radial gnfw pressure proflie. Note we're missing the dz term here
-    ip = np.sum(yy, axis=1) * 2.0 * XMpc / (me * 1000)
+    ip = np.trapz(yy, dx=dr*da, axis=-1) * 2.0 * XMpc / (me * 1000)
     
     #Set up a 2d xy map which we will interpolate over to get the 2D gnfw pressure profile
     full_rmap = np.arange(-1*r_map, r_map, dr) * (np.interp(z, dzline, daline))
     xx, yy = np.meshgrid(full_rmap, full_rmap)
     full_rr = np.sqrt(xx**2 + yy**2)
     full_map = np.interp(full_rr, r_in_Mpc, ip)
-
-
-
 
     #Make a grid, centered on xb1, yb1 and size rb1, with resolution dr, and convert to Mpc
     x_b1 = np.arange(-1*rb1+xb1, rb1+xb1, dr) * (np.interp(z, dzline, daline))
@@ -139,7 +137,7 @@ def _gnfw_bubble(
     test[outside_rb_flag] = 0 
     
     #integrated along z/line of sight to get the 2D line of sight integral. Also missing it's dz term
-    ip_b1 = -sup*np.sum(yy_b1, axis = -1) * 2.0 * XMpc / (me * 1000)
+    ip_b1 = -sup*np.trapz(yy_b1, dx=dr*da, axis = -1) * XMpc / (me * 1000)
 
     #plot stuff for diagnostics
     plt.imshow(ip_b1)
