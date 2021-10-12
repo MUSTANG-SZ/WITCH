@@ -173,7 +173,8 @@ def _conv_int_gnfw(
 ):
     hz = jnp.interp(z, dzline, hzline)
     nz = jnp.interp(z, dzline, nzline)
-
+    da = jnp.interp(z, dzline, daline)
+    
     ap = 0.12
 
     r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
@@ -198,14 +199,14 @@ def _conv_int_gnfw(
     )
 
     rmap = jnp.arange(1e-10, r_map, dr)
-    r_in_Mpc = rmap * (jnp.interp(z, dzline, daline))
+    r_in_Mpc = rmap * da
     rr = jnp.meshgrid(r_in_Mpc, r_in_Mpc)
     rr = jnp.sqrt(rr[0] ** 2 + rr[1] ** 2)
     yy = jnp.interp(rr, r, pressure, right=0.0)
 
     XMpc = Xthom * Mparsec
 
-    ip = jnp.sum(yy, axis=1) * 2.0 * XMpc / (me * 1000)
+    ip = jnp.trapz(yy, dx=dr*da, axis=-1) * 2.0 * XMpc / (me * 1000)
 
     x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
     beam = jnp.exp(-4 * np.log(2) * x ** 2 / fwhm ** 2)
