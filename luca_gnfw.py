@@ -208,17 +208,6 @@ def _conv_int_gnfw(
 
     ip = jnp.trapz(yy, dx=dr*da, axis=-1) * 2.0 * XMpc / (me * 1000)
 
-    x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
-    beam = jnp.exp(-4 * np.log(2) * x ** 2 / fwhm ** 2)
-    beam = beam / jnp.sum(beam)
-
-    nx = x.shape[0] // 2 + 1
-
-    ipp = jnp.concatenate((ip[0:nx][::-1], ip))
-    ip = jnp.convolve(ipp, beam, mode="same")[nx:]
-
-    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
-
     return rmap, ip
 
 
@@ -246,6 +235,17 @@ def conv_int_gnfw(
         r_map=r_map,
         dr=dr,
     )
+
+    x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
+    beam = jnp.exp(-4 * np.log(2) * x ** 2 / fwhm ** 2)
+    beam = beam / jnp.sum(beam)
+
+    nx = x.shape[0] // 2 + 1
+
+    ipp = jnp.concatenate((ip[0:nx][::-1], ip))
+    ip = jnp.convolve(ipp, beam, mode="same")[nx:]
+
+    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
 
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
@@ -294,6 +294,18 @@ def conv_int_gnfw_elliptical(
         r_map=r_map,
         dr=dr,
     )
+    
+    x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
+    beam = jnp.exp(-4 * np.log(2) * x ** 2 / fwhm ** 2)
+    beam = beam / jnp.sum(beam)
+
+    nx = x.shape[0] // 2 + 1
+
+    ipp = jnp.concatenate((ip[0:nx][::-1], ip))
+    ip = jnp.convolve(ipp, beam, mode="same")[nx:]
+
+    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
+
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
 
