@@ -349,7 +349,7 @@ def conv_int_gnfw_bubbles(
     full_rmap = np.arange(-1*r_map, r_map, dr) * da
     xx, yy = np.meshgrid(full_rmap, full_rmap)
     full_rr = np.sqrt(xx**2 + yy**2)
-    ip = np.interp(full_rr, r_in_Mpc, ip)
+    ip = np.interp(full_rr, rmap*da, ip)
     
     for b in bubbles:
         xb1, yb1, rb1, sup = b
