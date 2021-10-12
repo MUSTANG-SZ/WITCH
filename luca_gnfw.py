@@ -75,6 +75,7 @@ def y2K_RJ(freq, Te):
     return factor * K_CMB2K_RJ(freq)
 
 # gNFW Bubble
+@jax.partial(jax.jit, static_argnums=(15, 16, 17, 18, 19, 20))
 def _gnfw_bubble(
     x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup,
     xi,
@@ -97,9 +98,9 @@ def _gnfw_bubble(
 
     #Outputs:
     #    full_map, a 2D map of the sz signal from the gnfw_profile + 2 bubbles
-    hz = np.interp(z, dzline, hzline)
-    nz = np.interp(z, dzline, nzline)
-    da = np.interp(z, dzline, daline)
+    hz = jnp.interp(z, dzline, hzline)
+    nz = jnp.interp(z, dzline, nzline)
+    da = jnp.interp(z, dzline, daline)
 
     ap = 0.12
 
@@ -114,7 +115,7 @@ def _gnfw_bubble(
 
     #Set up an r range at which to evaluate P_gnfw for interpolating the gnfw radial profile
     dR = max_R / 2e3
-    r = np.arange(0.00, max_R, dR) + dR / 2.00
+    r = jnp.arange(0.00, max_R, dR) + dR / 2.00
 
     #Compute the pressure as a function of radius
     x = r / r500
@@ -130,29 +131,29 @@ def _gnfw_bubble(
     XMpc = Xthom * Mparsec
     
     #Make a grid, centered on xb1, yb1 and size rb1, with resolution dr, and convert to Mpc
-    x_b1 = np.arange(-1*rb1+xb1, rb1+xb1, dr) * (np.interp(z, dzline, daline))
-    y_b1 = np.arange(-1*rb1-yb1, rb1-yb1, dr) * (np.interp(z, dzline, daline))
-    z_b1 = np.arange(-1*rb1, rb1, dr) * (np.interp(z, dzline, daline))
+    x_b1 = jnp.arange(-1*rb1+xb1, rb1+xb1, dr) * (np.interp(z, dzline, daline))
+    y_b1 = jnp.arange(-1*rb1-yb1, rb1-yb1, dr) * (np.interp(z, dzline, daline))
+    z_b1 = jnp.arange(-1*rb1, rb1, dr) * (np.interp(z, dzline, daline))
 
-    xyz_b1 = np.meshgrid(x_b1, y_b1, z_b1)
+    xyz_b1 = jnp.meshgrid(x_b1, y_b1, z_b1)
 
     #Similar to above, make a 3d xyz cube with grid values = radius, and then interpolate with gnfw profile to get 3d gNFW profile
-    rr_b1 = np.sqrt(xyz_b1[0]**2 + xyz_b1[1]**2 + xyz_b1[2]**2)
-    yy_b1 = np.interp(rr_b1, r, pressure, right = 0.0) 
+    rr_b1 = jnp.sqrt(xyz_b1[0]**2 + xyz_b1[1]**2 + xyz_b1[2]**2)
+    yy_b1 = jnp.interp(rr_b1, r, pressure, right = 0.0) 
 
     #Set up a grid of points for computing distance from bubble center
-    x_rb = np.linspace(-1,1, len(x_b1))
-    y_rb = np.linspace(-1,1, len(y_b1))
-    z_rb = np.linspace(-1,1, len(z_b1))
-    rb_grid = np.meshgrid(x_rb, y_rb, z_rb)
+    x_rb = jnp.linspace(-1,1, len(x_b1))
+    y_rb = jnp.linspace(-1,1, len(y_b1))
+    z_rb = jnp.linspace(-1,1, len(z_b1))
+    rb_grid = jnp.meshgrid(x_rb, y_rb, z_rb)
 
   
     #Zero out points outside bubble
-    outside_rb_flag = np.sqrt(rb_grid[0]**2 + rb_grid[1]**2+rb_grid[2]**2) >=1    
+    outside_rb_flag = jnp.sqrt(rb_grid[0]**2 + rb_grid[1]**2+rb_grid[2]**2) >=1    
     yy_b1[outside_rb_flag] = 0
 
     #integrated along z/line of sight to get the 2D line of sight integral. Also missing it's dz term
-    ip_b1 = -sup*np.trapz(yy_b1, dx=dr*da, axis = -1) * XMpc / (me * 1000)
+    ip_b1 = -sup*jnp.trapz(yy_b1, dx=dr*da, axis = -1) * XMpc / (me * 1000)
 
     return ip_b1
 
