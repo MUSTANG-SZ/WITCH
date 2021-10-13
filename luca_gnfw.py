@@ -615,7 +615,7 @@ def jit_conv_int_gnfw_two_bubbles(
     T_electron=5.0,
     r_map=15.0 * 60,
     dr=0.1,
-    argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
+    argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
     ):
     
     x0, y0, P0, c500, alpha, beta, gamma, m500, sup1, sup2 = p
@@ -627,9 +627,11 @@ def jit_conv_int_gnfw_two_bubbles(
     )
     grad = jnp.array(grad)
 
-    if len(argnums) != len(p):
-        padded_grad = jnp.zeros(p.shape + grad[0].shape) + 1e-30
-        grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
+    padded_grad = jnp.zeros((len(p)+6, ) + grad[0].shape) + 1e-30
+    argnums = jnp.array(argnums)
+    argnums = jax.ops.index_add(argnums, jnp.where(argnums == 8), 3)
+    argnums = jax.ops.index_add(argnums, jnp.where(argnums == 9), 6)
+    grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
 
     return pred, grad
 def helper():
