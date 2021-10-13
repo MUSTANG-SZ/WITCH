@@ -157,7 +157,7 @@ def _gnfw_bubble(
     yy_b = jnp.where(jnp.sqrt(rb_grid[0]**2 + rb_grid[1]**2+rb_grid[2]**2) >=1, 0., yy_b)
 
     #integrated along z/line of sight to get the 2D line of sight integral. Also missing it's dz term
-    ip_b = -sup*jnp.trapz(yy_b, dx=dr*da, axis = -1) * XMpc / (me * 1000)
+    ip_b = -sup*jnp.trapz(yy_b, dx=dr*da, axis = -1) * XMpc / me
 
     return ip_b
 
@@ -211,7 +211,7 @@ def _conv_int_gnfw(
 
     XMpc = Xthom * Mparsec
 
-    ip = jnp.trapz(yy, dx=dr*da, axis=-1) * 2.0 * XMpc / (me * 1000)
+    ip = jnp.trapz(yy, dx=dr*da, axis=-1) * 2.0 * XMpc / me
 
     return rmap, ip
 
@@ -615,7 +615,7 @@ def jit_conv_int_gnfw_two_bubbles(
     T_electron=5.0,
     r_map=15.0 * 60,
     dr=0.1,
-    argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
+    argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
     ):
     
     x0, y0, P0, c500, alpha, beta, gamma, m500, sup1, sup2 = p
@@ -626,12 +626,18 @@ def jit_conv_int_gnfw_two_bubbles(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
     grad = jnp.array(grad)
-
-    if len(argnums) != len(p):
-        padded_grad = jnp.zeros(p.shape + grad[0].shape) + 1e-30
-        grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
+   
+    padded_grad = jnp.zeros((len(p)+6,) + grad[0].shape) + 1e-30
+    argnums = jnp.array(argnums)
+    grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
+    # Move sup factors to right place
+    grad = grad.at[11].set(grad.at[8].get())
+    grad = grad.at[15].set(grad.at[9].get())
+    grad = grad.at[8].set(0)
+    grad = grad.at[9].set(0)
 
     return pred, grad
+
 def helper():
     return jit_conv_int_gnfw(pars, tods, 1.00)[0].block_until_ready()
 
