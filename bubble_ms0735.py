@@ -12,6 +12,7 @@ from matplotlib import pyplot as plt
 from numpy.polynomial import Polynomial
 from functools import partial
 import scipy
+import os
 
 def helper(params, tod, z, to_fit):
     x = tod.info['dx']
@@ -76,7 +77,7 @@ nfft      = 1
 
 
 #find tod files we want to map
-outroot='/home/scratch/jscherer/mustang/MUSTANG2/Reductions/MS0735/'
+outroot='/home/scratch/'+os.environ['USER']+'/mustang/MUSTANG2/Reductions/MS0735/'
 
 #Load the most resent made folder starting with 'TS_'
 if myadj is None:
