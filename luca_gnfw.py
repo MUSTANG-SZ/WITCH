@@ -4,11 +4,13 @@ jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
 
 import jax.numpy as jnp
+import jax.scipy as jsp
 
 from astropy.cosmology import Planck15 as cosmo
 from astropy import constants as const
 from astropy import units as u
 
+import scipy as sp
 import numpy as np
 import timeit
 import time
@@ -75,7 +77,7 @@ def y2K_RJ(freq, Te):
     return factor * K_CMB2K_RJ(freq)
 
 # gNFW Bubble
-@jax.partial(jax.jit, static_argnums=(15, 16, 17, 18, 19, 20))
+@jax.partial(jax.jit, static_argnums=(8, 9 ,10, 15, 16, 17, 18, 19, 20))
 def _gnfw_bubble(
     x0, y0, P0, c500, alpha, beta, gamma, m500, xb, yb, rb, sup,
     xi,
@@ -149,11 +151,13 @@ def _gnfw_bubble(
 
   
     #Zero out points outside bubble
-    outside_rb_flag = jnp.sqrt(rb_grid[0]**2 + rb_grid[1]**2+rb_grid[2]**2) >=1    
-    yy_b[outside_rb_flag] = 0
+    #outside_rb_flag = jnp.sqrt(rb_grid[0]**2 + rb_grid[1]**2+rb_grid[2]**2) >=1    
+    #yy_b = jax.ops.index_update(yy_b, jax.ops.index[outside_rb_flag], 0.)
+
+    yy_b = jnp.where(jnp.sqrt(rb_grid[0]**2 + rb_grid[1]**2+rb_grid[2]**2) >=1, 0., yy_b)
 
     #integrated along z/line of sight to get the 2D line of sight integral. Also missing it's dz term
-    ip_b = -sup*jnp.trapz(yy_b1, dx=dr*da, axis = -1) * XMpc / (me * 1000)
+    ip_b = -sup*jnp.trapz(yy_b, dx=dr*da, axis = -1) * XMpc / (me * 1000)
 
     return ip_b
 
@@ -345,13 +349,13 @@ def conv_int_gnfw_two_bubbles(
         dr=dr,
     )
 
-    da = np.interp(z, dzline, daline)  
+    da = jnp.interp(z, dzline, daline)  
     
     #Set up a 2d xy map which we will interpolate over to get the 2D gnfw pressure profile
-    full_rmap = np.arange(-1*r_map, r_map, dr) * da
-    xx, yy = np.meshgrid(full_rmap, full_rmap)
-    full_rr = np.sqrt(xx**2 + yy**2)
-    ip = np.interp(full_rr, rmap*da, ip)
+    full_rmap = jnp.arange(-1*r_map, r_map, dr) * da
+    xx, yy = jnp.meshgrid(full_rmap, full_rmap)
+    full_rr = jnp.sqrt(xx**2 + yy**2)
+    ip = jnp.interp(full_rr, rmap*da, ip)
     
     ip_b = _gnfw_bubble(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1,
@@ -366,8 +370,8 @@ def conv_int_gnfw_two_bubbles(
         dr,
     )
 
-    ip = jax.ops.index_add(ip, jax.ops.index[int(full_map.shape[1]/2+int((-1*rb1-yb1)/dr)):int(full_map.shape[1]/2+int((rb1-yb1)/dr)),
-       int(full_map.shape[0]/2+int((-1*rb1+xb1)/dr)):int(full_map.shape[0]/2+int((rb1+xb1)/dr))], ip_b)
+    ip = jax.ops.index_add(ip, jax.ops.index[int(ip.shape[1]/2+int((-1*rb1-yb1)/dr)):int(ip.shape[1]/2+int((rb1-yb1)/dr)),
+       int(ip.shape[0]/2+int((-1*rb1+xb1)/dr)):int(ip.shape[0]/2+int((rb1+xb1)/dr))], ip_b)
     
     ip_b = _gnfw_bubble(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb2, yb2, rb2, sup2,
@@ -382,23 +386,33 @@ def conv_int_gnfw_two_bubbles(
         dr,
     )
 
-    ip = jax.ops.index_add(ip, jax.ops.index[int(full_map.shape[1]/2+int((-1*rb1-yb1)/dr)):int(full_map.shape[1]/2+int((rb1-yb1)/dr)),
-       int(full_map.shape[0]/2+int((-1*rb1+xb1)/dr)):int(full_map.shape[0]/2+int((rb1+xb1)/dr))], ip_b)
+    ip = jax.ops.index_add(ip, jax.ops.index[int(ip.shape[1]/2+int((-1*rb2-yb2)/dr)):int(ip.shape[1]/2+int((rb2-yb2)/dr)),
+       int(ip.shape[0]/2+int((-1*rb2+xb2)/dr)):int(ip.shape[0]/2+int((rb2+xb2)/dr))], ip_b)
 
     x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
-    beam = jnp.exp(-4 * np.log(2) * x ** 2 / fwhm ** 2)
+    beam_xx, beam_yy = jnp.meshgrid(x,x)
+    beam_rr = jnp.sqrt(beam_xx**2 + beam_yy**2)
+    beam = jnp.exp(-4 * jnp.log(2) * beam_rr ** 2 / fwhm ** 2)
     beam = beam / jnp.sum(beam)
 
-    ip = jnp.convolve(jnp.convolve(ip, beam, mode="same"), beam.T, mode='same')
+    #ip = jsp.signal.convolve(jsp.signal.convolve(ip, beam, mode="same"), beam.T, mode='same')
+    ip = jsp.signal.convolve2d(ip, beam, mode = 'same')
 
     ip = ip * y2K_RJ(freq=freq, Te=T_electron)
 
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
-    dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
-
-    return jnp.interp(dr, rmap, ip, right=0.0)
-
+    #dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
+    dx *= (180*60)/jnp.pi
+    dy *= (180*60)/jnp.pi
+    #Note this may  need to be changed for eliptical gnfws?
+    idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
+    print(dx)
+    print(r_map)
+    #return jsp.interpolate.interp2d(dr, full_rr, ip, right=0.0)
+    return jsp.ndimage.map_coordinates(ip, (idx,idy), order = 1) 
+    #return sp.interpolate.interp2d(xx, yy, ip)((dx,dy))
+    #return ip, ip_b
 # ---------------------------------------------------------------
 
 pars = jnp.array([0, 0, 1.0, 1.0, 1.5, 4.3, 0.7, 3e14])
@@ -594,10 +608,10 @@ def jit_conv_int_gnfw_two_bubbles(
     argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
     ):
     x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 = p
-    pred = conv_int_gnfw(
+    pred = conv_int_gnfw_two_bubbles(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
-    grad = jax.jacfwd(conv_int_gnfw, argnums=argnums)(
+    grad = jax.jacfwd(conv_int_gnfw_two_bubbles, argnums=argnums)(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
     grad = jnp.array(grad)
