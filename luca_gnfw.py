@@ -157,7 +157,7 @@ def _gnfw_bubble(
     yy_b = jnp.where(jnp.sqrt(rb_grid[0]**2 + rb_grid[1]**2+rb_grid[2]**2) >=1, 0., yy_b)
 
     #integrated along z/line of sight to get the 2D line of sight integral. Also missing it's dz term
-    ip_b = -sup*jnp.trapz(yy_b, dx=dr*da, axis = -1) * XMpc / (me * 1000)
+    ip_b = -sup*jnp.trapz(yy_b, dx=dr*da, axis = -1) * XMpc / me
 
     return ip_b
 
@@ -211,7 +211,7 @@ def _conv_int_gnfw(
 
     XMpc = Xthom * Mparsec
 
-    ip = jnp.trapz(yy, dx=dr*da, axis=-1) * 2.0 * XMpc / (me * 1000)
+    ip = jnp.trapz(yy, dx=dr*da, axis=-1) * 2.0 * XMpc / me
 
     return rmap, ip
 
