@@ -321,7 +321,8 @@ def conv_int_gnfw_elliptical(
 
     dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
     return jnp.interp(dr, rmap, ip, right=0.0)
-
+                                                                          
+#@jax.partial(jax.jit, static_argnums=(8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 23, 24))
 def conv_int_gnfw_two_bubbles(
     x0, y0, P0, c500, alpha, beta, gamma, m500,
     xb1, yb1, rb1, sup1,
@@ -395,24 +396,24 @@ def conv_int_gnfw_two_bubbles(
     beam = jnp.exp(-4 * jnp.log(2) * beam_rr ** 2 / fwhm ** 2)
     beam = beam / jnp.sum(beam)
 
-    #ip = jsp.signal.convolve(jsp.signal.convolve(ip, beam, mode="same"), beam.T, mode='same')
+
     ip = jsp.signal.convolve2d(ip, beam, mode = 'same')
 
     ip = ip * y2K_RJ(freq=freq, Te=T_electron)
 
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
-    #dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
-    dx *= (180*60)/jnp.pi
-    dy *= (180*60)/jnp.pi
+
+    dx *= (180*3600)/jnp.pi
+    dy *= (180*3600)/jnp.pi
     #Note this may  need to be changed for eliptical gnfws?
     idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
-    print(dx)
+    print(np.amax(dx))
     print(r_map)
-    #return jsp.interpolate.interp2d(dr, full_rr, ip, right=0.0)
+
     return jsp.ndimage.map_coordinates(ip, (idx,idy), order = 1) 
-    #return sp.interpolate.interp2d(xx, yy, ip)((dx,dy))
-    #return ip, ip_b
+
+
 # ---------------------------------------------------------------
 
 pars = jnp.array([0, 0, 1.0, 1.0, 1.5, 4.3, 0.7, 3e14])
@@ -586,6 +587,7 @@ def jit_conv_int_gnfw_elliptical(
 @jax.partial(
     jax.jit,
     static_argnums=(
+        2,
         3,
         4,
         5,
@@ -593,12 +595,20 @@ def jit_conv_int_gnfw_elliptical(
         7,
         8,
         9,
+        10,
+        11,
+        12,
+        13, 
+        14,
+        15
     ),
 )
 def jit_conv_int_gnfw_two_bubbles(
     p,
     tods,
     z,
+    xb1, yb1, rb1,
+    xb2, yb2, rb2,
     max_R=10.00,
     fwhm=9.0,
     freq=90e9,
@@ -607,7 +617,8 @@ def jit_conv_int_gnfw_two_bubbles(
     dr=0.1,
     argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
     ):
-    x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 = p
+    
+    x0, y0, P0, c500, alpha, beta, gamma, m500, sup1, sup2 = p
     pred = conv_int_gnfw_two_bubbles(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
