@@ -64,6 +64,17 @@ def y2K_CMB(freq,Te):
   factor = Y0+(Te/me)*(Y1+(Te/me)*(Y2+(Te/me)*(Y3+(Te/me)*Y4)))
   return factor*Tcmb
 
+# FFT Convolutions
+#-----------------------------------------------------------
+@jax.jit
+def fft_conv(image, kernel):
+    Fmap = jnp.fft.fft2(jnp.fft.fftshift(image))
+    Fkernel = jnp.fft.fft2(jnp.fft.fftshift(kernel))
+    convolved_map = jnp.fft.fftshift(jnp.real(jnp.fft.ifft2(Fmap*Fkernel)))
+
+    return convolved_map
+
+
 
 @jax.partial(jax.jit, static_argnums=(0,))
 def K_CMB2K_RJ(freq):
@@ -136,7 +147,7 @@ def _gnfw_bubble(
     x_b = jnp.arange(-1*rb+xb, rb+xb, dr) * da
     y_b = jnp.arange(-1*rb-yb, rb-yb, dr) * da
     z_b = jnp.arange(-1*rb, rb, dr) * da
-
+    
     xyz_b = jnp.meshgrid(x_b, y_b, z_b)
 
     #Similar to above, make a 3d xyz cube with grid values = radius, and then interpolate with gnfw profile to get 3d gNFW profile
@@ -322,7 +333,10 @@ def conv_int_gnfw_elliptical(
     dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
     return jnp.interp(dr, rmap, ip, right=0.0)
                                                                           
-#@jax.partial(jax.jit, static_argnums=(8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 23, 24))
+@jax.partial(
+    jax.jit, 
+    static_argnums=(8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 23, 24)
+)
 def conv_int_gnfw_two_bubbles(
     x0, y0, P0, c500, alpha, beta, gamma, m500,
     xb1, yb1, rb1, sup1,
@@ -389,6 +403,7 @@ def conv_int_gnfw_two_bubbles(
 
     ip = jax.ops.index_add(ip, jax.ops.index[int(ip.shape[1]/2+int((-1*rb2-yb2)/dr)):int(ip.shape[1]/2+int((rb2-yb2)/dr)),
        int(ip.shape[0]/2+int((-1*rb2+xb2)/dr)):int(ip.shape[0]/2+int((rb2+xb2)/dr))], ip_b)
+   
 
     x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
     beam_xx, beam_yy = jnp.meshgrid(x,x)
@@ -396,9 +411,13 @@ def conv_int_gnfw_two_bubbles(
     beam = jnp.exp(-4 * jnp.log(2) * beam_rr ** 2 / fwhm ** 2)
     beam = beam / jnp.sum(beam)
 
+    bound0, bound1 = int((ip.shape[0]-beam.shape[0])/2), int((ip.shape[1] - beam.shape[1])/2)
 
-    ip = jsp.signal.convolve2d(ip, beam, mode = 'same')
+    beam = jnp.pad(beam, ((bound0, bound0), (bound1, bound1)))
+ 
 
+    #ip = jsp.signal.convolve2d(ip, beam, mode = 'same')
+    ip = fft_conv(ip, beam)
     ip = ip * y2K_RJ(freq=freq, Te=T_electron)
 
     dx = (xi - x0) * jnp.cos(yi)
@@ -408,11 +427,22 @@ def conv_int_gnfw_two_bubbles(
     dy *= (180*3600)/jnp.pi
     #Note this may  need to be changed for eliptical gnfws?
     idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
-    print(np.amax(dx))
-    print(r_map)
+    #print('max idx: ',np.amax(idx))
+    #print('min idx: ',np.amin(idx))
+    #print('max idy: ', np.amax(idy))
+    #print('min idy: ', np.amin(idy))
+    #print(r_map)
+    #print(len(full_rmap))
+    return jsp.ndimage.map_coordinates(ip, (idx,idy), order = 0)#, ip 
+   
+   
+    #temp = np.meshgrid(jnp.arange(-1*r_map, r_map, dr), jnp.arange(-1*r_map, r_map, dr))
+    #print(np.arange(-1*r_map, r_map, dr).shape) 
+    #bound = 10*np.pi/(180*3600)
+    #x = np.linspace(-1*bound, bound, 200)
+    #y = np.linspace(-1*bound, bound, 200)
 
-    return jsp.ndimage.map_coordinates(ip, (idx,idy), order = 1) 
-
+    #return ip 
 
 # ---------------------------------------------------------------
 
@@ -585,7 +615,7 @@ def jit_conv_int_gnfw_elliptical(
 
 
 @jax.partial(
-    jax.jit,
+    jax.jit, 
     static_argnums=(
         2,
         3,
@@ -603,6 +633,7 @@ def jit_conv_int_gnfw_elliptical(
         15
     ),
 )
+
 def jit_conv_int_gnfw_two_bubbles(
     p,
     tods,
@@ -631,10 +662,10 @@ def jit_conv_int_gnfw_two_bubbles(
     argnums = jnp.array(argnums)
     grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
     # Move sup factors to right place
-    grad = grad.at[11].set(grad.at[8].get())
-    grad = grad.at[15].set(grad.at[9].get())
-    grad = grad.at[8].set(0)
-    grad = grad.at[9].set(0)
+    #grad = grad.at[11].set(grad.at[8].get())
+    #grad = grad.at[15].set(grad.at[9].get())
+    #grad = grad.at[8].set(0)
+    #grad = grad.at[9].set(0)
 
     return pred, grad
 
