@@ -333,10 +333,10 @@ def conv_int_gnfw_elliptical(
     dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
     return jnp.interp(dr, rmap, ip, right=0.0)
                                                                           
-@jax.partial(
-    jax.jit, 
-    static_argnums=(8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 23, 24)
-)
+#@jax.partial(
+#    jax.jit, 
+#    static_argnums=(8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 23, 24)
+#)
 def conv_int_gnfw_two_bubbles(
     x0, y0, P0, c500, alpha, beta, gamma, m500,
     xb1, yb1, rb1, sup1,
@@ -404,7 +404,7 @@ def conv_int_gnfw_two_bubbles(
     ip = jax.ops.index_add(ip, jax.ops.index[int(ip.shape[1]/2+int((-1*rb2-yb2)/dr)):int(ip.shape[1]/2+int((rb2-yb2)/dr)),
        int(ip.shape[0]/2+int((-1*rb2+xb2)/dr)):int(ip.shape[0]/2+int((rb2+xb2)/dr))], ip_b)
    
-
+   
     x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
     beam_xx, beam_yy = jnp.meshgrid(x,x)
     beam_rr = jnp.sqrt(beam_xx**2 + beam_yy**2)
@@ -412,8 +412,9 @@ def conv_int_gnfw_two_bubbles(
     beam = beam / jnp.sum(beam)
 
     bound0, bound1 = int((ip.shape[0]-beam.shape[0])/2), int((ip.shape[1] - beam.shape[1])/2)
+ 
 
-    beam = jnp.pad(beam, ((bound0, bound0), (bound1, bound1)))
+    beam = jnp.pad(beam, ((bound0, ip.shape[0]-beam.shape[0]-bound0), (bound1, ip.shape[1] - beam.shape[1] - bound1)))
  
 
     #ip = jsp.signal.convolve2d(ip, beam, mode = 'same')
@@ -613,7 +614,7 @@ def jit_conv_int_gnfw_elliptical(
 
     return pred, grad
 
-
+"""
 @jax.partial(
     jax.jit, 
     static_argnums=(
@@ -633,7 +634,7 @@ def jit_conv_int_gnfw_elliptical(
         15
     ),
 )
-
+"""
 def jit_conv_int_gnfw_two_bubbles(
     p,
     tods,
@@ -648,7 +649,7 @@ def jit_conv_int_gnfw_two_bubbles(
     dr=0.1,
     argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
     ):
-    
+   
     x0, y0, P0, c500, alpha, beta, gamma, m500, sup1, sup2 = p
     pred = conv_int_gnfw_two_bubbles(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
