@@ -4,7 +4,7 @@ import minkasi
 import jax
 import jax.numpy as jnp
 from minkasi_jax import  val_conv_int_gnfw, jit_potato_full, poly_sub
-from luca_gnfw import jit_conv_int_gnfw_elliptical, jit_conv_int_gnfw_two_bubbles, conv_int_gnfw_two_bubbles
+from luca_gnfw import jit_conv_int_gnfw_elliptical, conv_int_gnfw, jit_conv_int_gnfw_two_bubbles, conv_int_gnfw_two_bubbles
 import numpy as np
 from astropy.coordinates import Angle
 from astropy import units as u
@@ -13,6 +13,7 @@ from numpy.polynomial import Polynomial
 from functools import partial
 import scipy
 import os
+from matplotlib import pyplot as plt
 
 def helper(params, tod, z, to_fit):
     x = tod.info['dx']
@@ -22,15 +23,24 @@ def helper(params, tod, z, to_fit):
     xy = jnp.asarray(xy)
    
     xb1, yb1, rb1 = params[8:11]
-    print(xb1, yb1, rb1)
-    xb1, yb1, rb1 = params[12:15]
-    print(xb2, yb2, rb2)
+    #print(xb1, yb1, rb1)
+    xb2, yb2, rb2 = params[12:15]
+    #print(xb2, yb2, rb2)
 
-    params = np.delete(params, [[8,9,10, 12,13,14]])
-    print(params)
-    argnums = [i for i, p in enumerate(to_fit[:len(params)]) if p]
-    pred, derivs = jit_conv_int_gnfw_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, dr = 0.25, argnums = tuple(argnums))
     
+    #print(params)
+    argnums = np.array([i for i, p in enumerate(to_fit[:len(params)]) if p])
+    params = np.delete(params, [[8,9,10, 12,13,14]])
+  
+   
+    
+
+
+
+    
+    pred, derivs = jit_conv_int_gnfw_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = 15.0*60., dr = 0.5, argnums = tuple(argnums))
+    print('tod max: ', np.amax(pred)) 
+    print('d-sup1: ', np.amax(derivs[11]))
     return derivs, pred
 
 def potato_helper(params, tod):
@@ -114,7 +124,7 @@ tod_names=tod_names[minkasi.myrank::minkasi.nproc]
 tod_names.sort()
 for name in tod_names:
     print(name)
-tod_names=tod_names[:10]
+tod_names=tod_names[:48]
 
 todvec=minkasi.TodVec()
 
@@ -151,12 +161,13 @@ map=minkasi.SkyMap(lims,pixsize)
 #NFW Params
 #x0,y0,P0,c500,alpha,beta,gamma,m500
 ra = Angle('07 41 44.8 hours')
-dec = Angle('74:14:52 degrees')
+dec = Angle('74:14:38 degrees')
 ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
 gnfw_pars = np.array([1, 1., 0.,ra, dec,8.403, 1.177, 1.2223, 5.49, 0.7736,3.2e14])
 gnfw_labels = np.array(['x_scale', 'y_scale', 'theta', 'ra', 'dec', 'P500', 'c500', 'alpha', 'beta', 'gamma', 'm500'])
 
 ps_labels = np.array(['ra', 'dec', 'sigma', 'amp'])
+
 #Label nums:           11    12       13     14
 ps_pars = np.array([ra, dec, 3.8e-5,  4.2e-4])
 
@@ -180,7 +191,7 @@ for i, tod in enumerate(todvec.tods):
          pred = helper(gnfw_pars, temp_tod, z = z, to_fit = np.ones(len(gnfw_pars),dtype ='bool'))[1] + minkasi.derivs_from_gauss_c(ps_pars, temp_tod)[1]
 
 
-    print(tod.info['dat_calib'].shape)
+    #print(tod.info['dat_calib'].shape)
     ipix=map.get_pix(tod)
     tod.info['ipix']=ipix
     if sim:
@@ -251,6 +262,7 @@ if model_type == 'simon':
 
     #Cool Core
     gnfw_pars = np.array([ra, dec, 8.403, 1.177, 1.2223, 5.49, 0.7736,3.2e14])
+    #gnfw_pars = np.array([dec, ra, 8.403, 1.177, 1.2223, 5.49, 0.7736,3.2e14])
 
 if model_type == 'A10':
 
@@ -260,7 +272,7 @@ if model_type == 'A10':
 if model_type == 'simon':
 
     #Simon sims
-    gnfw_pars = np.array([ra, dec, 8.403, 1.177, 1.4063, 5.49, 0.3798,3.2e14])
+    gnfw_pars = np.array([ra, dec, 8.403, 1.177, 1.4063, 5.49, 0.3798,3.2e15])
 
 if model_type == 'best':
     #Best fit
@@ -274,8 +286,9 @@ ra_sw, dec_sw = ra_sw.to(u.radian).value, dec_sw.to(u.radian).value
 
 sw_labels = np.array(['sw ra', 'sw dec', 'radius', 'sup'])
 #Label nums:            8         9          10      11
-sw_pars = np.array([(ra-ra_sw)*r2arcsec, (dec-dec_sw)*r2arcsec, 0.5, 0.5])
-print(sw_pars)
+#sw_pars = np.array([int((ra-ra_sw)*r2arcsec*-1), int((dec-dec_sw)*r2arcsec), 30, 40])
+sw_pars = np.array([44, -5, 30, 1]) 
+#print(sw_pars)
 #North east bubble
 ra_ne = Angle('07 41 39 hours')
 dec_ne = Angle('74:13:51 degrees')       
@@ -283,8 +296,9 @@ ra_ne, dec_ne = ra_ne.to(u.radian).value, dec_ne.to(u.radian).value
 
 ne_labels = np.array(['ne ra', 'ne dec', 'radius', 'sup'])
 #Label nums:            12        13        14       15
-ne_pars = np.array([(ra-ra_ne)*r2arcsec, (dec-dec_ne)*r2arcsec, 0.5, 0.5])
-
+#ne_pars = np.array([int((ra-ra_ne)*r2arcsec*-1), int((dec-dec_ne)*r2arcsec), 30, 40])
+ne_pars = np.array([-47, 5, 30, 1])
+#print(ne_pars)
 #PS pars, currently just central
 ps_labels = np.array(['ra', 'dec', 'sigma', 'amp'])
 #Label nums:           16     17    18       19    
@@ -298,13 +312,42 @@ labels = np.hstack([gnfw_labels, sw_labels, ne_labels, ps_labels])
 #of the timestreams.
 
 to_fit=np.ones(len(pars),dtype='bool')
-to_fit[[2,3,4,5,8,9,10,12,13,14,16,17]]=False  #C500, beta fixed
+to_fit[[0,1,2,3,4,5,8,9,10,12,13,14,16,17]]=False  #C500, beta fixed
 
 x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 = pars[:int(npar[0])]
+#print(x0, y0)
 test = conv_int_gnfw_two_bubbles(
-        x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tod.info['dx'], tod.info['dy'], z=0.2, max_R=10., fwhm=9.0, freq=9039, T_electron=5, r_map=15.0*60.0, dr=0.25
+        x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tod.info['dx'], tod.info['dy'], z=0.2, max_R=10., fwhm=9.0, freq=90e9, T_electron=5, r_map=15.0*60.0, dr=0.5
+    )
+#print(np.amax(test))
+
+rmap =15
+dr = 0.5
+#print(np.amax(tod.info['dx']))
+x = (np.arange(-1*rmap*60, rmap*60, dr*2/3))*np.pi/(3600*180)+x0
+y = (np.arange(-1*rmap*60, rmap*60, dr*2/3))*np.pi/(3600*180)+y0
+
+xx, yy = np.meshgrid(x, y)
+
+test2 = conv_int_gnfw_two_bubbles(
+        x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , xx, yy, z=0.2, max_R=10., fwhm=9.0, freq=90e9, T_electron=5, r_map=15.0*60.0, dr=0.5
     )
 
+#print(np.amax(test2))
+plt.imshow(test2)
+plt.colorbar()
+plt.savefig('absurd_bubble.png')
+plt.close()
+
+#test_2 = conv_int_gnfw(x0, y0, P0, c500, alpha, beta, gamma, m500,tod.info['dx'], tod.info['dy'], z=0.2, max_R=10., fwhm=9.0, freq=9039, T_electron=5, r_map=15.0*60.0, dr=0.25)
+
+#print(test-test_2)
+#print(np.amax(test-test_2))
+
+#plt.imshow(test-test_2)
+#plt.colorbar()
+#plt.savefig('dif.png')
+#plt.close()
 funs = [partial(helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
 
 #for tod in todvec.tods:
@@ -320,7 +363,7 @@ fit = True
 if fit:
 
     t1=time.time()
-    pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 30)
+    pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 10)
     t2=time.time()
     if minkasi.myrank==0:
         print('took ',t2-t1,' seconds to fit timestreams')
@@ -358,7 +401,7 @@ for i, tod in enumerate(todvec.tods):
         if potato_helper in funs:
             pred = helper(pars_fit[:10], temp_tod, z = z, to_fit = to_fit)[1] + minkasi.derivs_from_gauss_c(pars_fit[11:14], temp_tod)[1] + potato_helper(pars_fit[14:], temp_tod)[1]
         else:
-            pred = helper(pars_fit[:10], temp_tod, z = z, to_fit = to_fit)[1] + minkasi.derivs_from_gauss_c(pars_fit[11:], temp_tod)[1]
+            pred = helper(pars_fit[:16], temp_tod, z = z, to_fit = to_fit)[1] + minkasi.derivs_from_gauss_c(pars_fit[16:], temp_tod)[1]
 
         tod.info['dat_calib'] = tod.info['dat_calib'] - np.array(pred)
         
