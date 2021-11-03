@@ -60,14 +60,14 @@ def poly(x, c0, c1, c2):
     return temp
 name = 'MS0735'
 myadj=None # If None, then it'll select the most recently made folder with string "TS_*"
-mydir='/home/scratch/cromero/mustang/MUSTANG2/Reductions/'+name+'/'
-
+#mydir='/home/scratch/cromero/mustang/MUSTANG2/Reductions/'+name+'/'
+#For niagara
+mydir='/scratch/r/rbond/jorlo/'+name+'/'
 #Some presets
 elxel     = False
 projstr='-'
 #projstr='-AGBT18A_175_07-'
 #projstr='-AGBT18A_175_06-'
-gpdir = '/home/scratch/cromero/mustang/MUSTANG2/Reductions/'+name+'/Minkasi/'
 tenc      = True     # Is the inner ring 10" in radius? (If False, then 5")
 widebins  = True    # Wide bins
 ultrawide = False     # Wide bins
@@ -83,7 +83,11 @@ nfft      = 1
 
 
 #find tod files we want to map
-outroot='/home/scratch/'+os.environ['USER']+'/mustang/MUSTANG2/Reductions/MS0735/'
+#for thales
+#outroot='/home/scratch/'+os.environ['USER']+'/mustang/MUSTANG2/Reductions/MS0735/'
+#for niagara
+outroot=os.environ['SCRATCH']+'/Reductions/MS0735/'
+
 
 #Load the most resent made folder starting with 'TS_'
 if myadj is None:
