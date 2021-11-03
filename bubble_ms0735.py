@@ -109,7 +109,7 @@ tod_names=glob.glob(tod_files)
 bad_tod,addtag = pbs.get_bad_tods(name,ndo=ndo,odo=odo)
 tod_names=minkasi.cut_blacklist(tod_names,bad_tod)
 tod_names.sort()
-tod_names=tod_names[:12]
+tod_names=tod_names[:]
 
 #if running MPI, you would want to split up files between processes
 #one easy way is to say to this:
@@ -225,13 +225,8 @@ ps_pars = np.array([ra, dec, 3.8e-5,  4.2e-4])
 
 
 #we can keep some parameters fixed at their input values if so desired.
-fit = True
-tod = todvec.tods[0]
-#to_fit = True*len(ps_pars)
-#test = minkasi.derivs_from_gauss_c(ps_pars, tod)
-test = minkasi.get_timestream_chisq_curve_deriv_from_func(minkasi.derivs_from_gauss_c, ps_pars, todvec, None)
-
-if fit:
+fit_gauss = True
+if fit_gauss:
     
     t1=time.time()
     ps_pars_fit,chisq=minkasi.fit_timestreams_with_derivs(minkasi.derivs_from_gauss_c,ps_pars,todvec, maxiter = 20)
@@ -297,28 +292,28 @@ to_fit[[0,1,2,3,4,5,8,9,10,12,13,14,16,17,18]]=False  #C500, beta fixed
 
 x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 = pars[:int(npar[0])]
 #print(x0, y0)
-test = conv_int_gnfw_two_bubbles(
-        x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tod.info['dx'], tod.info['dy'], z=0.2, max_R=10., fwhm=9.0, freq=90e9, T_electron=5, r_map=15.0*60.0, dr=0.5
-    )
+#test = conv_int_gnfw_two_bubbles(
+#        x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tod.info['dx'], tod.info['dy'], z=0.2, max_R=10., fwhm=9.0, freq=90e9, T_electron=5, r_map=15.0*60.0, dr=0.5
+#    )
 #print(np.amax(test))
 
-rmap =15
-dr = 0.5
+#rmap =15
+#dr = 0.5
 #print(np.amax(tod.info['dx']))
-x = (np.arange(-1*rmap*60, rmap*60, dr*2/3))*np.pi/(3600*180)+x0
-y = (np.arange(-1*rmap*60, rmap*60, dr*2/3))*np.pi/(3600*180)+y0
+#x = (np.arange(-1*rmap*60, rmap*60, dr*2/3))*np.pi/(3600*180)+x0
+#y = (np.arange(-1*rmap*60, rmap*60, dr*2/3))*np.pi/(3600*180)+y0
 
-xx, yy = np.meshgrid(x, y)
+#xx, yy = np.meshgrid(x, y)
 
-test2 = conv_int_gnfw_two_bubbles(
-        x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , xx, yy, z=0.2, max_R=10., fwhm=9.0, freq=90e9, T_electron=5, r_map=15.0*60.0, dr=0.5
-    )
+#test2 = conv_int_gnfw_two_bubbles(
+#        x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , xx, yy, z=0.2, max_R=10., fwhm=9.0, freq=90e9, T_electron=5, r_map=15.0*60.0, dr=0.5
+#    )
 
 #print(np.amax(test2))
-plt.imshow(test2)
-plt.colorbar()
-plt.savefig('absurd_bubble.png')
-plt.close()
+#plt.imshow(test2)
+#plt.colorbar()
+#plt.savefig('absurd_bubble.png')
+#plt.close()
 
 #test_2 = conv_int_gnfw(x0, y0, P0, c500, alpha, beta, gamma, m500,tod.info['dx'], tod.info['dy'], z=0.2, max_R=10., fwhm=9.0, freq=9039, T_electron=5, r_map=15.0*60.0, dr=0.25)
 
@@ -352,12 +347,12 @@ if speed_test:
 fit = True 
 
 if fit:
-    pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 1)
+    #pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 1)
     t1=time.time()
     print('starting actual fitting')
-    jax.profiler.start_trace('./tmp/tensorboard')
-    pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 20)
-    jax.profiler.stop_trace()
+    #jax.profiler.start_trace('./tmp/tensorboard')
+    pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 40)
+    #jax.profiler.stop_trace()
     t2=time.time()
     if minkasi.myrank==0:
         print('took ',t2-t1,' seconds to fit timestreams')
