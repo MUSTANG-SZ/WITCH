@@ -15,6 +15,8 @@ import scipy
 import os
 from matplotlib import pyplot as plt
 
+jax.config.update("jax_traceback_filtering", "off")
+
 def helper(params, tod, z, to_fit):
     x = tod.info['dx']
     y = tod.info['dy']
@@ -23,23 +25,17 @@ def helper(params, tod, z, to_fit):
     xy = jnp.asarray(xy)
    
     xb1, yb1, rb1 = params[8:11]
-    #print(xb1, yb1, rb1)
-    xb2, yb2, rb2 = params[12:15]
-    #print(xb2, yb2, rb2)
 
-    
+    xb2, yb2, rb2 = params[12:15]
+   
     #print(params)
     argnums = np.array([i for i, p in enumerate(to_fit[:len(params)]) if p])
+
     params = np.delete(params, [[8,9,10, 12,13,14]])
-  
-   
-    
+ 
 
-
-
-    
-    pred, derivs = jit_conv_int_gnfw_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = 15.0*60., dr = 0.5, argnums = tuple(argnums))
-    print('tod max: ', np.amax(pred)) 
+    pred, derivs = jit_conv_int_gnfw_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = 10.0*60., dr = 0.5, argnums = tuple(argnums))
+    print('tod max: ', np.amax(np.abs(pred))) 
     print('d-sup1: ', np.amax(derivs[11]))
     return derivs, pred
 
@@ -112,6 +108,8 @@ tod_names=glob.glob(tod_files)
 #cut bat tods
 bad_tod,addtag = pbs.get_bad_tods(name,ndo=ndo,odo=odo)
 tod_names=minkasi.cut_blacklist(tod_names,bad_tod)
+tod_names.sort()
+tod_names=tod_names[:12]
 
 #if running MPI, you would want to split up files between processes
 #one easy way is to say to this:
@@ -119,12 +117,12 @@ tod_names=tod_names[minkasi.myrank::minkasi.nproc]
 #NB - minkasi checks to see if MPI is around, if not
 #it sets rank to 0 an nproc to 1, so this would still
 #run in a non-MPI environment
-
+print('nproc: ', minkasi.nproc)
 #only look at first 25 tods here
-tod_names.sort()
-for name in tod_names:
-    print(name)
-tod_names=tod_names[:48]
+
+#for name in tod_names:
+#    print(name)
+
 
 todvec=minkasi.TodVec()
 
@@ -158,30 +156,12 @@ lims=todvec.lims()
 pixsize=2.0/3600*np.pi/180
 map=minkasi.SkyMap(lims,pixsize)
 
-#NFW Params
-#x0,y0,P0,c500,alpha,beta,gamma,m500
-ra = Angle('07 41 44.8 hours')
-dec = Angle('74:14:38 degrees')
-ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
-gnfw_pars = np.array([1, 1., 0.,ra, dec,8.403, 1.177, 1.2223, 5.49, 0.7736,3.2e14])
-gnfw_labels = np.array(['x_scale', 'y_scale', 'theta', 'ra', 'dec', 'P500', 'c500', 'alpha', 'beta', 'gamma', 'm500'])
-
-ps_labels = np.array(['ra', 'dec', 'sigma', 'amp'])
-
-#Label nums:           11    12       13     14
-ps_pars = np.array([ra, dec, 3.8e-5,  4.2e-4])
-
 
 d2r=np.pi/180
 sig=9/2.35/3600*d2r
 theta_0=40/3600*d2r
 
-
-iso_pars = np.array([ra, dec, theta_0,0.7,-7.2e-4])
-
-scale = 1
-#If sim = Ture, then the tods will be 'replaced' with the pure model output from helper
-sim = False 
+sim = False
 #If true, fit a polynomial to tods and remove
 sub_poly = True
 for i, tod in enumerate(todvec.tods):
@@ -215,25 +195,7 @@ for i, tod in enumerate(todvec.tods):
             #Using jax, not actually faster than scipy but maybe with parallelization or tcu's it is?
             #res = poly_sub(x, y) 
                       
-            tod.info['dat_calib'][j] -= poly(x, *res)
-            #fit, ax = plt.subplots()
-            #xs = np.linspace(min(x), max(x), 10000)
-            #plt.scatter(x,y, marker = '.', alpha = 0.1)                 
-            #plt.plot(xs, poly(xs, *res), '-r') 
-            #plt.ylim(-0.06, 0.06)
-            #textfit = '$f(x) = A + Bx + Cx^2$ \n' \
-            #  '$A = %.4f$  \n' \
-            #  '$B = %.4f$  \n' \
-            #  '$C = %.4f  \n' \
-            #  % (res[0], res[1], res[2])
-             
-            #props = dict(boxstyle='round', facecolor='wheat', alpha=0.5) 
-            #ax.text(0.05, .90, textfit, transform = ax.transAxes, fontsize=12, verticalalignment='top')
-
-            #plt.savefig(outroot + 'tod_plots/fit_tod_{}_det_{}.png'.format(i,j))
-            #plt.close()
-            
-
+            tod.info['dat_calib'][j] -= poly(x, *res)            
 
     print('mean is ',np.mean(tod.info['dat_calib']))
     tod.set_noise(minkasi.NoiseSmoothedSVD,fwhm=svdfwhm);tag='svd' 
@@ -246,13 +208,38 @@ d2r=np.pi/180
 sig=9/2.35/3600*d2r
 theta_0=40/3600*d2r
 
-r2arcsec = (3600*180)/np.pi
+
 
 #NFW Params
 #x0,y0,P0,c500,alpha,beta,gamma,m500
 ra = Angle('07 41 44.8 hours')
 dec = Angle('74:14:52 degrees')
 ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
+
+#First fit just the central ps
+#PS pars, currently just central
+ps_labels = np.array(['ra', 'dec', 'sigma', 'amp'])
+ps_pars = np.array([ra, dec, 3.8e-5,  4.2e-4])
+
+
+
+
+#we can keep some parameters fixed at their input values if so desired.
+fit = True
+tod = todvec.tods[0]
+#to_fit = True*len(ps_pars)
+#test = minkasi.derivs_from_gauss_c(ps_pars, tod)
+test = minkasi.get_timestream_chisq_curve_deriv_from_func(minkasi.derivs_from_gauss_c, ps_pars, todvec, None)
+
+if fit:
+    
+    t1=time.time()
+    ps_pars_fit,chisq=minkasi.fit_timestreams_with_derivs(minkasi.derivs_from_gauss_c,ps_pars,todvec, maxiter = 20)
+    t2=time.time()
+    if minkasi.myrank==0:
+        print('took ',t2-t1,' seconds to fit timestreams')
+        for i in range(len(ps_labels)):
+            print('parameter ',ps_labels[i],' is ', ps_pars_fit[i])
 
 gnfw_labels = np.array(['ra', 'dec', 'P500', 'c500', 'alpha', 'beta', 'gamma', 'm500'])
 #Label nums for ref:     0      1       2      3        4       5       6       7                 
@@ -286,9 +273,8 @@ ra_sw, dec_sw = ra_sw.to(u.radian).value, dec_sw.to(u.radian).value
 
 sw_labels = np.array(['sw ra', 'sw dec', 'radius', 'sup'])
 #Label nums:            8         9          10      11
-#sw_pars = np.array([int((ra-ra_sw)*r2arcsec*-1), int((dec-dec_sw)*r2arcsec), 30, 40])
 sw_pars = np.array([44, -5, 30, 1]) 
-#print(sw_pars)
+
 #North east bubble
 ra_ne = Angle('07 41 39 hours')
 dec_ne = Angle('74:13:51 degrees')       
@@ -296,13 +282,8 @@ ra_ne, dec_ne = ra_ne.to(u.radian).value, dec_ne.to(u.radian).value
 
 ne_labels = np.array(['ne ra', 'ne dec', 'radius', 'sup'])
 #Label nums:            12        13        14       15
-#ne_pars = np.array([int((ra-ra_ne)*r2arcsec*-1), int((dec-dec_ne)*r2arcsec), 30, 40])
 ne_pars = np.array([-47, 5, 30, 1])
-#print(ne_pars)
-#PS pars, currently just central
-ps_labels = np.array(['ra', 'dec', 'sigma', 'amp'])
-#Label nums:           16     17    18       19    
-ps_pars = np.array([ra, dec, 3.8e-5,  4.2e-4])
+
 
 #In case we want to later add more functions to the model
 pars = np.hstack([gnfw_pars,sw_pars, ne_pars, ps_pars])
@@ -312,7 +293,7 @@ labels = np.hstack([gnfw_labels, sw_labels, ne_labels, ps_labels])
 #of the timestreams.
 
 to_fit=np.ones(len(pars),dtype='bool')
-to_fit[[0,1,2,3,4,5,8,9,10,12,13,14,16,17]]=False  #C500, beta fixed
+to_fit[[0,1,2,3,4,5,8,9,10,12,13,14,16,17,18]]=False  #C500, beta fixed
 
 x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 = pars[:int(npar[0])]
 #print(x0, y0)
@@ -350,20 +331,33 @@ plt.close()
 #plt.close()
 funs = [partial(helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
 
-#for tod in todvec.tods:
-#    temp_tod = tod.copy()
-#    atmos = minkasi.tsAirmass(tod, n_atm)
-#    atmos.tod2map(tod, temp_tod.info['dat_calib'])
-#    print(atmos.params)
+#Hardcode funs
+
+#funs = [helper, minkasi.derivs_from_gauss_c]
 
 #we can keep some parameters fixed at their input values if so desired.
+speed_test = False 
+if speed_test:
+    partial(helper, z = z, to_fit = to_fit)(pars[:16], todvec.tods[0])
+    jax.profiler.start_trace('./tmp/tensorboard')
+    for i in range(5):
+        print(i)
+        t1=time.time()
+        partial(helper, z = z, to_fit = to_fit)(pars[:16], todvec.tods[0])
+        t2=time.time()
+        print('took ',t2-t1,' seconds to fit one tod')
+    jax.profiler.stop_trace()
+    #sys.exit()
+
 fit = True 
 
-
 if fit:
-
+    pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 1)
     t1=time.time()
-    pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 10)
+    print('starting actual fitting')
+    jax.profiler.start_trace('./tmp/tensorboard')
+    pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 20)
+    jax.profiler.stop_trace()
     t2=time.time()
     if minkasi.myrank==0:
         print('took ',t2-t1,' seconds to fit timestreams')
