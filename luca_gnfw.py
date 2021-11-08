@@ -614,7 +614,7 @@ def jit_conv_int_gnfw_elliptical(
 
     return pred, grad
 
-"""
+
 @jax.partial(
     jax.jit, 
     static_argnums=(
@@ -634,7 +634,7 @@ def jit_conv_int_gnfw_elliptical(
         15
     ),
 )
-"""
+
 def jit_conv_int_gnfw_two_bubbles(
     p,
     tods,
