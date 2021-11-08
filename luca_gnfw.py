@@ -404,11 +404,12 @@ def conv_int_gnfw_two_bubbles(
     ip = jax.ops.index_add(ip, jax.ops.index[int(ip.shape[1]/2+int((-1*rb2-yb2)/dr)):int(ip.shape[1]/2+int((rb2-yb2)/dr)),
        int(ip.shape[0]/2+int((-1*rb2+xb2)/dr)):int(ip.shape[0]/2+int((rb2+xb2)/dr))], ip_b)
    
-   
+    #Sum of two gaussians with amp1, fwhm1, amp2, fwhm2
+    amp1, fwhm1, amp2, fwhm2 = 9.735, 0.9808, 32.627, 0.0192 
     x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
     beam_xx, beam_yy = jnp.meshgrid(x,x)
     beam_rr = jnp.sqrt(beam_xx**2 + beam_yy**2)
-    beam = jnp.exp(-4 * jnp.log(2) * beam_rr ** 2 / fwhm ** 2)
+    beam = amp1*jnp.exp(-4 * jnp.log(2) * beam_rr ** 2 / fwhm1 ** 2) + amp2*jnp.exp(-4 * jnp.log(2) * beam_rr ** 2 / fwhm2 ** 2)
     beam = beam / jnp.sum(beam)
 
     bound0, bound1 = int((ip.shape[0]-beam.shape[0])/2), int((ip.shape[1] - beam.shape[1])/2)
