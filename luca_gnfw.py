@@ -332,7 +332,114 @@ def conv_int_gnfw_elliptical(
 
     dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
     return jnp.interp(dr, rmap, ip, right=0.0)
-                                                                          
+
+def conv_int_gnfw_elliptical_two_bubbles(
+    e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
+    xb1, yb1, rb1, sup1,
+    xb2, yb2, rb2, sup2,
+    xi,
+    yi,
+    z,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+):
+    '''
+    A hacky way of computing an eliptical gnfw + two bubble model. Currently computes a sphirically symmetric 
+    gnfw model, the stretches it to make it eliptical. Then bubbles computed using that sphirically symmetric
+    model are added at the right place. The issue here is that the profile under the bubbles is not the profile 
+    used to compute the bubbles due to the eliptical stretching. Still, hopefully it's close enough.
+    '''
+
+    rmap, ip = _conv_int_gnfw(
+        x0, y0, P0, c500, alpha, beta, gamma, m500,
+        xi,
+        yi,
+        z,
+        max_R=max_R,
+        fwhm=fwhm,
+        freq=freq,
+        T_electron=T_electron,
+        r_map=r_map,
+        dr = dr,
+    )
+
+    da = jnp.interp(z, dzline, daline)
+
+    #Set up a 2d xy map which we will interpolate over to get the 2D gnfw pressure profile
+    x = jnp.arange(-1*r_map, r_map, dr) * da
+    y = jnp.arange(-1*r_map, r_map, dr) * da
+   
+    _x = jnp.array(x, copy=True)
+    y = y / jnp.sqrt(1 - (abs(e)%1)**2)
+    x = x * jnp.cos(theta) + y * jnp.sin(theta)
+    y = -1 * _x *jnp.sin(theta) + y * jnp.cos(theta)
+
+    xx, yy = jnp.meshgrid(x, y)
+    full_rr = jnp.sqrt(xx**2 + yy**2)
+    ip = jnp.interp(full_rr, rmap*da, ip)
+
+    ip_b = _gnfw_bubble(
+        x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1,
+        xi,
+        yi,
+        z,
+        max_R,
+        fwhm,
+        freq,
+        T_electron,
+        r_map,
+        dr,
+    )
+
+    ip = jax.ops.index_add(ip, jax.ops.index[int(ip.shape[1]/2+int((-1*rb1-yb1)/dr)):int(ip.shape[1]/2+int((rb1-yb1)/dr)),
+       int(ip.shape[0]/2+int((-1*rb1+xb1)/dr)):int(ip.shape[0]/2+int((rb1+xb1)/dr))], ip_b)
+
+    ip_b = _gnfw_bubble(
+        x0, y0, P0, c500, alpha, beta, gamma, m500, xb2, yb2, rb2, sup2,
+        xi,
+        yi,
+        z,
+        max_R,
+        fwhm,
+        freq,
+        T_electron,
+        r_map,
+        dr,
+    )
+
+    ip = jax.ops.index_add(ip, jax.ops.index[int(ip.shape[1]/2+int((-1*rb2-yb2)/dr)):int(ip.shape[1]/2+int((rb2-yb2)/dr)),
+       int(ip.shape[0]/2+int((-1*rb2+xb2)/dr)):int(ip.shape[0]/2+int((rb2+xb2)/dr))], ip_b)
+
+    #Sum of two gaussians with amp1, fwhm1, amp2, fwhm2
+    amp1, fwhm1, amp2, fwhm2 = 9.735, 0.9808, 32.627, 0.0192
+    x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
+    beam_xx, beam_yy = jnp.meshgrid(x,x)
+    beam_rr = jnp.sqrt(beam_xx**2 + beam_yy**2)
+    beam = amp1*jnp.exp(-4 * jnp.log(2) * beam_rr ** 2 / fwhm1 ** 2) + amp2*jnp.exp(-4 * jnp.log(2) * beam_rr ** 2 / fwhm2 ** 2)
+    beam = beam / jnp.sum(beam)
+
+    bound0, bound1 = int((ip.shape[0]-beam.shape[0])/2), int((ip.shape[1] - beam.shape[1])/2)
+
+
+    beam = jnp.pad(beam, ((bound0, ip.shape[0]-beam.shape[0]-bound0), (bound1, ip.shape[1] - beam.shape[1] - bound1)))
+
+    ip = fft_conv(ip, beam)
+    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
+
+    dx = (xi - x0) * jnp.cos(yi)
+    dy = yi - y0
+
+    dx *= (180*3600)/jnp.pi
+    dy *= (180*3600)/jnp.pi
+
+    idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
+    return jsp.ndimage.map_coordinates(ip, (idx,idy), order = 0)#, ip
+
+                                                                      
 #@jax.partial(
 #    jax.jit, 
 #    static_argnums=(8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 23, 24)
@@ -670,6 +777,66 @@ def jit_conv_int_gnfw_two_bubbles(
     #grad = grad.at[9].set(0)
 
     return pred, grad
+
+@jax.partial(
+    jax.jit,
+    static_argnums=(
+        0
+        1,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+    ),
+)
+
+def jit_conv_int_gnfw_eliptical_two_bubbles(
+    e,
+    theta,
+    p,
+    tods,
+    z,
+    xb1, yb1, rb1,
+    xb2, yb2, rb2,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+    argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+    ):
+
+    x0, y0, P0, c500, alpha, beta, gamma, m500, sup1, sup2 = p
+    pred = conv_int_gnfw_two_bubbles(
+        e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
+    )
+    grad = jax.jacfwd(conv_int_gnfw_two_bubbles, argnums=argnums)(
+        e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
+    )
+    grad = jnp.array(grad)
+
+    padded_grad = jnp.zeros((len(p)+6,) + grad[0].shape) + 1e-30
+    argnums = jnp.array(argnums)
+    grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
+    # Move sup factors to right place
+    #grad = grad.at[11].set(grad.at[8].get())
+    #grad = grad.at[15].set(grad.at[9].get())
+    #grad = grad.at[8].set(0)
+    #grad = grad.at[9].set(0)
+
+    return pred, grad
+
 
 def helper():
     return jit_conv_int_gnfw(pars, tods, 1.00)[0].block_until_ready()
