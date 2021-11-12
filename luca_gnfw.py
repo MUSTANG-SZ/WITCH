@@ -439,7 +439,8 @@ def conv_int_gnfw_elliptical_two_bubbles(
     idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
     return jsp.ndimage.map_coordinates(ip, (idx,idy), order = 0)#, ip
 
-                                                                      
+
+                                                                     
 #@jax.partial(
 #    jax.jit, 
 #    static_argnums=(8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 23, 24)
