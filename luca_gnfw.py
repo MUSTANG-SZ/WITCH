@@ -653,13 +653,17 @@ def jit_conv_int_gnfw(
     pred = conv_int_gnfw(
         x0, y0, P0, c500, alpha, beta, gamma, m500, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
+
+    if len(argnums) == 0:
+        return pred, jnp.zeros(p.shape + pred.shape) + 1e-30
+
     grad = jax.jacfwd(conv_int_gnfw, argnums=argnums)(
         x0, y0, P0, c500, alpha, beta, gamma, m500, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
     grad = jnp.array(grad)
 
     if len(argnums) != len(p):
-        padded_grad = jnp.zeros(p.shape + grad[0].shape) + 1e-30
+        padded_grad = jnp.zeros(p.shape + pred.shape) + 1e-30
         grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
 
     return pred, grad
@@ -702,6 +706,10 @@ def jit_conv_int_gnfw_elliptical(
         r_map,
         dr,
     )
+
+    if len(argnums) == 0:
+        return pred, jnp.zeros(p.shape + pred.shape) + 1e-30
+
     grad = jax.jacfwd(conv_int_gnfw_elliptical, argnums=argnums)(
         e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
         tods[0],
@@ -717,7 +725,7 @@ def jit_conv_int_gnfw_elliptical(
     grad = jnp.array(grad)
 
     if len(argnums) != len(p):
-        padded_grad = jnp.zeros(p.shape + grad[0].shape) + 1e-30
+        padded_grad = jnp.zeros(p.shape + pred.shape) + 1e-30
         grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
 
     return pred, grad
@@ -762,19 +770,18 @@ def jit_conv_int_gnfw_two_bubbles(
     pred = conv_int_gnfw_two_bubbles(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
+    
+    if len(argnums) == 0:
+        return pred, jnp.zeros((len(p)+6,) + pred.shape) + 1e-30
+
     grad = jax.jacfwd(conv_int_gnfw_two_bubbles, argnums=argnums)(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
     grad = jnp.array(grad)
    
-    padded_grad = jnp.zeros((len(p)+6,) + grad[0].shape) + 1e-30
+    padded_grad = jnp.zeros((len(p)+6,) + pred.shape) + 1e-30
     argnums = jnp.array(argnums)
     grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
-    # Move sup factors to right place
-    #grad = grad.at[11].set(grad.at[8].get())
-    #grad = grad.at[15].set(grad.at[9].get())
-    #grad = grad.at[8].set(0)
-    #grad = grad.at[9].set(0)
 
     return pred, grad
 
