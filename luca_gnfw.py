@@ -15,6 +15,8 @@ import numpy as np
 import timeit
 import time
 
+from matplotlib import pyplot as plt
+
 # Constants
 # --------------------------------------------------------
 
@@ -269,6 +271,58 @@ def conv_int_gnfw(
 
     return jnp.interp(dr, rmap, ip, right=0.0)
 
+def _conv_int_gnfw_elliptical(
+    e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
+    xi,
+    yi,
+    z,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+):
+    """
+    Modification of conv_int_gnfw that adds ellipticity. This function does not include smoothing or declination stretch
+    which should be applied at the end
+   
+
+    Arguments:
+       Same as conv_int_gnfw except first 3 values of p are now:
+
+           e: Eccentricity, fixing the semimajor
+
+           theta: Angle to rotate profile by in radians
+
+       remaining args are the same as conv_int_gnfw
+
+    Returns:
+       Elliptical gnfw profile
+    """
+   
+
+    rmap, ip = _conv_int_gnfw(
+        x0, y0, P0, c500, alpha, beta, gamma, m500,
+        xi,
+        yi,
+        z,
+        max_R=max_R,
+        fwhm=fwhm,
+        freq=freq,
+        T_electron=T_electron,
+        r_map=r_map,
+        dr=dr,
+    )
+
+    dx = xi - x0
+    dy = yi-y0
+
+    dr = jnp.sqrt((dx*jnp.cos(theta) + dy * jnp.sin(theta))**2 + (dx * jnp.sin(theta) - dy * jnp.cos(theta))**2/(1-e**2)) * 180.0 / np.pi * 3600.0
+
+    return jnp.interp(dr, rmap, ip, right=0.0)
+
+
 
 def conv_int_gnfw_elliptical(
     e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
@@ -324,14 +378,18 @@ def conv_int_gnfw_elliptical(
 
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
-
-    _dx = jnp.array(dx, copy=True)
-    dy = dy / jnp.sqrt(1 - (abs(e)%1)**2)
-    dx = dx * jnp.cos(theta) + dy * jnp.sin(theta)
-    dy = -1 * _dx * jnp.sin(theta) + dy * jnp.cos(theta)
-
-    dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
+   
+    dr = np.sqrt((dx*jnp.cos(theta) + dy * jnp.sin(theta))**2 + (dx * jnp.sin(theta) - dy * jnp.cos(theta))**2/(1-e**2)) * 180.0 / np.pi * 3600.0
+    '''
+    plt.imshow(dr, origin='lower')
+    plt.colorbar()
+    plt.savefig('/scratch/r/rbond/jorlo/dr.png')
+    plt.close()
+    '''
+    
     return jnp.interp(dr, rmap, ip, right=0.0)
+
+
 
 def conv_int_gnfw_elliptical_two_bubbles(
     e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
@@ -353,7 +411,7 @@ def conv_int_gnfw_elliptical_two_bubbles(
     model are added at the right place. The issue here is that the profile under the bubbles is not the profile 
     used to compute the bubbles due to the eliptical stretching. Still, hopefully it's close enough.
     '''
-
+    ''' 
     rmap, ip = _conv_int_gnfw(
         x0, y0, P0, c500, alpha, beta, gamma, m500,
         xi,
@@ -366,10 +424,11 @@ def conv_int_gnfw_elliptical_two_bubbles(
         r_map=r_map,
         dr = dr,
     )
-
+    '''
     da = jnp.interp(z, dzline, daline)
-
+    #print(theta)
     #Set up a 2d xy map which we will interpolate over to get the 2D gnfw pressure profile
+    '''
     x = jnp.arange(-1*r_map, r_map, dr) * da
     y = jnp.arange(-1*r_map, r_map, dr) * da
    
@@ -377,10 +436,31 @@ def conv_int_gnfw_elliptical_two_bubbles(
     y = y / jnp.sqrt(1 - (abs(e)%1)**2)
     x = x * jnp.cos(theta) + y * jnp.sin(theta)
     y = -1 * _x *jnp.sin(theta) + y * jnp.cos(theta)
-
+    print('jorlo x', x)
     xx, yy = jnp.meshgrid(x, y)
     full_rr = jnp.sqrt(xx**2 + yy**2)
+  
+    plt.imshow(full_rr)
+    plt.colorbar()
+    plt.savefig('/scratch/r/rbond/jorlo/jorlo_dr.png')
+    
     ip = jnp.interp(full_rr, rmap*da, ip)
+    '''
+
+    #This might be inefficient?
+ 
+    ip = _conv_int_gnfw_elliptical(
+        e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
+        xi,
+        yi,
+        z,
+        max_R,
+        fwhm,
+        freq,
+        T_electron,
+        r_map,
+        dr,
+    )
 
     ip_b = _gnfw_bubble(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1,
@@ -428,16 +508,23 @@ def conv_int_gnfw_elliptical_two_bubbles(
     beam = jnp.pad(beam, ((bound0, ip.shape[0]-beam.shape[0]-bound0), (bound1, ip.shape[1] - beam.shape[1] - bound1)))
 
     ip = fft_conv(ip, beam)
-    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
-
+    ip = ip * y2K_RJ(freq=freq, Te=T_electron) 
+    
+    '''
+    plt.imshow(ip, origin='lower')
+    plt.savefig('/scratch/r/rbond/jorlo/ip_w_bubbles.png')
+    plt.close()
+    '''
+    
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
 
     dx *= (180*3600)/jnp.pi
     dy *= (180*3600)/jnp.pi
 
-    idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
-    return jsp.ndimage.map_coordinates(ip, (idx,idy), order = 0)#, ip
+    idx, idy = (dx + r_map)/(2*r_map)*ip.shape[0], (dy + r_map)/(2*r_map)*ip.shape[1]
+    
+    return jsp.ndimage.map_coordinates(ip, (idy,idx), order = 0)#, ip
 
 
                                                                      
@@ -789,7 +876,7 @@ def jit_conv_int_gnfw_two_bubbles(
 @jax.partial(
     jax.jit,
     static_argnums=(
-        0
+        0,
         1,
         4,
         5,
@@ -808,7 +895,7 @@ def jit_conv_int_gnfw_two_bubbles(
     ),
 )
 
-def jit_conv_int_gnfw_eliptical_two_bubbles(
+def jit_conv_int_gnfw_elliptical_two_bubbles(
     e,
     theta,
     p,
@@ -826,15 +913,15 @@ def jit_conv_int_gnfw_eliptical_two_bubbles(
     ):
 
     x0, y0, P0, c500, alpha, beta, gamma, m500, sup1, sup2 = p
-    pred = conv_int_gnfw_two_bubbles(
+    pred = conv_int_gnfw_elliptical_two_bubbles(
         e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
-    grad = jax.jacfwd(conv_int_gnfw_two_bubbles, argnums=argnums)(
+    grad = jax.jacfwd(conv_int_gnfw_elliptical_two_bubbles, argnums=argnums)(
         e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
     grad = jnp.array(grad)
 
-    padded_grad = jnp.zeros((len(p)+6,) + grad[0].shape) + 1e-30
+    padded_grad = jnp.zeros((len(p)+8,) + grad[0].shape) + 1e-30
     argnums = jnp.array(argnums)
     grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
     # Move sup factors to right place
