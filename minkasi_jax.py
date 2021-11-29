@@ -11,6 +11,8 @@ JAX_DEBUG_NANS = True
 from jax.config import config
 import jax.scipy.optimize as sopt
 
+from functools import partial
+
 config.update("jax_debug_nans", True)
 config.update("jax_enable_x64", True)
 #Todo: find some way to make this dynamic so you're not stuck using cpu if you have a gpu
@@ -19,6 +21,7 @@ jax.config.update('jax_platform_name','cpu')
 from astropy.cosmology import Planck15 as cosmo
 from astropy import constants as const
 from astropy import units as u
+
 
 
 def eliptical_gauss(p, x, y):
@@ -114,7 +117,7 @@ daline = jnp.array(daline.value)
 
 # Filtering
 # -------------------------------------------------------
-@jax.partial(jax.jit, static_argnums = (1,))
+@partial(jax.jit, static_argnums = (1,))
 def tod_hi_pass(tod, N_filt):
     #high pass filter a tod, with a tophat at N_filt
     mask = jnp.ones(tod.shape)
@@ -128,7 +131,7 @@ def tod_hi_pass(tod, N_filt):
 
 #ToD poly sub
 
-@jax.partial(jax.jit, static_argnums = (1,2,3))
+@partial(jax.jit, static_argnums = (1,2,3))
 def poly(x, c0, c1, c2):
     return c0+c1*x+c2*x**2
 
@@ -136,7 +139,7 @@ def poly(x, c0, c1, c2):
 
 # Compton y to Kcmb
 # --------------------------------------------------------
-@jax.partial(jax.jit, static_argnums = (0,1))
+@partial(jax.jit, static_argnums = (0,1))
 def y2K_CMB(freq,Te):
   #converts compton y to delta K_CMB. Includes relativistic corrections
   #Inputs: observation frequency, in Hz, electron temperature 
@@ -162,12 +165,12 @@ def y2K_CMB(freq,Te):
   factor = Y0+(Te/me)*(Y1+(Te/me)*(Y2+(Te/me)*(Y3+(Te/me)*Y4)))
   return factor*Tcmb
 
-@jax.partial(jax.jit,static_argnums=(0,))
+@partial(jax.jit,static_argnums=(0,))
 def K_CMB2K_RJ(freq):
   x = freq*h/kb/Tcmb
   return jnp.exp(x)*x*x/jnp.expm1(x)**2
 
-@jax.partial(jax.jit, static_argnums = (0,1))
+@partial(jax.jit, static_argnums = (0,1))
 def y2K_RJ(freq,Te):
   factor = y2K_CMB(freq,Te)
   return factor*K_CMB2K_RJ(freq)
@@ -260,15 +263,15 @@ pars = jnp.array([0,0,1.,1.,1.5,4.3,0.7,3e14])
 tods = jnp.array(np.random.rand(2,int(1e4)))
 
 #Some convenient functions for returning predictions, gradients, and predictions+gradients 
-@jax.partial(jax.jit,static_argnums=(3,4,5,6,7,8,))
+@partial(jax.jit,static_argnums=(3,4,5,6,7,8,))
 def val_conv_int_gnfw(p,tods,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=15.0*60,dr=0.5):
   return conv_int_gnfw(p,tods[0],tods[1],z,max_R,fwhm,freq,T_electron,r_map,dr)
 
-@jax.partial(jax.jit,static_argnums=(3,4,5,6,7,8,))
+@partial(jax.jit,static_argnums=(3,4,5,6,7,8,))
 def jac_conv_int_gnfw_fwd(p,tods,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=15.0*60,dr=0.5):
   return jax.jacfwd(conv_int_gnfw,argnums=0)(p,tods[0],tods[1],z,max_R,fwhm,freq,T_electron,r_map,dr)
 
-@jax.partial(jax.jit,static_argnums=(3,4,5,6,7,8,))
+@partial(jax.jit,static_argnums=(3,4,5,6,7,8,))
 def jit_conv_int_gnfw(p,tods,z,max_R=10.00,fwhm=9.,freq=90e9,T_electron=5.0,r_map=15.0*60,dr=0.5):
   pred = conv_int_gnfw(p,tods[0],tods[1],z,max_R,fwhm,freq,T_electron,r_map,dr)
   grad = jax.jacfwd(conv_int_gnfw,argnums=0)(p,tods[0],tods[1],z,max_R,fwhm,freq,T_electron,r_map,dr)
