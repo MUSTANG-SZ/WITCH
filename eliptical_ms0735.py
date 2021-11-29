@@ -143,9 +143,10 @@ for fname in tod_names:
 
     #figure out a guess at common mode #and (assumed) linear detector drifts/offset
     #drifts/offsets are removed, which is important for mode finding.  CM is *not* removed.
-    dd, pred2, cm = minkasi.fit_cm_plus_poly(dat['dat_calib'], full_out = True)
+    dd, pred2, cm = minkasi.fit_cm_plus_poly(dat['dat_calib'],cm_ord = 3, full_out = True)
 
     dat['dat_calib']=dd
+    dat['pred2'] = pred2
     dat['cm'] = cm
     t3=time.time()
     tod=minkasi.Tod(dat)
@@ -167,6 +168,7 @@ theta_0=40/3600*d2r
 sim = False
 #If true, fit a polynomial to tods and remove
 sub_poly = True 
+method = 'pred2'
 for i, tod in enumerate(todvec.tods):
 
     temp_tod = tod.copy()
@@ -191,7 +193,7 @@ for i, tod in enumerate(todvec.tods):
         nbin = 10
         #Fit a simple poly model to tods to remove atmosphere
         for j in range(tod.info['dat_calib'].shape[0]):
-            x, y =tod.info['apix'][j], tod.info['dat_calib'][j] - tod.info['cm']
+            x, y =tod.info['apix'][j], tod.info['dat_calib'][j] - tod.info[method]
             
             res, res_er = scipy.optimize.curve_fit(poly, x, y)
             
