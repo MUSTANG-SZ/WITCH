@@ -428,31 +428,36 @@ def conv_int_gnfw_elliptical_two_bubbles(
     da = jnp.interp(z, dzline, daline)
     #print(theta)
     #Set up a 2d xy map which we will interpolate over to get the 2D gnfw pressure profile
-    '''
-    x = jnp.arange(-1*r_map, r_map, dr) * da
-    y = jnp.arange(-1*r_map, r_map, dr) * da
-   
+    
+    x = jnp.arange(-1*r_map, r_map, dr) * jnp.pi / (180*3600)
+    y = jnp.arange(-1*r_map, r_map, dr) * jnp.pi / (180*3600) 
+    
+    #print(max(x)) 
+    
+    ''' 
     _x = jnp.array(x, copy=True)
     y = y / jnp.sqrt(1 - (abs(e)%1)**2)
     x = x * jnp.cos(theta) + y * jnp.sin(theta)
     y = -1 * _x *jnp.sin(theta) + y * jnp.cos(theta)
     print('jorlo x', x)
+    '''
     xx, yy = jnp.meshgrid(x, y)
-    full_rr = jnp.sqrt(xx**2 + yy**2)
-  
+    
+    '''
     plt.imshow(full_rr)
     plt.colorbar()
     plt.savefig('/scratch/r/rbond/jorlo/jorlo_dr.png')
-    
-    ip = jnp.interp(full_rr, rmap*da, ip)
     '''
 
+    
+   
+  
     #This might be inefficient?
  
     ip = _conv_int_gnfw_elliptical(
-        e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,
-        xi,
-        yi,
+        e, theta, 0., 0., P0, c500, alpha, beta, gamma, m500,
+        xx,
+        yy,
         z,
         max_R,
         fwhm,
@@ -462,6 +467,13 @@ def conv_int_gnfw_elliptical_two_bubbles(
         dr,
     )
 
+
+    '''
+    plt.imshow(ip)
+    plt.colorbar()
+    plt.savefig('/scratch/r/rbond/jorlo/ip.png')
+    plt.close()
+    '''
     ip_b = _gnfw_bubble(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1,
         xi,
@@ -518,11 +530,12 @@ def conv_int_gnfw_elliptical_two_bubbles(
     
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
-
+    
     dx *= (180*3600)/jnp.pi
     dy *= (180*3600)/jnp.pi
-
-    idx, idy = (dx + r_map)/(2*r_map)*ip.shape[0], (dy + r_map)/(2*r_map)*ip.shape[1]
+    full_rmap = jnp.arange(-1*r_map, r_map, dr) * da
+    
+    idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
     
     return jsp.ndimage.map_coordinates(ip, (idy,idx), order = 0)#, ip
 
@@ -558,7 +571,7 @@ def conv_int_gnfw_two_bubbles(
         r_map=r_map,
         dr=dr,
     )
-
+    
     da = jnp.interp(z, dzline, daline)  
     
     #Set up a 2d xy map which we will interpolate over to get the 2D gnfw pressure profile
@@ -913,6 +926,7 @@ def jit_conv_int_gnfw_elliptical_two_bubbles(
     ):
 
     x0, y0, P0, c500, alpha, beta, gamma, m500, sup1, sup2 = p
+
     pred = conv_int_gnfw_elliptical_two_bubbles(
         e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
