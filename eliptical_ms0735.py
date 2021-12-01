@@ -105,7 +105,7 @@ tod_names=minkasi.cut_blacklist(tod_names,bad_tod)
 tod_names.sort()
 # print(tod_names[147::160])
 # sys.stdout.flush()
-tod_names=tod_names[:]
+tod_names=tod_names[:120]
 
 #if running MPI, you would want to split up files between processes
 #one easy way is to say to this:
@@ -193,7 +193,7 @@ for i, tod in enumerate(todvec.tods):
         nbin = 10
         #Fit a simple poly model to tods to remove atmosphere
         for j in range(tod.info['dat_calib'].shape[0]):
-            x, y =tod.info['apix'][j], tod.info['dat_calib'][j] - tod.info[method]
+            x, y =tod.info['apix'][j], tod.info['dat_calib'][j] - tod.info[method][j]
             
             res, res_er = scipy.optimize.curve_fit(poly, x, y)
             
@@ -232,7 +232,7 @@ ps_pars = np.array([ra, dec, 1.37e-5,  1.7e-4])
 
 gnfw_labels = np.array(['e', 'theta','ra', 'dec', 'P500', 'c500', 'alpha', 'beta', 'gamma', 'm500'])
 #Label nums for ref:     0     1       2      3       4      5        6       7       8       9                 
-model_type = 'beta_ish'
+model_type = 'best'
 PS = True
 
 #Cluster Center
@@ -305,49 +305,6 @@ e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, 
         # x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tod.info['dx'], tod.info['dy'], z=0.2, max_R=10., fwhm=9.0, freq=90e9, T_electron=5, r_map=15.0*60.0, dr=0.5
     # )
 #print(np.amax(test))
-'''
-rmap =15
-dr = 0.5
-#print(np.amax(tod.info['dx']))
-x = (np.arange(-1*rmap*60, rmap*60, dr*2/3))*np.pi/(3600*180)+x0
-y = (np.arange(-1*rmap*60, rmap*60, dr*2/3))*np.pi/(3600*180)+y0
-
-xx, yy = np.meshgrid(x, y)
-
-test2 = conv_int_gnfw_elliptical_two_bubbles(
-         e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2, xx, yy, z=0.2, max_R=10., fwhm=9.0, freq=90e9, T_electron=5, r_map=15.0*60.0, dr=0.5
-    )
-
-print('bubble todmax, fake: ', np.amax(test2))
-plt.imshow(test2, origin='lower')
-plt.colorbar()
-plt.savefig('/scratch/r/rbond/jorlo/eliptical_bubble.png')
-plt.close()
-
-print('bubble todmax: ', np.amax(abs(conv_int_gnfw_elliptical_two_bubbles(
-         e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2, tod.info['dx'], tod.info['dy'], z=0.2, max_R=10., fwhm=9.0, freq=90e9, T_electron=5, r_map=15.0*60.0, dr=0.5
-    )
-)))
-
-
-print('no bubble todmax: ', np.amax(abs(conv_int_gnfw_elliptical(e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500,tod.info['dx'], tod.info['dy'], z=0.2, max_R=10., fwhm=9.0, freq=90e9, T_electron=5, r_map=15.0*60.0, dr=0.5))))
-#test_2 = conv_int_gnfw(x0, y0, P0, c500, alpha, beta, gamma, m500,tod.info['dx'], tod.info['dy'], z=0.2, max_R=10., fwhm=9.0, freq=9039, T_electron=5, r_map=15.0*60.0, dr=0.25)
-
-test3 = conv_int_gnfw_elliptical(
-    e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500, xx, yy, z=0.2, max_R=10., fwhm=9.0, freq=90e9, T_electron=5, r_map=15.0*60.0, dr=0.5
-    )
-
-
-plt.imshow(test3, origin='lower')
-plt.colorbar()
-plt.savefig('/scratch/r/rbond/jorlo/eliptical_saianeesh.png')
-plt.close()
-
-plt.imshow(test2-test3, origin='lower')
-plt.colorbar()
-plt.savefig('/scratch/r/rbond/jorlo/diff.png')
-plt.close()
-'''
 
 #print(test-test_2)
 #print(np.amax(test-test_2))
@@ -376,7 +333,7 @@ funs = [partial(helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
     # jax.profiler.stop_trace()
     #sys.exit()
 
-fit = True 
+fit = False 
 
 if fit:
     # pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 1)
@@ -414,7 +371,7 @@ minkasi.comm.barrier()
 if fit:
     dic = {'pars':pars_fit, 'chisq':chisq, 'curve':curve, 'errs':errs}
 
-remove_bowl = True
+remove_bowl = False
 
 if remove_bowl:
     #Remove model from TODs
@@ -491,7 +448,7 @@ for i in range(len(labels)):
 if sim:
     outroot += 'sim_'
 if sub_poly:
-    outroot += 'poly_sub_'
+    outroot += 'poly_sub_'+str(method)+'_'
 if resid:
     outroot += 'resid_'
 else:
