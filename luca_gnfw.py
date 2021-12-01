@@ -111,7 +111,7 @@ def bowl(
     dy = yi - y0
     dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
 
-    pred = 
+    pred = 0
 
 # gNFW Bubble
 @jax.partial(jax.jit, static_argnums=(8, 9 ,10, 15, 16, 17, 18, 19, 20))
