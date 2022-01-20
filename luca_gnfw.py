@@ -170,9 +170,12 @@ def _gnfw_bubble(
     XMpc = Xthom * Mparsec
     
     #Make a grid, centered on xb1, yb1 and size rb1, with resolution dr, and convert to Mpc
-    x_b = jnp.arange(-1*rb+xb, rb+xb, dr) * da
-    y_b = jnp.arange(-1*rb-yb, rb-yb, dr) * da
-    z_b = jnp.arange(-1*rb, rb, dr) * da
+    # x_b = jnp.arange(-1*rb+xb, rb+xb, dr) * da
+    # y_b = jnp.arange(-1*rb-yb, rb-yb, dr) * da
+    # z_b = jnp.arange(-1*rb, rb, dr) * da
+    x_b = jnp.linspace(-1*rb+xb, rb+xb, 2*int(rb/dr)) * da
+    y_b = jnp.linspace(-1*rb-yb, rb-yb, 2*int(rb/dr)) * da
+    z_b = jnp.linspace(-1*rb, rb, 2*int(rb/dr)) * da
     
     xyz_b = jnp.meshgrid(x_b, y_b, z_b)
 
@@ -510,9 +513,9 @@ def conv_int_gnfw_elliptical_two_bubbles(
         r_map,
         dr,
     )
-
-    ip = jax.ops.index_add(ip, jax.ops.index[int(ip.shape[1]/2+int((-1*rb1-yb1)/dr)):int(ip.shape[1]/2+int((rb1-yb1)/dr)),
-       int(ip.shape[0]/2+int((-1*rb1+xb1)/dr)):int(ip.shape[0]/2+int((rb1+xb1)/dr))], ip_b)
+    
+    idx = jax.ops.index[(int(ip.shape[1]/2)-int(rb1/dr)-int(yb1/dr)):(int(ip.shape[1]/2)+int(rb1/dr)-int(yb1/dr)), (int(ip.shape[0]/2)-int(rb1/dr)+int(xb1/dr)):(int(ip.shape[0]/2)+int(rb1/dr)+int(xb1/dr))]
+    ip = jax.ops.index_add(ip, idx, ip_b)
 
     ip_b = _gnfw_bubble(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb2, yb2, rb2, sup2,
@@ -527,8 +530,8 @@ def conv_int_gnfw_elliptical_two_bubbles(
         dr,
     )
 
-    ip = jax.ops.index_add(ip, jax.ops.index[int(ip.shape[1]/2+int((-1*rb2-yb2)/dr)):int(ip.shape[1]/2+int((rb2-yb2)/dr)),
-       int(ip.shape[0]/2+int((-1*rb2+xb2)/dr)):int(ip.shape[0]/2+int((rb2+xb2)/dr))], ip_b)
+    idx = jax.ops.index[(int(ip.shape[1]/2)-int(rb2/dr)-int(yb2/dr)):(int(ip.shape[1]/2)+int(rb2/dr)-int(yb2/dr)), (int(ip.shape[0]/2)-int(rb2/dr)+int(xb2/dr)):(int(ip.shape[0]/2)+int(rb2/dr)+int(xb2/dr))]
+    ip = jax.ops.index_add(ip, idx, ip_b)
 
     #Sum of two gaussians with amp1, fwhm1, amp2, fwhm2
     amp1, fwhm1, amp2, fwhm2 = 9.735, 0.9808, 32.627, 0.0192
@@ -954,6 +957,10 @@ def jit_conv_int_gnfw_elliptical_two_bubbles(
     pred = conv_int_gnfw_elliptical_two_bubbles(
         e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
+    
+    if len(argnums) == 0:
+        return pred, jnp.zeros((len(p)+6,) + pred.shape) + 1e-30
+
     grad = jax.jacfwd(conv_int_gnfw_elliptical_two_bubbles, argnums=argnums)(
         e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
