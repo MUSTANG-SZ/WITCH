@@ -681,6 +681,228 @@ def conv_int_gnfw_two_bubbles(
 
     #return ip 
 
+@jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
+def _isobeta_elliptical(
+    x0, y0, r_1, r_2, r_3, theta, beta, amp,
+    xi,
+    yi,
+    z,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+):
+    """
+    Elliptical isobeta pressure profile
+    This function does not include smoothing or declination stretch
+    which should be applied at the end
+    """
+    da = jnp.interp(z, dzline, daline)
+    
+    # Make grid centered on x0, y0 with resolution dr and size r_map and convert to Mpc
+    x = jnp.linspace(-1*r_map+x0, r_map+x0, 2*int(r_map/dr)) * da
+    y = jnp.linspace(-1*r_map-y0, r_map-y0, 2*int(r_map/dr)) * da
+    z = jnp.linspace(-1*r_map, r_map, 2*int(r_map/dr)) * da
+    xyz = jnp.meshgrid(x, y, z)
+    
+    # Rotate
+    xx = xyz[0]*jnp.cos(theta) + xyz[1]*jnp.sin(theta)
+    yy = xyz[1]*jnp.cos(theta) - xyz[0]*jnp.sin(theta)
+    zz = xyz[2]
+
+    # Apply ellipticity
+    xfac = (xx/r_1)**2
+    yfac = (yy/r_2)**2
+    zfac = (zz/r_3)**2
+
+    # Calculate pressure profile
+    rr = 1 + xfac + yfac + zfac
+    power = -1.5*beta    
+    rrpow = rr**power
+
+    return amp*rrpow
+
+@jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
+def _int_isobeta_elliptical(
+    x0, y0, r_1, r_2, r_3, theta, beta, amp,
+    xi,
+    yi,
+    z,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+):
+    """
+    Elliptical isobeta
+    This function does not include smoothing or declination stretch
+    which should be applied at the end
+    """
+    da = jnp.interp(z, dzline, daline)
+    XMpc = Xthom * Mparsec
+
+    pressure = _isobeta_elliptical(
+        x0, y0, r_1, r_2, r_3, theta, beta, amp,
+        xi,
+        yi,
+        z,
+        max_R,
+        fwhm,
+        freq,
+        T_electron,
+        r_map,
+        dr,
+    )
+    
+    # Integrate line of sight pressure
+    return jnp.trapz(pressure, dx=dr*da, axis=-1) * XMpc / me
+
+
+@jax.partial(jax.jit, static_argnums=(8, 9, 10, 15, 16, 17, 18, 19, 20))
+def _isobeta_bubble(
+    x0, y0, r_1, r_2, r_3, theta, beta, amp, xb, yb, rb, sup,
+    xi,
+    yi,
+    z,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+):
+    da = jnp.interp(z, dzline, daline)
+    XMpc = Xthom * Mparsec
+
+    pressure = _isobeta_elliptical(
+        x0, y0, r_1, r_2, r_3, theta, beta, amp,
+        xi,
+        yi,
+        z,
+        max_R,
+        fwhm,
+        freq,
+        T_electron,
+        r_map,
+        dr,
+    )
+    print(pressure.shape)
+    # Get grid of pressure centered on bubble center of size 2*rb on each axis
+    idx = jax.ops.index[(int(pressure.shape[0]/2)-int(rb/dr)-int(xb/dr)):(int(pressure.shape[0]/2)+int(rb/dr)-int(xb/dr)), (int(pressure.shape[1]/2)-int(rb/dr)-int(yb/dr)):(int(pressure.shape[1]/2)+int(rb/dr)-int(yb/dr)), (int(pressure.shape[2]/2) - int(rb/dr)):(int(pressure.shape[2]/2) + int(rb/dr))]
+    yy_b = pressure.at[idx].get()
+
+    #Set up a grid of points for computing distance from bubble center
+    x_rb = jnp.linspace(-1,1, yy_b.shape[0])
+    y_rb = jnp.linspace(-1,1, yy_b.shape[1])
+    z_rb = jnp.linspace(-1,1, yy_b.shape[2])
+    rb_grid = jnp.meshgrid(x_rb, y_rb, z_rb)
+
+    print(yy_b.shape)
+    print(idx)
+    #Zero out points outside bubble
+    yy_b = jnp.where(jnp.sqrt(rb_grid[0]**2 + rb_grid[1]**2+rb_grid[2]**2) >=1, 0., yy_b)
+    #integrated along z/line of sight to get the 2D line of sight integral. Also missing it's dz term
+    ip_b = -sup*jnp.trapz(yy_b, dx=dr*da, axis = -1) * XMpc / me
+
+    return ip_b
+
+
+def conv_int_isobeta_elliptical_two_bubbles(
+    x0, y0, r_1, r_2, r_3, theta, beta, amp,
+    xb1, yb1, rb1, sup1,
+    xb2, yb2, rb2, sup2,
+    xi,
+    yi,
+    z,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+):
+    da = jnp.interp(z, dzline, daline)
+    #print(theta)
+    #Set up a 2d xy map which we will interpolate over to get the 2D gnfw pressure profile
+    
+    ip = _int_isobeta_elliptical(
+        x0, y0, r_1, r_2, r_3, theta, beta, amp,
+        xi,
+        yi,
+        z,
+        max_R,
+        fwhm,
+        freq,
+        T_electron,
+        r_map,
+        dr,
+    )
+
+    ip_b = _isobeta_bubble(
+        x0, y0, r_1, r_2, r_3, theta, beta, amp, xb1, yb1, rb1, sup1,
+        xi,
+        yi,
+        z,
+        max_R=10.00,
+        fwhm=9.0,
+        freq=90e9,
+        T_electron=5.0,
+        r_map=15.0 * 60,
+        dr=0.1,
+    )
+    
+    idx = jax.ops.index[(int(ip.shape[1]/2)-int(rb1/dr)-int(yb1/dr)):(int(ip.shape[1]/2)+int(rb1/dr)-int(yb1/dr)), (int(ip.shape[0]/2)-int(rb1/dr)+int(xb1/dr)):(int(ip.shape[0]/2)+int(rb1/dr)+int(xb1/dr))]
+    ip = jax.ops.index_add(ip, idx, ip_b)
+
+    ip_b = _isobeta_bubble(
+        x0, y0, r_1, r_2, r_3, theta, beta, amp, xb2, yb2, rb2, sup2,
+        xi,
+        yi,
+        z,
+        max_R=10.00,
+        fwhm=9.0,
+        freq=90e9,
+        T_electron=5.0,
+        r_map=15.0 * 60,
+        dr=0.1,
+    )
+    
+    idx = jax.ops.index[(int(ip.shape[1]/2)-int(rb2/dr)-int(yb2/dr)):(int(ip.shape[1]/2)+int(rb2/dr)-int(yb2/dr)), (int(ip.shape[0]/2)-int(rb2/dr)+int(xb2/dr)):(int(ip.shape[0]/2)+int(rb2/dr)+int(xb2/dr))]
+    ip = jax.ops.index_add(ip, idx, ip_b)
+
+    #Sum of two gaussians with amp1, fwhm1, amp2, fwhm2
+    amp1, fwhm1, amp2, fwhm2 = 9.735, 0.9808, 32.627, 0.0192
+    x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
+    beam_xx, beam_yy = jnp.meshgrid(x,x)
+    beam_rr = jnp.sqrt(beam_xx**2 + beam_yy**2)
+    beam = amp1*jnp.exp(-4 * jnp.log(2) * beam_rr ** 2 / fwhm1 ** 2) + amp2*jnp.exp(-4 * jnp.log(2) * beam_rr ** 2 / fwhm2 ** 2)
+    beam = beam / jnp.sum(beam)
+
+    bound0, bound1 = int((ip.shape[0]-beam.shape[0])/2), int((ip.shape[1] - beam.shape[1])/2)
+
+
+    beam = jnp.pad(beam, ((bound0, ip.shape[0]-beam.shape[0]-bound0), (bound1, ip.shape[1] - beam.shape[1] - bound1)))
+
+    ip = fft_conv(ip, beam)
+    ip = ip * y2K_RJ(freq=freq, Te=T_electron) 
+    
+    dx = (xi - x0) * jnp.cos(yi)
+    dy = yi - y0
+    
+    dx *= (180*3600)/jnp.pi
+    dy *= (180*3600)/jnp.pi
+    full_rmap = jnp.arange(-1*r_map, r_map, dr) * da
+    
+    idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
+    
+    return jsp.ndimage.map_coordinates(ip, (idy,idx), order = 0)#, ip
+
+
+
 # ---------------------------------------------------------------
 
 pars = jnp.array([0, 0, 1.0, 1.0, 1.5, 4.3, 0.7, 3e14])
