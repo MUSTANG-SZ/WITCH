@@ -799,7 +799,8 @@ def conv_int_isobeta_elliptical_two_bubbles(
     
     # Get pressure and xyz grid
     pressure, xyz = _isobeta_elliptical(
-        x0, y0, r_1, r_2, r_3, theta, beta, amp,
+        x0*(180*3600)/jnp.pi, y0*(180*3600)/jnp.pi,
+        r_1, r_2, r_3, theta, beta, amp,
         xi,
         yi,
         z,
