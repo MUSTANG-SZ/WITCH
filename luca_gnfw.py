@@ -681,7 +681,7 @@ def conv_int_gnfw_two_bubbles(
 
     #return ip 
 
-# @jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
+@jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
 def _isobeta_elliptical(
     x0, y0, r_1, r_2, r_3, theta, beta, amp,
     xi,
@@ -726,7 +726,7 @@ def _isobeta_elliptical(
     return amp*rrpow, xyz
 
 
-# @jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
+@jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
 def _int_isobeta_elliptical(
     x0, y0, r_1, r_2, r_3, theta, beta, amp,
     xi,
@@ -764,7 +764,7 @@ def _int_isobeta_elliptical(
     return jnp.trapz(pressure, dx=dr*da, axis=-1) * XMpc / me
 
 
-# @jax.partial(jax.jit, static_argnums=(8, 9, 10, 15, 16, 17, 18, 19, 20))
+@jax.partial(jax.jit, static_argnums=(8, 9, 10, 15, 16, 17, 18, 19, 20))
 def add_bubble(pressure, xyz, xb, yb, rb, sup, z):
     da = jnp.interp(z, dzline, daline)
 
@@ -809,8 +809,6 @@ def conv_int_isobeta_elliptical_two_bubbles(
         r_map,
         dr,
     )
-    plt.imshow(pressure[:, :, 90])
-    plt.show()
 
     # Add first bubble
     pressure = add_bubble(pressure, xyz, xb1, yb1, rb1, sup1, z)
