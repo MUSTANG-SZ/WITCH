@@ -700,30 +700,31 @@ def _isobeta_elliptical(
     which should be applied at the end
     """
     da = jnp.interp(z, dzline, daline)
-    print("a")    
+
     # Make grid with resolution dr and size r_map and convert to Mpc
     x = jnp.linspace(-1*r_map, r_map, 2*int(r_map/dr)) * da
     y = jnp.linspace(-1*r_map, r_map, 2*int(r_map/dr)) * da
     z = jnp.linspace(-1*r_map, r_map, 2*int(r_map/dr)) * da
-    print(x)
+
     xyz = jnp.meshgrid(x, y, z, sparse=True, indexing='xy')
-    print("b")
+
     # Rotate
     xx = xyz[0]*jnp.cos(theta) + xyz[1]*jnp.sin(theta)
     yy = xyz[1]*jnp.cos(theta) - xyz[0]*jnp.sin(theta)
     zz = xyz[2]
-    print("c")
+
     # Apply ellipticity
     xfac = (xx/r_1)**2
     yfac = (yy/r_2)**2
     zfac = (zz/r_3)**2
-    print("d")
+
     # Calculate pressure profile
     rr = 1 + xfac + yfac + zfac
     power = -1.5*beta
     rrpow = rr**power
-    print("f")
+
     return amp*rrpow, xyz
+
 
 # @jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
 def _int_isobeta_elliptical(
@@ -758,24 +759,22 @@ def _int_isobeta_elliptical(
         r_map,
         dr,
     )
-    print("g")
-    print(pressure.shape)
+
     # Integrate line of sight pressure
     return jnp.trapz(pressure, dx=dr*da, axis=-1) * XMpc / me
 
 
 # @jax.partial(jax.jit, static_argnums=(8, 9, 10, 15, 16, 17, 18, 19, 20))
-def add_bubble(pressure, xyz, xb, yb, rb, sup):
+def add_bubble(pressure, xyz, xb, yb, rb, sup, z):
+    da = jnp.interp(z, dzline, daline)
+
     # Recenter grid on bubble center
-    # Need to convert xb and yb to Mpc?
-    x = xyz[0] - xb
-    y = xyz[1] - yb
+    x = xyz[0] - (xb * da)
+    y = xyz[1] - (yb * da)
     z = xyz[2]
-    print(pressure.shape)
-    
+
     # Supress points inside bubble
-    # Need to convert rb to Mpc?
-    pressure_b = jnp.where(jnp.sqrt(x**2 + y**2 + z**2) >= rb, pressure, (1 - sup)*pressure)
+    pressure_b = jnp.where(jnp.sqrt(x**2 + y**2 + z**2) >= (rb * da), pressure, (1 - sup)*pressure)
     return pressure_b
 
 
@@ -795,7 +794,7 @@ def conv_int_isobeta_elliptical_two_bubbles(
 ):
     da = jnp.interp(z, dzline, daline)
     XMpc = Xthom * Mparsec
-    
+
     # Get pressure and xyz grid
     pressure, xyz = _isobeta_elliptical(
         x0*(180*3600)/jnp.pi, y0*(180*3600)/jnp.pi,
@@ -814,21 +813,15 @@ def conv_int_isobeta_elliptical_two_bubbles(
     plt.show()
 
     # Add first bubble
-    print("b1")
-    pressure = add_bubble(pressure, xyz, xb1, yb1, rb1, sup1)
-    
+    pressure = add_bubble(pressure, xyz, xb1, yb1, rb1, sup1, z)
+
     # Add second bubble
-    print("b2")
-    pressure = add_bubble(pressure, xyz, xb2, yb2, rb2, sup2)
-    
+    pressure = add_bubble(pressure, xyz, xb2, yb2, rb2, sup2, z)
+
     # Integrate along line of site
-    print("int start")
     ip = jnp.trapz(pressure, dx=dr*da, axis=-1) * XMpc / me
-    print("int done")
-    plt.imshow(ip)
-    plt.show()
-    #Sum of two gaussians with amp1, fwhm1, amp2, fwhm2
-    print("beam start")
+
+    # Sum of two gaussians with amp1, fwhm1, amp2, fwhm2
     amp1, fwhm1, amp2, fwhm2 = 9.735, 0.9808, 32.627, 0.0192
     x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
     beam_xx, beam_yy = jnp.meshgrid(x,x)
@@ -838,24 +831,19 @@ def conv_int_isobeta_elliptical_two_bubbles(
 
     bound0, bound1 = int((ip.shape[0]-beam.shape[0])/2), int((ip.shape[1] - beam.shape[1])/2)
 
-
     beam = jnp.pad(beam, ((bound0, ip.shape[0]-beam.shape[0]-bound0), (bound1, ip.shape[1] - beam.shape[1] - bound1)))
 
     ip = fft_conv(ip, beam)
-    ip = ip * y2K_RJ(freq=freq, Te=T_electron) 
-    print("beam done")
-    plt.imshow(ip)
-    plt.show()
+    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
+
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
-    
+
     dx *= (180*3600)/jnp.pi
     dy *= (180*3600)/jnp.pi
     full_rmap = jnp.arange(-1*r_map, r_map, dr) * da
-    
+
     idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
-    print(len(full_rmap))
-    print(idx)
     return jsp.ndimage.map_coordinates(ip, (idx, idy), order = 0)#, ip
 
 # ---------------------------------------------------------------
