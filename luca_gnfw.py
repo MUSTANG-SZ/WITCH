@@ -707,7 +707,7 @@ def _isobeta_elliptical(
     y = jnp.linspace(-1*r_map-y0, r_map-y0, 2*int(r_map/dr)) * da
     z = jnp.linspace(-1*r_map, r_map, 2*int(r_map/dr)) * da
     print(x)
-    xyz = jnp.meshgrid(x, y, z, sparse=True)
+    xyz = jnp.meshgrid(x, y, z, sparse=True, indexing='xy')
     print("b")
     # Rotate
     xx = xyz[0]*jnp.cos(theta) + xyz[1]*jnp.sin(theta)
@@ -857,7 +857,7 @@ def conv_int_isobeta_elliptical_two_bubbles(
     idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
     print(len(full_rmap))
     print(idx)
-    return jsp.ndimage.map_coordinates(ip, (idy,idx), order = 0)#, ip
+    return jsp.ndimage.map_coordinates(ip, (idx, idy), order = 0)#, ip
 
 # ---------------------------------------------------------------
 
