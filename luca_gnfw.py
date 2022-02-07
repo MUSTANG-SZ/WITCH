@@ -701,10 +701,9 @@ def _isobeta_elliptical(
     """
     da = jnp.interp(z, dzline, daline)
     print("a")    
-    # Make grid centered on x0, y0 with resolution dr and size r_map and convert to Mpc
-    # Need to convert x0 and y0 to arcseconds before passing
-    x = jnp.linspace(-1*r_map+x0, r_map+x0, 2*int(r_map/dr)) * da
-    y = jnp.linspace(-1*r_map-y0, r_map-y0, 2*int(r_map/dr)) * da
+    # Make grid with resolution dr and size r_map and convert to Mpc
+    x = jnp.linspace(-1*r_map, r_map, 2*int(r_map/dr)) * da
+    y = jnp.linspace(-1*r_map, r_map, 2*int(r_map/dr)) * da
     z = jnp.linspace(-1*r_map, r_map, 2*int(r_map/dr)) * da
     print(x)
     xyz = jnp.meshgrid(x, y, z, sparse=True, indexing='xy')
