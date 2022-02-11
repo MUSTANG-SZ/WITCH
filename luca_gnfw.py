@@ -1140,6 +1140,60 @@ def jit_conv_int_gnfw_elliptical_two_bubbles(
 
     return pred, grad
 
+@jax.partial(
+    jax.jit,
+    static_argnums=(
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+    ),
+)
+def jit_conv_int_isobeta_elliptical_two_bubbles(
+    p,
+    tods,
+    z,
+    xb1, yb1, rb1,
+    xb2, yb2, rb2,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+    argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+    ):
+
+    x0, y0, r_1, r_2, r_3, theta, beta, amp, sup1, sup2 = p
+
+    pred = conv_int_isobeta_elliptical_two_bubbles(
+         x0, y0, r_1, r_2, r_3, theta, beta, amp, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
+    )
+    
+    if len(argnums) == 0:
+        return pred, jnp.zeros((len(p)+6,) + pred.shape) + 1e-30
+
+    grad = jax.jacfwd(conv_int_isobeta_elliptical_two_bubbles, argnums=argnums)(
+         x0, y0, r_1, r_2, r_3, theta, beta, amp, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
+    )
+    grad = jnp.array(grad)
+
+    padded_grad = jnp.zeros((len(p)+8,) + grad[0].shape) + 1e-30
+    argnums = jnp.array(argnums)
+    grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
+
+    return pred, grad
+
 
 def helper():
     return jit_conv_int_gnfw(pars, tods, 1.00)[0].block_until_ready()
