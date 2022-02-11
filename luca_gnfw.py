@@ -1198,7 +1198,7 @@ def jit_conv_int_isobeta_elliptical_two_bubbles(
     )
     grad = jnp.array(grad)
 
-    padded_grad = jnp.zeros((len(p)+8,) + grad[0].shape) + 1e-30
+    padded_grad = jnp.zeros((len(p)+6,) + grad[0].shape) + 1e-30
     argnums = jnp.array(argnums)
     grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
 
