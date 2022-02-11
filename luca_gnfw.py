@@ -170,9 +170,12 @@ def _gnfw_bubble(
     XMpc = Xthom * Mparsec
     
     #Make a grid, centered on xb1, yb1 and size rb1, with resolution dr, and convert to Mpc
-    x_b = jnp.arange(-1*rb+xb, rb+xb, dr) * da
-    y_b = jnp.arange(-1*rb-yb, rb-yb, dr) * da
-    z_b = jnp.arange(-1*rb, rb, dr) * da
+    # x_b = jnp.arange(-1*rb+xb, rb+xb, dr) * da
+    # y_b = jnp.arange(-1*rb-yb, rb-yb, dr) * da
+    # z_b = jnp.arange(-1*rb, rb, dr) * da
+    x_b = jnp.linspace(-1*rb+xb, rb+xb, 2*int(rb/dr)) * da
+    y_b = jnp.linspace(-1*rb-yb, rb-yb, 2*int(rb/dr)) * da
+    z_b = jnp.linspace(-1*rb, rb, 2*int(rb/dr)) * da
     
     xyz_b = jnp.meshgrid(x_b, y_b, z_b)
 
@@ -510,9 +513,9 @@ def conv_int_gnfw_elliptical_two_bubbles(
         r_map,
         dr,
     )
-
-    ip = jax.ops.index_add(ip, jax.ops.index[int(ip.shape[1]/2+int((-1*rb1-yb1)/dr)):int(ip.shape[1]/2+int((rb1-yb1)/dr)),
-       int(ip.shape[0]/2+int((-1*rb1+xb1)/dr)):int(ip.shape[0]/2+int((rb1+xb1)/dr))], ip_b)
+    
+    idx = jax.ops.index[(int(ip.shape[1]/2)-int(rb1/dr)-int(yb1/dr)):(int(ip.shape[1]/2)+int(rb1/dr)-int(yb1/dr)), (int(ip.shape[0]/2)-int(rb1/dr)+int(xb1/dr)):(int(ip.shape[0]/2)+int(rb1/dr)+int(xb1/dr))]
+    ip = jax.ops.index_add(ip, idx, ip_b)
 
     ip_b = _gnfw_bubble(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb2, yb2, rb2, sup2,
@@ -527,8 +530,8 @@ def conv_int_gnfw_elliptical_two_bubbles(
         dr,
     )
 
-    ip = jax.ops.index_add(ip, jax.ops.index[int(ip.shape[1]/2+int((-1*rb2-yb2)/dr)):int(ip.shape[1]/2+int((rb2-yb2)/dr)),
-       int(ip.shape[0]/2+int((-1*rb2+xb2)/dr)):int(ip.shape[0]/2+int((rb2+xb2)/dr))], ip_b)
+    idx = jax.ops.index[(int(ip.shape[1]/2)-int(rb2/dr)-int(yb2/dr)):(int(ip.shape[1]/2)+int(rb2/dr)-int(yb2/dr)), (int(ip.shape[0]/2)-int(rb2/dr)+int(xb2/dr)):(int(ip.shape[0]/2)+int(rb2/dr)+int(xb2/dr))]
+    ip = jax.ops.index_add(ip, idx, ip_b)
 
     #Sum of two gaussians with amp1, fwhm1, amp2, fwhm2
     amp1, fwhm1, amp2, fwhm2 = 9.735, 0.9808, 32.627, 0.0192
@@ -677,6 +680,169 @@ def conv_int_gnfw_two_bubbles(
     #y = np.linspace(-1*bound, bound, 200)
 
     #return ip 
+
+@jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
+def _isobeta_elliptical(
+    x0, y0, r_1, r_2, r_3, theta, beta, amp,
+    xi,
+    yi,
+    z,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+):
+    """
+    Elliptical isobeta pressure profile
+    This function does not include smoothing or declination stretch
+    which should be applied at the end
+    """
+    da = jnp.interp(z, dzline, daline)
+
+    # Make grid with resolution dr and size r_map and convert to Mpc
+    x = jnp.linspace(-1*r_map, r_map, 2*int(r_map/dr)) * da
+    y = jnp.linspace(-1*r_map, r_map, 2*int(r_map/dr)) * da
+    z = jnp.linspace(-1*r_map, r_map, 2*int(r_map/dr)) * da
+
+    xyz = jnp.meshgrid(x, y, z, sparse=True, indexing='xy')
+
+    # Rotate
+    xx = xyz[0]*jnp.cos(theta) + xyz[1]*jnp.sin(theta)
+    yy = xyz[1]*jnp.cos(theta) - xyz[0]*jnp.sin(theta)
+    zz = xyz[2]
+
+    # Apply ellipticity
+    xfac = (xx/r_1)**2
+    yfac = (yy/r_2)**2
+    zfac = (zz/r_3)**2
+
+    # Calculate pressure profile
+    rr = 1 + xfac + yfac + zfac
+    power = -1.5*beta
+    rrpow = rr**power
+
+    return amp*rrpow, xyz
+
+
+@jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
+def _int_isobeta_elliptical(
+    x0, y0, r_1, r_2, r_3, theta, beta, amp,
+    xi,
+    yi,
+    z,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+):
+    """
+    Elliptical isobeta
+    This function does not include smoothing or declination stretch
+    which should be applied at the end
+    """
+    da = jnp.interp(z, dzline, daline)
+    XMpc = Xthom * Mparsec
+
+    pressure, _ = _isobeta_elliptical(
+        x0, y0, r_1, r_2, r_3, theta, beta, amp,
+        xi,
+        yi,
+        z,
+        max_R,
+        fwhm,
+        freq,
+        T_electron,
+        r_map,
+        dr,
+    )
+
+    # Integrate line of sight pressure
+    return jnp.trapz(pressure, dx=dr*da, axis=-1) * XMpc / me
+
+
+@jax.jit
+def add_bubble(pressure, xyz, xb, yb, rb, sup, z):
+    da = jnp.interp(z, dzline, daline)
+
+    # Recenter grid on bubble center
+    x = xyz[0] - (xb * da)
+    y = xyz[1] - (yb * da)
+    z = xyz[2]
+
+    # Supress points inside bubble
+    pressure_b = jnp.where(jnp.sqrt(x**2 + y**2 + z**2) >= (rb * da), pressure, (1 - sup)*pressure)
+    return pressure_b
+
+
+def conv_int_isobeta_elliptical_two_bubbles(
+    x0, y0, r_1, r_2, r_3, theta, beta, amp,
+    xb1, yb1, rb1, sup1,
+    xb2, yb2, rb2, sup2,
+    xi,
+    yi,
+    z,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+):
+    da = jnp.interp(z, dzline, daline)
+    XMpc = Xthom * Mparsec
+
+    # Get pressure and xyz grid
+    pressure, xyz = _isobeta_elliptical(
+        x0*(180*3600)/jnp.pi, y0*(180*3600)/jnp.pi,
+        r_1, r_2, r_3, theta, beta, amp,
+        xi,
+        yi,
+        z,
+        max_R,
+        fwhm,
+        freq,
+        T_electron,
+        r_map,
+        dr,
+    )
+
+    # Add first bubble
+    pressure = add_bubble(pressure, xyz, xb1, yb1, rb1, sup1, z)
+
+    # Add second bubble
+    pressure = add_bubble(pressure, xyz, xb2, yb2, rb2, sup2, z)
+
+    # Integrate along line of site
+    ip = jnp.trapz(pressure, dx=dr*da, axis=-1) * XMpc / me
+
+    # Sum of two gaussians with amp1, fwhm1, amp2, fwhm2
+    amp1, fwhm1, amp2, fwhm2 = 9.735, 0.9808, 32.627, 0.0192
+    x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
+    beam_xx, beam_yy = jnp.meshgrid(x,x)
+    beam_rr = jnp.sqrt(beam_xx**2 + beam_yy**2)
+    beam = amp1*jnp.exp(-4 * jnp.log(2) * beam_rr ** 2 / fwhm1 ** 2) + amp2*jnp.exp(-4 * jnp.log(2) * beam_rr ** 2 / fwhm2 ** 2)
+    beam = beam / jnp.sum(beam)
+
+    bound0, bound1 = int((ip.shape[0]-beam.shape[0])/2), int((ip.shape[1] - beam.shape[1])/2)
+
+    beam = jnp.pad(beam, ((bound0, ip.shape[0]-beam.shape[0]-bound0), (bound1, ip.shape[1] - beam.shape[1] - bound1)))
+
+    ip = fft_conv(ip, beam)
+    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
+
+    dx = (xi - x0) * jnp.cos(yi)
+    dy = yi - y0
+
+    dx *= (180*3600)/jnp.pi
+    dy *= (180*3600)/jnp.pi
+    full_rmap = jnp.arange(-1*r_map, r_map, dr) * da
+
+    idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
+    return jsp.ndimage.map_coordinates(ip, (idx, idy), order = 0)#, ip
 
 # ---------------------------------------------------------------
 
@@ -954,6 +1120,10 @@ def jit_conv_int_gnfw_elliptical_two_bubbles(
     pred = conv_int_gnfw_elliptical_two_bubbles(
         e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
+    
+    if len(argnums) == 0:
+        return pred, jnp.zeros((len(p)+6,) + pred.shape) + 1e-30
+
     grad = jax.jacfwd(conv_int_gnfw_elliptical_two_bubbles, argnums=argnums)(
         e, theta, x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2 , tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
@@ -967,6 +1137,60 @@ def jit_conv_int_gnfw_elliptical_two_bubbles(
     #grad = grad.at[15].set(grad.at[9].get())
     #grad = grad.at[8].set(0)
     #grad = grad.at[9].set(0)
+
+    return pred, grad
+
+@jax.partial(
+    jax.jit,
+    static_argnums=(
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+    ),
+)
+def jit_conv_int_isobeta_elliptical_two_bubbles(
+    p,
+    tods,
+    z,
+    xb1, yb1, rb1,
+    xb2, yb2, rb2,
+    max_R=10.00,
+    fwhm=9.0,
+    freq=90e9,
+    T_electron=5.0,
+    r_map=15.0 * 60,
+    dr=0.1,
+    argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+    ):
+
+    x0, y0, r_1, r_2, r_3, theta, beta, amp, sup1, sup2 = p
+
+    pred = conv_int_isobeta_elliptical_two_bubbles(
+         x0, y0, r_1, r_2, r_3, theta, beta, amp, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
+    )
+    
+    if len(argnums) == 0:
+        return pred, jnp.zeros((len(p)+6,) + pred.shape) + 1e-30
+
+    grad = jax.jacfwd(conv_int_isobeta_elliptical_two_bubbles, argnums=argnums)(
+         x0, y0, r_1, r_2, r_3, theta, beta, amp, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
+    )
+    grad = jnp.array(grad)
+
+    padded_grad = jnp.zeros((len(p)+8,) + grad[0].shape) + 1e-30
+    argnums = jnp.array(argnums)
+    grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
 
     return pred, grad
 
