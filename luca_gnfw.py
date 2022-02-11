@@ -681,6 +681,13 @@ def conv_int_gnfw_two_bubbles(
 
     #return ip 
 
+@jax.jit
+def get_rmap(r_map, r_1, r_2, r_3, da, beta, amp):
+    r = jnp.min((r_1, r_2, r_3))
+    rmap = ((1e-6/amp)**(-1/(1.5*beta)) - 1) * (r / da)
+    return jnp.min((rmap, r_map))
+
+
 @jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
 def _isobeta_elliptical(
     x0, y0, r_1, r_2, r_3, theta, beta, amp,
@@ -795,6 +802,9 @@ def conv_int_isobeta_elliptical_two_bubbles(
     da = jnp.interp(z, dzline, daline)
     XMpc = Xthom * Mparsec
 
+    # Get a sane r_map
+    r_map = get_rmap(r_map, r_1, r_2, r_3, da, beta, amp)
+
     # Get pressure and xyz grid
     pressure, xyz = _isobeta_elliptical(
         x0*(180*3600)/jnp.pi, y0*(180*3600)/jnp.pi,
@@ -817,7 +827,7 @@ def conv_int_isobeta_elliptical_two_bubbles(
     pressure = add_bubble(pressure, xyz, xb2, yb2, rb2, sup2, z)
 
     # Integrate along line of site
-    ip = jnp.trapz(pressure, dx=dr*da, axis=-1) * XMpc / me
+    ip = jnp.trapz(pressure, dx=dr*da/, axis=-1) * XMpc / me
 
     # Sum of two gaussians with amp1, fwhm1, amp2, fwhm2
     amp1, fwhm1, amp2, fwhm2 = 9.735, 0.9808, 32.627, 0.0192
