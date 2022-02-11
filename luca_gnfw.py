@@ -764,7 +764,7 @@ def _int_isobeta_elliptical(
     return jnp.trapz(pressure, dx=dr*da, axis=-1) * XMpc / me
 
 
-@jax.partial(jax.jit, static_argnums=(8, 9, 10, 15, 16, 17, 18, 19, 20))
+@jax.jit
 def add_bubble(pressure, xyz, xb, yb, rb, sup, z):
     da = jnp.interp(z, dzline, daline)
 
