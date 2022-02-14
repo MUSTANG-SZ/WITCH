@@ -681,6 +681,14 @@ def conv_int_gnfw_two_bubbles(
 
     #return ip 
 
+@jax.jit
+def get_rmap(r_map, r_1, r_2, r_3, z, beta, amp):
+    da = jnp.interp(z, dzline, daline)
+    r = jnp.min(jnp.array([r_1, r_2, r_3]))
+    rmap = ((1e-6/amp)**(-1/(1.5*beta)) - 1) * (r / da)
+    return jnp.min(jnp.array([rmap, r_map]))
+
+
 @jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
 def _isobeta_elliptical(
     x0, y0, r_1, r_2, r_3, theta, beta, amp,
