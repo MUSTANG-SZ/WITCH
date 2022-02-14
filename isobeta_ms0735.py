@@ -32,7 +32,6 @@ def helper(params, tod, z, to_fit):
 
     r_map = 7.0*60
     r_map = float(get_rmap(r_map, params[2], params[3], params[4], z, params[6], params[7]))
-    print(r_map)
     pred, derivs = jit_conv_int_isobeta_elliptical_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = r_map, dr = 0.25, argnums = tuple(argnums))
     
     return derivs, pred
