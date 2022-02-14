@@ -95,7 +95,6 @@ bad_tod,addtag = pbs.get_bad_tods(name,ndo=ndo,odo=odo)
 tod_names=minkasi.cut_blacklist(tod_names,bad_tod)
 tod_names.sort()
 
-tod_names = tod_names[:5]
 #if running MPI, you would want to split up files between processes
 tod_names=tod_names[minkasi.myrank::minkasi.nproc]
 
