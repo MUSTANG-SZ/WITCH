@@ -15,7 +15,7 @@ import numpy as np
 import timeit
 import time
 
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 
 # Constants
 # --------------------------------------------------------
@@ -685,7 +685,7 @@ def conv_int_gnfw_two_bubbles(
 def get_rmap(r_map, r_1, r_2, r_3, z, beta, amp):
     da = jnp.interp(z, dzline, daline)
     r = jnp.min(jnp.array([r_1, r_2, r_3]))
-    rmap = ((1e-6/amp)**(-1/(1.5*beta)) - 1) * (r / da)
+    rmap = ((1e-10/amp)**(-1/(1.5*beta)) - 1) * (r / da)
     return jnp.min(jnp.array([rmap, r_map]))
 
 
