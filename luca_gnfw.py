@@ -15,7 +15,6 @@ import numpy as np
 import timeit
 import time
 
-import sys
 # from matplotlib import pyplot as plt
 
 # Constants
@@ -1185,11 +1184,11 @@ def jit_conv_int_isobeta_elliptical_two_bubbles(
     argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
     ):
     x0, y0, r_1, r_2, r_3, theta, beta, amp, sup1, sup2 = p
-    sys.stdout.flush()
+    
     pred = conv_int_isobeta_elliptical_two_bubbles(
          x0, y0, r_1, r_2, r_3, theta, beta, amp, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
-    sys.stdout.flush()
+  
     if len(argnums) == 0:
         return pred, jnp.zeros((len(p)+6,) + pred.shape) + 1e-30
 
@@ -1197,11 +1196,11 @@ def jit_conv_int_isobeta_elliptical_two_bubbles(
          x0, y0, r_1, r_2, r_3, theta, beta, amp, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
     grad = jnp.array(grad)
-    sys.stdout.flush()
+ 
     padded_grad = jnp.zeros((len(p)+6,) + grad[0].shape) + 1e-30
     argnums = jnp.array(argnums)
     grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
-    sys.stdout.flush()
+
     return pred, grad
 
 
