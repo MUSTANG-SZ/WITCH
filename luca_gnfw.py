@@ -15,6 +15,7 @@ import numpy as np
 import timeit
 import time
 
+import sys
 # from matplotlib import pyplot as plt
 
 # Constants
@@ -681,12 +682,14 @@ def conv_int_gnfw_two_bubbles(
 
     #return ip 
 
-@jax.jit
+
 def get_rmap(r_map, r_1, r_2, r_3, z, beta, amp):
-    da = jnp.interp(z, dzline, daline)
-    r = jnp.min(jnp.array([r_1, r_2, r_3]))
-    rmap = ((1e-10/amp)**(-1/(1.5*beta)) - 1) * (r / da)
-    return jnp.min(jnp.array([rmap, r_map]))
+    if beta == 0 or amp == 0:
+        return r_map
+    da = np.interp(z, dzline, daline)
+    r = np.min(jnp.array([r_1, r_2, r_3]))
+    rmap = ((1e-10/np.abs(amp))**(-1/(1.5*beta)) - 1) * (r / da)
+    return np.nanmin(np.array([rmap, r_map]))
 
 
 @jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
@@ -1181,13 +1184,12 @@ def jit_conv_int_isobeta_elliptical_two_bubbles(
     dr=0.1,
     argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
     ):
-
     x0, y0, r_1, r_2, r_3, theta, beta, amp, sup1, sup2 = p
-
+    sys.stdout.flush()
     pred = conv_int_isobeta_elliptical_two_bubbles(
          x0, y0, r_1, r_2, r_3, theta, beta, amp, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
-    
+    sys.stdout.flush()
     if len(argnums) == 0:
         return pred, jnp.zeros((len(p)+6,) + pred.shape) + 1e-30
 
@@ -1195,11 +1197,11 @@ def jit_conv_int_isobeta_elliptical_two_bubbles(
          x0, y0, r_1, r_2, r_3, theta, beta, amp, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
     grad = jnp.array(grad)
-
+    sys.stdout.flush()
     padded_grad = jnp.zeros((len(p)+6,) + grad[0].shape) + 1e-30
     argnums = jnp.array(argnums)
     grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
-
+    sys.stdout.flush()
     return pred, grad
 
 
