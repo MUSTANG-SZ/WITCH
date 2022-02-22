@@ -18,7 +18,9 @@ import resource
 # jax.config.update("jax_traceback_filtering", "off")
 
 def helper(params, tod, z, to_fit):
+    print("mem " + str(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
     print("here1 " + str(minkasi.myrank))
+    print(params)
     sys.stdout.flush()
     x = tod.info['dx']
     y = tod.info['dy']
@@ -32,12 +34,14 @@ def helper(params, tod, z, to_fit):
     argnums = np.array([i for i, p in enumerate(to_fit[:len(params)]) if p])
     params = np.delete(params, [[8, 9, 10, 12, 13, 14]])
 
-    r_map = 7.0*60
-    r_map = float(get_rmap(r_map, params[2], params[3], params[4], z, params[6], params[7]))
+    r_map = 3.0*60
+    # r_map = float(get_rmap(r_map, params[2], params[3], params[4], z, params[6], params[7]))
     print("here2 " + str(minkasi.myrank))
+    # print(r_map)
     sys.stdout.flush()
-    pred, derivs = jit_conv_int_isobeta_elliptical_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = r_map, dr = 0.25, argnums = tuple(argnums))
+    pred, derivs = jit_conv_int_isobeta_elliptical_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
     print("here3 " + str(minkasi.myrank))
+    print(pred.nbytes, derivs.nbytes)
     sys.stdout.flush()
     return derivs, pred
 
@@ -51,7 +55,8 @@ def poly(x, c0, c1, c2):
 
 name = 'MS0735'
 myadj=None # If None, then it'll select the most recently made folder with string "TS_*"
-mydir='/scratch/r/rbond/jorlo/'+name+'/'
+# mydir='/scratch/r/rbond/jorlo/'+name+'/'
+mydir='/home/scratch/cromero/mustang/MUSTANG2/Reductions/'+name+'/'
 #Some presets
 elxel     = False
 projstr='-'
@@ -73,7 +78,8 @@ nfft      = 1
 
 
 #find tod files we want to map
-outroot=os.environ['SCRATCH']+'/Reductions/MS0735/isobeta/'
+# outroot=os.environ['SCRATCH']+'/Reductions/MS0735/isobeta/'
+outroot='/home/scratch/sharidas/mustang/MUSTANG2/Reductions/MS0735/isobeta/'
 
 #Load the most resent made folder starting with 'TS_'
 if myadj is None:
@@ -213,7 +219,8 @@ ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
 
 
 # isobeta_pars = np.array([ra, dec, .12, .16, .12, 83*d2r, 9.0, .3])
-isobeta_pars = np.array([ra, dec, 0.122, 0.167, 0.122, 83*d2r, 8.403, 3])
+# isobeta_pars = np.array([ra, dec, 0.122, 0.167, 0.122, 83*d2r, 8.403, 3])
+isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 8.403, -5])
 
 #southwest bubble pars
 ra_sw = Angle('07 41 49 hours')
@@ -245,6 +252,15 @@ to_fit=np.ones(len(pars),dtype='bool')
 # to_fit[[0, 1, 8, 9, 10, 12, 13, 14, 16, 17]]=False 
 to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 12, 13, 14, 16, 17]]=False
 
+priors = [None]*len(to_fit)
+priors = np.array(priors)
+priors[[11, 15]] = 'flat'
+prior_vals = [None]*len(to_fit)
+# prior_vals[7] = [-1e4, 0.0]
+prior_vals[11] = [0.0, 1.0]
+prior_vals[15] = [0.0, 1.0]
+
+
 funs = [partial(helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
 
 fit = True 
@@ -253,7 +269,7 @@ if fit:
     print('starting actual fitting ' + str(minkasi.myrank))
     sys.stdout.flush()
     # jax.profiler.start_trace('./tmp/tensorboard')
-    pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 20)
+    pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 20, priors = priors, prior_vals=prior_vals)
     # jax.profiler.stop_trace()
     t2=time.time()
     if minkasi.myrank==0:
