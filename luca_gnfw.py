@@ -15,7 +15,7 @@ import numpy as np
 import timeit
 import time
 
-# from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 
 # Constants
 # --------------------------------------------------------
@@ -686,7 +686,7 @@ def get_rmap(r_map, r_1, r_2, r_3, z, beta, amp):
     if beta == 0 or amp == 0:
         return r_map
     da = np.interp(z, dzline, daline)
-    r = np.min(jnp.array([r_1, r_2, r_3]))
+    r = np.max(jnp.array([r_1, r_2, r_3]))
     rmap = ((1e-10/np.abs(amp))**(-1/(1.5*beta)) - 1) * (r / da)
     return np.nanmin(np.array([rmap, r_map]))
 
@@ -804,7 +804,7 @@ def conv_int_isobeta_elliptical_two_bubbles(
 ):
     da = jnp.interp(z, dzline, daline)
     XMpc = Xthom * Mparsec
-
+   
     # Get pressure and xyz grid
     pressure, xyz = _isobeta_elliptical(
         x0*(180*3600)/jnp.pi, y0*(180*3600)/jnp.pi,
@@ -843,7 +843,7 @@ def conv_int_isobeta_elliptical_two_bubbles(
 
     ip = fft_conv(ip, beam)
     ip = ip * y2K_RJ(freq=freq, Te=T_electron)
-
+    
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
 
