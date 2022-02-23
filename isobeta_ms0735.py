@@ -18,9 +18,6 @@ import resource
 # jax.config.update("jax_traceback_filtering", "off")
 
 def helper(params, tod, z, to_fit):
-    print("mem " + str(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
-    print("here1 " + str(minkasi.myrank))
-    print(params)
     sys.stdout.flush()
     x = tod.info['dx']
     y = tod.info['dy']
@@ -36,13 +33,8 @@ def helper(params, tod, z, to_fit):
 
     r_map = 3.0*60
     # r_map = float(get_rmap(r_map, params[2], params[3], params[4], z, params[6], params[7]))
-    print("here2 " + str(minkasi.myrank))
-    # print(r_map)
-    sys.stdout.flush()
     pred, derivs = jit_conv_int_isobeta_elliptical_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
-    print("here3 " + str(minkasi.myrank))
-    print(pred.nbytes, derivs.nbytes)
-    sys.stdout.flush()
+    
     return derivs, pred
 
 
@@ -109,8 +101,6 @@ tod_names.sort()
 tod_names = tod_names[:100]
 #if running MPI, you would want to split up files between processes
 tod_names=tod_names[minkasi.myrank::minkasi.nproc]
-print(minkasi.have_mpi, minkasi.myrank, minkasi.nproc)
-sys.stdout.flush()
 
 minkasi.barrier()
 
@@ -354,7 +344,7 @@ for i, tod in enumerate(todvec.tods):
 
     temp_tod = tod.copy()
     if resid:  
-        pred = helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1])
+        pred = helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1]
 
         tod.info['dat_calib'] = tod.info['dat_calib'] - np.array(pred)
         
