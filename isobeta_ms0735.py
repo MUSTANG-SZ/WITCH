@@ -354,7 +354,7 @@ for i, tod in enumerate(todvec.tods):
 
     temp_tod = tod.copy()
     if resid:  
-        pred = helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool)[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1])
+        pred = helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1])
 
         tod.info['dat_calib'] = tod.info['dat_calib'] - np.array(pred)
         
