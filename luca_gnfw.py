@@ -690,25 +690,8 @@ def get_rmap(r_map, r_1, r_2, r_3, z, beta, amp):
     rmap = ((1e-10/np.abs(amp))**(-1/(1.5*beta)) - 1) * (r / da)
     return np.nanmin(np.array([rmap, r_map]))
 
-
-@jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
-def _isobeta_elliptical(
-    x0, y0, r_1, r_2, r_3, theta, beta, amp,
-    xi,
-    yi,
-    z,
-    max_R=10.00,
-    fwhm=9.0,
-    freq=90e9,
-    T_electron=5.0,
-    r_map=15.0 * 60,
-    dr=0.1,
-):
-    """
-    Elliptical isobeta pressure profile
-    This function does not include smoothing or declination stretch
-    which should be applied at the end
-    """
+@jax.partial(jax.jit, static_argnums=(1, 2))
+def make_grid(z, r_map, dr):
     da = jnp.interp(z, dzline, daline)
 
     # Make grid with resolution dr and size r_map and convert to Mpc
@@ -716,8 +699,21 @@ def _isobeta_elliptical(
     y = jnp.linspace(-1*r_map, r_map, 2*int(r_map/dr)) * da
     z = jnp.linspace(-1*r_map, r_map, 2*int(r_map/dr)) * da
 
-    xyz = jnp.meshgrid(x, y, z, sparse=True, indexing='xy')
+    return jnp.meshgrid(x, y, z, sparse=True, indexing='xy')
 
+
+@jax.jit
+def _isobeta_elliptical(
+    x0, y0, r_1, r_2, r_3, theta, beta, amp,
+    xi,
+    yi,
+    xyz
+):
+    """
+    Elliptical isobeta pressure profile
+    This function does not include smoothing or declination stretch
+    which should be applied at the end
+    """
     # Rotate
     xx = xyz[0]*jnp.cos(theta) + xyz[1]*jnp.sin(theta)
     yy = xyz[1]*jnp.cos(theta) - xyz[0]*jnp.sin(theta)
@@ -733,7 +729,7 @@ def _isobeta_elliptical(
     power = -1.5*beta
     rrpow = rr**power
 
-    return amp*rrpow, xyz
+    return amp*rrpow
 
 
 @jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
@@ -804,20 +800,17 @@ def conv_int_isobeta_elliptical_two_bubbles(
 ):
     da = jnp.interp(z, dzline, daline)
     XMpc = Xthom * Mparsec
-   
+
+    # Get xyz grid
+    xyz = make_grid(z, r_map, dr)
+
     # Get pressure and xyz grid
-    pressure, xyz = _isobeta_elliptical(
+    pressure, = _isobeta_elliptical(
         x0*(180*3600)/jnp.pi, y0*(180*3600)/jnp.pi,
         r_1, r_2, r_3, theta, beta, amp,
         xi,
         yi,
-        z,
-        max_R,
-        fwhm,
-        freq,
-        T_electron,
-        r_map,
-        dr,
+        xyz,
     )
 
     # Add first bubble
@@ -852,7 +845,7 @@ def conv_int_isobeta_elliptical_two_bubbles(
     full_rmap = jnp.arange(-1*r_map, r_map, dr) * da
 
     idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
-    return jsp.ndimage.map_coordinates(ip, (idx, idy), order = 0)#, ip
+    return jsp.ndimage.map_coordinates(ip, (idy, idx), order = 0)#, ip
 
 # ---------------------------------------------------------------
 
