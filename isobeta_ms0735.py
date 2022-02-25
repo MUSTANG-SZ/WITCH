@@ -4,11 +4,11 @@ import minkasi
 import jax
 import jax.numpy as jnp
 from minkasi_jax import  val_conv_int_gnfw, jit_potato_full, poly_sub
-from luca_gnfw import jit_conv_int_isobeta_elliptical_two_bubbles, get_rmap
+from luca_gnfw import jit_conv_int_isobeta_elliptical_two_bubbles, jit_conv_int_double_isobeta_elliptical_two_bubbles, get_rmap
 import numpy as np
 from astropy.coordinates import Angle
 from astropy import units as u
-# from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 from numpy.polynomial import Polynomial
 from functools import partial
 import scipy
@@ -18,7 +18,6 @@ import resource
 # jax.config.update("jax_traceback_filtering", "off")
 
 def helper(params, tod, z, to_fit):
-    sys.stdout.flush()
     x = tod.info['dx']
     y = tod.info['dy']
 
@@ -34,6 +33,25 @@ def helper(params, tod, z, to_fit):
     r_map = 3.0*60
     # r_map = float(get_rmap(r_map, params[2], params[3], params[4], z, params[6], params[7]))
     pred, derivs = jit_conv_int_isobeta_elliptical_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
+    
+    return derivs, pred
+
+def double_helper(params, tod, z, to_fit):
+    x = tod.info['dx']
+    y = tod.info['dy']
+
+    xy = [x, y]
+    xy = jnp.asarray(xy)
+    
+    xb1, yb1, rb1 = params[14:17]
+    xb2, yb2, rb2 = params[18:21]
+    
+    argnums = np.array([i for i, p in enumerate(to_fit[:len(params)]) if p])
+    params = np.delete(params, [[14, 15, 16, 18, 19, 20]])
+
+    r_map = 3.0*60
+    # r_map = float(get_rmap(r_map, params[2], params[3], params[4], z, params[6], params[7]))
+    pred, derivs = jit_conv_int_double_isobeta_elliptical_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
     
     return derivs, pred
 
@@ -191,26 +209,29 @@ ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
 
 #First fit just the central ps
 #PS pars, currently just central
+PS = True
 ps_labels = np.array(['ra', 'dec', 'sigma', 'amp'])
 #                       16     17     18      19
+#                       22     23     24      25
 ps_pars = np.array([ra, dec, 1.37e-5,  1.7e-4])
 
 
-
-
-isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta', 'beta', 'amp'])
-#Label nums for ref:       0       1       2      3     4       5        6      7
-PS = True
 
 #Cluster Center
 ra = Angle('07 41 44.5 hours')
 dec = Angle('74:14:38.7 degrees')
 ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
 
+double_isobeta = True
+if double_isobeta:
+    isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta_1', 'beta_1', 'amp_1', 'r_4', 'r_5', 'r_6', 'theta_2', 'beta_2', 'amp_2'])
+    #Label nums for ref:       0       1       2      3     4       5          6        7        8      9      10     11        12        13
+    isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 1.2, -1, .167, .122, .122, 97*d2r, 9, -1])
 
-# isobeta_pars = np.array([ra, dec, .12, .16, .12, 83*d2r, 9.0, .3])
-# isobeta_pars = np.array([ra, dec, 0.122, 0.167, 0.122, 83*d2r, 8.403, 3])
-isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 8.403, -5])
+else:
+    isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta', 'beta', 'amp'])
+    #Label nums for ref:       0       1       2      3     4       5        6      7
+    isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 1.2, -5])
 
 #southwest bubble pars
 ra_sw = Angle('07 41 49 hours')
@@ -221,6 +242,7 @@ print((dec-dec_sw)*r2arcsec)
 
 sw_labels = np.array(['sw ra', 'sw dec', 'radius', 'sup'])
 #Label nums:            8         9         10       11
+#Label nums:            14        15        16       17
 sw_pars = np.array([-7, 44, 30, 0.5]) 
 
 #North east bubble
@@ -230,6 +252,7 @@ ra_ne, dec_ne = ra_ne.to(u.radian).value, dec_ne.to(u.radian).value
 
 ne_labels = np.array(['ne ra', 'ne dec', 'radius', 'sup'])
 #Label nums:            12        13        14       15
+#Label nums:            18        19        20       21
 ne_pars = np.array([7,-47, 30, 0.5])
 
 
@@ -239,19 +262,28 @@ npar = np.hstack([len(isobeta_pars)+len(sw_pars)+len(ne_pars), len(ps_pars)])
 labels = np.hstack([isobeta_labels, sw_labels, ne_labels, ps_labels])
 
 to_fit=np.ones(len(pars),dtype='bool')
-# to_fit[[0, 1, 8, 9, 10, 12, 13, 14, 16, 17]]=False 
-to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 12, 13, 14, 16, 17]]=False
+if double_isobeta:
+    to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 14, 15, 16, 18, 19, 20, 22, 23]]=False
+else:
+    to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 12, 13, 14, 16, 17]]=False
 
 priors = [None]*len(to_fit)
 priors = np.array(priors)
-priors[[11, 15]] = 'flat'
 prior_vals = [None]*len(to_fit)
-# prior_vals[7] = [-1e4, 0.0]
-prior_vals[11] = [0.0, 1.0]
-prior_vals[15] = [0.0, 1.0]
+if double_isobeta:
+    priors[[17, 21]] = 'flat'
+    prior_vals[17] = [0.0, 1.0]
+    prior_vals[21] = [0.0, 1.0]
+else:
+    priors[[11, 15]] = 'flat'
+    prior_vals[11] = [0.0, 1.0]
+    prior_vals[15] = [0.0, 1.0]
 
+if double_isobeta:
+    funs = [partial(double_helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
+else:
+    funs = [partial(helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
 
-funs = [partial(helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
 
 fit = True 
 if fit:
@@ -343,9 +375,11 @@ fitting = 'charles'
 for i, tod in enumerate(todvec.tods):
 
     temp_tod = tod.copy()
-    if resid:  
-        pred = helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1]
-
+    if resid: 
+        if double_isobeta:
+            pred = double_helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1]
+        else:
+            pred = helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1]
         tod.info['dat_calib'] = tod.info['dat_calib'] - np.array(pred)
         
     #Unclear if we need to reset the noise
@@ -511,13 +545,3 @@ if fitting == 'charles':
             mapset_out.maps[0].write(outroot+'niter_'+repr(niter+1)+'.fits')
     
     minkasi.barrier()
-    
-
-
-
-
-
-
-
-
-
