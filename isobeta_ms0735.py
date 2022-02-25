@@ -263,7 +263,7 @@ labels = np.hstack([isobeta_labels, sw_labels, ne_labels, ps_labels])
 
 to_fit=np.ones(len(pars),dtype='bool')
 if double_isobeta:
-    to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 11, 14, 15, 16, 18, 19, 20, 22, 23]]=False
+    to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 14, 15, 16, 18, 19, 20, 22, 23]]=False
 else:
     to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 12, 13, 14, 16, 17]]=False
 
@@ -375,8 +375,11 @@ fitting = 'charles'
 for i, tod in enumerate(todvec.tods):
 
     temp_tod = tod.copy()
-    if resid:  
-        pred = helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1]
+    if resid: 
+        if double_isobeta:
+            pred = double_helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1]
+        else:
+            pred = helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1]
         tod.info['dat_calib'] = tod.info['dat_calib'] - np.array(pred)
         
     #Unclear if we need to reset the noise
@@ -542,13 +545,3 @@ if fitting == 'charles':
             mapset_out.maps[0].write(outroot+'niter_'+repr(niter+1)+'.fits')
     
     minkasi.barrier()
-    
-
-
-
-
-
-
-
-
-

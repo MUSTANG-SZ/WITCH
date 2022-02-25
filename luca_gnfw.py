@@ -810,7 +810,7 @@ def conv_int_isobeta_elliptical_two_bubbles(
         r_1, r_2, r_3, theta, beta, amp,
         xi,
         yi,
-        xyz,
+        xyz
     )
 
     # Add first bubble
@@ -870,21 +870,21 @@ def conv_int_double_isobeta_elliptical_two_bubbles(
     xyz = make_grid(z, r_map, dr)
 
     # Get first pressure
-    pressure_1, = _isobeta_elliptical(
+    pressure_1 = _isobeta_elliptical(
         x0*(180*3600)/jnp.pi, y0*(180*3600)/jnp.pi,
         r_1, r_2, r_3, theta_1, beta_1, amp_1,
         xi,
         yi,
-        xyz,
+        xyz
     )
     
     # Get second pressure
-    pressure_1 = _isobeta_elliptical(
+    pressure_2 = _isobeta_elliptical(
         x0*(180*3600)/jnp.pi, y0*(180*3600)/jnp.pi,
         r_4, r_5, r_6, theta_2, beta_2, amp_2,
         xi,
         yi,
-        xyz,
+        xyz
     )
 
     # Add profiles
@@ -1309,14 +1309,14 @@ def jit_conv_int_double_isobeta_elliptical_two_bubbles(
     ):
     x0, y0, r_1, r_2, r_3, theta_1, beta_1, amp_1, r_4, r_5, r_6, theta_2, beta_2, amp_2, sup1, sup2 = p
     
-    pred = conv_int_isobeta_elliptical_two_bubbles(
+    pred = conv_int_double_isobeta_elliptical_two_bubbles(
          x0, y0, r_1, r_2, r_3, theta_1, beta_1, amp_1, r_4, r_5, r_6, theta_2, beta_2, amp_2, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
   
     if len(argnums) == 0:
         return pred, jnp.zeros((len(p)+6,) + pred.shape) + 1e-30
 
-    grad = jax.jacfwd(conv_int_isobeta_elliptical_two_bubbles, argnums=argnums)(
+    grad = jax.jacfwd(conv_int_double_isobeta_elliptical_two_bubbles, argnums=argnums)(
          x0, y0, r_1, r_2, r_3, theta_1, beta_1, amp_1, r_4, r_5, r_6, theta_2, beta_2, amp_2, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
     grad = jnp.array(grad)
