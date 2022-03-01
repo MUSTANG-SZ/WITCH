@@ -25,7 +25,7 @@ def helper(params, tod, z, to_fit):
     xy = jnp.asarray(xy)
     
     xb1, yb1, rb1 = params[8:11]
-    xb2, yb2, rb2 = params[13:16]
+    xb2, yb2, rb2 = params[12:15]
     
     argnums = np.array([i for i, p in enumerate(to_fit[:len(params)]) if p])
     params = np.delete(params, [[8, 9, 10, 12, 13, 14]])
@@ -45,7 +45,7 @@ def double_helper(params, tod, z, to_fit):
     
     xb1, yb1, rb1 = params[14:17]
     xb2, yb2, rb2 = params[18:21]
-    
+
     argnums = np.array([i for i, p in enumerate(to_fit[:len(params)]) if p])
     params = np.delete(params, [[14, 15, 16, 18, 19, 20]])
 
@@ -89,7 +89,7 @@ nfft      = 1
 
 #find tod files we want to map
 # outroot=os.environ['SCRATCH']+'/Reductions/MS0735/isobeta/'
-outroot='/home/scratch/sharidas/mustang/MUSTANG2/Reductions/MS0735/isobeta/'
+outroot='/home/scratch/sharidas/mustang/MUSTANG2/Reductions/MS0735/'
 
 #Load the most resent made folder starting with 'TS_'
 if myadj is None:
@@ -156,43 +156,6 @@ d2r=np.pi/180
 sig=9/2.35/3600*d2r
 theta_0=40/3600*d2r
 
-sim = False
-#If true, fit a polynomial to tods and remove
-sub_poly = True 
-method = 'pred2'
-for i, tod in enumerate(todvec.tods):
-
-    temp_tod = tod.copy()
-    # if sim:
-    #      pred = helper(gnfw_pars, temp_tod, z = z, to_fit = np.ones(len(gnfw_pars),dtype ='bool'))[1] + minkasi.derivs_from_gauss_c(ps_pars, temp_tod)[1]
-
-
-    #print(tod.info['dat_calib'].shape)
-    ipix=map.get_pix(tod)
-    tod.info['ipix']=ipix
-    # if sim:
-    #     #Flip alternate TODs and add simulated profile on top
-    #     if (i % 2) == 0:
-    #         tod.info['dat_calib'] = -1*scale*tod.info['dat_calib']
-        # else:
-        #     tod.info['dat_calib'] = scale*tod.info['dat_calib']
-        # 
-        # tod.info['dat_calib'] = tod.info['dat_calib'] + pred
-        
-    if sub_poly:
-        tod.set_apix()
-        nbin = 10
-        #Fit a simple poly model to tods to remove atmosphere
-        for j in range(tod.info['dat_calib'].shape[0]):
-            x, y =tod.info['apix'][j], tod.info['dat_calib'][j] - tod.info[method][j]
-            
-            res, res_er = scipy.optimize.curve_fit(poly, x, y)
-            
-            #Using jax, not actually faster than scipy but maybe with parallelization or tcu's it is?
-            tod.info['dat_calib'][j] -= poly(x, *res)            
-
-    tod.set_noise(minkasi.NoiseSmoothedSVD,fwhm=svdfwhm);tag='svd' 
-
 #at a map/some initial fits.  The better the guess, the
 #faster the convergence.
 d2r=np.pi/180
@@ -226,7 +189,7 @@ double_isobeta = True
 if double_isobeta:
     isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta_1', 'beta_1', 'amp_1', 'r_4', 'r_5', 'r_6', 'theta_2', 'beta_2', 'amp_2'])
     #Label nums for ref:       0       1       2      3     4       5          6        7        8      9      10     11        12        13
-    isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 1.2, -1, .167, .122, .122, 97*d2r, 9, -1])
+    isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.341, 97*d2r, 1.2, -1, .167, .122, .167, 97*d2r, 9, -1])
 
 else:
     isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta', 'beta', 'amp'])
@@ -243,7 +206,7 @@ print((dec-dec_sw)*r2arcsec)
 sw_labels = np.array(['sw ra', 'sw dec', 'radius', 'sup'])
 #Label nums:            8         9         10       11
 #Label nums:            14        15        16       17
-sw_pars = np.array([-7, 44, 30, 0.5]) 
+sw_pars = np.array([21, -51, 30, .5]) 
 
 #North east bubble
 ra_ne = Angle('07 41 39 hours')
@@ -253,7 +216,7 @@ ra_ne, dec_ne = ra_ne.to(u.radian).value, dec_ne.to(u.radian).value
 ne_labels = np.array(['ne ra', 'ne dec', 'radius', 'sup'])
 #Label nums:            12        13        14       15
 #Label nums:            18        19        20       21
-ne_pars = np.array([7,-47, 30, 0.5])
+ne_pars = np.array([-7, 43, 30, .5])
 
 
 #In case we want to later add more functions to the model
@@ -284,6 +247,42 @@ if double_isobeta:
 else:
     funs = [partial(helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
 
+
+sim = False 
+#If true, fit a polynomial to tods and remove
+sub_poly = True 
+method = 'pred2'
+for i, tod in enumerate(todvec.tods):
+
+    temp_tod = tod.copy()
+    if sim:
+        pred = double_helper(pars[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0],dtype ='bool'))[1] + minkasi.derivs_from_gauss_c(ps_pars, temp_tod)[1]
+
+
+    ipix=map.get_pix(tod)
+    tod.info['ipix']=ipix
+    if sim:
+        #Flip alternate TODs and add simulated profile on top
+        if (i % 2) == 0:
+            tod.info['dat_calib'] = -1*tod.info['dat_calib']
+        else:
+            tod.info['dat_calib'] = tod.info['dat_calib']
+        
+        tod.info['dat_calib'] = tod.info['dat_calib'] + np.array(pred)
+        
+    if sub_poly:
+        tod.set_apix()
+        nbin = 10
+        #Fit a simple poly model to tods to remove atmosphere
+        for j in range(tod.info['dat_calib'].shape[0]):
+            x, y =tod.info['apix'][j], tod.info['dat_calib'][j] - tod.info[method][j]
+            
+            res, res_er = scipy.optimize.curve_fit(poly, x, y)
+            
+            #Using jax, not actually faster than scipy but maybe with parallelization or tcu's it is?
+            tod.info['dat_calib'][j] -= poly(x, *res)            
+
+    tod.set_noise(minkasi.NoiseSmoothedSVD,fwhm=svdfwhm);tag='svd' 
 
 fit = True 
 if fit:

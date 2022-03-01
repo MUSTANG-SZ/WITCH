@@ -829,9 +829,8 @@ def conv_int_isobeta_elliptical_two_bubbles(
     beam_rr = jnp.sqrt(beam_xx**2 + beam_yy**2)
     beam = amp1*jnp.exp(-4 * jnp.log(2) * beam_rr ** 2 / fwhm1 ** 2) + amp2*jnp.exp(-4 * jnp.log(2) * beam_rr ** 2 / fwhm2 ** 2)
     beam = beam / jnp.sum(beam)
-
+    
     bound0, bound1 = int((ip.shape[0]-beam.shape[0])/2), int((ip.shape[1] - beam.shape[1])/2)
-
     beam = jnp.pad(beam, ((bound0, ip.shape[0]-beam.shape[0]-bound0), (bound1, ip.shape[1] - beam.shape[1] - bound1)))
 
     ip = fft_conv(ip, beam)
@@ -844,7 +843,7 @@ def conv_int_isobeta_elliptical_two_bubbles(
     dy *= (180*3600)/jnp.pi
     full_rmap = jnp.arange(-1*r_map, r_map, dr) * da
 
-    idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
+    idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (-dy + r_map)/(2*r_map)*len(full_rmap)
     return jsp.ndimage.map_coordinates(ip, (idy, idx), order = 0)#, ip
 
 
@@ -908,7 +907,6 @@ def conv_int_double_isobeta_elliptical_two_bubbles(
     beam = beam / jnp.sum(beam)
 
     bound0, bound1 = int((ip.shape[0]-beam.shape[0])/2), int((ip.shape[1] - beam.shape[1])/2)
-
     beam = jnp.pad(beam, ((bound0, ip.shape[0]-beam.shape[0]-bound0), (bound1, ip.shape[1] - beam.shape[1] - bound1)))
 
     ip = fft_conv(ip, beam)
@@ -921,7 +919,7 @@ def conv_int_double_isobeta_elliptical_two_bubbles(
     dy *= (180*3600)/jnp.pi
     full_rmap = jnp.arange(-1*r_map, r_map, dr) * da
 
-    idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
+    idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (-dy + r_map)/(2*r_map)*len(full_rmap)
     return jsp.ndimage.map_coordinates(ip, (idy, idx), order = 0)#, ip
 
 # ---------------------------------------------------------------
@@ -1312,7 +1310,7 @@ def jit_conv_int_double_isobeta_elliptical_two_bubbles(
     pred = conv_int_double_isobeta_elliptical_two_bubbles(
          x0, y0, r_1, r_2, r_3, theta_1, beta_1, amp_1, r_4, r_5, r_6, theta_2, beta_2, amp_2, xb1, yb1, rb1, sup1, xb2, yb2, rb2, sup2, tods[0], tods[1], z, max_R, fwhm, freq, T_electron, r_map, dr
     )
-  
+    
     if len(argnums) == 0:
         return pred, jnp.zeros((len(p)+6,) + pred.shape) + 1e-30
 
