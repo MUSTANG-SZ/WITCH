@@ -206,7 +206,7 @@ print((dec-dec_sw)*r2arcsec)
 sw_labels = np.array(['sw ra', 'sw dec', 'radius', 'sup'])
 #Label nums:            8         9         10       11
 #Label nums:            14        15        16       17
-sw_pars = np.array([-7, 44, 30, 1]) 
+sw_pars = np.array([21, -51, 30, .5]) 
 
 #North east bubble
 ra_ne = Angle('07 41 39 hours')
@@ -216,7 +216,7 @@ ra_ne, dec_ne = ra_ne.to(u.radian).value, dec_ne.to(u.radian).value
 ne_labels = np.array(['ne ra', 'ne dec', 'radius', 'sup'])
 #Label nums:            12        13        14       15
 #Label nums:            18        19        20       21
-ne_pars = np.array([7,-47, 30, 1])
+ne_pars = np.array([-7, 43, 30, .5])
 
 
 #In case we want to later add more functions to the model
