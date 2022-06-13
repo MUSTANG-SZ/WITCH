@@ -43,6 +43,7 @@ def double_helper(params, tod, z, to_fit):
     xy = [x, y]
     xy = jnp.asarray(xy)
     
+    params[10] = params[3]*(params[9]/params[2])
     xb1, yb1, rb1 = params[14:17]
     xb2, yb2, rb2 = params[18:21]
 
@@ -65,8 +66,8 @@ def poly(x, c0, c1, c2):
 
 name = 'MS0735'
 myadj=None # If None, then it'll select the most recently made folder with string "TS_*"
-# mydir='/scratch/r/rbond/jorlo/'+name+'/'
-mydir='/home/scratch/cromero/mustang/MUSTANG2/Reductions/'+name+'/'
+mydir='/scratch/r/rbond/jorlo/'+name+'/'
+# mydir='/home/scratch/cromero/mustang/MUSTANG2/Reductions/'+name+'/'
 #Some presets
 elxel     = False
 projstr='-'
@@ -88,8 +89,8 @@ nfft      = 1
 
 
 #find tod files we want to map
-# outroot=os.environ['SCRATCH']+'/Reductions/MS0735/isobeta/'
-outroot='/home/scratch/sharidas/mustang/MUSTANG2/Reductions/MS0735/'
+outroot=os.environ['SCRATCH']+'/Reductions/MS0735/isobeta/'
+# outroot='/home/scratch/sharidas/mustang/MUSTANG2/Reductions/MS0735/'
 
 #Load the most resent made folder starting with 'TS_'
 if myadj is None:
@@ -116,7 +117,11 @@ bad_tod,addtag = pbs.get_bad_tods(name,ndo=ndo,odo=odo)
 tod_names=minkasi.cut_blacklist(tod_names,bad_tod)
 tod_names.sort()
 
-tod_names = tod_names[:100]
+session_id = False
+# session_id = '03'
+# if session_id:
+#     tod_names = [name for name in tod_names if name[79:81] == session_id]
+# tod_names = tod_names[150:250]
 #if running MPI, you would want to split up files between processes
 tod_names=tod_names[minkasi.myrank::minkasi.nproc]
 
@@ -189,7 +194,7 @@ double_isobeta = True
 if double_isobeta:
     isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta_1', 'beta_1', 'amp_1', 'r_4', 'r_5', 'r_6', 'theta_2', 'beta_2', 'amp_2'])
     #Label nums for ref:       0       1       2      3     4       5          6        7        8      9      10     11        12        13
-    isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.341, 97*d2r, 1.2, -1, .167, .122, .167, 97*d2r, 9, -1])
+    isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 1.2, -1, .167, .122, .122, 97*d2r, 8.93, -1])
 
 else:
     isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta', 'beta', 'amp'])
@@ -206,7 +211,7 @@ print((dec-dec_sw)*r2arcsec)
 sw_labels = np.array(['sw ra', 'sw dec', 'radius', 'sup'])
 #Label nums:            8         9         10       11
 #Label nums:            14        15        16       17
-sw_pars = np.array([21, -51, 30, .5]) 
+sw_pars = np.array([21, -51, 30, 0.5]) 
 
 #North east bubble
 ra_ne = Angle('07 41 39 hours')
@@ -216,7 +221,7 @@ ra_ne, dec_ne = ra_ne.to(u.radian).value, dec_ne.to(u.radian).value
 ne_labels = np.array(['ne ra', 'ne dec', 'radius', 'sup'])
 #Label nums:            12        13        14       15
 #Label nums:            18        19        20       21
-ne_pars = np.array([-7, 43, 30, .5])
+ne_pars = np.array([-15, 43, 30, 0.5])
 
 
 #In case we want to later add more functions to the model
@@ -226,7 +231,7 @@ labels = np.hstack([isobeta_labels, sw_labels, ne_labels, ps_labels])
 
 to_fit=np.ones(len(pars),dtype='bool')
 if double_isobeta:
-    to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 14, 15, 16, 18, 19, 20, 22, 23]]=False
+    to_fit[[0, 1, 2, 3, 5, 8, 9, 10, 11, 12, 14, 15, 16, 18, 19, 20, 22, 23]]=False
 else:
     to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 12, 13, 14, 16, 17]]=False
 
@@ -235,6 +240,7 @@ priors = np.array(priors)
 prior_vals = [None]*len(to_fit)
 if double_isobeta:
     priors[[17, 21]] = 'flat'
+    # prior_vals[12] = [0.0, 30.0]
     prior_vals[17] = [0.0, 1.0]
     prior_vals[21] = [0.0, 1.0]
 else:
@@ -250,7 +256,7 @@ else:
 
 sim = False 
 #If true, fit a polynomial to tods and remove
-sub_poly = True 
+sub_poly = True
 method = 'pred2'
 for i, tod in enumerate(todvec.tods):
 
@@ -293,6 +299,7 @@ if fit:
     pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 20, priors = priors, prior_vals=prior_vals)
     # jax.profiler.stop_trace()
     t2=time.time()
+    pars_fit[10] = pars_fit[3]*(pars_fit[9]/pars_fit[2])
     if minkasi.myrank==0:
         print('took ',t2-t1,' seconds to fit timestreams')
         for i in range(len(labels)):
@@ -355,6 +362,13 @@ for i in range(len(labels)):
 # if session_id:
 #     outroot += session_id + '_'
 
+if isobeta_pars[2] == isobeta_pars[4]:
+    outroot += 'r1_'
+elif isobeta_pars[3] == isobeta_pars[4]:
+    outroot += 'r2_'
+
+if not sub_poly:
+    outroot += 'nosub_'
 
 #delete trailing _
 outroot = outroot [:-1] 
@@ -398,7 +412,8 @@ if resid:
     outroot += 'resid_'
 else:
     outroot += 'data_'
-
+if session_id:
+    outroot += 'session_' + session_id + '_'
 # if fit:
 #     outroot_pickle = outroot[:-1]+'.p'
 #     pk.dump(dic, open(outroot_pickle, 'wb'))
