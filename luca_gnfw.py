@@ -409,12 +409,6 @@ def conv_int_gnfw_elliptical(
     dy = yi - y0
    
     dr = np.sqrt((dx*jnp.cos(theta) + dy * jnp.sin(theta))**2 + (dx * jnp.sin(theta) - dy * jnp.cos(theta))**2/(1-e**2)) * 180.0 / np.pi * 3600.0
-    '''
-    plt.imshow(dr, origin='lower')
-    plt.colorbar()
-    plt.savefig('/scratch/r/rbond/jorlo/dr.png')
-    plt.close()
-    '''
     
     return jnp.interp(dr, rmap, ip, right=0.0)
 
@@ -455,13 +449,11 @@ def conv_int_gnfw_elliptical_two_bubbles(
     )
     '''
     da = jnp.interp(z, dzline, daline)
-    #print(theta)
+
     #Set up a 2d xy map which we will interpolate over to get the 2D gnfw pressure profile
-    
     x = jnp.arange(-1*r_map, r_map, dr) * jnp.pi / (180*3600)
     y = jnp.arange(-1*r_map, r_map, dr) * jnp.pi / (180*3600) 
     
-    #print(max(x)) 
     
     ''' 
     _x = jnp.array(x, copy=True)
@@ -472,15 +464,6 @@ def conv_int_gnfw_elliptical_two_bubbles(
     '''
     xx, yy = jnp.meshgrid(x, y)
     
-    '''
-    plt.imshow(full_rr)
-    plt.colorbar()
-    plt.savefig('/scratch/r/rbond/jorlo/jorlo_dr.png')
-    '''
-
-    
-   
-  
     #This might be inefficient?
  
     ip = _conv_int_gnfw_elliptical(
@@ -496,13 +479,6 @@ def conv_int_gnfw_elliptical_two_bubbles(
         dr,
     )
 
-
-    '''
-    plt.imshow(ip)
-    plt.colorbar()
-    plt.savefig('/scratch/r/rbond/jorlo/ip.png')
-    plt.close()
-    '''
     ip_b = _gnfw_bubble(
         x0, y0, P0, c500, alpha, beta, gamma, m500, xb1, yb1, rb1, sup1,
         xi,
@@ -551,12 +527,6 @@ def conv_int_gnfw_elliptical_two_bubbles(
     ip = fft_conv(ip, beam)
     ip = ip * y2K_RJ(freq=freq, Te=T_electron) 
     
-    '''
-    plt.imshow(ip, origin='lower')
-    plt.savefig('/scratch/r/rbond/jorlo/ip_w_bubbles.png')
-    plt.close()
-    '''
-    
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
     
@@ -570,10 +540,10 @@ def conv_int_gnfw_elliptical_two_bubbles(
 
 
                                                                      
-#@partial(
-#    jax.jit, 
-#    static_argnums=(8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 23, 24)
-#)
+@partial(
+   jax.jit, 
+   static_argnums=(8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 23, 24)
+)
 def conv_int_gnfw_two_bubbles(
     x0, y0, P0, c500, alpha, beta, gamma, m500,
     xb1, yb1, rb1, sup1,
@@ -666,12 +636,6 @@ def conv_int_gnfw_two_bubbles(
     dy *= (180*3600)/jnp.pi
     #Note this may  need to be changed for eliptical gnfws?
     idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
-    #print('max idx: ',np.amax(idx))
-    #print('min idx: ',np.amin(idx))
-    #print('max idy: ', np.amax(idy))
-    #print('min idy: ', np.amin(idy))
-    #print(r_map)
-    #print(len(full_rmap))
     return jsp.ndimage.map_coordinates(ip, (idx,idy), order = 0)#, ip 
    
    
@@ -1212,11 +1176,6 @@ def jit_conv_int_gnfw_elliptical_two_bubbles(
     padded_grad = jnp.zeros((len(p)+8,) + grad[0].shape) + 1e-30
     argnums = jnp.array(argnums)
     grad = padded_grad.at[jnp.array(argnums)].set(jnp.array(grad))
-    # Move sup factors to right place
-    #grad = grad.at[11].set(grad.at[8].get())
-    #grad = grad.at[15].set(grad.at[9].get())
-    #grad = grad.at[8].set(0)
-    #grad = grad.at[9].set(0)
 
     return pred, grad
 
