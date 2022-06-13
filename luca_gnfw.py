@@ -17,6 +17,8 @@ import time
 
 import matplotlib.pyplot as plt
 
+from functools import partial
+
 # Constants
 # --------------------------------------------------------
 
@@ -47,7 +49,7 @@ daline = jnp.array(daline.value)
 
 # Compton y to Kcmb
 # --------------------------------------------------------
-@jax.partial(jax.jit, static_argnums=(0, 1))
+@partial(jax.jit, static_argnums=(0, 1))
 def y2K_CMB(freq,Te):
   x = freq*h/kb/Tcmb
   xt = x/jnp.tanh(0.5*x)
@@ -78,13 +80,13 @@ def fft_conv(image, kernel):
 
 
 
-@jax.partial(jax.jit, static_argnums=(0,))
+@partial(jax.jit, static_argnums=(0,))
 def K_CMB2K_RJ(freq):
     x = freq * h / kb / Tcmb
     return jnp.exp(x) * x * x / jnp.expm1(x) ** 2
 
 
-@jax.partial(jax.jit, static_argnums=(0, 1))
+@partial(jax.jit, static_argnums=(0, 1))
 def y2K_RJ(freq, Te):
     factor = y2K_CMB(freq, Te)
     return factor * K_CMB2K_RJ(freq)
@@ -114,7 +116,7 @@ def bowl(
     pred = 0
 
 # gNFW Bubble
-@jax.partial(jax.jit, static_argnums=(8, 9 ,10, 15, 16, 17, 18, 19, 20))
+@partial(jax.jit, static_argnums=(8, 9 ,10, 15, 16, 17, 18, 19, 20))
 def _gnfw_bubble(
     x0, y0, P0, c500, alpha, beta, gamma, m500, xb, yb, rb, sup,
     xi,
@@ -203,7 +205,7 @@ def _gnfw_bubble(
 
 # Beam-convolved gNFW profiel
 # --------------------------------------------------------
-@jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
+@partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
 def _conv_int_gnfw(
     x0, y0, P0, c500, alpha, beta, gamma, m500,
     xi,
@@ -568,7 +570,7 @@ def conv_int_gnfw_elliptical_two_bubbles(
 
 
                                                                      
-#@jax.partial(
+#@partial(
 #    jax.jit, 
 #    static_argnums=(8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 23, 24)
 #)
@@ -690,7 +692,7 @@ def get_rmap(r_map, r_1, r_2, r_3, z, beta, amp):
     rmap = ((1e-10/np.abs(amp))**(-1/(1.5*beta)) - 1) * (r / da)
     return np.nanmin(np.array([rmap, r_map]))
 
-@jax.partial(jax.jit, static_argnums=(1, 2))
+@partial(jax.jit, static_argnums=(1, 2))
 def make_grid(z, r_map, dr):
     da = jnp.interp(z, dzline, daline)
 
@@ -732,7 +734,7 @@ def _isobeta_elliptical(
     return amp*rrpow
 
 
-@jax.partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
+@partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
 def _int_isobeta_elliptical(
     x0, y0, r_1, r_2, r_3, theta, beta, amp,
     xi,
@@ -929,7 +931,7 @@ pars_elliptical = jnp.array([0, 0, 0, 0, 1.0, 1.0, 1.5, 4.3, 0.7, 3e14])
 tods = jnp.array(np.random.rand(2, int(1e4)))
 
 
-@jax.partial(
+@partial(
     jax.jit,
     static_argnums=(
         3,
@@ -957,7 +959,7 @@ def val_conv_int_gnfw(
     )
 
 
-@jax.partial(
+@partial(
     jax.jit,
     static_argnums=(
         3,
@@ -994,7 +996,7 @@ def jac_conv_int_gnfw_fwd(
     return grad
 
 
-@jax.partial(
+@partial(
     jax.jit,
     static_argnums=(
         3,
@@ -1038,7 +1040,7 @@ def jit_conv_int_gnfw(
     return pred, grad
 
 
-@jax.partial(
+@partial(
     jax.jit,
     static_argnums=(
         6,
@@ -1100,7 +1102,7 @@ def jit_conv_int_gnfw_elliptical(
     return pred, grad
 
 
-@jax.partial(
+@partial(
     jax.jit, 
     static_argnums=(
         2,
@@ -1154,7 +1156,7 @@ def jit_conv_int_gnfw_two_bubbles(
 
     return pred, grad
 
-@jax.partial(
+@partial(
     jax.jit,
     static_argnums=(
         0,
@@ -1218,7 +1220,7 @@ def jit_conv_int_gnfw_elliptical_two_bubbles(
 
     return pred, grad
 
-@jax.partial(
+@partial(
     jax.jit,
     static_argnums=(
         2,
@@ -1272,7 +1274,7 @@ def jit_conv_int_isobeta_elliptical_two_bubbles(
     return pred, grad
 
 
-@jax.partial(
+@partial(
     jax.jit,
     static_argnums=(
         2,
