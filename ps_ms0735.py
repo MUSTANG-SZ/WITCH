@@ -1,80 +1,13 @@
-import time, datetime, glob, sys, copy
+import time, datetime, glob, sys
 import presets_by_source as pbs
 import minkasi
-import jax
-import jax.numpy as jnp
-from minkasi_jax import  val_conv_int_gnfw, jit_potato_full, poly_sub
-from luca_gnfw import jit_conv_int_isobeta_elliptical_two_bubbles, jit_conv_int_double_isobeta_elliptical_two_bubbles, jit_conv_int_double_isobeta_elliptical_two_bubbles_shock, get_rmap
 import numpy as np
 from astropy.coordinates import Angle
 from astropy import units as u
-import matplotlib.pyplot as plt
-from numpy.polynomial import Polynomial
-from functools import partial
 import scipy
 import os
-import resource
 # import dill as pk
 # jax.config.update("jax_traceback_filtering", "off")
-
-def helper(params, tod, z, to_fit):
-    x = tod.info['dx']
-    y = tod.info['dy']
-
-    xy = [x, y]
-    xy = jnp.asarray(xy)
-    
-    xb1, yb1, rb1 = params[8:11]
-    xb2, yb2, rb2 = params[12:15]
-    
-    argnums = np.array([i for i, p in enumerate(to_fit[:len(params)]) if p])
-    params = np.delete(params, [[8, 9, 10, 12, 13, 14]])
-
-    r_map = 3.0*60
-    # r_map = float(get_rmap(r_map, params[2], params[3], params[4], z, params[6], params[7]))
-    pred, derivs = jit_conv_int_isobeta_elliptical_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
-    
-    return derivs, pred
-
-def double_helper(params, tod, z, to_fit):
-    x = tod.info['dx']
-    y = tod.info['dy']
-
-    xy = [x, y]
-    xy = jnp.asarray(xy)
-    
-    xb1, yb1, rb1 = params[14:17]
-    xb2, yb2, rb2 = params[18:21]
-
-    argnums = np.array([i for i, p in enumerate(to_fit[:len(params)]) if p])
-    params = np.delete(params, [[14, 15, 16, 18, 19, 20]])
-
-    r_map = 3.0*60
-    # r_map = float(get_rmap(r_map, params[2], params[3], params[4], z, params[6], params[7]))
-    pred, derivs = jit_conv_int_double_isobeta_elliptical_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
-    
-    return derivs, pred
-
-
-def shock_helper(params, tod, z, to_fit):
-    x = tod.info['dx']
-    y = tod.info['dy']
-
-    xy = [x, y]
-    xy = jnp.asarray(xy)
-    
-    xb1, yb1, rb1 = params[14:17]
-    xb2, yb2, rb2 = params[18:21]
-
-    argnums = np.array([i for i, p in enumerate(to_fit[:len(params)]) if p])
-    params = np.delete(params, [[14, 15, 16, 18, 19, 20]])
-
-    r_map = 3.0*60
-    # r_map = float(get_rmap(r_map, params[2], params[3], params[4], z, params[6], params[7]))
-    pred, derivs = jit_conv_int_double_isobeta_elliptical_two_bubbles_shock(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
-    
-    return derivs, pred
-
 
 def poly(x, c0, c1, c2):
     temp = 0
@@ -136,11 +69,6 @@ bad_tod,addtag = pbs.get_bad_tods(name,ndo=ndo,odo=odo)
 tod_names=minkasi.cut_blacklist(tod_names,bad_tod)
 tod_names.sort()
 
-session_id = False
-# session_id = '03'
-# if session_id:
-#     tod_names = [name for name in tod_names if name[79:81] == session_id]
-# tod_names = tod_names[150:250]
 #if running MPI, you would want to split up files between processes
 tod_names=tod_names[minkasi.myrank::minkasi.nproc]
 
@@ -197,117 +125,28 @@ ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
 #First fit just the central ps
 #PS pars, currently just central
 PS = True
-ps_labels = np.array(['ra', 'dec', 'sigma', 'amp'])
+labels = np.array(['ra', 'dec', 'sigma', 'amp'])
 #                       16     17     18      19
 #                       22     23     24      25
-#                       27     28     29      30
-ps_pars = np.array([ra, dec, 1.37e-5,  1.7e-4])
+pars = np.array([ra, dec, 1.37e-5,  1.7e-4])
 
 
 
-#Cluster Center
-ra = Angle('07 41 44.5 hours')
-dec = Angle('74:14:38.7 degrees')
-ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
-
-double_isobeta = True
-shock = True
-if double_isobeta:
-    isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta_1', 'beta_1', 'amp_1', 'r_4', 'r_5', 'r_6', 'theta_2', 'beta_2', 'amp_2'])
-    #Label nums for ref:       0       1       2      3     4       5          6        7        8      9      10     11        12        13
-    # isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 1.2, -1, .167, .122, .122, 97*d2r, 8.93, -1])
-    isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 1.2, 0, .167, .122, .122, 97*d2r, 8.93, -1])
-
-else:
-    isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta', 'beta', 'amp'])
-    #Label nums for ref:       0       1       2      3     4       5        6      7
-    isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 1.2, -5])
-
-#southwest bubble pars
-ra_sw = Angle('07 41 49 hours')
-dec_sw = Angle('74:15:22 degrees')
-ra_sw, dec_sw = ra_sw.to(u.radian).value, dec_sw.to(u.radian).value
-
-print((dec-dec_sw)*r2arcsec)
-
-sw_labels = np.array(['sw ra', 'sw dec', 'radius', 'sup'])
-#Label nums:            8         9         10       11
-#Label nums:            14        15        16       17
-sw_pars = np.array([21, -51, 30, 0.5]) 
-
-#North east bubble
-ra_ne = Angle('07 41 39 hours')
-dec_ne = Angle('74:13:51 degrees')       
-ra_ne, dec_ne = ra_ne.to(u.radian).value, dec_ne.to(u.radian).value
-
-ne_labels = np.array(['ne ra', 'ne dec', 'radius', 'sup'])
-#Label nums:            12        13        14       15
-#Label nums:            18        19        20       21
-ne_pars = np.array([-15, 43, 30, 0.5])
-
-if shock:
-    # Shock pars
-    shock_labels = (['sr_1', 'sr_2', 'sr_3', 's_theta', 'shock_val'])
-# Label nums:         22        23      24      25          26
-    shock_pars = ([.320, .230, .230, 97*d2r, .26])
-    #In case we want to later add more functions to the model
-    pars = np.hstack([isobeta_pars,sw_pars, ne_pars, shock_pars, ps_pars])
-    npar = np.hstack([len(isobeta_pars)+len(sw_pars)+len(ne_pars)+len(shock_pars), len(ps_pars)])
-    labels = np.hstack([isobeta_labels, sw_labels, ne_labels, shock_labels, ps_labels])
-else:
-    #In case we want to later add more functions to the model
-    pars = np.hstack([isobeta_pars,sw_pars, ne_pars, ps_pars])
-    npar = np.hstack([len(isobeta_pars)+len(sw_pars)+len(ne_pars), len(ps_pars)])
-    labels = np.hstack([isobeta_labels, sw_labels, ne_labels, ps_labels])
+npar = [len(pars)]
 
 to_fit=np.ones(len(pars),dtype='bool')
-if double_isobeta:
-    if shock:
-        # to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 18, 19, 20, 22, 23, 24, 25, 27, 28]]=False
-        to_fit[[0, 1, 2, 3, 4, 5, 6, 7, 11, 14, 15, 16, 18, 19, 20, 22, 23, 24, 25, 27, 28]]=False
-    else:
-        to_fit[[0, 1, 2, 3, 5, 8, 9, 10, 11, 12, 14, 15, 16, 18, 19, 20, 22, 23]]=False
-else:
-    to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 12, 13, 14, 16, 17]]=False
-
-priors = [None]*len(to_fit)
-priors = np.array(priors)
-prior_vals = [None]*len(to_fit)
-if double_isobeta:
-    priors[[17, 21]] = 'flat'
-    prior_vals[17] = [0.0, 1.0]
-    prior_vals[21] = [0.0, 1.0]
-    if shock:
-        priors[[8, 9, 10, 12, 26]] = 'flat'
-        prior_vals[8] = [.16, .35]
-        prior_vals[9] = [.12, .25]
-        prior_vals[10] = [.12, .35]
-        prior_vals[12] = [0.0, 9.0]
-        prior_vals[26] = [0.0, 5.0]
-else:
-    priors[[11, 15]] = 'flat'
-    prior_vals[11] = [0.0, 1.0]
-    prior_vals[15] = [0.0, 1.0]
-
-if double_isobeta:
-    if shock:
-        funs = [partial(shock_helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
-    else:
-        funs = [partial(double_helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
-else:
-    funs = [partial(helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
+funs = [minkasi.derivs_from_gauss_c]
 
 
 sim = False 
 #If true, fit a polynomial to tods and remove
-sub_poly = True
+sub_poly = False 
 method = 'pred2'
 for i, tod in enumerate(todvec.tods):
 
     temp_tod = tod.copy()
     if sim:
-        pred = double_helper(pars[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0],dtype ='bool'))[1] + minkasi.derivs_from_gauss_c(ps_pars, temp_tod)[1]
-
+        pred =  minkasi.derivs_from_gauss_c(ps_pars, temp_tod)[1]
 
     ipix=map.get_pix(tod)
     tod.info['ipix']=ipix
@@ -340,7 +179,7 @@ if fit:
     print('starting actual fitting ' + str(minkasi.myrank))
     sys.stdout.flush()
     # jax.profiler.start_trace('./tmp/tensorboard')
-    pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 20, priors = priors, prior_vals=prior_vals)
+    pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 20)
     # jax.profiler.stop_trace()
     t2=time.time()
     if minkasi.myrank==0:
@@ -353,8 +192,6 @@ if fit:
     for i in range(len(rs)):
         temp = np.sqrt(rs[i])*np.pi/(60*180)
         fake_tod[0][i], fake_tod[1][i] = temp+pars_fit[0], temp+pars_fit[1]
-
-    profile = val_conv_int_gnfw(pars_fit[:8], fake_tod,z) 
 
 else:
     pars_fit = pars
@@ -405,13 +242,6 @@ for i in range(len(labels)):
 # if session_id:
 #     outroot += session_id + '_'
 
-if isobeta_pars[2] == isobeta_pars[4]:
-    outroot += 'r1_'
-elif isobeta_pars[3] == isobeta_pars[4]:
-    outroot += 'r2_'
-
-if not sub_poly:
-    outroot += 'nosub_'
 
 #delete trailing _
 outroot = outroot [:-1] 
@@ -432,13 +262,7 @@ for i, tod in enumerate(todvec.tods):
 
     temp_tod = tod.copy()
     if resid: 
-        if double_isobeta:
-            if shock:
-                pred = shock_helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1]
-            else:
-                pred = double_helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1]
-        else:
-            pred = helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1]
+        pred =  minkasi.derivs_from_gauss_c(pars_fit, temp_tod)[1]
         tod.info['dat_calib'] = tod.info['dat_calib'] - np.array(pred)
         
     #Unclear if we need to reset the noise
@@ -458,8 +282,7 @@ if resid:
     outroot += 'resid_'
 else:
     outroot += 'data_'
-if session_id:
-    outroot += 'session_' + session_id + '_'
+
 # if fit:
 #     outroot_pickle = outroot[:-1]+'.p'
 #     pk.dump(dic, open(outroot_pickle, 'wb'))
