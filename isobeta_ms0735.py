@@ -4,7 +4,7 @@ import minkasi
 import jax
 import jax.numpy as jnp
 from minkasi_jax import  val_conv_int_gnfw, jit_potato_full, poly_sub
-from luca_gnfw import jit_conv_int_isobeta_elliptical_two_bubbles, jit_conv_int_double_isobeta_elliptical_two_bubbles, get_rmap
+from luca_gnfw import jit_conv_int_isobeta_elliptical_two_bubbles, jit_conv_int_double_isobeta_elliptical_two_bubbles, jit_conv_int_double_isobeta_elliptical_two_bubbles_shock, get_rmap
 import numpy as np
 from astropy.coordinates import Angle
 from astropy import units as u
@@ -43,7 +43,6 @@ def double_helper(params, tod, z, to_fit):
     xy = [x, y]
     xy = jnp.asarray(xy)
     
-    params[10] = params[3]*(params[9]/params[2])
     xb1, yb1, rb1 = params[14:17]
     xb2, yb2, rb2 = params[18:21]
 
@@ -53,6 +52,26 @@ def double_helper(params, tod, z, to_fit):
     r_map = 3.0*60
     # r_map = float(get_rmap(r_map, params[2], params[3], params[4], z, params[6], params[7]))
     pred, derivs = jit_conv_int_double_isobeta_elliptical_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
+    
+    return derivs, pred
+
+
+def shock_helper(params, tod, z, to_fit):
+    x = tod.info['dx']
+    y = tod.info['dy']
+
+    xy = [x, y]
+    xy = jnp.asarray(xy)
+    
+    xb1, yb1, rb1 = params[14:17]
+    xb2, yb2, rb2 = params[18:21]
+
+    argnums = np.array([i for i, p in enumerate(to_fit[:len(params)]) if p])
+    params = np.delete(params, [[14, 15, 16, 18, 19, 20]])
+
+    r_map = 3.0*60
+    # r_map = float(get_rmap(r_map, params[2], params[3], params[4], z, params[6], params[7]))
+    pred, derivs = jit_conv_int_double_isobeta_elliptical_two_bubbles_shock(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
     
     return derivs, pred
 
@@ -181,6 +200,7 @@ PS = True
 ps_labels = np.array(['ra', 'dec', 'sigma', 'amp'])
 #                       16     17     18      19
 #                       22     23     24      25
+#                       27     28     29      30
 ps_pars = np.array([ra, dec, 1.37e-5,  1.7e-4])
 
 
@@ -191,10 +211,12 @@ dec = Angle('74:14:38.7 degrees')
 ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
 
 double_isobeta = True
+shock = True
 if double_isobeta:
     isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta_1', 'beta_1', 'amp_1', 'r_4', 'r_5', 'r_6', 'theta_2', 'beta_2', 'amp_2'])
     #Label nums for ref:       0       1       2      3     4       5          6        7        8      9      10     11        12        13
-    isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 1.2, -1, .167, .122, .122, 97*d2r, 8.93, -1])
+    # isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 1.2, -1, .167, .122, .122, 97*d2r, 8.93, -1])
+    isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 1.2, 0, .167, .122, .122, 97*d2r, 8.93, -1])
 
 else:
     isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta', 'beta', 'amp'])
@@ -223,15 +245,28 @@ ne_labels = np.array(['ne ra', 'ne dec', 'radius', 'sup'])
 #Label nums:            18        19        20       21
 ne_pars = np.array([-15, 43, 30, 0.5])
 
-
-#In case we want to later add more functions to the model
-pars = np.hstack([isobeta_pars,sw_pars, ne_pars, ps_pars])
-npar = np.hstack([len(isobeta_pars)+len(sw_pars)+len(ne_pars), len(ps_pars)])
-labels = np.hstack([isobeta_labels, sw_labels, ne_labels, ps_labels])
+if shock:
+    # Shock pars
+    shock_labels = (['sr_1', 'sr_2', 'sr_3', 's_theta', 'shock_val'])
+# Label nums:         22        23      24      25          26
+    shock_pars = ([.320, .230, .230, 97*d2r, .26])
+    #In case we want to later add more functions to the model
+    pars = np.hstack([isobeta_pars,sw_pars, ne_pars, shock_pars, ps_pars])
+    npar = np.hstack([len(isobeta_pars)+len(sw_pars)+len(ne_pars)+len(shock_pars), len(ps_pars)])
+    labels = np.hstack([isobeta_labels, sw_labels, ne_labels, shock_labels, ps_labels])
+else:
+    #In case we want to later add more functions to the model
+    pars = np.hstack([isobeta_pars,sw_pars, ne_pars, ps_pars])
+    npar = np.hstack([len(isobeta_pars)+len(sw_pars)+len(ne_pars), len(ps_pars)])
+    labels = np.hstack([isobeta_labels, sw_labels, ne_labels, ps_labels])
 
 to_fit=np.ones(len(pars),dtype='bool')
 if double_isobeta:
-    to_fit[[0, 1, 2, 3, 5, 8, 9, 10, 11, 12, 14, 15, 16, 18, 19, 20, 22, 23]]=False
+    if shock:
+        # to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 18, 19, 20, 22, 23, 24, 25, 27, 28]]=False
+        to_fit[[0, 1, 2, 3, 4, 5, 6, 7, 11, 14, 15, 16, 18, 19, 20, 22, 23, 24, 25, 27, 28]]=False
+    else:
+        to_fit[[0, 1, 2, 3, 5, 8, 9, 10, 11, 12, 14, 15, 16, 18, 19, 20, 22, 23]]=False
 else:
     to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 12, 13, 14, 16, 17]]=False
 
@@ -240,16 +275,25 @@ priors = np.array(priors)
 prior_vals = [None]*len(to_fit)
 if double_isobeta:
     priors[[17, 21]] = 'flat'
-    # prior_vals[12] = [0.0, 30.0]
     prior_vals[17] = [0.0, 1.0]
     prior_vals[21] = [0.0, 1.0]
+    if shock:
+        priors[[8, 9, 10, 12, 26]] = 'flat'
+        prior_vals[8] = [.16, .35]
+        prior_vals[9] = [.12, .25]
+        prior_vals[10] = [.12, .35]
+        prior_vals[12] = [0.0, 9.0]
+        prior_vals[26] = [0.0, 5.0]
 else:
     priors[[11, 15]] = 'flat'
     prior_vals[11] = [0.0, 1.0]
     prior_vals[15] = [0.0, 1.0]
 
 if double_isobeta:
-    funs = [partial(double_helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
+    if shock:
+        funs = [partial(shock_helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
+    else:
+        funs = [partial(double_helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
 else:
     funs = [partial(helper, z = z, to_fit = to_fit), minkasi.derivs_from_gauss_c]
 
@@ -299,7 +343,6 @@ if fit:
     pars_fit,chisq,curve,errs=minkasi.fit_timestreams_with_derivs_manyfun(funs,pars,npar,todvec,to_fit, maxiter = 20, priors = priors, prior_vals=prior_vals)
     # jax.profiler.stop_trace()
     t2=time.time()
-    pars_fit[10] = pars_fit[3]*(pars_fit[9]/pars_fit[2])
     if minkasi.myrank==0:
         print('took ',t2-t1,' seconds to fit timestreams')
         for i in range(len(labels)):
@@ -390,7 +433,10 @@ for i, tod in enumerate(todvec.tods):
     temp_tod = tod.copy()
     if resid: 
         if double_isobeta:
-            pred = double_helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1]
+            if shock:
+                pred = shock_helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1]
+            else:
+                pred = double_helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1]
         else:
             pred = helper(pars_fit[:npar[0]], temp_tod, z = z, to_fit = np.zeros(npar[0], dtype=bool))[1] + minkasi.derivs_from_gauss_c(pars_fit[npar[0]:], temp_tod)[1]
         tod.info['dat_calib'] = tod.info['dat_calib'] - np.array(pred)
