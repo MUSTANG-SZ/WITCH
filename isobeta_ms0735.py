@@ -24,15 +24,15 @@ def helper(params, tod, z, to_fit):
     xy = [x, y]
     xy = jnp.asarray(xy)
     
-    xb1, yb1, rb1 = params[8:11]
-    xb2, yb2, rb2 = params[12:15]
+    xb1, yb1, zb1, rb1 = params[8:12]
+    xb2, yb2, zb2, rb2 = params[13:17]
     
     argnums = np.array([i for i, p in enumerate(to_fit[:len(params)]) if p])
-    params = np.delete(params, [[8, 9, 10, 12, 13, 14]])
+    params = np.delete(params, [[8, 9, 10, 11, 13, 14, 15, 16]])
 
     r_map = 3.0*60
     # r_map = float(get_rmap(r_map, params[2], params[3], params[4], z, params[6], params[7]))
-    pred, derivs = jit_conv_int_isobeta_elliptical_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
+    pred, derivs = jit_conv_int_isobeta_elliptical_two_bubbles(params, xy, z, xb1, yb1, zb1, rb1, xb2, yb2, zb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
     
     return derivs, pred
 
@@ -43,15 +43,15 @@ def double_helper(params, tod, z, to_fit):
     xy = [x, y]
     xy = jnp.asarray(xy)
     
-    xb1, yb1, rb1 = params[14:17]
-    xb2, yb2, rb2 = params[18:21]
+    xb1, yb1, zb1, rb1 = params[14:18]
+    xb2, yb2, zb2, rb2 = params[19:23]
 
     argnums = np.array([i for i, p in enumerate(to_fit[:len(params)]) if p])
-    params = np.delete(params, [[14, 15, 16, 18, 19, 20]])
+    params = np.delete(params, [[14, 15, 16, 17, 19, 20, 21, 22]])
 
     r_map = 3.0*60
     # r_map = float(get_rmap(r_map, params[2], params[3], params[4], z, params[6], params[7]))
-    pred, derivs = jit_conv_int_double_isobeta_elliptical_two_bubbles(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
+    pred, derivs = jit_conv_int_double_isobeta_elliptical_two_bubbles(params, xy, z, xb1, yb1, zb1, rb1, xb2, yb2, zb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
     
     return derivs, pred
 
@@ -63,15 +63,15 @@ def shock_helper(params, tod, z, to_fit):
     xy = [x, y]
     xy = jnp.asarray(xy)
     
-    xb1, yb1, rb1 = params[14:17]
-    xb2, yb2, rb2 = params[18:21]
+    xb1, yb1, zb1, rb1 = params[14:18]
+    xb2, yb2, zb2, rb2 = params[19:23]
 
     argnums = np.array([i for i, p in enumerate(to_fit[:len(params)]) if p])
-    params = np.delete(params, [[14, 15, 16, 18, 19, 20]])
+    params = np.delete(params, [[14, 15, 16, 17, 19, 20, 21, 22]])
 
     r_map = 3.0*60
     # r_map = float(get_rmap(r_map, params[2], params[3], params[4], z, params[6], params[7]))
-    pred, derivs = jit_conv_int_double_isobeta_elliptical_two_bubbles_shock(params, xy, z, xb1, yb1, rb1, xb2, yb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
+    pred, derivs = jit_conv_int_double_isobeta_elliptical_two_bubbles_shock(params, xy, z, xb1, yb1, zb1, rb1, xb2, yb2, zb2, rb2, r_map = r_map, dr = 0.5, argnums = tuple(argnums))
     
     return derivs, pred
 
@@ -106,6 +106,7 @@ z         = 0.216    #Redshift of MS0735
 svdfwhm   = 10
 nfft      = 1
 
+plane_ang = 15
 
 #find tod files we want to map
 outroot=os.environ['SCRATCH']+'/Reductions/MS0735/isobeta/'
@@ -198,9 +199,9 @@ ra, dec = ra.to(u.radian).value, dec.to(u.radian).value
 #PS pars, currently just central
 PS = True
 ps_labels = np.array(['ra', 'dec', 'sigma', 'amp'])
-#                       16     17     18      19
-#                       22     23     24      25
-#                       27     28     29      30
+#                       18     19     20      21
+#                       24     25     26      27
+#                       29     30     31      32
 ps_pars = np.array([ra, dec, 1.37e-5,  1.7e-4])
 
 
@@ -216,7 +217,7 @@ if double_isobeta:
     isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta_1', 'beta_1', 'amp_1', 'r_4', 'r_5', 'r_6', 'theta_2', 'beta_2', 'amp_2'])
     #Label nums for ref:       0       1       2      3     4       5          6        7        8      9      10     11        12        13
     # isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 1.2, -1, .167, .122, .122, 97*d2r, 8.93, -1])
-    isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 1.2, 0, .167, .122, .122, 97*d2r, 8.93, -1])
+    isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.341, 97*d2r, 1.2, 0, .167, .122, .167, 97*d2r, 8.93, -1])
 
 else:
     isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta', 'beta', 'amp'])
@@ -230,25 +231,27 @@ ra_sw, dec_sw = ra_sw.to(u.radian).value, dec_sw.to(u.radian).value
 
 print((dec-dec_sw)*r2arcsec)
 
-sw_labels = np.array(['sw ra', 'sw dec', 'radius', 'sup'])
-#Label nums:            8         9         10       11
-#Label nums:            14        15        16       17
-sw_pars = np.array([21, -51, 30, 0.5]) 
+sw_labels = np.array(['sw ra', 'sw dec', 'dz', 'radius', 'sup'])
+#Label nums:            8         9       10       11      12
+#Label nums:            14        15      16       17      18
+sw_pars = np.array([21, -51, 0, 30, 0.5]) 
+sw_pars[2] = np.sqrt(sw_pars[0]**2 + sw_pars[1]**2)*np.sin(d2r*plane_ang)
 
 #North east bubble
 ra_ne = Angle('07 41 39 hours')
 dec_ne = Angle('74:13:51 degrees')       
 ra_ne, dec_ne = ra_ne.to(u.radian).value, dec_ne.to(u.radian).value
 
-ne_labels = np.array(['ne ra', 'ne dec', 'radius', 'sup'])
-#Label nums:            12        13        14       15
-#Label nums:            18        19        20       21
-ne_pars = np.array([-15, 43, 30, 0.5])
+ne_labels = np.array(['ne ra', 'ne dec', 'dz', 'radius', 'sup'])
+#Label nums:            13        14      15       16      17
+#Label nums:            19        20      21       22      23
+ne_pars = np.array([-15, 43, 0, 30, 0.5])
+ne_pars[2] = np.sqrt(ne_pars[0]**2 + ne_pars[1]**2)*np.sin(-1*d2r*plane_ang)
 
 if shock:
     # Shock pars
     shock_labels = (['sr_1', 'sr_2', 'sr_3', 's_theta', 'shock_val'])
-# Label nums:         22        23      24      25          26
+# Label nums:         24        25      26      27          28
     shock_pars = ([.320, .230, .230, 97*d2r, .26])
     #In case we want to later add more functions to the model
     pars = np.hstack([isobeta_pars,sw_pars, ne_pars, shock_pars, ps_pars])
@@ -264,30 +267,30 @@ to_fit=np.ones(len(pars),dtype='bool')
 if double_isobeta:
     if shock:
         # to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 18, 19, 20, 22, 23, 24, 25, 27, 28]]=False
-        to_fit[[0, 1, 2, 3, 4, 5, 6, 7, 11, 14, 15, 16, 18, 19, 20, 22, 23, 24, 25, 27, 28]]=False
+        to_fit[[0, 1, 2, 3, 4, 5, 6, 7, 11, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 29, 30]]=False
     else:
-        to_fit[[0, 1, 2, 3, 5, 8, 9, 10, 11, 12, 14, 15, 16, 18, 19, 20, 22, 23]]=False
+        to_fit[[0, 1, 2, 3, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 19, 20, 21, 22, 24, 25]]=False
 else:
-    to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 12, 13, 14, 16, 17]]=False
+    to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 13, 14, 15, 16, 18, 19]]=False
 
 priors = [None]*len(to_fit)
 priors = np.array(priors)
 prior_vals = [None]*len(to_fit)
 if double_isobeta:
-    priors[[17, 21]] = 'flat'
-    prior_vals[17] = [0.0, 1.0]
-    prior_vals[21] = [0.0, 1.0]
+    priors[[18, 23]] = 'flat'
+    prior_vals[18] = [0.0, 1.0]
+    prior_vals[23] = [0.0, 1.0]
     if shock:
-        priors[[8, 9, 10, 12, 26]] = 'flat'
+        priors[[8, 9, 10, 12, 28]] = 'flat'
         prior_vals[8] = [.16, .35]
         prior_vals[9] = [.12, .25]
         prior_vals[10] = [.12, .35]
         prior_vals[12] = [0.0, 9.0]
-        prior_vals[26] = [0.0, 5.0]
+        prior_vals[28] = [0.0, 5.0]
 else:
-    priors[[11, 15]] = 'flat'
-    prior_vals[11] = [0.0, 1.0]
-    prior_vals[15] = [0.0, 1.0]
+    priors[[12, 17]] = 'flat'
+    prior_vals[12] = [0.0, 1.0]
+    prior_vals[17] = [0.0, 1.0]
 
 if double_isobeta:
     if shock:
@@ -413,8 +416,8 @@ elif isobeta_pars[3] == isobeta_pars[4]:
 if not sub_poly:
     outroot += 'nosub_'
 
-#delete trailing _
-outroot = outroot [:-1] 
+outroot += str(plane_ang)+'deg'
+
 outroot += '/'
 
 minkasi.barrier()
