@@ -106,7 +106,8 @@ z         = 0.216    #Redshift of MS0735
 svdfwhm   = 10
 nfft      = 1
 
-plane_ang = 15
+plane_ang = 0 
+print("Bubble angle is " + str(plane_ang))
 
 #find tod files we want to map
 outroot=os.environ['SCRATCH']+'/Reductions/MS0735/isobeta/'
@@ -217,7 +218,7 @@ if double_isobeta:
     isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta_1', 'beta_1', 'amp_1', 'r_4', 'r_5', 'r_6', 'theta_2', 'beta_2', 'amp_2'])
     #Label nums for ref:       0       1       2      3     4       5          6        7        8      9      10     11        12        13
     # isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.249, 97*d2r, 1.2, -1, .167, .122, .122, 97*d2r, 8.93, -1])
-    isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.341, 97*d2r, 1.2, 0, .167, .122, .167, 97*d2r, 8.93, -1])
+    isobeta_pars = np.array([ra, dec, 0.341, 0.249, 0.341, 97*d2r, .98, 0, .167, .122, .167, 97*d2r, 8.93, -1])
 
 else:
     isobeta_labels = np.array(['ra', 'dec', 'r_1', 'r_2', 'r_3', 'theta', 'beta', 'amp'])
@@ -252,7 +253,7 @@ if shock:
     # Shock pars
     shock_labels = (['sr_1', 'sr_2', 'sr_3', 's_theta', 'shock_val'])
 # Label nums:         24        25      26      27          28
-    shock_pars = ([.320, .230, .230, 97*d2r, .26])
+    shock_pars = ([.320, .230, .320, 97*d2r, .26])
     #In case we want to later add more functions to the model
     pars = np.hstack([isobeta_pars,sw_pars, ne_pars, shock_pars, ps_pars])
     npar = np.hstack([len(isobeta_pars)+len(sw_pars)+len(ne_pars)+len(shock_pars), len(ps_pars)])
@@ -266,8 +267,7 @@ else:
 to_fit=np.ones(len(pars),dtype='bool')
 if double_isobeta:
     if shock:
-        # to_fit[[0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 18, 19, 20, 22, 23, 24, 25, 27, 28]]=False
-        to_fit[[0, 1, 2, 3, 4, 5, 6, 7, 11, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 29, 30]]=False
+        to_fit[[0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 14, 15, 16, 17, 19, 20, 21, 22, 24, 25, 26, 27, 29, 30]]=False
     else:
         to_fit[[0, 1, 2, 3, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 19, 20, 21, 22, 24, 25]]=False
 else:
@@ -280,13 +280,13 @@ if double_isobeta:
     priors[[18, 23]] = 'flat'
     prior_vals[18] = [0.0, 1.0]
     prior_vals[23] = [0.0, 1.0]
-    if shock:
-        priors[[8, 9, 10, 12, 28]] = 'flat'
-        prior_vals[8] = [.16, .35]
-        prior_vals[9] = [.12, .25]
-        prior_vals[10] = [.12, .35]
-        prior_vals[12] = [0.0, 9.0]
-        prior_vals[28] = [0.0, 5.0]
+    # if shock:
+    #     priors[[8, 9, 10, 12, 28]] = 'flat'
+    #     prior_vals[8] = [.16, .35]
+    #     prior_vals[9] = [.12, .25]
+    #     prior_vals[10] = [.12, .35]
+    #     prior_vals[12] = [0.0, 9.0]
+    #     prior_vals[28] = [0.0, 5.0]
 else:
     priors[[12, 17]] = 'flat'
     prior_vals[12] = [0.0, 1.0]
