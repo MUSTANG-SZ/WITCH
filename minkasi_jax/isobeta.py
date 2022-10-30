@@ -50,28 +50,6 @@ def _isobeta_elliptical(r_1, r_2, r_3, theta, beta, amp, xyz):
     return amp * rrpow
 
 
-@partial(jax.jit, static_argnums=(6, 7, 8))
-def _int_isobeta_elliptical(
-    r_1, r_2, r_3, theta, beta, amp, z, r_map=15.0 * 60, dr=0.1
-):
-    """
-    Elliptical isobeta
-    This function does not include smoothing or declination stretch
-    which should be applied at the end
-    """
-    da = jnp.interp(z, dzline, daline)
-    XMpc = Xthom * Mparsec
-
-    # Get xyz grid
-    xyz = make_grid(z, r_map, dr)
-
-    # Get pressure
-    pressure = _isobeta_elliptical(r_1, r_2, r_3, theta, beta, amp, xyz)
-
-    # Integrate line of sight pressure
-    return jnp.trapz(pressure, dx=dr * da, axis=-1) * XMpc / me
-
-
 def conv_int_isobeta_elliptical_two_bubbles(
     x0,
     y0,
