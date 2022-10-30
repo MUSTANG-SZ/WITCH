@@ -1,6 +1,11 @@
 """
 Module for generating isobeta profiles with substructure and their gradients.
 """
+#TODO: Move some coordinate operations out of main funcs
+#TODO: Move unit conversions out of main funcs
+#TODO: Make unit agnostic? Already sorta is in parts
+#TODO: One function to rule them all
+
 from functools import partial
 import jax
 import jax.numpy as jnp
@@ -28,9 +33,29 @@ jax.config.update("jax_platform_name", "cpu")
 @jax.jit
 def _isobeta_elliptical(r_1, r_2, r_3, theta, beta, amp, xyz):
     """
-    Elliptical isobeta pressure profile
+    Elliptical isobeta pressure profile in 3d
     This function does not include smoothing or declination stretch
-    which should be applied at the end
+    which should be applied at the end.
+
+    Arguments:
+
+        r_1: Amount to scale along x-axis
+
+        r_2: Amount to scale along y-axis
+
+        r_3: Amount to scale along z-axis
+
+        theta: Angle to rotate in xy-plane
+
+        beta: Beta value of isobeta model
+
+        amp: Amplitude of isobeta model
+
+        xyz: Coordinte grid to calculate model on
+
+    Returns:
+
+        model: The isobeta model centered on the origin of xyz
     """
     # Rotate
     xx = xyz[0] * jnp.cos(theta) + xyz[1] * jnp.sin(theta)
@@ -78,6 +103,68 @@ def conv_int_isobeta_elliptical_two_bubbles(
     r_map=15.0 * 60,
     dr=0.1,
 ):
+    """
+    Elliptical isobeta profile with two bubbles.
+    Final result is integrated to 2d with smoothing and declination stretch applied.
+
+    Arguments:
+
+        x0: Ra of cluster center
+
+        y0: Dec of cluster center
+
+        r_1: Amount to scale along x-axis
+
+        r_2: Amount to scale along y-axis
+
+        r_3: Amount to scale along z-axis
+
+        theta: Angle to rotate in xy-plane
+
+        beta: Beta value of isobeta model
+
+        amp: Amplitude of isobeta model
+
+        xb1: Ra of first bubble's center relative to cluster center
+
+        yb1: Dec of first bubble's center relative to cluster center
+
+        zb1: Line of site offset of first bubble's center relative to cluster center
+
+        rb1: Radius of first bubble
+
+        sup1: Supression factor of first bubble
+
+        xb2: Ra of second bubble's center relative to cluster center
+
+        yb2: Dec of second bubble's center relative to cluster center
+
+        zb2: Line of site offset of second bubble's center relative to cluster center
+
+        rb2: Radius of second bubble
+
+        sup2: Supression factor of second bubble
+
+        xi: Ra TOD
+
+        yi: Dec TOD
+
+        z: Cluster redshift
+
+        fwhm: Full width half max of beam used for smoothing
+
+        freq: Frequency of observation in Hz
+
+        T_electron: Electron temperature
+
+        r_map: Size of map to model on
+
+        dr: Map grid size
+
+    Returns:
+
+        model: The isobeta model in K_RJ
+    """
     da = jnp.interp(z, dzline, daline)
     XMpc = Xthom * Mparsec
 
@@ -167,6 +254,80 @@ def conv_int_double_isobeta_elliptical_two_bubbles(
     r_map=15.0 * 60,
     dr=0.1,
 ):
+    """
+    Elliptical double isobeta profile with two bubbles.
+    Final result is integrated to 2d with smoothing and declination stretch applied.
+
+    Arguments:
+
+        x0: Ra of cluster center
+
+        y0: Dec of cluster center
+
+        r_1: Amount to scale first isobeta along x-axis
+
+        r_2: Amount to scale first isobeta along y-axis
+
+        r_3: Amount to scale first isobeta along z-axis
+
+        theta_1: Angle to rotate first isobeta in xy-plane
+
+        beta_1: Beta value of first isobeta model
+
+        amp_1: Amplitude of first isobeta model
+
+        r_4: Amount to scale second isobeta along x-axis
+
+        r_5: Amount to scale second isobeta along y-axis
+
+        r_6: Amount to scale second isobeta along z-axis
+
+        theta_2: Angle to rotate second isobeta in xy-plane
+
+        beta_2: Beta value of second isobeta model
+
+        amp_2: Amplitude of second isobeta model
+
+        xb1: Ra of first bubble's center relative to cluster center
+
+        yb1: Dec of first bubble's center relative to cluster center
+
+        zb1: Line of site offset of first bubble's center relative to cluster center
+
+        rb1: Radius of first bubble
+
+        sup1: Supression factor of first bubble
+
+        xb2: Ra of second bubble's center relative to cluster center
+
+        yb2: Dec of second bubble's center relative to cluster center
+
+        zb2: Line of site offset of second bubble's center relative to cluster center
+
+        rb2: Radius of second bubble
+
+        sup2: Supression factor of second bubble
+
+        xi: Ra TOD
+
+        yi: Dec TOD
+
+        z: Cluster redshift
+
+        fwhm: Full width half max of beam used for smoothing
+
+        freq: Frequency of observation in Hz
+
+        T_electron: Electron temperature
+
+        r_map: Size of map to model on
+
+        dr: Map grid size
+
+    Returns:
+
+        model: The isobeta model in K_RJ
+    """
     da = jnp.interp(z, dzline, daline)
     XMpc = Xthom * Mparsec
 
@@ -267,6 +428,90 @@ def conv_int_double_isobeta_elliptical_two_bubbles_shock(
     r_map=15.0 * 60,
     dr=0.1,
 ):
+    """
+    Elliptical double isobeta profile with two bubbles and a shock.
+    Final result is integrated to 2d with smoothing and declination stretch applied.
+
+    Arguments:
+
+        x0: Ra of cluster center
+
+        y0: Dec of cluster center
+
+        r_1: Amount to scale first isobeta along x-axis
+
+        r_2: Amount to scale first isobeta along y-axis
+
+        r_3: Amount to scale first isobeta along z-axis
+
+        theta_1: Angle to rotate first isobeta in xy-plane
+
+        beta_1: Beta value of first isobeta model
+
+        amp_1: Amplitude of first isobeta model
+
+        r_4: Amount to scale second isobeta along x-axis
+
+        r_5: Amount to scale second isobeta along y-axis
+
+        r_6: Amount to scale second isobeta along z-axis
+
+        theta_2: Angle to rotate second isobeta in xy-plane
+
+        beta_2: Beta value of second isobeta model
+
+        amp_2: Amplitude of second isobeta model
+
+        xb1: Ra of first bubble's center relative to cluster center
+
+        yb1: Dec of first bubble's center relative to cluster center
+
+        zb1: Line of site offset of first bubble's center relative to cluster center
+
+        rb1: Radius of first bubble
+
+        sup1: Supression factor of first bubble
+
+        xb2: Ra of second bubble's center relative to cluster center
+
+        yb2: Dec of second bubble's center relative to cluster center
+
+        zb2: Line of site offset of second bubble's center relative to cluster center
+
+        rb2: Radius of second bubble
+
+        sup2: Supression factor of second bubble
+
+        sr_1: Amount to scale shock along x-axis
+
+        sr_2: Amount to scale shock along y-axis
+
+        sr_3: Amount to scale shock along z-axis
+
+        stheta: Angle to rotate shock in xy-plane
+
+        shock: Factor by which pressure is enhanced within shock
+
+        xi: Ra TOD
+
+        yi: Dec TOD
+
+        z: Cluster redshift
+
+        fwhm: Full width half max of beam used for smoothing
+
+        freq: Frequency of observation in Hz
+
+        T_electron: Electron temperature
+
+        r_map: Size of map to model on
+
+        dr: Map grid size
+
+    Returns:
+
+        model: The isobeta model in K_RJ
+    """
     da = jnp.interp(z, dzline, daline)
     XMpc = Xthom * Mparsec
 
@@ -354,6 +599,55 @@ def jit_conv_int_isobeta_elliptical_two_bubbles(
     dr=0.1,
     argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
 ):
+    """
+    Compute elliptical isobeta with two bubbles and its gradients.
+
+    Arguments:
+
+        p: Model parameters (x0, y0, r_1, r_2, r_3, theta, beta, amp, sup1, sup2).
+           See conv_int_isobeta_elliptical_two_bubbles for details.
+
+        tods: Ra and Dec TODs.
+
+        z: Cluster redshift
+
+        xb1: Ra of first bubble's center relative to cluster center
+
+        yb1: Dec of first bubble's center relative to cluster center
+
+        zb1: Line of site offset of first bubble's center relative to cluster center
+
+        rb1: Radius of first bubble
+
+        xb2: Ra of second bubble's center relative to cluster center
+
+        yb2: Dec of second bubble's center relative to cluster center
+
+        zb2: Line of site offset of second bubble's center relative to cluster center
+
+        rb2: Radius of second bubble
+
+        fwhm: Full width half max of beam used for smoothing
+
+        freq: Frequency of observation in Hz
+
+        T_electron: Electron temperature
+
+        r_map: Size of map to model on
+
+        dr: Map grid size
+
+        argnums: Parameters in conv_int_isobeta_elliptical_two_bubbles to compute the gradent with respect to
+
+    Returns:
+
+        pred: The result of conv_int_isobeta_elliptical_two_bubbles
+
+        derivs: The gradent of pred with respect to all model parameters.
+                Will always be padded to have 18 rows with each one corresponding to
+                one of the first 18 parameters of conv_int_isobeta_elliptical_two_bubbles.
+                Parameters not in argnums will have all their values set to 1e-30.
+    """
     x0, y0, r_1, r_2, r_3, theta, beta, amp, sup1, sup2 = p
 
     pred = conv_int_isobeta_elliptical_two_bubbles(
@@ -448,6 +742,56 @@ def jit_conv_int_double_isobeta_elliptical_two_bubbles(
     dr=0.1,
     argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
 ):
+    """
+    Compute elliptical double isobeta with two bubbles and its gradients.
+
+    Arguments:
+
+        p: Model parameters (x0, y0, r_1, r_2, r_3, theta_1, beta_1, amp_1,
+                             r_4, r_5, r_6, theta_2, beta_2, amp_2, sup1, sup2).
+           See conv_int_double_isobeta_elliptical_two_bubbles for details.
+
+        tods: Ra and Dec TODs.
+
+        z: Cluster redshift
+
+        xb1: Ra of first bubble's center relative to cluster center
+
+        yb1: Dec of first bubble's center relative to cluster center
+
+        zb1: Line of site offset of first bubble's center relative to cluster center
+
+        rb1: Radius of first bubble
+
+        xb2: Ra of second bubble's center relative to cluster center
+
+        yb2: Dec of second bubble's center relative to cluster center
+
+        zb2: Line of site offset of second bubble's center relative to cluster center
+
+        rb2: Radius of second bubble
+
+        fwhm: Full width half max of beam used for smoothing
+
+        freq: Frequency of observation in Hz
+
+        T_electron: Electron temperature
+
+        r_map: Size of map to model on
+
+        dr: Map grid size
+
+        argnums: Parameters in conv_int_double_isobeta_elliptical_two_bubbles to compute the gradent with respect to
+
+    Returns:
+
+        pred: The result of conv_int_double_isobeta_elliptical_two_bubbles
+
+        derivs: The gradient of pred with respect to all model parameters.
+                Will always be padded to have 24 rows with each one corresponding to
+                one of the first 24 parameters of conv_int_double_isobeta_elliptical_two_bubbles.
+                Parameters not in argnums will have all their values set to 1e-30.
+    """
     (
         x0,
         y0,
@@ -571,6 +915,57 @@ def jit_conv_int_double_isobeta_elliptical_two_bubbles_shock(
     dr=0.1,
     argnums=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
 ):
+    """
+    Compute elliptical double isobeta with two bubbles plus a shock and its gradients.
+
+    Arguments:
+
+        p: Model parameters (x0, y0, r_1, r_2, r_3, theta_1, beta_1, amp_1,
+                             r_4, r_5, r_6, theta_2, beta_2, amp_2, sup1, sup2,
+                             sr_1, sr_2, sr_3, s_theta, shock).
+           See conv_int_double_isobeta_elliptical_two_bubbles_shock for details.
+
+        tods: Ra and Dec TODs.
+
+        z: Cluster redshift
+
+        xb1: Ra of first bubble's center relative to cluster center
+
+        yb1: Dec of first bubble's center relative to cluster center
+
+        zb1: Line of site offset of first bubble's center relative to cluster center
+
+        rb1: Radius of first bubble
+
+        xb2: Ra of second bubble's center relative to cluster center
+
+        yb2: Dec of second bubble's center relative to cluster center
+
+        zb2: Line of site offset of second bubble's center relative to cluster center
+
+        rb2: Radius of second bubble
+
+        fwhm: Full width half max of beam used for smoothing
+
+        freq: Frequency of observation in Hz
+
+        T_electron: Electron temperature
+
+        r_map: Size of map to model on
+
+        dr: Map grid size
+
+        argnums: Parameters in conv_int_double_isobeta_elliptical_two_bubbles_shock to compute the gradent with respect to
+
+    Returns:
+
+        pred: The result of conv_int_double_isobeta_elliptical_two_bubbles_shock
+
+        derivs: The gradient of pred with respect to all model parameters.
+                Will always be padded to have 29 rows with each one corresponding to
+                one of the first 29 parameters of conv_int_double_isobeta_elliptical_two_bubbles_shock.
+                Parameters not in argnums will have all their values set to 1e-30.
+    """
     (
         x0,
         y0,
