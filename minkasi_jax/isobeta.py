@@ -1,10 +1,10 @@
 """
 Module for generating isobeta profiles with substructure and their gradients.
 """
-#TODO: Move some coordinate operations out of main funcs
-#TODO: Move unit conversions out of main funcs
-#TODO: Make unit agnostic? Already sorta is in parts
-#TODO: One function to rule them all
+# TODO: Move some coordinate operations out of main funcs
+# TODO: Move unit conversions out of main funcs
+# TODO: Make unit agnostic? Already sorta is in parts
+# TODO: One function to rule them all
 
 from functools import partial
 import jax
@@ -12,10 +12,7 @@ import jax.numpy as jnp
 import jax.scipy as jsp
 from utils import (
     dzline,
-    hzline,
-    nzline,
     daline,
-    h70,
     Mparsec,
     Xthom,
     me,
