@@ -26,7 +26,7 @@ jax.config.update("jax_platform_name", "cpu")
 
 
 @jax.jit
-def _isobeta_elliptical(x0, y0, r_1, r_2, r_3, theta, beta, amp, xyz):
+def _isobeta_elliptical(r_1, r_2, r_3, theta, beta, amp, xyz):
     """
     Elliptical isobeta pressure profile
     This function does not include smoothing or declination stretch
@@ -50,9 +50,9 @@ def _isobeta_elliptical(x0, y0, r_1, r_2, r_3, theta, beta, amp, xyz):
     return amp * rrpow
 
 
-@partial(jax.jit, static_argnums=(11, 12, 13, 14, 15, 16))
+@partial(jax.jit, static_argnums=(6, 7, 8))
 def _int_isobeta_elliptical(
-    x0, y0, r_1, r_2, r_3, theta, beta, amp, z, r_map=15.0 * 60, dr=0.1
+    r_1, r_2, r_3, theta, beta, amp, z, r_map=15.0 * 60, dr=0.1
 ):
     """
     Elliptical isobeta
@@ -66,17 +66,7 @@ def _int_isobeta_elliptical(
     xyz = make_grid(z, r_map, dr)
 
     # Get pressure
-    pressure = _isobeta_elliptical(
-        x0 * (180 * 3600) / jnp.pi,
-        y0 * (180 * 3600) / jnp.pi,
-        r_1,
-        r_2,
-        r_3,
-        theta,
-        beta,
-        amp,
-        xyz,
-    )
+    pressure = _isobeta_elliptical(r_1, r_2, r_3, theta, beta, amp, xyz)
 
     # Integrate line of sight pressure
     return jnp.trapz(pressure, dx=dr * da, axis=-1) * XMpc / me
@@ -117,17 +107,7 @@ def conv_int_isobeta_elliptical_two_bubbles(
     xyz = make_grid(z, r_map, dr)
 
     # Get pressure
-    pressure = _isobeta_elliptical(
-        x0 * (180 * 3600) / jnp.pi,
-        y0 * (180 * 3600) / jnp.pi,
-        r_1,
-        r_2,
-        r_3,
-        theta,
-        beta,
-        amp,
-        xyz,
-    )
+    pressure = _isobeta_elliptical(r_1, r_2, r_3, theta, beta, amp, xyz)
 
     # Add first bubble
     pressure = add_bubble(pressure, xyz, xb1, yb1, zb1, rb1, sup1, z)
@@ -216,30 +196,10 @@ def conv_int_double_isobeta_elliptical_two_bubbles(
     xyz = make_grid(z, r_map, dr)
 
     # Get first pressure
-    pressure_1 = _isobeta_elliptical(
-        x0 * (180 * 3600) / jnp.pi,
-        y0 * (180 * 3600) / jnp.pi,
-        r_1,
-        r_2,
-        r_3,
-        theta_1,
-        beta_1,
-        amp_1,
-        xyz,
-    )
+    pressure_1 = _isobeta_elliptical(r_1, r_2, r_3, theta_1, beta_1, amp_1, xyz)
 
     # Get second pressure
-    pressure_2 = _isobeta_elliptical(
-        x0 * (180 * 3600) / jnp.pi,
-        y0 * (180 * 3600) / jnp.pi,
-        r_4,
-        r_5,
-        r_6,
-        theta_2,
-        beta_2,
-        amp_2,
-        xyz,
-    )
+    pressure_2 = _isobeta_elliptical(r_4, r_5, r_6, theta_2, beta_2, amp_2, xyz)
 
     # Add profiles
     pressure = pressure_1 + pressure_2
@@ -336,30 +296,10 @@ def conv_int_double_isobeta_elliptical_two_bubbles_shock(
     xyz = make_grid(z, r_map, dr)
 
     # Get first pressure
-    pressure_1 = _isobeta_elliptical(
-        x0 * (180 * 3600) / jnp.pi,
-        y0 * (180 * 3600) / jnp.pi,
-        r_1,
-        r_2,
-        r_3,
-        theta_1,
-        beta_1,
-        amp_1,
-        xyz,
-    )
+    pressure_1 = _isobeta_elliptical(r_1, r_2, r_3, theta_1, beta_1, amp_1, xyz)
 
     # Get second pressure
-    pressure_2 = _isobeta_elliptical(
-        x0 * (180 * 3600) / jnp.pi,
-        y0 * (180 * 3600) / jnp.pi,
-        r_4,
-        r_5,
-        r_6,
-        theta_2,
-        beta_2,
-        amp_2,
-        xyz,
-    )
+    pressure_2 = _isobeta_elliptical(r_4, r_5, r_6, theta_2, beta_2, amp_2, xyz)
 
     # Add profiles
     pressure = pressure_1 + pressure_2
@@ -415,7 +355,7 @@ def conv_int_double_isobeta_elliptical_two_bubbles_shock(
 
 @partial(
     jax.jit,
-    static_argnums=(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17),
+    static_argnums=(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16),
 )
 def jit_conv_int_isobeta_elliptical_two_bubbles(
     p,
@@ -509,7 +449,7 @@ def jit_conv_int_isobeta_elliptical_two_bubbles(
 
 @partial(
     jax.jit,
-    static_argnums=(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17),
+    static_argnums=(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16),
 )
 def jit_conv_int_double_isobeta_elliptical_two_bubbles(
     p,
@@ -632,7 +572,7 @@ def jit_conv_int_double_isobeta_elliptical_two_bubbles(
 
 @partial(
     jax.jit,
-    static_argnums=(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17),
+    static_argnums=(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16),
 )
 def jit_conv_int_double_isobeta_elliptical_two_bubbles_shock(
     p,
