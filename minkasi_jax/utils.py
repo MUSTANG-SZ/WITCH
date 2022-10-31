@@ -41,7 +41,7 @@ hzline = jnp.array(hzline.value)
 nzline = jnp.array(nzline.value)
 daline = jnp.array(daline.value)
 
-# Compton y to Kcmb
+# Unit conversions
 # --------------------------------------------------------
 @partial(jax.jit, static_argnums=(0, 1))
 def y2K_CMB(freq, Te):
@@ -84,17 +84,6 @@ def y2K_CMB(freq, Te):
     return factor * Tcmb
 
 
-# FFT Convolutions
-# -----------------------------------------------------------
-@jax.jit
-def fft_conv(image, kernel):
-    Fmap = jnp.fft.fft2(jnp.fft.fftshift(image))
-    Fkernel = jnp.fft.fft2(jnp.fft.fftshift(kernel))
-    convolved_map = jnp.fft.fftshift(jnp.real(jnp.fft.ifft2(Fmap * Fkernel)))
-
-    return convolved_map
-
-
 @partial(jax.jit, static_argnums=(0,))
 def K_CMB2K_RJ(freq):
     x = freq * h / kb / Tcmb
@@ -107,6 +96,19 @@ def y2K_RJ(freq, Te):
     return factor * K_CMB2K_RJ(freq)
 
 
+# FFT Convolutions
+# -----------------------------------------------------------
+@jax.jit
+def fft_conv(image, kernel):
+    Fmap = jnp.fft.fft2(jnp.fft.fftshift(image))
+    Fkernel = jnp.fft.fft2(jnp.fft.fftshift(kernel))
+    convolved_map = jnp.fft.fftshift(jnp.real(jnp.fft.ifft2(Fmap * Fkernel)))
+
+    return convolved_map
+
+
+# Model building tools
+# -----------------------------------------------------------
 @partial(jax.jit, static_argnums=(1, 2))
 def make_grid(z, r_map, dr):
     da = jnp.interp(z, dzline, daline)
