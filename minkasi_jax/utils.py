@@ -107,37 +107,6 @@ def y2K_RJ(freq, Te):
     return factor * K_CMB2K_RJ(freq)
 
 
-# Bowling
-# -----------------------------------------------------------
-
-
-@jax.jit
-def bowl(x0, y0, c0, c1, c2, xi, yi):
-    # A function which returns predictions and gradients for a simple eliptical bowl
-    # Inputs:
-    #    x0,y0, the center of the bowl
-    #    c0, c1, c2 the polynomial coefficients
-    #    xi, yi, the xi and yi to evaluate at
-
-    # Outputs:
-    # pred the value f(x0, y0, c0, c1, c2)(xi, yi)
-
-    dx = (xi - x0) * jnp.cos(yi)
-    dy = yi - y0
-    dr = jnp.sqrt(dx * dx + dy * dy) * 180.0 / np.pi * 3600.0
-
-    pred = 0
-
-
-def get_rmap(r_map, r_1, r_2, r_3, z, beta, amp):
-    if beta == 0 or amp == 0:
-        return r_map
-    da = np.interp(z, dzline, daline)
-    r = np.max(jnp.array([r_1, r_2, r_3]))
-    rmap = ((1e-10 / np.abs(amp)) ** (-1 / (1.5 * beta)) - 1) * (r / da)
-    return np.nanmin(np.array([rmap, r_map]))
-
-
 @partial(jax.jit, static_argnums=(1, 2))
 def make_grid(z, r_map, dr):
     da = jnp.interp(z, dzline, daline)
