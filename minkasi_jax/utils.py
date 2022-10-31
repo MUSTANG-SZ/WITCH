@@ -133,7 +133,7 @@ def y2K_RJ(freq, Te):
     return factor * K_CMB2K_RJ(freq)
 
 
-# FFT Convolutions
+# FFT Operations
 # -----------------------------------------------------------
 @jax.jit
 def fft_conv(image, kernel):
@@ -155,6 +155,32 @@ def fft_conv(image, kernel):
     convolved_map = jnp.fft.fftshift(jnp.real(jnp.fft.ifft2(Fmap * Fkernel)))
 
     return convolved_map
+
+
+@partial(jax.jit, static_argnums=(1,))
+def tod_hi_pass(tod, N_filt):
+    """
+    High pass a tod with a tophat
+
+    Arguments:
+
+        tod: TOD to high pass
+
+        N_filt: N_filt of tophat
+
+
+    Returns:
+
+        tod_filtered: Filtered TOD
+    """
+    mask = jnp.ones(tod.shape)
+    mask = jax.ops.index_update(mask, jax.ops.index[..., :N_filt], 0.0)
+
+    ## apply the filter in fourier space
+    Ftod = jnp.fft.fft(tod)
+    Ftod_filtered = Ftod * mask
+    tod_filtered = jnp.fft.ifft(Ftod_filtered).real
+    return tod_filtered
 
 
 # Model building tools
