@@ -485,7 +485,7 @@ def conv_int_double_isobeta_elliptical_two_bubbles_shock(
 
         sr_3: Amount to scale shock along z-axis
 
-        stheta: Angle to rotate shock in xy-plane
+        s_theta: Angle to rotate shock in xy-plane
 
         shock: Factor by which pressure is enhanced within shock
 
