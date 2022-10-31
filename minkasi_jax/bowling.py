@@ -70,3 +70,5 @@ def jac_potato_grad(p, tods):
 def jit_potato_full(p, tods):
     pred = potato_chip(p, tods[0], tods[1])
     grad = jax.jacfwd(potato_chip, argnums=0)(p, tods[0], tods[1])
+
+    return pred, grad
