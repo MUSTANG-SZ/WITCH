@@ -45,6 +45,19 @@ daline = jnp.array(daline.value)
 # --------------------------------------------------------
 @partial(jax.jit, static_argnums=(0, 1))
 def y2K_CMB(freq, Te):
+    """
+    Convert from compton y to K_CMB.
+
+    Arguments:
+
+        freq: The observing frequency in Hz.
+
+        Te: Electron temperature
+
+    Returns:
+
+        y2K_CMB: Conversion factor from compton y to K_CMB.
+    """
     x = freq * h / kb / Tcmb
     xt = x / jnp.tanh(0.5 * x)
     st = x / jnp.sinh(0.5 * x)
@@ -86,12 +99,36 @@ def y2K_CMB(freq, Te):
 
 @partial(jax.jit, static_argnums=(0,))
 def K_CMB2K_RJ(freq):
+    """
+    Convert from K_CMB to K_RJ.
+
+    Arguments:
+
+        freq: The observing frequency in Hz.
+
+    Returns:
+
+        K_CMB2K_RJ: Conversion factor from K_CMB to K_RJ.
+    """
     x = freq * h / kb / Tcmb
     return jnp.exp(x) * x * x / jnp.expm1(x) ** 2
 
 
 @partial(jax.jit, static_argnums=(0, 1))
 def y2K_RJ(freq, Te):
+    """
+    Convert from compton y to K_RJ.
+
+    Arguments:
+
+        freq: The observing frequency in Hz.
+
+        Te: Electron temperature
+
+    Returns:
+
+        y2K_RJ: Conversion factor from compton y to K_RJ.
+    """
     factor = y2K_CMB(freq, Te)
     return factor * K_CMB2K_RJ(freq)
 
@@ -100,6 +137,19 @@ def y2K_RJ(freq, Te):
 # -----------------------------------------------------------
 @jax.jit
 def fft_conv(image, kernel):
+    """
+    Perform a convolution using FFTs for speed.
+
+    Arguments:
+
+        image: Data to be convolved
+
+        kernel: Convolution kernel
+
+    Returns:
+
+        convolved_map: Image convolved with kernel.
+    """
     Fmap = jnp.fft.fft2(jnp.fft.fftshift(image))
     Fkernel = jnp.fft.fft2(jnp.fft.fftshift(kernel))
     convolved_map = jnp.fft.fftshift(jnp.real(jnp.fft.ifft2(Fmap * Fkernel)))
@@ -111,6 +161,26 @@ def fft_conv(image, kernel):
 # -----------------------------------------------------------
 @partial(jax.jit, static_argnums=(1, 2))
 def make_grid(z, r_map, dr):
+    """
+    Make coordinate grids to build models in.
+    All grids are sparse and are int(2*r_map / dr) in each dimension.
+
+    Arguments:
+
+        z: The redshift at which to build the grid
+
+        r_map: Size of grid radially.
+
+        dr: Grid resolution.
+
+    Returns:
+
+        x: Grid of x coordinates in MPc.
+
+        y: Grid of y coordinates in MPc
+
+        z: Grid of z coordinates in MPc
+    """
     da = jnp.interp(z, dzline, daline)
 
     # Make grid with resolution dr and size r_map and convert to Mpc
@@ -123,6 +193,31 @@ def make_grid(z, r_map, dr):
 
 @jax.jit
 def add_bubble(pressure, xyz, xb, yb, zb, rb, sup, z):
+    """
+    Add bubble to 3d pressure profile.
+
+    Arguments:
+
+        pressure: The pressure profile
+
+        xyz: Coordinate grids, see make_grid for details
+
+        xb: Ra of bubble's center relative to cluster center
+
+        yb: Dec of bubble's center relative to cluster center
+
+        zb: Line of site offset of bubble's center relative to cluster center
+
+        rb: Radius of bubble
+
+        sup: Supression factor of bubble
+
+        z: Redshift of cluster
+
+    Returns:
+
+        pressure_b: Pressure profile with bubble added
+    """
     da = jnp.interp(z, dzline, daline)
 
     # Recenter grid on bubble center
@@ -139,6 +234,29 @@ def add_bubble(pressure, xyz, xb, yb, zb, rb, sup, z):
 
 @jax.jit
 def add_shock(pressure, xyz, sr_1, sr_2, sr_3, s_theta, shock):
+    """
+    Add bubble to 3d pressure profile.
+
+    Arguments:
+
+        pressure: The pressure profile
+
+        xyz: Coordinate grids, see make_grid for details
+
+        sr_1: Amount to scale shock along x-axis
+
+        sr_2: Amount to scale shock along y-axis
+
+        sr_3: Amount to scale shock along z-axis
+
+        s_theta: Angle to rotate shock in xy-plane
+
+        shock: Factor by which pressure is enhanced within shock
+
+    Returns:
+
+        pressure_s: Pressure profile with shock added
+    """
     # Rotate
     xx = xyz[0] * jnp.cos(s_theta) + xyz[1] * jnp.sin(s_theta)
     yy = xyz[1] * jnp.cos(s_theta) - xyz[0] * jnp.sin(s_theta)
