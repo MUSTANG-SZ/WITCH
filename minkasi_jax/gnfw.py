@@ -1,24 +1,29 @@
-import jax
-
-jax.config.update("jax_enable_x64", true)
-jax.config.update("jax_platform_name", "cpu")
-
-import jax.numpy as jnp
-import jax.scipy as jsp
-
-from astropy.cosmology import planck15 as cosmo
-from astropy import constants as const
-from astropy import units as u
-
-import scipy as sp
-import numpy as np
-import timeit
-import time
-
-import matplotlib.pyplot as plt
+"""
+Module for generating gNFW profiles with substructure and their gradients.
+"""
+# TODO: Move some coordinate operations out of main funcs
+# TODO: Move unit conversions out of main funcs
+# TODO: Make unit agnostic? Already sorta is in parts
+# TODO: Use same substructure functions as isobeta?
+# TODO: One function to rule them all
 
 from functools import partial
-from utils import dzline, hzline, nzline, daline, h70, Mparsec, Xthom, me, y2K_RJ, fft_conv, make_grid, add_shock, add_bubble 
+import jax
+import jax.numpy as jnp
+import jax.scipy as jsp
+from utils import (
+    dzline,
+    daline,
+    Mparsec,
+    Xthom,
+    me,
+    y2K_RJ,
+    fft_conv,
+)
+
+jax.config.update("jax_enable_x64", True)
+jax.config.update("jax_platform_name", "cpu")
+
 
 # gNFW Bubble
 @partial(jax.jit, static_argnums=(8, 9 ,10, 15, 16, 17, 18, 19, 20))
