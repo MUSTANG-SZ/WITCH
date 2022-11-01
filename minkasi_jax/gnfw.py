@@ -19,6 +19,8 @@ from utils import (
     me,
     y2K_RJ,
     fft_conv,
+    hzline,
+    nzline,
 )
 
 jax.config.update("jax_enable_x64", True)
@@ -82,9 +84,6 @@ def _gnfw_bubble(
     XMpc = Xthom * Mparsec
     
     #Make a grid, centered on xb1, yb1 and size rb1, with resolution dr, and convert to Mpc
-    # x_b = jnp.arange(-1*rb+xb, rb+xb, dr) * da
-    # y_b = jnp.arange(-1*rb-yb, rb-yb, dr) * da
-    # z_b = jnp.arange(-1*rb, rb, dr) * da
     x_b = jnp.linspace(-1*rb+xb, rb+xb, 2*int(rb/dr)) * da
     y_b = jnp.linspace(-1*rb-yb, rb-yb, 2*int(rb/dr)) * da
     z_b = jnp.linspace(-1*rb, rb, 2*int(rb/dr)) * da
@@ -103,9 +102,6 @@ def _gnfw_bubble(
 
   
     #Zero out points outside bubble
-    #outside_rb_flag = jnp.sqrt(rb_grid[0]**2 + rb_grid[1]**2+rb_grid[2]**2) >=1    
-    #yy_b = jax.ops.index_update(yy_b, jax.ops.index[outside_rb_flag], 0.)
-
     yy_b = jnp.where(jnp.sqrt(rb_grid[0]**2 + rb_grid[1]**2+rb_grid[2]**2) >=1, 0., yy_b)
 
     #integrated along z/line of sight to get the 2D line of sight integral. Also missing it's dz term
@@ -239,8 +235,6 @@ def _conv_int_gnfw_elliptical(
     Returns:
        Elliptical gnfw profile
     """
-   
-
     rmap, ip = _conv_int_gnfw(
         x0, y0, P0, c500, alpha, beta, gamma, m500,
         xi,
@@ -260,7 +254,6 @@ def _conv_int_gnfw_elliptical(
     dr = jnp.sqrt((dx*jnp.cos(theta) + dy * jnp.sin(theta))**2 + (dx * jnp.sin(theta) - dy * jnp.cos(theta))**2/(1-e**2)) * 180.0 / np.pi * 3600.0
 
     return jnp.interp(dr, rmap, ip, right=0.0)
-
 
 
 def conv_int_gnfw_elliptical(
@@ -344,34 +337,11 @@ def conv_int_gnfw_elliptical_two_bubbles(
     model are added at the right place. The issue here is that the profile under the bubbles is not the profile 
     used to compute the bubbles due to the eliptical stretching. Still, hopefully it's close enough.
     '''
-    ''' 
-    rmap, ip = _conv_int_gnfw(
-        x0, y0, P0, c500, alpha, beta, gamma, m500,
-        xi,
-        yi,
-        z,
-        max_R=max_R,
-        fwhm=fwhm,
-        freq=freq,
-        T_electron=T_electron,
-        r_map=r_map,
-        dr = dr,
-    )
-    '''
     da = jnp.interp(z, dzline, daline)
 
     #Set up a 2d xy map which we will interpolate over to get the 2D gnfw pressure profile
     x = jnp.arange(-1*r_map, r_map, dr) * jnp.pi / (180*3600)
     y = jnp.arange(-1*r_map, r_map, dr) * jnp.pi / (180*3600) 
-    
-    
-    ''' 
-    _x = jnp.array(x, copy=True)
-    y = y / jnp.sqrt(1 - (abs(e)%1)**2)
-    x = x * jnp.cos(theta) + y * jnp.sin(theta)
-    y = -1 * _x *jnp.sin(theta) + y * jnp.cos(theta)
-    print('jorlo x', x)
-    '''
     xx, yy = jnp.meshgrid(x, y)
     
     #This might be inefficient?
@@ -547,15 +517,6 @@ def conv_int_gnfw_two_bubbles(
     #Note this may  need to be changed for eliptical gnfws?
     idx, idy = (dx + r_map)/(2*r_map)*len(full_rmap), (dy + r_map)/(2*r_map)*len(full_rmap)
     return jsp.ndimage.map_coordinates(ip, (idx,idy), order = 0)#, ip 
-   
-   
-    #temp = np.meshgrid(jnp.arange(-1*r_map, r_map, dr), jnp.arange(-1*r_map, r_map, dr))
-    #print(np.arange(-1*r_map, r_map, dr).shape) 
-    #bound = 10*np.pi/(180*3600)
-    #x = np.linspace(-1*bound, bound, 200)
-    #y = np.linspace(-1*bound, bound, 200)
-
-    #return ip 
 
 @partial(
     jax.jit,
