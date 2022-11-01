@@ -11,6 +11,7 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 import jax.scipy as jsp
+import numpy as np
 from utils import (
     dzline,
     daline,
@@ -21,6 +22,7 @@ from utils import (
     fft_conv,
     hzline,
     nzline,
+    h70,
 )
 
 jax.config.update("jax_enable_x64", True)
