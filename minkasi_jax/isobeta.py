@@ -10,18 +10,7 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 import jax.scipy as jsp
-from utils import (
-    dzline,
-    daline,
-    Mparsec,
-    Xthom,
-    me,
-    y2K_RJ,
-    fft_conv,
-    make_grid,
-    add_shock,
-    add_bubble,
-)
+from utils import fft_conv, make_grid, add_shock, add_bubble
 
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
@@ -73,7 +62,9 @@ def _isobeta_elliptical(r_1, r_2, r_3, theta, beta, amp, xyz):
 
 
 @partial(jax.jit, static_argnums=(0, 1, 3, 5, 7, 8, 9, 10))
-def isobeta(xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx, beam, idx, idy):
+def isobeta(
+    xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx, beam, idx, idy
+):
     """
     Generically create isobeta models with substructure.
 
@@ -114,9 +105,6 @@ def isobeta(xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx,
 
         model: The isobeta model with the specified substructure.
     """
-    da = jnp.interp(z, dzline, daline)
-    XMpc = Xthom * Mparsec
-
     pressure = jnp.zeros_like(xyz)
     for i in range(n_profiles):
         pressure = jnp.add(pressure, _isobeta_elliptical(*profiles[i], xyz))
@@ -143,15 +131,14 @@ def isobeta(xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx,
 
     ip = fft_conv(ip, beam)
 
-    dx = (xi - x0) * jnp.cos(yi)
-    dy = yi - y0
-
     return jsp.ndimage.map_coordinates(ip, (idy, idx), order=0)
 
 
 # TODO: figure out how to skip parameters
 @partial(jax.jit, static_argnums=(0, 1, 3, 5, 7, 8, 9, 10))
-def isobeta_grad(xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx, beam, idx, idy):
+def isobeta_grad(
+    xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx, beam, idx, idy
+):
     """
     Generically create isobeta models with substructure and get their gradients.
 
@@ -194,9 +181,33 @@ def isobeta_grad(xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles
 
         grad: The gradient of the model with respect to the model parameters.
     """
-    pred = isobeta(xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx, beam, idx, idy)
+    pred = isobeta(
+        xyz,
+        n_profiles,
+        profiles,
+        n_shocks,
+        shocks,
+        n_bubbles,
+        bubbles,
+        dx,
+        beam,
+        idx,
+        idy,
+    )
 
-    grad = jax.jacfwd(isobeta, argnums=(2, 4, 6))(xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx, beam, idx, idy)
+    grad = jax.jacfwd(isobeta, argnums=(2, 4, 6))(
+        xyz,
+        n_profiles,
+        profiles,
+        n_shocks,
+        shocks,
+        n_bubbles,
+        bubbles,
+        dx,
+        beam,
+        idx,
+        idy,
+    )
     grad = jnp.array(grad)
 
     return pred, grad
