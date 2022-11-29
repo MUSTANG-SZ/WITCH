@@ -109,6 +109,10 @@ def isobeta(xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx,
              Should have Dec stretch applied.
 
         idy: Dec TOD in units of pixels.
+
+    Returns:
+
+        model: The isobeta model with the specified substructure.
     """
     da = jnp.interp(z, dzline, daline)
     XMpc = Xthom * Mparsec
@@ -183,6 +187,12 @@ def isobeta_grad(xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles
              Should have Dec stretch applied.
 
         idy: Dec TOD in units of pixels.
+
+    Returns:
+
+        model: The isobeta model with the specified substructure.
+
+        grad: The gradient of the model with respect to the model parameters.
     """
     pred = isobeta(xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx, beam, idx, idy)
 
