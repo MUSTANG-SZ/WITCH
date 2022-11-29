@@ -72,6 +72,7 @@ def _isobeta_elliptical(r_1, r_2, r_3, theta, beta, amp, xyz):
     return amp * rrpow
 
 
+@partial(jax.jit, static_argnums=(0, 1, 3, 5, 7, 8, 9, 10))
 def isobeta(xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx, beam, idx, idy):
     """
     Generically create isobeta models with substructure.
