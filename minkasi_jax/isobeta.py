@@ -72,123 +72,58 @@ def _isobeta_elliptical(r_1, r_2, r_3, theta, beta, amp, xyz):
     return amp * rrpow
 
 
-def conv_int_isobeta_elliptical_two_bubbles(
-    x0,
-    y0,
-    r_1,
-    r_2,
-    r_3,
-    theta,
-    beta,
-    amp,
-    xb1,
-    yb1,
-    zb1,
-    rb1,
-    sup1,
-    xb2,
-    yb2,
-    zb2,
-    rb2,
-    sup2,
-    xi,
-    yi,
-    z,
-    fwhm=9.0,
-    freq=90e9,
-    T_electron=5.0,
-    r_map=15.0 * 60,
-    dr=0.1,
-):
+def isobeta(xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx, beam, idx, idy):
     """
-    Elliptical isobeta profile with two bubbles.
-    Final result is integrated to 2d with smoothing and declination stretch applied.
+    Generically create isobeta models with substructure.
 
     Arguments:
 
-        x0: Ra of cluster center
+        xyz: Coordinate grid to compute profile on.
 
-        y0: Dec of cluster center
+        n_profiles: Number of isobeta profiles to add.
 
-        r_1: Amount to scale along x-axis
+        profile: 2d array of profile parameters.
+                 Each row is an isobeta profile with parameters:
+                 (r_1, r_2, r_3, theta, beta, amp)
 
-        r_2: Amount to scale along y-axis
+        n_shocks: Number of shocks to add.
 
-        r_3: Amount to scale along z-axis
+        shocks: 2d array of shock parameters.
+                Each row is a shock with parameters:
+                (sr_1, sr_2, sr_3, s_theta, shock)
 
-        theta: Angle to rotate in xy-plane
+        n_bubbles: Number of bubbles to add.
 
-        beta: Beta value of isobeta model
+        bubbles: 2d array of bubble parameters.
+                 Each row is a bubble with parameters:
+                 (xb, yb, zb, rb, sup, z)
 
-        amp: Amplitude of isobeta model
+        dx: Factor to scale by while integrating.
+            Since it is a global factor it can contain unit conversions.
+            Historically equal to y2K_RJ * dr * da * XMpc / me.
 
-        xb1: Ra of first bubble's center relative to cluster center
+        beam: Beam to convolve by, should be a 2d array.
 
-        yb1: Dec of first bubble's center relative to cluster center
+        idx: RA TOD in units of pixels.
+             Should have Dec stretch applied.
 
-        zb1: Line of site offset of first bubble's center relative to cluster center
-
-        rb1: Radius of first bubble
-
-        sup1: Supression factor of first bubble
-
-        xb2: Ra of second bubble's center relative to cluster center
-
-        yb2: Dec of second bubble's center relative to cluster center
-
-        zb2: Line of site offset of second bubble's center relative to cluster center
-
-        rb2: Radius of second bubble
-
-        sup2: Supression factor of second bubble
-
-        xi: Ra TOD
-
-        yi: Dec TOD
-
-        z: Cluster redshift
-
-        fwhm: Full width half max of beam used for smoothing
-
-        freq: Frequency of observation in Hz
-
-        T_electron: Electron temperature
-
-        r_map: Size of map to model on
-
-        dr: Map grid size
-
-    Returns:
-
-        model: The isobeta model in K_RJ
+        idy: Dec TOD in units of pixels.
     """
     da = jnp.interp(z, dzline, daline)
     XMpc = Xthom * Mparsec
 
-    # Get xyz grid
-    xyz = make_grid(z, r_map, dr)
+    pressure = jnp.zeros_like(xyz)
+    for i in range(n_profiles):
+        pressure = jnp.add(pressure, _isobeta_elliptical(*profiles[i], xyz))
 
-    # Get pressure
-    pressure = _isobeta_elliptical(r_1, r_2, r_3, theta, beta, amp, xyz)
+    for i in range(n_shocks):
+        pressure = add_shock(pressure, xyz, *shocks[i])
 
-    # Add first bubble
-    pressure = add_bubble(pressure, xyz, xb1, yb1, zb1, rb1, sup1, z)
-
-    # Add second bubble
-    pressure = add_bubble(pressure, xyz, xb2, yb2, zb2, rb2, sup2, z)
+    for i in range(n_bubbles):
+        pressure = add_bubble(pressure, xyz, *bubbles[i])
 
     # Integrate along line of site
-    ip = jnp.trapz(pressure, dx=dr * da, axis=-1) * XMpc / me
-
-    # Sum of two gaussians with amp1, fwhm1, amp2, fwhm2
-    amp1, fwhm1, amp2, fwhm2 = 9.735, 0.9808, 32.627, 0.0192
-    x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
-    beam_xx, beam_yy = jnp.meshgrid(x, x)
-    beam_rr = jnp.sqrt(beam_xx**2 + beam_yy**2)
-    beam = amp1 * jnp.exp(-4 * jnp.log(2) * beam_rr**2 / fwhm1**2) + amp2 * jnp.exp(
-        -4 * jnp.log(2) * beam_rr**2 / fwhm2**2
-    )
-    beam = beam / jnp.sum(beam)
+    ip = jnp.trapz(pressure, dx=dx, axis=-1)
 
     bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
         (ip.shape[1] - beam.shape[1]) / 2
@@ -202,375 +137,11 @@ def conv_int_isobeta_elliptical_two_bubbles(
     )
 
     ip = fft_conv(ip, beam)
-    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
 
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
 
-    dx *= (180 * 3600) / jnp.pi
-    dy *= (180 * 3600) / jnp.pi
-    full_rmap = jnp.arange(-1 * r_map, r_map, dr) * da
-
-    idx, idy = (dx + r_map) / (2 * r_map) * len(full_rmap), (-dy + r_map) / (
-        2 * r_map
-    ) * len(full_rmap)
-    return jsp.ndimage.map_coordinates(ip, (idy, idx), order=0)  # , ip
-
-
-def conv_int_double_isobeta_elliptical_two_bubbles(
-    x0,
-    y0,
-    r_1,
-    r_2,
-    r_3,
-    theta_1,
-    beta_1,
-    amp_1,
-    r_4,
-    r_5,
-    r_6,
-    theta_2,
-    beta_2,
-    amp_2,
-    xb1,
-    yb1,
-    zb1,
-    rb1,
-    sup1,
-    xb2,
-    yb2,
-    zb2,
-    rb2,
-    sup2,
-    xi,
-    yi,
-    z,
-    fwhm=9.0,
-    freq=90e9,
-    T_electron=5.0,
-    r_map=15.0 * 60,
-    dr=0.1,
-):
-    """
-    Elliptical double isobeta profile with two bubbles.
-    Final result is integrated to 2d with smoothing and declination stretch applied.
-
-    Arguments:
-
-        x0: Ra of cluster center
-
-        y0: Dec of cluster center
-
-        r_1: Amount to scale first isobeta along x-axis
-
-        r_2: Amount to scale first isobeta along y-axis
-
-        r_3: Amount to scale first isobeta along z-axis
-
-        theta_1: Angle to rotate first isobeta in xy-plane
-
-        beta_1: Beta value of first isobeta model
-
-        amp_1: Amplitude of first isobeta model
-
-        r_4: Amount to scale second isobeta along x-axis
-
-        r_5: Amount to scale second isobeta along y-axis
-
-        r_6: Amount to scale second isobeta along z-axis
-
-        theta_2: Angle to rotate second isobeta in xy-plane
-
-        beta_2: Beta value of second isobeta model
-
-        amp_2: Amplitude of second isobeta model
-
-        xb1: Ra of first bubble's center relative to cluster center
-
-        yb1: Dec of first bubble's center relative to cluster center
-
-        zb1: Line of site offset of first bubble's center relative to cluster center
-
-        rb1: Radius of first bubble
-
-        sup1: Supression factor of first bubble
-
-        xb2: Ra of second bubble's center relative to cluster center
-
-        yb2: Dec of second bubble's center relative to cluster center
-
-        zb2: Line of site offset of second bubble's center relative to cluster center
-
-        rb2: Radius of second bubble
-
-        sup2: Supression factor of second bubble
-
-        xi: Ra TOD
-
-        yi: Dec TOD
-
-        z: Cluster redshift
-
-        fwhm: Full width half max of beam used for smoothing
-
-        freq: Frequency of observation in Hz
-
-        T_electron: Electron temperature
-
-        r_map: Size of map to model on
-
-        dr: Map grid size
-
-    Returns:
-
-        model: The isobeta model in K_RJ
-    """
-    da = jnp.interp(z, dzline, daline)
-    XMpc = Xthom * Mparsec
-
-    # Get xyz grid
-    xyz = make_grid(z, r_map, dr)
-
-    # Get first pressure
-    pressure_1 = _isobeta_elliptical(r_1, r_2, r_3, theta_1, beta_1, amp_1, xyz)
-
-    # Get second pressure
-    pressure_2 = _isobeta_elliptical(r_4, r_5, r_6, theta_2, beta_2, amp_2, xyz)
-
-    # Add profiles
-    pressure = pressure_1 + pressure_2
-
-    # Add first bubble
-    pressure = add_bubble(pressure, xyz, xb1, yb1, zb1, rb1, sup1, z)
-
-    # Add second bubble
-    pressure = add_bubble(pressure, xyz, xb2, yb2, zb2, rb2, sup2, z)
-
-    # Integrate along line of site
-    ip = jnp.trapz(pressure, dx=dr * da, axis=-1) * XMpc / me
-
-    # Sum of two gaussians with amp1, fwhm1, amp2, fwhm2
-    amp1, fwhm1, amp2, fwhm2 = 9.735, 0.9808, 32.627, 0.0192
-    x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
-    beam_xx, beam_yy = jnp.meshgrid(x, x)
-    beam_rr = jnp.sqrt(beam_xx**2 + beam_yy**2)
-    beam = amp1 * jnp.exp(-4 * jnp.log(2) * beam_rr**2 / fwhm1**2) + amp2 * jnp.exp(
-        -4 * jnp.log(2) * beam_rr**2 / fwhm2**2
-    )
-    beam = beam / jnp.sum(beam)
-
-    bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
-        (ip.shape[1] - beam.shape[1]) / 2
-    )
-    beam = jnp.pad(
-        beam,
-        (
-            (bound0, ip.shape[0] - beam.shape[0] - bound0),
-            (bound1, ip.shape[1] - beam.shape[1] - bound1),
-        ),
-    )
-
-    ip = fft_conv(ip, beam)
-    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
-
-    dx = (xi - x0) * jnp.cos(yi)
-    dy = yi - y0
-
-    dx *= (180 * 3600) / jnp.pi
-    dy *= (180 * 3600) / jnp.pi
-    full_rmap = jnp.arange(-1 * r_map, r_map, dr) * da
-
-    idx, idy = (dx + r_map) / (2 * r_map) * len(full_rmap), (-dy + r_map) / (
-        2 * r_map
-    ) * len(full_rmap)
-    return jsp.ndimage.map_coordinates(ip, (idy, idx), order=0)  # , ip
-
-
-def conv_int_double_isobeta_elliptical_two_bubbles_shock(
-    x0,
-    y0,
-    r_1,
-    r_2,
-    r_3,
-    theta_1,
-    beta_1,
-    amp_1,
-    r_4,
-    r_5,
-    r_6,
-    theta_2,
-    beta_2,
-    amp_2,
-    xb1,
-    yb1,
-    zb1,
-    rb1,
-    sup1,
-    xb2,
-    yb2,
-    zb2,
-    rb2,
-    sup2,
-    sr_1,
-    sr_2,
-    sr_3,
-    s_theta,
-    shock,
-    xi,
-    yi,
-    z,
-    fwhm=9.0,
-    freq=90e9,
-    T_electron=5.0,
-    r_map=15.0 * 60,
-    dr=0.1,
-):
-    """
-    Elliptical double isobeta profile with two bubbles and a shock.
-    Final result is integrated to 2d with smoothing and declination stretch applied.
-
-    Arguments:
-
-        x0: Ra of cluster center
-
-        y0: Dec of cluster center
-
-        r_1: Amount to scale first isobeta along x-axis
-
-        r_2: Amount to scale first isobeta along y-axis
-
-        r_3: Amount to scale first isobeta along z-axis
-
-        theta_1: Angle to rotate first isobeta in xy-plane
-
-        beta_1: Beta value of first isobeta model
-
-        amp_1: Amplitude of first isobeta model
-
-        r_4: Amount to scale second isobeta along x-axis
-
-        r_5: Amount to scale second isobeta along y-axis
-
-        r_6: Amount to scale second isobeta along z-axis
-
-        theta_2: Angle to rotate second isobeta in xy-plane
-
-        beta_2: Beta value of second isobeta model
-
-        amp_2: Amplitude of second isobeta model
-
-        xb1: Ra of first bubble's center relative to cluster center
-
-        yb1: Dec of first bubble's center relative to cluster center
-
-        zb1: Line of site offset of first bubble's center relative to cluster center
-
-        rb1: Radius of first bubble
-
-        sup1: Supression factor of first bubble
-
-        xb2: Ra of second bubble's center relative to cluster center
-
-        yb2: Dec of second bubble's center relative to cluster center
-
-        zb2: Line of site offset of second bubble's center relative to cluster center
-
-        rb2: Radius of second bubble
-
-        sup2: Supression factor of second bubble
-
-        sr_1: Amount to scale shock along x-axis
-
-        sr_2: Amount to scale shock along y-axis
-
-        sr_3: Amount to scale shock along z-axis
-
-        s_theta: Angle to rotate shock in xy-plane
-
-        shock: Factor by which pressure is enhanced within shock
-
-        xi: Ra TOD
-
-        yi: Dec TOD
-
-        z: Cluster redshift
-
-        fwhm: Full width half max of beam used for smoothing
-
-        freq: Frequency of observation in Hz
-
-        T_electron: Electron temperature
-
-        r_map: Size of map to model on
-
-        dr: Map grid size
-
-    Returns:
-
-        model: The isobeta model in K_RJ
-    """
-    da = jnp.interp(z, dzline, daline)
-    XMpc = Xthom * Mparsec
-
-    # Get xyz grid
-    xyz = make_grid(z, r_map, dr)
-
-    # Get first pressure
-    pressure_1 = _isobeta_elliptical(r_1, r_2, r_3, theta_1, beta_1, amp_1, xyz)
-
-    # Get second pressure
-    pressure_2 = _isobeta_elliptical(r_4, r_5, r_6, theta_2, beta_2, amp_2, xyz)
-
-    # Add profiles
-    pressure = pressure_1 + pressure_2
-
-    # Add shock
-    pressure = add_shock(pressure, xyz, sr_1, sr_2, sr_3, s_theta, shock)
-
-    # Add first bubble
-    pressure = add_bubble(pressure, xyz, xb1, yb1, zb1, rb1, sup1, z)
-
-    # Add second bubble
-    pressure = add_bubble(pressure, xyz, xb2, yb2, zb2, rb2, sup2, z)
-
-    # Integrate along line of site
-    ip = jnp.trapz(pressure, dx=dr * da, axis=-1) * XMpc / me
-
-    # Sum of two gaussians with amp1, fwhm1, amp2, fwhm2
-    amp1, fwhm1, amp2, fwhm2 = 9.735, 0.9808, 32.627, 0.0192
-    x = jnp.arange(-1.5 * fwhm // (dr), 1.5 * fwhm // (dr)) * (dr)
-    beam_xx, beam_yy = jnp.meshgrid(x, x)
-    beam_rr = jnp.sqrt(beam_xx**2 + beam_yy**2)
-    beam = amp1 * jnp.exp(-4 * jnp.log(2) * beam_rr**2 / fwhm1**2) + amp2 * jnp.exp(
-        -4 * jnp.log(2) * beam_rr**2 / fwhm2**2
-    )
-    beam = beam / jnp.sum(beam)
-
-    bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
-        (ip.shape[1] - beam.shape[1]) / 2
-    )
-    beam = jnp.pad(
-        beam,
-        (
-            (bound0, ip.shape[0] - beam.shape[0] - bound0),
-            (bound1, ip.shape[1] - beam.shape[1] - bound1),
-        ),
-    )
-
-    ip = fft_conv(ip, beam)
-    ip = ip * y2K_RJ(freq=freq, Te=T_electron)
-
-    dx = (xi - x0) * jnp.cos(yi)
-    dy = yi - y0
-
-    dx *= (180 * 3600) / jnp.pi
-    dy *= (180 * 3600) / jnp.pi
-    full_rmap = jnp.arange(-1 * r_map, r_map, dr) * da
-
-    idx, idy = (dx + r_map) / (2 * r_map) * len(full_rmap), (-dy + r_map) / (
-        2 * r_map
-    ) * len(full_rmap)
-    return jsp.ndimage.map_coordinates(ip, (idy, idx), order=0)  # , ip
+    return jsp.ndimage.map_coordinates(ip, (idy, idx), order=0)
 
 
 @partial(
