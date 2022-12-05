@@ -9,7 +9,7 @@ import numpy as np
 
 from astropy import constants as const
 from astropy import units as u
-from astropy.cosmology import planck15 as cosmo
+from astropy.cosmology import Planck15 as cosmo
 
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
