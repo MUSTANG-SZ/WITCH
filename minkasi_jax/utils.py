@@ -298,3 +298,73 @@ def add_shock(pressure, xyz, sr_1, sr_2, sr_3, s_theta, shock):
         jnp.sqrt(xfac + yfac + zfac) > 1, pressure, (1 + shock) * pressure
     )
     return pressure_s
+
+
+def tod_to_index(xi, yi, x0, y0, r_map, dr, z):
+    """
+    Convert RA/Dec TODs to index space.
+
+    Arguments:
+
+        xi: RA TOD
+
+        yi: Dec TOD
+
+        x0: RA at center of model. Nominally the cluster center.
+
+        y0: Dec at center of model. Nominally the cluster center.
+
+        r_map: Radial size of grid
+
+        dr: Pixel size
+
+        z: Redshift
+
+    Returns:
+
+        idx: The RA TOD in index space
+
+        idy: The Dec TOD in index space.
+    """
+    da = jnp.interp(z, dzline, daline)
+    dx = (xi - x0) * jnp.cos(yi)
+    dy = yi - y0
+
+    dx *= (180 * 3600) / jnp.pi
+    dy *= (180 * 3600) / jnp.pi
+    full_rmap = jnp.arange(-1 * r_map, r_map, dr) * da
+
+    idx, idy = (dx + r_map) / (2 * r_map) * len(full_rmap), (-dy + r_map) / (
+        2 * r_map
+    ) * len(full_rmap)
+
+    return idx, idy
+
+
+def beam_double_gauss(dr, fwhm1=9.735, amp1=0.9808, fwhm2=32.627, amp2=0.0192):
+    """
+    Helper function to generate a double gaussian beam.
+
+    Arguments:
+
+        dr: Pixel size.
+
+        fwhm1: Full width half max of the primary gaussian.
+
+        amp1: Amplitude of the primary gaussian.
+
+        fwhm2: Full width half max of the secondairy gaussian.
+
+        amp2: Amplitude of the secondairy gaussian.
+
+    Returns:
+
+        beam: Double gaussian beam.
+    """
+    x = jnp.arange(-1.5 * fwhm1 // (dr), 1.5 * fwhm1 // (dr)) * (dr)
+    beam_xx, beam_yy = jnp.meshgrid(x, x)
+    beam_rr = jnp.sqrt(beam_xx**2 + beam_yy**2)
+    beam = amp1 * jnp.exp(-4 * jnp.log(2) * beam_rr**2 / fwhm1**2) + amp2 * jnp.exp(
+        -4 * jnp.log(2) * beam_rr**2 / fwhm2**2
+    )
+    return beam / jnp.sum(beam)
