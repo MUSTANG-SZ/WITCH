@@ -105,7 +105,7 @@ def isobeta(
 
         model: The isobeta model with the specified substructure.
     """
-    pressure = jnp.zeros_like(xyz)
+    pressure = jnp.zeros((xyz[0].shape[1], xyz[1].shape[0], xyz[2].shape[2]))
     for i in range(n_profiles):
         pressure = jnp.add(pressure, _isobeta_elliptical(*profiles[i], xyz))
 
@@ -208,6 +208,5 @@ def isobeta_grad(
         idx,
         idy,
     )
-    grad = jnp.array(grad)
 
     return pred, grad
