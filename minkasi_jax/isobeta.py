@@ -15,6 +15,94 @@ from utils import fft_conv, make_grid, add_shock, add_bubble
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
 
+N_PAR_PROFILE = 6
+N_PAR_SHOCK = 5
+N_PAR_BUBBLE = 6
+
+
+def isobeta_heper(
+    xyz, n_profiles, n_shocks, n_bubbles, dx, beam, idx, idy, params, tod
+):
+    """
+    Helper function to be used when fitting with Minkasi.
+    Use functools.partial to set all parameters but params and tod before passing to Minkasi.
+
+    Arguments:
+
+        xyz: Coordinate grid to compute profile on.
+
+        n_profiles: Number of isobeta profiles to add.
+
+        n_shocks: Number of shocks to add.
+
+        n_bubbles: Number of bubbles to add.
+
+        dx: Factor to scale by while integrating.
+            Since it is a global factor it can contain unit conversions.
+            Historically equal to y2K_RJ * dr * da * XMpc / me.
+
+        beam: Beam to convolve by, should be a 2d array.
+
+        idx: RA TOD in units of pixels.
+             Should have Dec stretch applied.
+
+        idy: Dec TOD in units of pixels.
+
+        params: 1D array of model parameters.
+
+        tod: The TOD, this is unused but Minkasi expects it.
+
+    Returns:
+
+        derivs: The gradient of the model with respect to the model parameters.
+                Reshaped to be the correct format for Minkasi.
+
+        pred: The isobeta model with the specified substructure.
+    """
+    profiles, shocks, bubbles = jnp.array(
+        [
+            [0.0],
+        ]
+    )
+    start = 0
+    if n_profiles:
+        delta = n_profiles * N_PAR_PROFILE
+        profiles = params[start : start + delta].reshape((n_profiles, N_PAR_PROFILE))
+        start += delta
+    if n_shocks:
+        delta = n_shocks * N_PAR_SHOCK
+        shocks = params[start : start + delta].reshape((n_shocks, N_PAR_SHOCK))
+        start += delta
+    if n_bubbles:
+        delta = n_bubbles * N_PAR_BUBBLE
+        bubbles = params[start : start + delta].reshape((n_bubbles, N_PAR_BUBBLE))
+        start += delta
+
+    pred, grad = isobeta_grad(
+        xyz,
+        n_profiles,
+        profiles,
+        n_shocks,
+        shocks,
+        n_bubbles,
+        bubbles,
+        dx,
+        beam,
+        idx,
+        idy,
+    )
+
+    derivs = []
+    if n_profiles:
+        derivs.append(jnp.vstack(grad[0]))
+    if n_shocks:
+        derivs.append(jnp.vstack(grad[1]))
+    if n_bubbles:
+        derivs.append(jnp.vstack(grad[2]))
+    derivs = jnp.vstack(derivs)
+
+    return derivs, pred
+
 
 @jax.jit
 def _isobeta_elliptical(r_1, r_2, r_3, theta, beta, amp, xyz):
@@ -61,7 +149,15 @@ def _isobeta_elliptical(r_1, r_2, r_3, theta, beta, amp, xyz):
     return amp * rrpow
 
 
-@partial(jax.jit, static_argnums=(1, 3, 5, 7,))
+@partial(
+    jax.jit,
+    static_argnums=(
+        1,
+        3,
+        5,
+        7,
+    ),
+)
 def isobeta(
     xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx, beam, idx, idy
 ):
@@ -135,7 +231,15 @@ def isobeta(
 
 
 # TODO: figure out how to skip parameters
-@partial(jax.jit, static_argnums=(1, 3, 5, 7,))
+@partial(
+    jax.jit,
+    static_argnums=(
+        1,
+        3,
+        5,
+        7,
+    ),
+)
 def isobeta_grad(
     xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx, beam, idx, idy
 ):
