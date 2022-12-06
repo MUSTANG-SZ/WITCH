@@ -59,11 +59,7 @@ def isobeta_heper(
 
         pred: The isobeta model with the specified substructure.
     """
-    profiles, shocks, bubbles = jnp.array(
-        [
-            [0.0],
-        ]
-    )
+    profiles, shocks, bubbles = jnp.zeros((1, 1), dtype=float)
     start = 0
     if n_profiles:
         delta = n_profiles * N_PAR_PROFILE
