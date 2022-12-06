@@ -10,7 +10,7 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 import jax.scipy as jsp
-from utils import fft_conv, make_grid, add_shock, add_bubble
+from utils import fft_conv, add_shock, add_bubble
 
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
