@@ -20,9 +20,7 @@ N_PAR_SHOCK = 5
 N_PAR_BUBBLE = 6
 
 
-def isobeta_heper(
-    xyz, n_profiles, n_shocks, n_bubbles, dx, beam, idx, idy, params, tod
-):
+def isobeta_heper(xyz, n_profiles, n_shocks, n_bubbles, dx, beam, params, tod):
     """
     Helper function to be used when fitting with Minkasi.
     Use functools.partial to set all parameters but params and tod before passing to Minkasi.
@@ -43,14 +41,9 @@ def isobeta_heper(
 
         beam: Beam to convolve by, should be a 2d array.
 
-        idx: RA TOD in units of pixels.
-             Should have Dec stretch applied.
-
-        idy: Dec TOD in units of pixels.
-
         params: 1D array of model parameters.
 
-        tod: The TOD, this is unused but Minkasi expects it.
+        tod: The TOD, assumed that idx and idy are in tod.info.
 
     Returns:
 
@@ -59,6 +52,9 @@ def isobeta_heper(
 
         pred: The isobeta model with the specified substructure.
     """
+    idx = tod.info["idx"]
+    idy = tod.info["idy"]
+
     profiles, shocks, bubbles = jnp.zeros((1, 1), dtype=float)
     start = 0
     if n_profiles:
