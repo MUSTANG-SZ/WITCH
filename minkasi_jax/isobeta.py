@@ -1,10 +1,6 @@
 """
 Module for generating isobeta profiles with substructure and their gradients.
 """
-# TODO: Move some coordinate operations out of main funcs
-# TODO: Move unit conversions out of main funcs
-# TODO: Make unit agnostic? Already sorta is in parts
-# TODO: One function to rule them all
 
 from functools import partial
 import jax
@@ -17,7 +13,7 @@ jax.config.update("jax_platform_name", "cpu")
 
 N_PAR_PROFILE = 6
 N_PAR_SHOCK = 5
-N_PAR_BUBBLE = 6
+N_PAR_BUBBLE = 5
 
 
 def isobeta_heper(xyz, n_profiles, n_shocks, n_bubbles, dx, beam, params, tod):
@@ -176,7 +172,7 @@ def isobeta(
 
         bubbles: 2d array of bubble parameters.
                  Each row is a bubble with parameters:
-                 (xb, yb, zb, rb, sup, z)
+                 (xb, yb, zb, rb, sup)
 
         dx: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
