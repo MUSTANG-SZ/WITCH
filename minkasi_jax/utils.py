@@ -133,6 +133,21 @@ def y2K_RJ(freq, Te):
     return factor * K_CMB2K_RJ(freq)
 
 
+def get_da(z):
+    """
+    Get factor to convert from arcseconds to MPc.
+
+    Arguments:
+
+        z: The redshift at which to compute the  factor.
+
+    Returns:
+
+        da: Conversion factor from arcseconds to MPc
+    """
+    return jnp.interp(z, dzline, daline)
+
+
 # FFT Operations
 # -----------------------------------------------------------
 @jax.jit
@@ -186,33 +201,29 @@ def tod_hi_pass(tod, N_filt):
 # Model building tools
 # -----------------------------------------------------------
 @partial(jax.jit, static_argnums=(1, 2))
-def make_grid(z, r_map, dr):
+def make_grid(r_map, dr):
     """
     Make coordinate grids to build models in.
     All grids are sparse and are int(2*r_map / dr) in each dimension.
 
     Arguments:
 
-        z: The redshift at which to build the grid
-
         r_map: Size of grid radially.
 
-        dr: Grid resolution.
+        dr: Grid resolution, should be in same units as r_map.
 
     Returns:
 
-        x: Grid of x coordinates in MPc.
+        x: Grid of x coordinates in same units as r_map.
 
-        y: Grid of y coordinates in MPc
+        y: Grid of y coordinates in same units as r_map
 
-        z: Grid of z coordinates in MPc
+        z: Grid of z coordinates in same units as r_map
     """
-    da = jnp.interp(z, dzline, daline)
-
-    # Make grid with resolution dr and size r_map and convert to Mpc
-    x = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dr)) * da
-    y = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dr)) * da
-    z = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dr)) * da
+    # Make grid with resolution dr and size r_map
+    x = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dr))
+    y = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dr))
+    z = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dr))
 
     return jnp.meshgrid(x, y, z, sparse=True, indexing="xy")
 
@@ -238,22 +249,18 @@ def add_bubble(pressure, xyz, xb, yb, zb, rb, sup, z):
 
         sup: Supression factor of bubble
 
-        z: Redshift of cluster
-
     Returns:
 
         pressure_b: Pressure profile with bubble added
     """
-    da = jnp.interp(z, dzline, daline)
-
     # Recenter grid on bubble center
-    x = xyz[0] - (xb * da)
-    y = xyz[1] - (yb * da)
-    z = xyz[2] - (zb * da)
+    x = xyz[0] - xb
+    y = xyz[1] - yb
+    z = xyz[2] - zb
 
     # Supress points inside bubble
     pressure_b = jnp.where(
-        jnp.sqrt(x**2 + y**2 + z**2) >= (rb * da), pressure, (1 - sup) * pressure
+        jnp.sqrt(x**2 + y**2 + z**2) >= rb, pressure, (1 - sup) * pressure
     )
     return pressure_b
 
@@ -300,7 +307,7 @@ def add_shock(pressure, xyz, sr_1, sr_2, sr_3, s_theta, shock):
     return pressure_s
 
 
-def tod_to_index(xi, yi, x0, y0, r_map, dr, z):
+def tod_to_index(xi, yi, x0, y0, r_map, dr):
     """
     Convert RA/Dec TODs to index space.
 
@@ -318,21 +325,18 @@ def tod_to_index(xi, yi, x0, y0, r_map, dr, z):
 
         dr: Pixel size
 
-        z: Redshift
-
     Returns:
 
         idx: The RA TOD in index space
 
         idy: The Dec TOD in index space.
     """
-    da = jnp.interp(z, dzline, daline)
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
 
     dx *= (180 * 3600) / jnp.pi
     dy *= (180 * 3600) / jnp.pi
-    full_rmap = jnp.arange(-1 * r_map, r_map, dr) * da
+    full_rmap = jnp.arange(-1 * r_map, r_map, dr)
 
     idx, idy = (dx + r_map) / (2 * r_map) * len(full_rmap), (-dy + r_map) / (
         2 * r_map
