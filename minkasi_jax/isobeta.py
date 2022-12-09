@@ -16,12 +16,16 @@ N_PAR_SHOCK = 5
 N_PAR_BUBBLE = 5
 
 
-def isobeta_heper(xyz, n_profiles, n_shocks, n_bubbles, dx, beam, params, tod):
+def isobeta_heper(params, tod, xyz, n_profiles, n_shocks, n_bubbles, dx, beam):
     """
     Helper function to be used when fitting with Minkasi.
     Use functools.partial to set all parameters but params and tod before passing to Minkasi.
 
     Arguments:
+
+        params: 1D array of model parameters.
+
+        tod: The TOD, assumed that idx and idy are in tod.info.
 
         xyz: Coordinate grid to compute profile on.
 
@@ -36,10 +40,6 @@ def isobeta_heper(xyz, n_profiles, n_shocks, n_bubbles, dx, beam, params, tod):
             Historically equal to y2K_RJ * dr * da * XMpc / me.
 
         beam: Beam to convolve by, should be a 2d array.
-
-        params: 1D array of model parameters.
-
-        tod: The TOD, assumed that idx and idy are in tod.info.
 
     Returns:
 
