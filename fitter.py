@@ -97,7 +97,7 @@ for fname in tod_names:
 # the ones from private TODs
 lims = todvec.lims()
 pixsize = 2.0 / 3600 * np.pi / 180
-map = minkasi.SkyMap(lims, pixsize)
+skymap = minkasi.SkyMap(lims, pixsize)
 
 Te = eval(str(cfg["cluster"]["Te"]))
 freq = eval(str(cfg["cluster"]["freq"]))
@@ -148,7 +148,7 @@ if sub_poly:
     method = cfg["bowling"]["method"]
     degree = cfg["bowling"]["degree"]
 for i, tod in enumerate(todvec.tods):
-    ipix = map.get_pix(tod)
+    ipix = skymap.get_pix(tod)
     tod.info["ipix"] = ipix
 
     if sub_poly:
@@ -226,9 +226,9 @@ dograd = cfg["minkasi"]["dograd"]
 # get the hit count map.  We use this as a preconditioner
 # which helps small-scale convergence quite a bit.
 print_once("starting hits")
-hits = minkasi.make_hits(todvec, map)
+hits = minkasi.make_hits(todvec, skymap)
 print_once("finished hits.")
-naive = map.copy()
+naive = skymap.copy()
 naive.clear()
 for tod in todvec.tods:
     tmp = tod.info["dat_calib"].copy()
@@ -247,7 +247,7 @@ hits.invert()
 # setup the mapset.  In general this can have many things
 # in addition to map(s) of the sky, but for now we'll just
 # use a single skymap.
-weightmap = minkasi.make_hits(todvec, map, do_weights=True)
+weightmap = minkasi.make_hits(todvec, skymap, do_weights=True)
 mask = weightmap.map > 0
 tmp = weightmap.map.copy()
 tmp[mask] = 1.0 / np.sqrt(tmp[mask])
@@ -258,7 +258,7 @@ if minkasi.myrank == 0:
     weightmap.write(os.path.join(outdir, "weights.fits"))
 
 mapset = minkasi.Mapset()
-mapset.add_map(map)
+mapset.add_map(skymap)
 
 # make A^T N^1 d.  TODs need to understand what to do with maps
 # but maps don't necessarily need to understand what to do with TODs,
@@ -329,7 +329,7 @@ for niter in range(npass):
         mapset.add_map(pp)
 
         priorset = minkasi.Mapset()
-        priorset.add_map(map)
+        priorset.add_map(skymap)
         priorset.add_map(prior)
         priorset.maps[0] = None
     else:
