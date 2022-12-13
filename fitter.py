@@ -12,7 +12,7 @@ import argparse as ap
 from functools import partial
 import yaml
 import numpy as np
-import mikasi
+import minkasi
 from astropy.coordinates import Angle
 from astropy import units as u
 import minkasi_jax.presets_by_source as pbs
@@ -155,9 +155,7 @@ for i, tod in enumerate(todvec.tods):
         tod.set_apix()
         for j in range(tod.info["dat_calib"].shape[0]):
             x, y = tod.info["apix"][j], tod.info["dat_calib"][j] - tod.info[method][j]
-            res, stats = np.polynomial.polynomial.polyfit(
-                x, y, cfg["bowling"]["degree"]
-            )
+            res = np.polynomial.polynomial.polyfit( x, y, cfg["bowling"]["degree"])
             tod.info["dat_calib"][j] -= np.polynomial.polynomial.polyval(x, res)
 
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
@@ -200,7 +198,7 @@ if fit:
 
     print_once("Fit parameters:")
     for l, pf, err in zip(labels, pars_fit, errs):
-        print_once("\t", l, " = ", pf, " ± ", err)
+        print_once("\t", l, " = ", pf, " +/- ", err)
     print_once("chisq = ", chisq)
 
     if minkasi.myrank == 0:
