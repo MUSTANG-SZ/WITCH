@@ -201,7 +201,6 @@ def tod_hi_pass(tod, N_filt):
 
 # Model building tools
 # -----------------------------------------------------------
-@partial(jax.jit, static_argnums=(1, 2))
 def make_grid(r_map, dr):
     """
     Make coordinate grids to build models in.
@@ -230,7 +229,7 @@ def make_grid(r_map, dr):
 
 
 @jax.jit
-def add_bubble(pressure, xyz, xb, yb, zb, rb, sup, z):
+def add_bubble(pressure, xyz, xb, yb, zb, rb, sup):
     """
     Add bubble to 3d pressure profile.
 

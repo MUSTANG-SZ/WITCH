@@ -6,7 +6,7 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 import jax.scipy as jsp
-from utils import fft_conv, add_shock, add_bubble
+from .utils import fft_conv, add_shock, add_bubble
 
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
@@ -51,7 +51,9 @@ def isobeta_helper(params, tod, xyz, n_profiles, n_shocks, n_bubbles, dx, beam):
     idx = tod.info["idx"]
     idy = tod.info["idy"]
 
-    profiles, shocks, bubbles = jnp.zeros((1, 1), dtype=float)
+    profiles = jnp.zeros((1, 1), dtype=float)
+    shocks = jnp.zeros((1, 1), dtype=float)
+    bubbles = jnp.zeros((1, 1), dtype=float)
     start = 0
     if n_profiles:
         delta = n_profiles * N_PAR_PROFILE
