@@ -166,12 +166,12 @@ for i, tod in enumerate(todvec.tods):
 outdir = os.path.join(
     cfg["paths"]["outroot"],
     cfg["cluster"]["name"],
-    "_".join(mn for mn in cfg["models"].keys()),
+    "-".join(mn for mn in cfg["models"].keys()),
 )
 if cfg["paths"]["subdir"]:
     outdir = os.path.join(outdir, cfg["paths"]["subdir"])
 if fit:
-    outdir = os.path.join(outdir, "_".join(l for l in labels[to_fit]))
+    outdir = os.path.join(outdir, "-".join(l for l in labels[to_fit]))
 else:
     outdir = os.path.join(outdir, "not_fit")
 print_once("Outputs can be found in ", outdir)
