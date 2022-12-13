@@ -13,8 +13,11 @@ from functools import partial
 import yaml
 import numpy as np
 import mikasi
+from astropy.coordinates import Angle
+from astropy import units as u
 import minkasi_jax.presets_by_source as pbs
 from minkasi_jax.utils import *
+from minkasi_jax.isobeta import isobeta_helper
 
 
 def print_once(*args):
@@ -61,7 +64,7 @@ y0 = eval(str(cfg["coords"]["y0"]))
 # Load TODs
 tod_names = glob.glob(os.path.join(cfg["paths"]["tods"], cfg["paths"]["glob"]))
 bad_tod, addtag = pbs.get_bad_tods(
-    cfgs["cluster"]["name"], ndo=cfgs["paths"]["ndo"], odo=cfgs["paths"]["odo"]
+    cfg["cluster"]["name"], ndo=cfg["paths"]["ndo"], odo=cfg["paths"]["odo"]
 )
 tod_names = minkasi.cut_blacklist(tod_names, bad_tod)
 tod_names.sort()
@@ -218,8 +221,8 @@ for tod in todvec.tods:
 tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
 # Make maps
-npass = cfg["mikasi"]["npass"]
-dograd = cfg["mikasi"]["dograd"]
+npass = cfg["minkasi"]["npass"]
+dograd = cfg["minkasi"]["dograd"]
 # get the hit count map.  We use this as a preconditioner
 # which helps small-scale convergence quite a bit.
 print_once("starting hits")
