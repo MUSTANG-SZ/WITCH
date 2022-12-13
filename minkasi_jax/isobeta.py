@@ -16,7 +16,7 @@ N_PAR_SHOCK = 5
 N_PAR_BUBBLE = 5
 
 
-def isobeta_heper(params, tod, xyz, n_profiles, n_shocks, n_bubbles, dx, beam):
+def isobeta_helper(params, tod, xyz, n_profiles, n_shocks, n_bubbles, dx, beam):
     """
     Helper function to be used when fitting with Minkasi.
     Use functools.partial to set all parameters but params and tod before passing to Minkasi.
