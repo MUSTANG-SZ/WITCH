@@ -25,6 +25,7 @@ h = const.h.value
 Xthom = const.sigma_T.to(u.cm**2).value
 
 Mparsec = u.Mpc.to(u.cm)
+XMpc = Xthom * Mparsec
 
 # Cosmology
 # --------------------------------------------------------
