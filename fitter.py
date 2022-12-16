@@ -85,12 +85,13 @@ for fname in tod_names:
 
     # Make pixelized RA/Dec TODs
     idx, idy = tod_to_index(dat["dx"], dat["dy"], x0, y0, r_map, dr, coord_conv)
-    dat["idx"] = idx
-    dat["idy"] = idy
+    idu, id_inv = np.unique(np.vstack((idx.ravel(), idy.ravel())), axis=1, return_inverse=True)
+    dat["idx"] = idu[0]
+    dat["idy"] = idu[1]
+    dat["id_inv"] = id_inv 
 
     tod = minkasi.Tod(dat)
     todvec.add_tod(tod)
-
 
 # make a template map with desired pixel size an limits that cover the data
 # todvec.lims() is MPI-aware and will return global limits, not just
