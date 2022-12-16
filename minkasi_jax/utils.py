@@ -345,6 +345,9 @@ def tod_to_index(xi, yi, x0, y0, r_map, dr, conv_factor):
         2 * r_map
     ) * len(full_rmap)
 
+    idx = np.rint(idx).astype(int)
+    idy = np.rint(idy).astype(int)
+
     return idx, idy
 
 

@@ -26,6 +26,10 @@ def isobeta_helper(params, tod, xyz, n_profiles, n_shocks, n_bubbles, dx, beam):
         params: 1D array of model parameters.
 
         tod: The TOD, assumed that idx and idy are in tod.info.
+             Optionally also include id_inv. In this case it is assumed that
+             idx and idy are flattened and passed through np.unique such that
+             each (idx[i], idy[i]) is unique and id_inv is the inverse index
+             mapping obtained by setting return_inverse=True.
 
         xyz: Coordinate grid to compute profile on.
 
@@ -84,12 +88,18 @@ def isobeta_helper(params, tod, xyz, n_profiles, n_shocks, n_bubbles, dx, beam):
 
     derivs = []
     if n_profiles:
-        derivs.append(jnp.vstack(grad[0]))
+        derivs.append(jnp.vstack(jnp.moveaxis(grad[0], (-2, -1), (0, 1))))
     if n_shocks:
-        derivs.append(jnp.vstack(grad[1]))
+        derivs.append(jnp.vstack(jnp.moveaxis(grad[1], (-2, -1), (0, 1))))
     if n_bubbles:
-        derivs.append(jnp.vstack(grad[2]))
+        derivs.append(jnp.vstack(jnp.moveaxis(grad[2], (-2, -1), (0, 1))))
     derivs = jnp.vstack(derivs)
+
+    if "id_inv" in tod.info:
+        id_inv = tod.info["id_inv"]
+        shape = tod.info["dx"].shape
+        pred = pred[id_inv].reshape(shape)
+        derivs = derivs[:, id_inv].reshape((len(derivs), ) + shape)
 
     return derivs, pred
 
@@ -217,7 +227,8 @@ def isobeta(
 
     ip = fft_conv(ip, beam)
 
-    return jsp.ndimage.map_coordinates(ip, (idy, idx), order=0)
+    # return jsp.ndimage.map_coordinates(ip, (idy, idx), order=0)
+    return ip[idy.ravel(), idx.ravel()].reshape(idx.shape)
 
 
 # TODO: figure out how to skip parameters
@@ -289,6 +300,7 @@ def isobeta_grad(
         idy,
     )
 
+    # grad = jax.jacfwd(jax.checkpoint(isobeta, static_argnums=(1, 3, 5, 7)), argnums=(2, 4, 6))(
     grad = jax.jacfwd(isobeta, argnums=(2, 4, 6))(
         xyz,
         n_profiles,
