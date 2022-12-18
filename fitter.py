@@ -85,10 +85,12 @@ for fname in tod_names:
 
     # Make pixelized RA/Dec TODs
     idx, idy = tod_to_index(dat["dx"], dat["dy"], x0, y0, r_map, dr, coord_conv)
-    idu, id_inv = np.unique(np.vstack((idx.ravel(), idy.ravel())), axis=1, return_inverse=True)
+    idu, id_inv = np.unique(
+        np.vstack((idx.ravel(), idy.ravel())), axis=1, return_inverse=True
+    )
     dat["idx"] = idu[0]
     dat["idy"] = idu[1]
-    dat["id_inv"] = id_inv 
+    dat["id_inv"] = id_inv
 
     tod = minkasi.Tod(dat)
     todvec.add_tod(tod)
@@ -119,7 +121,6 @@ to_fit = []
 priors = []
 prior_vals = []
 for model in cfg["models"].values():
-    funs.append(eval(str(model["func"])))
     npars.append(len(model["parameters"]))
     for name, par in model["parameters"].items():
         labels.append(name)
@@ -131,6 +132,7 @@ for model in cfg["models"].values():
         else:
             priors.append(None)
             prior_vals.append(None)
+    funs.append(eval(str(model["func"])))
 npars = np.array(npars)
 labels = np.array(labels)
 pars = np.array(pars)
@@ -156,7 +158,7 @@ for i, tod in enumerate(todvec.tods):
         tod.set_apix()
         for j in range(tod.info["dat_calib"].shape[0]):
             x, y = tod.info["apix"][j], tod.info["dat_calib"][j] - tod.info[method][j]
-            res = np.polynomial.polynomial.polyfit( x, y, cfg["bowling"]["degree"])
+            res = np.polynomial.polynomial.polyfit(x, y, cfg["bowling"]["degree"])
             tod.info["dat_calib"][j] -= np.polynomial.polynomial.polyval(x, res)
 
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
