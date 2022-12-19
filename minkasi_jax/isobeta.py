@@ -5,7 +5,6 @@ Module for generating isobeta profiles with substructure and their gradients.
 from functools import partial
 import jax
 import jax.numpy as jnp
-import numpy as np
 from .utils import fft_conv, add_shock, add_bubble
 
 jax.config.update("jax_enable_x64", True)
