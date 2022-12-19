@@ -208,7 +208,7 @@ if fit:
 
     if minkasi.myrank == 0:
         res_path = os.path.join(outdir, "results")
-        print_once("Saving results to ", res_path)
+        print_once("Saving results to ", res_path, ".npz")
         np.savez_compressed(
             res_path, pars_fit=pars_fit, chisq=chisq, errs=errs, curve=curve
         )
