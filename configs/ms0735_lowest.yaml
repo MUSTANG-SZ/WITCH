@@ -1,0 +1,126 @@
+cluster:
+  name: "MS0735"
+  Te: 5.0
+  freq: 90e9
+paths:
+  tods: "/scratch/r/rbond/jorlo/MS0735/TS_EaCMS0f0_51_5_Oct_2021"
+  glob: "Signal_TOD*.fits"
+  ndo: False
+  odo: False
+  outroot: "/scratch/s/sievers/skh/Reductions"
+  subdir: "r3=r2"
+coords:
+  z: .216
+  r_map: "3.0*60*da"
+  dr: ".5*da"
+  x0: "Angle('07 41 44.5 hours').to(u.radian).value"
+  y0: "Angle('74:14:38.7 degrees').to(u.radian).value"
+  conv_factor: "(da * 180 * 3600) / np.pi"
+beam:
+  fwhm1: "9.735 * da"
+  amp1: 0.9808
+  fwhm2: "32.627 * da"
+  amp2: 0.0192
+bowling:
+  sub_poly: False 
+  method: "pred2"
+  degree: 2
+minkasi:
+  noise:
+    class: "minkasi.NoiseSmoothedSVD"
+    args: "[]"
+    kwargs: "{'fwhm':10}"
+  maxiter: 20
+  npass: 5
+  dograd: False
+models:
+  double_isobeta_shock_bubbles:
+    func: "partial(isobeta_helper, xyz=xyz, n_profiles=2, n_shocks=0, n_bubbles=2, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(to_fit)[0])"
+    parameters:
+      r_1:
+        value: .341
+        to_fit: False
+      r_2:
+        value: .249
+        to_fit: False
+      r_3:
+        value: "model['parameters']['r_1']['value']"
+        to_fit: False
+      theta_1:
+        value: "np.deg2rad(97)"
+        to_fit: False
+      beta_1:
+        value: .98
+        to_fit: False
+      amp_1:
+        value: 0
+        to_fit: True
+      r_4:
+        value: .167
+        to_fit: False
+      r_5:
+        value: .122
+        to_fit: False
+      r_6:
+        value: "model['parameters']['r_4']['value']"
+        to_fit: False
+      theta_2:
+        value: "np.deg2rad(97)"
+        to_fit: False
+      beta_2:
+        value: 8.93
+        to_fit: False
+      amp_2:
+        value: 0
+        to_fit: True
+      b_ne_ra:
+        value: "-15*da"
+        to_fit: False
+      b_ne_dec:
+        value: "43*da"
+        to_fit: False
+      b_ne_z:
+        value: "np.sqrt(pars[-1]**2 + pars[-2]**2)*np.sin(np.deg2rad(0))"
+        to_fit: False
+      b_ne_r:
+        value: "30*da"
+        to_fit: False
+      b_ne_sup:
+        value: .5
+        to_fit: True
+        priors:
+          type: "flat"
+          value: "[0.0, 1.0]"
+      b_sw_ra:
+        value: "21*da"
+        to_fit: False
+      b_sw_dec:
+        value: "-51*da"
+        to_fit: False
+      b_sw_z:
+        value: "np.sqrt(pars[-1]**2 + pars[-2]**2)*np.sin(-1*np.deg2rad(0))"
+        to_fit: False
+      b_sw_r:
+        value: "30*da"
+        to_fit: False
+      b_sw_sup:
+        value: .5
+        to_fit: True
+        priors:
+          type: "flat"
+          value: "[0.0, 1.0]"
+  gauss:
+    func: "minkasi.derivs_from_gauss_c"
+    parameters:
+      ps_ra:
+        value: "Angle('07 41 44.5 hours').to(u.radian).value"
+        to_fit: False
+      ps_dec:
+        value: "Angle('74:14:38.7 degrees').to(u.radian).value"
+        to_fit: False
+      sigma:
+        value: "1.37e-5"
+        to_fit: True 
+      amp:
+        value: "1.7e-4"
+        to_fit: True 

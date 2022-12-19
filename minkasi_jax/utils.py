@@ -25,6 +25,7 @@ h = const.h.value
 Xthom = const.sigma_T.to(u.cm**2).value
 
 Mparsec = u.Mpc.to(u.cm)
+XMpc = Xthom * Mparsec
 
 # Cosmology
 # --------------------------------------------------------
@@ -200,7 +201,6 @@ def tod_hi_pass(tod, N_filt):
 
 # Model building tools
 # -----------------------------------------------------------
-@partial(jax.jit, static_argnums=(1, 2))
 def make_grid(r_map, dr):
     """
     Make coordinate grids to build models in.
@@ -229,7 +229,7 @@ def make_grid(r_map, dr):
 
 
 @jax.jit
-def add_bubble(pressure, xyz, xb, yb, zb, rb, sup, z):
+def add_bubble(pressure, xyz, xb, yb, zb, rb, sup):
     """
     Add bubble to 3d pressure profile.
 
@@ -307,7 +307,7 @@ def add_shock(pressure, xyz, sr_1, sr_2, sr_3, s_theta, shock):
     return pressure_s
 
 
-def tod_to_index(xi, yi, x0, y0, r_map, dr):
+def tod_to_index(xi, yi, x0, y0, r_map, dr, conv_factor):
     """
     Convert RA/Dec TODs to index space.
 
@@ -325,6 +325,9 @@ def tod_to_index(xi, yi, x0, y0, r_map, dr):
 
         dr: Pixel size
 
+        conv_factor: Conversion factor to put RA and Dec in same units as r_map.
+                     Nominally (da * 180 * 3600) / pi
+
     Returns:
 
         idx: The RA TOD in index space
@@ -334,13 +337,16 @@ def tod_to_index(xi, yi, x0, y0, r_map, dr):
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
 
-    dx *= (180 * 3600) / jnp.pi
-    dy *= (180 * 3600) / jnp.pi
+    dx *= conv_factor
+    dy *= conv_factor
     full_rmap = jnp.arange(-1 * r_map, r_map, dr)
 
     idx, idy = (dx + r_map) / (2 * r_map) * len(full_rmap), (-dy + r_map) / (
         2 * r_map
     ) * len(full_rmap)
+
+    idx = np.rint(idx).astype(int)
+    idy = np.rint(idy).astype(int)
 
     return idx, idy
 
