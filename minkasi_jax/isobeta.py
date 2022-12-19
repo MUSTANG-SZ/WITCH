@@ -5,8 +5,7 @@ Module for generating isobeta profiles with substructure and their gradients.
 from functools import partial
 import jax
 import jax.numpy as jnp
-import jax.scipy as jsp
-from utils import fft_conv, add_shock, add_bubble
+from .utils import fft_conv, add_shock, add_bubble
 
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
@@ -16,12 +15,22 @@ N_PAR_SHOCK = 5
 N_PAR_BUBBLE = 5
 
 
-def isobeta_heper(xyz, n_profiles, n_shocks, n_bubbles, dx, beam, params, tod):
+def isobeta_helper(
+    params, tod, xyz, n_profiles, n_shocks, n_bubbles, dx, beam, argnums
+):
     """
     Helper function to be used when fitting with Minkasi.
     Use functools.partial to set all parameters but params and tod before passing to Minkasi.
 
     Arguments:
+
+        params: 1D array of model parameters.
+
+        tod: The TOD, assumed that idx and idy are in tod.info.
+             Optionally also include id_inv. In this case it is assumed that
+             idx and idy are flattened and passed through np.unique such that
+             each (idx[i], idy[i]) is unique and id_inv is the inverse index
+             mapping obtained by setting return_inverse=True.
 
         xyz: Coordinate grid to compute profile on.
 
@@ -37,13 +46,11 @@ def isobeta_heper(xyz, n_profiles, n_shocks, n_bubbles, dx, beam, params, tod):
 
         beam: Beam to convolve by, should be a 2d array.
 
-        params: 1D array of model parameters.
-
-        tod: The TOD, assumed that idx and idy are in tod.info.
+        argnums: Arguments to evaluate the gradient at.
 
     Returns:
 
-        derivs: The gradient of the model with respect to the model parameters.
+        grad: The gradient of the model with respect to the model parameters.
                 Reshaped to be the correct format for Minkasi.
 
         pred: The isobeta model with the specified substructure.
@@ -51,45 +58,26 @@ def isobeta_heper(xyz, n_profiles, n_shocks, n_bubbles, dx, beam, params, tod):
     idx = tod.info["idx"]
     idy = tod.info["idy"]
 
-    profiles, shocks, bubbles = jnp.zeros((1, 1), dtype=float)
-    start = 0
-    if n_profiles:
-        delta = n_profiles * N_PAR_PROFILE
-        profiles = params[start : start + delta].reshape((n_profiles, N_PAR_PROFILE))
-        start += delta
-    if n_shocks:
-        delta = n_shocks * N_PAR_SHOCK
-        shocks = params[start : start + delta].reshape((n_shocks, N_PAR_SHOCK))
-        start += delta
-    if n_bubbles:
-        delta = n_bubbles * N_PAR_BUBBLE
-        bubbles = params[start : start + delta].reshape((n_bubbles, N_PAR_BUBBLE))
-        start += delta
-
     pred, grad = isobeta_grad(
         xyz,
         n_profiles,
-        profiles,
         n_shocks,
-        shocks,
         n_bubbles,
-        bubbles,
         dx,
         beam,
         idx,
         idy,
+        tuple(argnums + 8),
+        *params
     )
 
-    derivs = []
-    if n_profiles:
-        derivs.append(jnp.vstack(grad[0]))
-    if n_shocks:
-        derivs.append(jnp.vstack(grad[1]))
-    if n_bubbles:
-        derivs.append(jnp.vstack(grad[2]))
-    derivs = jnp.vstack(derivs)
+    if "id_inv" in tod.info:
+        id_inv = tod.info["id_inv"]
+        shape = tod.info["dx"].shape
+        pred = pred[id_inv].reshape(shape)
+        grad = grad[:, id_inv].reshape((len(grad),) + shape)
 
-    return derivs, pred
+    return grad, pred
 
 
 @jax.jit
@@ -139,16 +127,9 @@ def _isobeta_elliptical(r_1, r_2, r_3, theta, beta, amp, xyz):
 
 @partial(
     jax.jit,
-    static_argnums=(
-        1,
-        3,
-        5,
-        7,
-    ),
+    static_argnums=(1, 2, 3, 4),
 )
-def isobeta(
-    xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx, beam, idx, idy
-):
+def isobeta(xyz, n_profiles, n_shocks, n_bubbles, dx, beam, idx, idy, *params):
     """
     Generically create isobeta models with substructure.
 
@@ -158,21 +139,9 @@ def isobeta(
 
         n_profiles: Number of isobeta profiles to add.
 
-        profile: 2d array of profile parameters.
-                 Each row is an isobeta profile with parameters:
-                 (r_1, r_2, r_3, theta, beta, amp)
-
         n_shocks: Number of shocks to add.
 
-        shocks: 2d array of shock parameters.
-                Each row is a shock with parameters:
-                (sr_1, sr_2, sr_3, s_theta, shock)
-
         n_bubbles: Number of bubbles to add.
-
-        bubbles: 2d array of bubble parameters.
-                 Each row is a bubble with parameters:
-                 (xb, yb, zb, rb, sup)
 
         dx: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
@@ -185,10 +154,30 @@ def isobeta(
 
         idy: Dec TOD in units of pixels.
 
+        params: 1D array of model parameters.
+
     Returns:
 
         model: The isobeta model with the specified substructure.
     """
+    params = jnp.array(params)
+    profiles = jnp.zeros((1, 1), dtype=float)
+    shocks = jnp.zeros((1, 1), dtype=float)
+    bubbles = jnp.zeros((1, 1), dtype=float)
+    start = 0
+    if n_profiles:
+        delta = n_profiles * N_PAR_PROFILE
+        profiles = params[start : start + delta].reshape((n_profiles, N_PAR_PROFILE))
+        start += delta
+    if n_shocks:
+        delta = n_shocks * N_PAR_SHOCK
+        shocks = params[start : start + delta].reshape((n_shocks, N_PAR_SHOCK))
+        start += delta
+    if n_bubbles:
+        delta = n_bubbles * N_PAR_BUBBLE
+        bubbles = params[start : start + delta].reshape((n_bubbles, N_PAR_BUBBLE))
+        start += delta
+
     pressure = jnp.zeros((xyz[0].shape[1], xyz[1].shape[0], xyz[2].shape[2]))
     for i in range(n_profiles):
         pressure = jnp.add(pressure, _isobeta_elliptical(*profiles[i], xyz))
@@ -215,21 +204,16 @@ def isobeta(
 
     ip = fft_conv(ip, beam)
 
-    return jsp.ndimage.map_coordinates(ip, (idy, idx), order=0)
+    # return jsp.ndimage.map_coordinates(ip, (idy, idx), order=0)
+    return ip[idy.ravel(), idx.ravel()].reshape(idx.shape)
 
 
-# TODO: figure out how to skip parameters
 @partial(
     jax.jit,
-    static_argnums=(
-        1,
-        3,
-        5,
-        7,
-    ),
+    static_argnums=(1, 2, 3, 4, 8),
 )
 def isobeta_grad(
-    xyz, n_profiles, profiles, n_shocks, shocks, n_bubbles, bubbles, dx, beam, idx, idy
+    xyz, n_profiles, n_shocks, n_bubbles, dx, beam, idx, idy, argnums, *params
 ):
     """
     Generically create isobeta models with substructure and get their gradients.
@@ -240,21 +224,9 @@ def isobeta_grad(
 
         n_profiles: Number of isobeta profiles to add.
 
-        profile: 2d array of profile parameters.
-                 Each row is an isobeta profile with parameters:
-                 (r_1, r_2, r_3, theta, beta, amp)
-
         n_shocks: Number of shocks to add.
 
-        shocks: 2d array of shock parameters.
-                Each row is a shock with parameters:
-                (sr_1, sr_2, sr_3, s_theta, shock)
-
         n_bubbles: Number of bubbles to add.
-
-        bubbles: 2d array of bubble parameters.
-                 Each row is a bubble with parameters:
-                 (xb, yb, zb, rb, sup, z)
 
         dx: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
@@ -267,38 +239,22 @@ def isobeta_grad(
 
         idy: Dec TOD in units of pixels.
 
+        argnums: The arguments to evaluate the gradient at
+
+        params: 1D array of model parameters.
+
     Returns:
 
         model: The isobeta model with the specified substructure.
 
         grad: The gradient of the model with respect to the model parameters.
     """
-    pred = isobeta(
-        xyz,
-        n_profiles,
-        profiles,
-        n_shocks,
-        shocks,
-        n_bubbles,
-        bubbles,
-        dx,
-        beam,
-        idx,
-        idy,
-    )
+    pred = isobeta(xyz, n_profiles, n_shocks, n_bubbles, dx, beam, idx, idy, *params)
 
-    grad = jax.jacfwd(isobeta, argnums=(2, 4, 6))(
-        xyz,
-        n_profiles,
-        profiles,
-        n_shocks,
-        shocks,
-        n_bubbles,
-        bubbles,
-        dx,
-        beam,
-        idx,
-        idy,
+    grad = jax.jacfwd(isobeta, argnums=argnums)(
+        xyz, n_profiles, n_shocks, n_bubbles, dx, beam, idx, idy, *params
     )
+    grad_padded = jnp.zeros((len(params),) + idx.shape)
+    grad_padded = grad_padded.at[jnp.array(argnums) - 8].set(jnp.array(grad))
 
-    return pred, grad
+    return pred, grad_padded

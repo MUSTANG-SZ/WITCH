@@ -94,13 +94,13 @@ def potato_chip(pn, p, xi, yi):
 
         chip: A vector of values for this model given p at the xi, yi
     """
-    if p is 0:
+    if pn == 0:
         A, c0, c1, c2, c3, c4, theta = p
-    elif pn is 1:
+    elif pn == 1:
         A, c1, c2, c3, c4, theta = p
-    elif pn is 2:
+    elif pn == 2:
         A, c1, c3, c4, theta = p
-    elif pn is 3:
+    elif pn == 3:
         c1, theta = p
     else:
         return 0
@@ -110,13 +110,13 @@ def potato_chip(pn, p, xi, yi):
         -1 * jnp.sin(theta) * xi + jnp.cos(theta) * yi,
     )
 
-    if p is 0:
+    if pn == 0:
         return A * (c0 + c1 * x1 + c2 * x2 + x1**2 / c3 - x2**2 / c4)
-    elif pn is 1:
+    elif pn == 1:
         return A * (1 + c1 * x1 + c2 * x2 + x1**2 / c3 - x2**2 / c4)
-    elif pn is 2:
+    elif pn == 2:
         return A * (c1 * x1 + x1**2 / c3 - x2**2 / c4)
-    elif pn is 3:
+    elif pn == 3:
         return c1 * x1
 
 
