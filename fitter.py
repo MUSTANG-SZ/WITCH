@@ -175,6 +175,8 @@ if fit:
     outdir = os.path.join(outdir, "-".join(l for l in labels[to_fit]))
 else:
     outdir = os.path.join(outdir, "not_fit")
+if sub_poly:
+    outdir += "-" + method + "_" + str(degree) 
 print_once("Outputs can be found in ", outdir)
 if minkasi.myrank == 0:
     os.makedirs(outdir, exist_ok=True)
@@ -218,7 +220,7 @@ for tod in todvec.tods:
     for n, fun in zip(npars, funs):
         model += fun(pars_fit[start : (start + n)], tod)[1]
         start += n
-    tod.info["dat_calib"] -= model
+    tod.info["dat_calib"] -= np.array(model)
 tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
 # Make maps
@@ -348,7 +350,7 @@ for niter in range(npass):
         priorset,
         precon,
         maxiter=maxiter,
-        outroot=os.path.join(outroot, "niter_" + repr(niter + 1)),
+        outroot=os.path.join(outdir, "niter_" + repr(niter + 1)),
         save_iters=iters,
     )
     if minkasi.myrank == 0:
