@@ -17,7 +17,7 @@ from astropy.coordinates import Angle
 from astropy import units as u
 import minkasi_jax.presets_by_source as pbs
 from minkasi_jax.utils import *
-from minkasi_jax.isobeta import isobeta_helper
+from minkasi_jax import helper
 
 
 def print_once(*args):
