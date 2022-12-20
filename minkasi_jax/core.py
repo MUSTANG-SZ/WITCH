@@ -11,8 +11,8 @@ from .structure import isobeta, add_shock, add_bubble
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
 
-N_PAR_ISOBETA = 6
-N_PAR_SHOCK = 5
+N_PAR_ISOBETA = 9
+N_PAR_SHOCK = 8
 N_PAR_BUBBLE = 5
 
 

@@ -7,13 +7,19 @@ import jax.numpy as jnp
 
 
 @jax.jit
-def isobeta(r_1, r_2, r_3, theta, beta, amp, xyz):
+def isobeta(dx, dy, dz, r_1, r_2, r_3, theta, beta, amp, xyz):
     """
     Elliptical isobeta pressure profile in 3d
     This function does not include smoothing or declination stretch
     which should be applied at the end.
 
     Arguments:
+
+        dx: RA of cluster center relative to grid origin
+
+        dy: Dec of cluster center relative to grid origin
+
+        dz: Line of sight offset of cluster center relative to grid origin
 
         r_1: Amount to scale along x-axis
 
@@ -33,15 +39,19 @@ def isobeta(r_1, r_2, r_3, theta, beta, amp, xyz):
 
         model: The isobeta model centered on the origin of xyz
     """
+    # Shift origin
+    x = xyz[0] - dx
+    y = xyz[1] - dy
+    z = xyz[2] - dz
+
     # Rotate
-    xx = xyz[0] * jnp.cos(theta) + xyz[1] * jnp.sin(theta)
-    yy = xyz[1] * jnp.cos(theta) - xyz[0] * jnp.sin(theta)
-    zz = xyz[2]
+    xx = x * jnp.cos(theta) + y * jnp.sin(theta)
+    yy = y * jnp.cos(theta) - x * jnp.sin(theta)
 
     # Apply ellipticity
     xfac = (xx / r_1) ** 2
     yfac = (yy / r_2) ** 2
-    zfac = (zz / r_3) ** 2
+    zfac = (z / r_3) ** 2
 
     # Calculate pressure profile
     rr = 1 + xfac + yfac + zfac
@@ -62,11 +72,11 @@ def add_bubble(pressure, xyz, xb, yb, zb, rb, sup):
 
         xyz: Coordinate grids, see make_grid for details
 
-        xb: Ra of bubble's center relative to cluster center
+        xb: Ra of bubble's center relative to grid origin
 
-        yb: Dec of bubble's center relative to cluster center
+        yb: Dec of bubble's center relative to grid origin
 
-        zb: Line of site offset of bubble's center relative to cluster center
+        zb: Line of site offset of bubble's center relative to grid origin
 
         rb: Radius of bubble
 
@@ -89,7 +99,7 @@ def add_bubble(pressure, xyz, xb, yb, zb, rb, sup):
 
 
 @jax.jit
-def add_shock(pressure, xyz, sr_1, sr_2, sr_3, s_theta, shock):
+def add_shock(pressure, xyz, xs, ys, zs, sr_1, sr_2, sr_3, s_theta, shock):
     """
     Add bubble to 3d pressure profile.
 
@@ -98,6 +108,12 @@ def add_shock(pressure, xyz, sr_1, sr_2, sr_3, s_theta, shock):
         pressure: The pressure profile
 
         xyz: Coordinate grids, see make_grid for details
+
+        xs: RA of cluster center relative to grid origin
+
+        ys: Dec of cluster center relative to grid origin
+
+        zs: Line of sight offset of cluster center relative to grid origin
 
         sr_1: Amount to scale shock along x-axis
 
@@ -113,15 +129,19 @@ def add_shock(pressure, xyz, sr_1, sr_2, sr_3, s_theta, shock):
 
         pressure_s: Pressure profile with shock added
     """
+    # Recenter grid on bubble center
+    x = xyz[0] - xs
+    y = xyz[1] - ys
+    z = xyz[2] - zs
+
     # Rotate
-    xx = xyz[0] * jnp.cos(s_theta) + xyz[1] * jnp.sin(s_theta)
-    yy = xyz[1] * jnp.cos(s_theta) - xyz[0] * jnp.sin(s_theta)
-    zz = xyz[2]
+    xx = x * jnp.cos(s_theta) + y * jnp.sin(s_theta)
+    yy = y * jnp.cos(s_theta) - x * jnp.sin(s_theta)
 
     # Apply ellipticity
     xfac = (xx / sr_1) ** 2
     yfac = (yy / sr_2) ** 2
-    zfac = (zz / sr_3) ** 2
+    zfac = (z / sr_3) ** 2
 
     # Enhance points inside shock
     pressure_s = jnp.where(
