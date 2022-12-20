@@ -12,11 +12,12 @@ jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
 
 N_PAR_ISOBETA = 9
+N_PAR_GNFW = 14
 N_PAR_SHOCK = 8
 N_PAR_BUBBLE = 5
 
 
-def helper(params, tod, xyz, n_isobeta, n_shocks, n_bubbles, dx, beam, argnums):
+def helper(params, tod, xyz, n_isobeta, n_gnfw, n_shocks, n_bubbles, dx, beam, argnums):
     """
     Helper function to be used when fitting with Minkasi.
     Use functools.partial to set all parameters but params and tod before passing to Minkasi.
@@ -34,6 +35,8 @@ def helper(params, tod, xyz, n_isobeta, n_shocks, n_bubbles, dx, beam, argnums):
         xyz: Coordinate grid to compute profile on.
 
         n_isobeta: Number of isobeta profiles to add.
+
+        n_gnfw: Number of gnfw profiles to add.
 
         n_shocks: Number of shocks to add.
 
@@ -60,6 +63,7 @@ def helper(params, tod, xyz, n_isobeta, n_shocks, n_bubbles, dx, beam, argnums):
     pred, grad = model_grad(
         xyz,
         n_isobeta,
+        n_gnfw,
         n_shocks,
         n_bubbles,
         dx,
@@ -81,9 +85,9 @@ def helper(params, tod, xyz, n_isobeta, n_shocks, n_bubbles, dx, beam, argnums):
 
 @partial(
     jax.jit,
-    static_argnums=(1, 2, 3, 4),
+    static_argnums=(1, 2, 3, 4, 5),
 )
-def model(xyz, n_isobeta, n_shocks, n_bubbles, dx, beam, idx, idy, *params):
+def model(xyz, n_isobeta, n_gnfw, n_shocks, n_bubbles, dx, beam, idx, idy, *params):
     """
     Generically create models with substructure.
 
@@ -91,7 +95,9 @@ def model(xyz, n_isobeta, n_shocks, n_bubbles, dx, beam, idx, idy, *params):
 
         xyz: Coordinate grid to compute profile on.
 
-        n_profiles: Number of isobeta profiles to add.
+        n_isobeta: Number of isobeta profiles to add.
+
+        n_gnfw: Number of gnfw profiles to add.
 
         n_shocks: Number of shocks to add.
 
@@ -116,12 +122,17 @@ def model(xyz, n_isobeta, n_shocks, n_bubbles, dx, beam, idx, idy, *params):
     """
     params = jnp.array(params)
     isobetas = jnp.zeros((1, 1), dtype=float)
+    gnfws = jnp.zeros((1, 1), dtype=float)
     shocks = jnp.zeros((1, 1), dtype=float)
     bubbles = jnp.zeros((1, 1), dtype=float)
     start = 0
     if n_isobeta:
         delta = n_isobeta * N_PAR_ISOBETA
         isobetas = params[start : start + delta].reshape((n_isobeta, N_PAR_ISOBETA))
+        start += delta
+    if n_gnfw:
+        delta = n_gnfw * N_PAR_GNFW
+        gnfws = params[start : start + delta].reshape((n_gnfw, N_PAR_GNFW))
         start += delta
     if n_shocks:
         delta = n_shocks * N_PAR_SHOCK
@@ -135,6 +146,9 @@ def model(xyz, n_isobeta, n_shocks, n_bubbles, dx, beam, idx, idy, *params):
     pressure = jnp.zeros((xyz[0].shape[1], xyz[1].shape[0], xyz[2].shape[2]))
     for i in range(n_isobeta):
         pressure = jnp.add(pressure, isobeta(*isobetas[i], xyz))
+
+    for i in range(n_gnfw):
+        pressure = jnp.add(pressure, gnfw(*gnfws[i], xyz))
 
     for i in range(n_shocks):
         pressure = add_shock(pressure, xyz, *shocks[i])
