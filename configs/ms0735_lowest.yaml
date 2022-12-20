@@ -53,7 +53,7 @@ models:
         value: .249
         to_fit: False
       r_3:
-        value: "model['parameters']['r_1']['value']"
+        value: "model['parameters']['r_2']['value']"
         to_fit: False
       theta_1:
         value: "np.deg2rad(97)"
@@ -80,7 +80,7 @@ models:
         value: .122
         to_fit: False
       r_6:
-        value: "model['parameters']['r_4']['value']"
+        value: "model['parameters']['r_5']['value']"
         to_fit: False
       theta_2:
         value: "np.deg2rad(97)"
