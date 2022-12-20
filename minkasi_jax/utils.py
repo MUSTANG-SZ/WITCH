@@ -16,6 +16,7 @@ jax.config.update("jax_platform_name", "cpu")
 # Constants
 # --------------------------------------------------------
 
+ap = 0.12
 h70 = cosmo.H0.value / 7.00e01
 
 Tcmb = 2.7255
@@ -140,13 +141,43 @@ def get_da(z):
 
     Arguments:
 
-        z: The redshift at which to compute the  factor.
+        z: The redshift at which to compute the factor.
 
     Returns:
 
         da: Conversion factor from arcseconds to MPc
     """
     return jnp.interp(z, dzline, daline)
+
+
+def get_nz(z):
+    """
+    Get n(z).
+
+    Arguments:
+
+        z: The redshift at which to compute the factor.
+
+    Returns:
+
+        nz: n at the given z.
+    """
+    return jnp.interp(z, dzline, nzline)
+
+
+def get_hz(z):
+    """
+    Get h(z).
+
+    Arguments:
+
+        z: The redshift at which to compute the factor.
+
+    Returns:
+
+        hz: h at the given z.
+    """
+    return jnp.interp(z, dzline, hzline)
 
 
 # FFT Operations
