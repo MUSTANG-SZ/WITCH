@@ -259,6 +259,50 @@ def make_grid(r_map, dr):
     return jnp.meshgrid(x, y, z, sparse=True, indexing="xy")
 
 
+@jax.jit
+def transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz):
+    """
+    Shift, rotate, and apply ellipticity to coordinate grid.
+
+    Arguments:
+
+        dx: RA of cluster center relative to grid origin
+
+        dy: Dec of cluster center relative to grid origin
+
+        dz: Line of sight offset of cluster center relative to grid origin
+
+        r_1: Amount to scale along x-axis
+
+        r_2: Amount to scale along y-axis
+
+        r_3: Amount to scale along z-axis
+
+        theta: Angle to rotate in xy-plane
+
+        xyz: Coordinte grid to transform
+
+    Returns:
+
+        xyz: Transformed coordinate grid
+    """
+    # Shift origin
+    x = xyz[0] - dx
+    y = xyz[1] - dy
+    z = xyz[2] - dz
+
+    # Rotate
+    xx = x * jnp.cos(theta) + y * jnp.sin(theta)
+    yy = y * jnp.cos(theta) - x * jnp.sin(theta)
+
+    # Apply ellipticity
+    x = xx / r_1
+    y = yy / r_2
+    z = z / r_3
+
+    return x, y, z
+
+
 def tod_to_index(xi, yi, x0, y0, r_map, dr, conv_factor):
     """
     Convert RA/Dec TODs to index space.

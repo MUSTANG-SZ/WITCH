@@ -4,7 +4,7 @@ This includes both cluster profiles and substructure.
 """
 import jax
 import jax.numpy as jnp
-from .utils import ap, h70, get_nz, get_hz
+from .utils import transform_grid, ap, h70, get_nz, get_hz
 
 
 @jax.jit
@@ -50,27 +50,13 @@ def gnfw(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z
 
         model: The gnfw model
     """
-    # Shift origin
-    x = xyz[0] - dx
-    y = xyz[1] - dy
-    z = xyz[2] - dz
-
-    # Rotate
-    xx = x * jnp.cos(theta) + y * jnp.sin(theta)
-    yy = y * jnp.cos(theta) - x * jnp.sin(theta)
-
-    # Apply ellipticity
-    xfac = (xx / r_1) ** 2
-    yfac = (yy / r_2) ** 2
-    zfac = (z / r_3) ** 2
-
-    # Constants
     nz = get_nz(z)
     hz = get_hz(z)
 
-    # Calculate pressure profile
+    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+
     r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
-    r = c500 * jnp.sqrt(xfac + yfac + zfac) / r500
+    r = c500 * jnp.sqrt(x**2 + y**2 + z**2) / r500
     denominator = (r**gamma) * (1 + r**alpha) ** ((beta - gamma) / alpha)
 
     P500 = (
@@ -116,22 +102,9 @@ def isobeta(dx, dy, dz, r_1, r_2, r_3, theta, beta, amp, xyz):
 
         model: The isobeta model
     """
-    # Shift origin
-    x = xyz[0] - dx
-    y = xyz[1] - dy
-    z = xyz[2] - dz
+    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
-    # Rotate
-    xx = x * jnp.cos(theta) + y * jnp.sin(theta)
-    yy = y * jnp.cos(theta) - x * jnp.sin(theta)
-
-    # Apply ellipticity
-    xfac = (xx / r_1) ** 2
-    yfac = (yy / r_2) ** 2
-    zfac = (z / r_3) ** 2
-
-    # Calculate pressure profile
-    rr = 1 + xfac + yfac + zfac
+    rr = 1 + x**2 + y**2 + z**2
     power = -1.5 * beta
     rrpow = rr**power
 
@@ -206,22 +179,9 @@ def add_shock(pressure, xyz, xs, ys, zs, sr_1, sr_2, sr_3, s_theta, shock):
 
         pressure_s: Pressure profile with shock added
     """
-    # Recenter grid on bubble center
-    x = xyz[0] - xs
-    y = xyz[1] - ys
-    z = xyz[2] - zs
+    x, y, z = transform_grid(xs, ys, zs, sr_1, sr_2, sr_3, s_theta, xyz)
 
-    # Rotate
-    xx = x * jnp.cos(s_theta) + y * jnp.sin(s_theta)
-    yy = y * jnp.cos(s_theta) - x * jnp.sin(s_theta)
-
-    # Apply ellipticity
-    xfac = (xx / sr_1) ** 2
-    yfac = (yy / sr_2) ** 2
-    zfac = (z / sr_3) ** 2
-
-    # Enhance points inside shock
     pressure_s = jnp.where(
-        jnp.sqrt(xfac + yfac + zfac) > 1, pressure, (1 + shock) * pressure
+        jnp.sqrt(x**2 + y**2 + z**2) > 1, pressure, (1 + shock) * pressure
     )
     return pressure_s
