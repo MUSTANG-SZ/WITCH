@@ -10,7 +10,7 @@ from .utils import ap, h70, get_nz, get_hz
 @jax.jit
 def gnfw(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z, xyz):
     """
-    Elliptical gNFW pressure profile in 3d
+    Elliptical gNFW pressure profile in 3d.
     This function does not include smoothing or declination stretch
     which should be applied at the end.
 
@@ -86,7 +86,7 @@ def gnfw(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z
 @jax.jit
 def isobeta(dx, dy, dz, r_1, r_2, r_3, theta, beta, amp, xyz):
     """
-    Elliptical isobeta pressure profile in 3d
+    Elliptical isobeta pressure profile in 3d.
     This function does not include smoothing or declination stretch
     which should be applied at the end.
 
@@ -114,7 +114,7 @@ def isobeta(dx, dy, dz, r_1, r_2, r_3, theta, beta, amp, xyz):
 
     Returns:
 
-        model: The isobeta model centered on the origin of xyz
+        model: The isobeta model
     """
     # Shift origin
     x = xyz[0] - dx
