@@ -177,7 +177,7 @@ else:
     outdir = os.path.join(outdir, "not_fit")
 if sub_poly:
     outdir += "-" + method + "_" + str(degree) 
-print_once("Outputs can be found in ", outdir)
+print_once("Outputs can be found in", outdir)
 if minkasi.myrank == 0:
     os.makedirs(outdir, exist_ok=True)
     shutil.copyfile(args.config, os.path.join(outdir, "config.yaml"))
@@ -199,16 +199,16 @@ if fit:
     )
     minkasi.comm.barrier()
     t2 = time.time()
-    print_once("Took ", t2 - t1, " seconds to fit")
+    print_once("Took", t2 - t1, "seconds to fit")
 
     print_once("Fit parameters:")
     for l, pf, err in zip(labels, pars_fit, errs):
-        print_once("\t", l, " = ", pf, " +/- ", err)
-    print_once("chisq = ", chisq)
+        print_once("\t", l, "=", pf, "+/-", err)
+    print_once("chisq =", chisq)
 
     if minkasi.myrank == 0:
         res_path = os.path.join(outdir, "results")
-        print_once("Saving results to ", res_path, ".npz")
+        print_once("Saving results to", res_path + ".npz")
         np.savez_compressed(
             res_path, pars_fit=pars_fit, chisq=chisq, errs=errs, curve=curve
         )
