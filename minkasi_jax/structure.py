@@ -149,7 +149,9 @@ def add_bubble(pressure, xyz, xb, yb, zb, rb, sup):
 
 
 @jax.jit
-def add_shock(pressure, xyz, xs, ys, zs, sr_1, sr_2, sr_3, s_theta, shock):
+def add_shock(
+    pressure, xyz, xs, ys, zs, sr_1, sr_2, sr_3, s_theta, amp, xk, x0, yk, y0, zk, z0
+):
     """
     Add bubble to 3d pressure profile.
 
@@ -173,7 +175,22 @@ def add_shock(pressure, xyz, xs, ys, zs, sr_1, sr_2, sr_3, s_theta, shock):
 
         s_theta: Angle to rotate shock in xy-plane
 
-        shock: Factor by which pressure is enhanced within shock
+        amp: Factor by which pressure is enhanced at peak of exponential
+
+        xk: Power of exponential in RA direction
+
+        x0: RA offset of exponential.
+            Note that this is in transformed coordinates so x0=1 is at xs + sr_1.
+
+        yk: Power of exponential in Dec direction
+
+        y0: Dec offset of exponential.
+            Note that this is in transformed coordinates so y0=1 is at ys + sr_2.
+
+        xk: Power of exponential along the line of sight
+
+        x0: Line of sight offset of exponential.
+            Note that this is in transformed coordinates so z0=1 is at zs + sr_3.
 
     Returns:
 
@@ -181,7 +198,9 @@ def add_shock(pressure, xyz, xs, ys, zs, sr_1, sr_2, sr_3, s_theta, shock):
     """
     x, y, z = transform_grid(xs, ys, zs, sr_1, sr_2, sr_3, s_theta, xyz)
 
+    exponential = amp * ((x - x0) * xk) + ((y - y0) * yk) + ((z - z0) * zk)
+
     pressure_s = jnp.where(
-        jnp.sqrt(x**2 + y**2 + z**2) > 1, pressure, (1 + shock) * pressure
+        jnp.sqrt(x**2 + y**2 + z**2) > 1, pressure, (1 + exponential) * pressure
     )
     return pressure_s

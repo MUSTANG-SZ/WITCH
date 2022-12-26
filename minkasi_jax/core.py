@@ -13,7 +13,7 @@ jax.config.update("jax_platform_name", "cpu")
 
 N_PAR_ISOBETA = 9
 N_PAR_GNFW = 14
-N_PAR_SHOCK = 8
+N_PAR_SHOCK = 14 
 N_PAR_BUBBLE = 5
 
 
