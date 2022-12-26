@@ -112,48 +112,11 @@ def isobeta(dx, dy, dz, r_1, r_2, r_3, theta, beta, amp, xyz):
 
 
 @jax.jit
-def add_bubble(pressure, xyz, xb, yb, zb, rb, sup):
-    """
-    Add bubble to 3d pressure profile.
-
-    Arguments:
-
-        pressure: The pressure profile
-
-        xyz: Coordinate grids, see make_grid for details
-
-        xb: Ra of bubble's center relative to grid origin
-
-        yb: Dec of bubble's center relative to grid origin
-
-        zb: Line of site offset of bubble's center relative to grid origin
-
-        rb: Radius of bubble
-
-        sup: Supression factor of bubble
-
-    Returns:
-
-        pressure_b: Pressure profile with bubble added
-    """
-    # Recenter grid on bubble center
-    x = xyz[0] - xb
-    y = xyz[1] - yb
-    z = xyz[2] - zb
-
-    # Supress points inside bubble
-    pressure_b = jnp.where(
-        jnp.sqrt(x**2 + y**2 + z**2) >= rb, pressure, (1 - sup) * pressure
-    )
-    return pressure_b
-
-
-@jax.jit
-def add_shock(
-    pressure, xyz, xs, ys, zs, sr_1, sr_2, sr_3, s_theta, amp, xk, x0, yk, y0, zk, z0
+def add_exponential(
+    pressure, xyz, dx, dy, dz, r_1, r_2, r_3, theta, amp, xk, x0, yk, y0, zk, z0
 ):
     """
-    Add bubble to 3d pressure profile.
+    Add ellipsoid with exponential structure to 3d pressure profile.
 
     Arguments:
 
@@ -161,19 +124,19 @@ def add_shock(
 
         xyz: Coordinate grids, see make_grid for details
 
-        xs: RA of cluster center relative to grid origin
+        dx: RA of ellipsoid center relative to grid origin
 
-        ys: Dec of cluster center relative to grid origin
+        dy: Dec of ellipsoid center relative to grid origin
 
-        zs: Line of sight offset of cluster center relative to grid origin
+        dz: Line of sight offset of ellipsoid center relative to grid origin
 
-        sr_1: Amount to scale shock along x-axis
+        r_1: Amount to scale ellipsoid along x-axis
 
-        sr_2: Amount to scale shock along y-axis
+        r_2: Amount to scale ellipsoid along y-axis
 
-        sr_3: Amount to scale shock along z-axis
+        r_3: Amount to scale ellipsoid along z-axis
 
-        s_theta: Angle to rotate shock in xy-plane
+        theta: Angle to rotate ellipsoid in xy-plane
 
         amp: Factor by which pressure is enhanced at peak of exponential
 
@@ -194,13 +157,13 @@ def add_shock(
 
     Returns:
 
-        pressure_s: Pressure profile with shock added
+        new_pressure: Pressure profile with ellipsoid added
     """
-    x, y, z = transform_grid(xs, ys, zs, sr_1, sr_2, sr_3, s_theta, xyz)
+    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
     exponential = amp * ((x - x0) * xk) + ((y - y0) * yk) + ((z - z0) * zk)
 
-    pressure_s = jnp.where(
+    new_pressure = jnp.where(
         jnp.sqrt(x**2 + y**2 + z**2) > 1, pressure, (1 + exponential) * pressure
     )
-    return pressure_s
+    return new_pressure
