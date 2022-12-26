@@ -6,14 +6,14 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 from .utils import fft_conv
-from .structure import isobeta, add_exponential 
+from .structure import isobeta, gnfw, add_exponential
 
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
 
 N_PAR_ISOBETA = 9
 N_PAR_GNFW = 14
-N_PAR_EXPONENTIAL = 14 
+N_PAR_EXPONENTIAL = 14
 
 
 def helper(params, tod, xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, argnums):
@@ -81,7 +81,12 @@ def helper(params, tod, xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, argnum
 
 @partial(
     jax.jit,
-    static_argnums=(1, 2, 3, 4,),
+    static_argnums=(
+        1,
+        2,
+        3,
+        4,
+    ),
 )
 def model(xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, *params):
     """
@@ -129,7 +134,9 @@ def model(xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, *params):
         start += delta
     if n_exponentials:
         delta = n_exponentials * N_PAR_EXPONENTIAL
-        exponentials = params[start : start + delta].reshape((n_exponentials, N_PAR_EXPONENTIAL))
+        exponentials = params[start : start + delta].reshape(
+            (n_exponentials, N_PAR_EXPONENTIAL)
+        )
         start += delta
 
     pressure = jnp.zeros((xyz[0].shape[1], xyz[1].shape[0], xyz[2].shape[2]))
@@ -167,7 +174,7 @@ def model(xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, *params):
     static_argnums=(1, 2, 3, 4, 8),
 )
 def model_grad(
-    xyz, n_isobeta, n_shocks, n_bubbles, dx, beam, idx, idy, argnums, *params
+    xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, argnums, *params
 ):
     """
     Generically create models with substructure and get their gradients.
@@ -178,9 +185,9 @@ def model_grad(
 
         n_isobeta: Number of isobeta profiles to add.
 
-        n_shocks: Number of shocks to add.
+        n_gnfw: Number of gnfw profiles to add.
 
-        n_bubbles: Number of bubbles to add.
+        n_exponentials: Number of exponential ellipsoids to add.
 
         dx: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
@@ -203,10 +210,10 @@ def model_grad(
 
         grad: The gradient of the model with respect to the model parameters.
     """
-    pred = model(xyz, n_isobeta, n_shocks, n_bubbles, dx, beam, idx, idy, *params)
+    pred = model(xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, *params)
 
     grad = jax.jacfwd(model, argnums=argnums)(
-        xyz, n_isobeta, n_shocks, n_bubbles, dx, beam, idx, idy, *params
+        xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, *params
     )
     grad_padded = jnp.zeros((len(params),) + idx.shape)
     grad_padded = grad_padded.at[jnp.array(argnums) - 8].set(jnp.array(grad))
