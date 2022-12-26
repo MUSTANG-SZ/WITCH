@@ -115,6 +115,24 @@ models:
       shock_val:
         value: .26
         to_fit: True
+      sxk:
+        value: 0
+        to_fit: False
+      sx0:
+        value: 0
+        to_fit: False
+      syk:
+        value: 0
+        to_fit: False
+      sy0:
+        value: 0
+        to_fit: False
+      szk:
+        value: 0
+        to_fit: False
+      sz0:
+        value: 0
+        to_fit: False
       b_ne_ra:
         value: "-15*da"
         to_fit: False
