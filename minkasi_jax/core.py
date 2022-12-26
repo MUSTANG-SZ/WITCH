@@ -6,18 +6,17 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 from .utils import fft_conv
-from .structure import isobeta, add_shock, add_bubble
+from .structure import isobeta, add_exponential 
 
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
 
 N_PAR_ISOBETA = 9
 N_PAR_GNFW = 14
-N_PAR_SHOCK = 14 
-N_PAR_BUBBLE = 5
+N_PAR_EXPONENTIAL = 14 
 
 
-def helper(params, tod, xyz, n_isobeta, n_gnfw, n_shocks, n_bubbles, dx, beam, argnums):
+def helper(params, tod, xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, argnums):
     """
     Helper function to be used when fitting with Minkasi.
     Use functools.partial to set all parameters but params and tod before passing to Minkasi.
@@ -38,9 +37,7 @@ def helper(params, tod, xyz, n_isobeta, n_gnfw, n_shocks, n_bubbles, dx, beam, a
 
         n_gnfw: Number of gnfw profiles to add.
 
-        n_shocks: Number of shocks to add.
-
-        n_bubbles: Number of bubbles to add.
+        n_exponentials: Number of exponential ellipsoids to add.
 
         dx: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
@@ -64,8 +61,7 @@ def helper(params, tod, xyz, n_isobeta, n_gnfw, n_shocks, n_bubbles, dx, beam, a
         xyz,
         n_isobeta,
         n_gnfw,
-        n_shocks,
-        n_bubbles,
+        n_exponentials,
         dx,
         beam,
         idx,
@@ -85,9 +81,9 @@ def helper(params, tod, xyz, n_isobeta, n_gnfw, n_shocks, n_bubbles, dx, beam, a
 
 @partial(
     jax.jit,
-    static_argnums=(1, 2, 3, 4, 5),
+    static_argnums=(1, 2, 3, 4,),
 )
-def model(xyz, n_isobeta, n_gnfw, n_shocks, n_bubbles, dx, beam, idx, idy, *params):
+def model(xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, *params):
     """
     Generically create models with substructure.
 
@@ -99,9 +95,7 @@ def model(xyz, n_isobeta, n_gnfw, n_shocks, n_bubbles, dx, beam, idx, idy, *para
 
         n_gnfw: Number of gnfw profiles to add.
 
-        n_shocks: Number of shocks to add.
-
-        n_bubbles: Number of bubbles to add.
+        n_exponentials: Number of exponential ellipsoids to add.
 
         dx: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
@@ -123,8 +117,7 @@ def model(xyz, n_isobeta, n_gnfw, n_shocks, n_bubbles, dx, beam, idx, idy, *para
     params = jnp.array(params)
     isobetas = jnp.zeros((1, 1), dtype=float)
     gnfws = jnp.zeros((1, 1), dtype=float)
-    shocks = jnp.zeros((1, 1), dtype=float)
-    bubbles = jnp.zeros((1, 1), dtype=float)
+    exponentials = jnp.zeros((1, 1), dtype=float)
     start = 0
     if n_isobeta:
         delta = n_isobeta * N_PAR_ISOBETA
@@ -134,13 +127,9 @@ def model(xyz, n_isobeta, n_gnfw, n_shocks, n_bubbles, dx, beam, idx, idy, *para
         delta = n_gnfw * N_PAR_GNFW
         gnfws = params[start : start + delta].reshape((n_gnfw, N_PAR_GNFW))
         start += delta
-    if n_shocks:
-        delta = n_shocks * N_PAR_SHOCK
-        shocks = params[start : start + delta].reshape((n_shocks, N_PAR_SHOCK))
-        start += delta
-    if n_bubbles:
-        delta = n_bubbles * N_PAR_BUBBLE
-        bubbles = params[start : start + delta].reshape((n_bubbles, N_PAR_BUBBLE))
+    if n_exponentials:
+        delta = n_exponentials * N_PAR_EXPONENTIAL
+        exponentials = params[start : start + delta].reshape((n_exponentials, N_PAR_EXPONENTIAL))
         start += delta
 
     pressure = jnp.zeros((xyz[0].shape[1], xyz[1].shape[0], xyz[2].shape[2]))
@@ -150,11 +139,8 @@ def model(xyz, n_isobeta, n_gnfw, n_shocks, n_bubbles, dx, beam, idx, idy, *para
     for i in range(n_gnfw):
         pressure = jnp.add(pressure, gnfw(*gnfws[i], xyz))
 
-    for i in range(n_shocks):
-        pressure = add_shock(pressure, xyz, *shocks[i])
-
-    for i in range(n_bubbles):
-        pressure = add_bubble(pressure, xyz, *bubbles[i])
+    for i in range(n_exponentials):
+        pressure = add_exponential(pressure, xyz, *exponentials[i])
 
     # Integrate along line of site
     ip = jnp.trapz(pressure, dx=dx, axis=-1)
