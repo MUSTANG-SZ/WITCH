@@ -6,7 +6,7 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 from .utils import fft_conv
-from .structure import isobeta, gnfw, add_exponential, add_uniform
+from .structure import isobeta, gnfw, add_uniform, add_exponential
 
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
