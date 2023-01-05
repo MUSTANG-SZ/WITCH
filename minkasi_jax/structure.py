@@ -206,3 +206,69 @@ def add_exponential(
         jnp.sqrt(x**2 + y**2 + z**2) > 1, pressure, (1 + exponential) * pressure
     )
     return new_pressure
+
+
+@jax.jit
+def add_powerlaw(
+    pressure, xyz, dx, dy, dz, r_1, r_2, r_3, theta, amp, k, xa, x0, ya, y0, za, z0
+):
+    """
+    Add ellipsoid with power law structure to 3d pressure profile.
+
+    Arguments:
+
+        pressure: The pressure profile
+
+        xyz: Coordinate grids, see make_grid for details
+
+        dx: RA of ellipsoid center relative to grid origin
+
+        dy: Dec of ellipsoid center relative to grid origin
+
+        dz: Line of sight offset of ellipsoid center relative to grid origin
+
+        r_1: Amount to scale ellipsoid along x-axis
+
+        r_2: Amount to scale ellipsoid along y-axis
+
+        r_3: Amount to scale ellipsoid along z-axis
+
+        theta: Angle to rotate ellipsoid in xy-plane
+
+        amp: Factor by which pressure is enhanced at peak of power law
+
+        k: Power of power law
+
+        xa: Relative amplitude of power law in RA direction
+
+        x0: RA offset of power law.
+            Note that this is in transformed coordinates so x0=1 is at xs + sr_1.
+
+        ya: Relative amplitude of power law in Dec direction
+
+        y0: Dec offset of power law.
+            Note that this is in transformed coordinates so y0=1 is at ys + sr_2.
+
+        za: Relative amplitude of power law along the line of sight
+
+        z0: Line of sight offset of power law.
+            Note that this is in transformed coordinates so z0=1 is at zs + sr_3.
+
+    Returns:
+
+        new_pressure: Pressure profile with ellipsoid added
+    """
+    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+
+    powerlaw = (
+        xa * jnp.float_power(x - x0 + 1, k)
+        + ya * jnp.float_power(y - y0 + 1, k)
+        + za * jnp.float_power(z - z0 + 1, k)
+    )
+    powerlaw *= amp / (xa + ya + za)
+    powerlaw = jnp.where(jnp.isinf(powerlaw), amp, powerlaw)
+
+    new_pressure = jnp.where(
+        jnp.sqrt(x**2 + y**2 + z**2) > 1, pressure, (1 + powerlaw) * pressure
+    )
+    return new_pressure
