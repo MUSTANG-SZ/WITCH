@@ -161,7 +161,7 @@ def add_exponential(
     """
     x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
-    exponential = amp * ((x - x0) * xk) + ((y - y0) * yk) + ((z - z0) * zk)
+    exponential = amp * jnp.exp(((x - x0) * xk) + ((y - y0) * yk) + ((z - z0) * zk))
 
     new_pressure = jnp.where(
         jnp.sqrt(x**2 + y**2 + z**2) > 1, pressure, (1 + exponential) * pressure
