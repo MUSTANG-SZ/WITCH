@@ -6,7 +6,7 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 from .utils import fft_conv
-from .structure import isobeta, gnfw, add_uniform, add_exponential
+from .structure import isobeta, gnfw, add_uniform, add_exponential, add_powerlaw
 
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
@@ -15,8 +15,9 @@ N_PAR_ISOBETA = 9
 N_PAR_GNFW = 14
 N_PAR_UNIFORM = 8
 N_PAR_EXPONENTIAL = 14
+N_PAR_POWERLAW = 15
 
-ARGNUM_SHIFT = 9
+ARGNUM_SHIFT = 10
 
 
 def helper(
@@ -30,6 +31,7 @@ def helper(
     n_gnfw=0,
     n_uniform=0,
     n_exponential=0,
+    n_powerlaw=0,
 ):
     """
     Helper function to be used when fitting with Minkasi.
@@ -63,6 +65,8 @@ def helper(
 
         n_exponential: Number of exponential ellipsoids to add.
 
+        n_powerlaw: Number of power law ellipsoids to add.
+
     Returns:
 
         grad: The gradient of the model with respect to the model parameters.
@@ -79,6 +83,7 @@ def helper(
         n_gnfw,
         n_uniform,
         n_exponential,
+        n_powerlaw,
         dx,
         beam,
         idx,
@@ -98,10 +103,20 @@ def helper(
 
 @partial(
     jax.jit,
-    static_argnums=(1, 2, 3, 4, 5, 9),
+    static_argnums=(1, 2, 3, 4, 5, 6),
 )
 def model(
-    xyz, n_isobeta, n_gnfw, n_uniform, n_exponential, dx, beam, idx, idy, *params
+    xyz,
+    n_isobeta,
+    n_gnfw,
+    n_uniform,
+    n_exponential,
+    n_powerlaw,
+    dx,
+    beam,
+    idx,
+    idy,
+    *params
 ):
     """
     Generically create models with substructure.
@@ -117,6 +132,8 @@ def model(
         n_uniform: Number of uniform ellipsoids to add.
 
         n_exponential: Number of exponential ellipsoids to add.
+
+        n_powerlaw: Number of power law ellipsoids to add.
 
         dx: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
@@ -140,6 +157,8 @@ def model(
     gnfws = jnp.zeros((1, 1), dtype=float)
     uniforms = jnp.zeros((1, 1), dtype=float)
     exponentials = jnp.zeros((1, 1), dtype=float)
+    powerlaws = jnp.zeros((1, 1), dtype=float)
+
     start = 0
     if n_isobeta:
         delta = n_isobeta * N_PAR_ISOBETA
@@ -159,6 +178,10 @@ def model(
             (n_exponential, N_PAR_EXPONENTIAL)
         )
         start += delta
+    if n_powerlaw:
+        delta = n_powerlaw * N_PAR_POWERLAW
+        powerlaws = params[start : start + delta].reshape((n_powerlaw, N_PAR_POWERLAW))
+        start += delta
 
     pressure = jnp.zeros((xyz[0].shape[1], xyz[1].shape[0], xyz[2].shape[2]))
     for i in range(n_isobeta):
@@ -172,6 +195,9 @@ def model(
 
     for i in range(n_exponential):
         pressure = add_exponential(pressure, xyz, *exponentials[i])
+
+    for i in range(n_powerlaw):
+        pressure = add_powerlaw(pressure, xyz, *powerlaws[i])
 
     # Integrate along line of site
     ip = jnp.trapz(pressure, dx=dx, axis=-1)
@@ -195,7 +221,7 @@ def model(
 
 @partial(
     jax.jit,
-    static_argnums=(1, 2, 3, 4, 5, 9),
+    static_argnums=(1, 2, 3, 4, 5, 6, 10),
 )
 def model_grad(
     xyz,
@@ -203,6 +229,7 @@ def model_grad(
     n_gnfw,
     n_uniform,
     n_exponential,
+    n_powerlaw,
     dx,
     beam,
     idx,
@@ -224,6 +251,8 @@ def model_grad(
         n_uniform: Number of uniform ellipsoids to add.
 
         n_exponential: Number of exponential ellipsoids to add.
+
+        n_powerlaw: Number of power law ellipsoids to add.
 
         dx: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
@@ -247,11 +276,31 @@ def model_grad(
         grad: The gradient of the model with respect to the model parameters.
     """
     pred = model(
-        xyz, n_isobeta, n_gnfw, n_uniform, n_exponential, dx, beam, idx, idy, *params
+        xyz,
+        n_isobeta,
+        n_gnfw,
+        n_uniform,
+        n_exponential,
+        n_powerlaw,
+        dx,
+        beam,
+        idx,
+        idy,
+        *params
     )
 
     grad = jax.jacfwd(model, argnums=argnums)(
-        xyz, n_isobeta, n_gnfw, n_uniform, n_exponential, dx, beam, idx, idy, *params
+        xyz,
+        n_isobeta,
+        n_gnfw,
+        n_uniform,
+        n_exponential,
+        n_powerlaw,
+        dx,
+        beam,
+        idx,
+        idy,
+        *params
     )
     grad_padded = jnp.zeros((len(params),) + idx.shape)
     grad_padded = grad_padded.at[jnp.array(argnums) - ARGNUM_SHIFT].set(jnp.array(grad))
