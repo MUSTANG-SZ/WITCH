@@ -16,8 +16,21 @@ N_PAR_GNFW = 14
 N_PAR_UNIFORM = 8
 N_PAR_EXPONENTIAL = 14
 
+ARGNUM_SHIFT = 9
 
-def helper(params, tod, xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, beam, argnums):
+
+def helper(
+    params,
+    tod,
+    xyz,
+    dx,
+    beam,
+    argnums,
+    n_isobeta=0,
+    n_gnfw=0,
+    n_uniform=0,
+    n_exponential=0,
+):
     """
     Helper function to be used when fitting with Minkasi.
     Use functools.partial to set all parameters but params and tod before passing to Minkasi.
@@ -34,14 +47,6 @@ def helper(params, tod, xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, b
 
         xyz: Coordinate grid to compute profile on.
 
-        n_isobeta: Number of isobeta profiles to add.
-
-        n_gnfw: Number of gnfw profiles to add.
-
-        n_uniform: Number of uniform ellipsoids to add.
-
-        n_exponentials: Number of exponential ellipsoids to add.
-
         dx: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
             Historically equal to y2K_RJ * dr * da * XMpc / me.
@@ -49,6 +54,14 @@ def helper(params, tod, xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, b
         beam: Beam to convolve by, should be a 2d array.
 
         argnums: Arguments to evaluate the gradient at.
+
+        n_isobeta: Number of isobeta profiles to add.
+
+        n_gnfw: Number of gnfw profiles to add.
+
+        n_uniform: Number of uniform ellipsoids to add.
+
+        n_exponential: Number of exponential ellipsoids to add.
 
     Returns:
 
@@ -65,12 +78,12 @@ def helper(params, tod, xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, b
         n_isobeta,
         n_gnfw,
         n_uniform,
-        n_exponentials,
+        n_exponential,
         dx,
         beam,
         idx,
         idy,
-        tuple(argnums + 9),
+        tuple(argnums + ARGNUM_SHIFT),
         *params
     )
 
@@ -85,9 +98,11 @@ def helper(params, tod, xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, b
 
 @partial(
     jax.jit,
-    static_argnums=( 1, 2, 3, 4, 5, 9),
+    static_argnums=(1, 2, 3, 4, 5, 9),
 )
-def model(xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, beam, idx, idy, *params):
+def model(
+    xyz, n_isobeta, n_gnfw, n_uniform, n_exponential, dx, beam, idx, idy, *params
+):
     """
     Generically create models with substructure.
 
@@ -101,7 +116,7 @@ def model(xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, beam, idx, idy,
 
         n_uniform: Number of uniform ellipsoids to add.
 
-        n_exponentials: Number of exponential ellipsoids to add.
+        n_exponential: Number of exponential ellipsoids to add.
 
         dx: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
@@ -138,10 +153,10 @@ def model(xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, beam, idx, idy,
         delta = n_uniform * N_PAR_UNIFORM
         uniforms = params[start : start + delta].reshape((n_uniform, N_PAR_UNIFORM))
         start += delta
-    if n_exponentials:
-        delta = n_exponentials * N_PAR_EXPONENTIAL
+    if n_exponential:
+        delta = n_exponential * N_PAR_EXPONENTIAL
         exponentials = params[start : start + delta].reshape(
-            (n_exponentials, N_PAR_EXPONENTIAL)
+            (n_exponential, N_PAR_EXPONENTIAL)
         )
         start += delta
 
@@ -155,7 +170,7 @@ def model(xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, beam, idx, idy,
     for i in range(n_uniform):
         pressure = add_uniform(pressure, xyz, *uniforms[i])
 
-    for i in range(n_exponentials):
+    for i in range(n_exponential):
         pressure = add_exponential(pressure, xyz, *exponentials[i])
 
     # Integrate along line of site
@@ -183,7 +198,17 @@ def model(xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, beam, idx, idy,
     static_argnums=(1, 2, 3, 4, 5, 9),
 )
 def model_grad(
-    xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, beam, idx, idy, argnums, *params
+    xyz,
+    n_isobeta,
+    n_gnfw,
+    n_uniform,
+    n_exponential,
+    dx,
+    beam,
+    idx,
+    idy,
+    argnums,
+    *params
 ):
     """
     Generically create models with substructure and get their gradients.
@@ -198,7 +223,7 @@ def model_grad(
 
         n_uniform: Number of uniform ellipsoids to add.
 
-        n_exponentials: Number of exponential ellipsoids to add.
+        n_exponential: Number of exponential ellipsoids to add.
 
         dx: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
@@ -221,12 +246,14 @@ def model_grad(
 
         grad: The gradient of the model with respect to the model parameters.
     """
-    pred = model(xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, beam, idx, idy, *params)
+    pred = model(
+        xyz, n_isobeta, n_gnfw, n_uniform, n_exponential, dx, beam, idx, idy, *params
+    )
 
     grad = jax.jacfwd(model, argnums=argnums)(
-        xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, beam, idx, idy, *params
+        xyz, n_isobeta, n_gnfw, n_uniform, n_exponential, dx, beam, idx, idy, *params
     )
     grad_padded = jnp.zeros((len(params),) + idx.shape)
-    grad_padded = grad_padded.at[jnp.array(argnums) - 9].set(jnp.array(grad))
+    grad_padded = grad_padded.at[jnp.array(argnums) - ARGNUM_SHIFT].set(jnp.array(grad))
 
     return pred, grad_padded

@@ -189,9 +189,9 @@ def add_exponential(
         y0: Dec offset of exponential.
             Note that this is in transformed coordinates so y0=1 is at ys + sr_2.
 
-        xk: Power of exponential along the line of sight
+        zk: Power of exponential along the line of sight
 
-        x0: Line of sight offset of exponential.
+        z0: Line of sight offset of exponential.
             Note that this is in transformed coordinates so z0=1 is at zs + sr_3.
 
     Returns:
