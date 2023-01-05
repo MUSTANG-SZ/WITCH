@@ -35,7 +35,7 @@ minkasi:
   dograd: False
 models:
   double_isobeta_bubbles:
-    func: "partial(helper, xyz=xyz, n_isobeta=2, n_gnfw=0, n_exponentials=2, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(to_fit)[0])"
+    func: "partial(helper, xyz=xyz, n_isobeta=2, n_gnfw=0, n_uniform=2, n_exponentials=0, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(to_fit)[0])"
     parameters:
       dx_1:
         value: 0.0 
@@ -118,24 +118,6 @@ models:
         priors:
           type: "flat"
           value: "[-1.0, 0.0]"
-      b_ne_xk:
-        value: 0
-        to_fit: False
-      b_ne_x0:
-        value: 0
-        to_fit: False
-      b_ne_yk:
-        value: 0
-        to_fit: False
-      b_ne_y0:
-        value: 0
-        to_fit: False
-      b_ne_zk:
-        value: 0
-        to_fit: False
-      b_ne_z0:
-        value: 0
-        to_fit: False
       b_sw_ra:
         value: "21*da"
         to_fit: False
@@ -163,24 +145,6 @@ models:
         priors:
           type: "flat"
           value: "[-1.0, 0.0]"
-      b_sw_xk:
-        value: 0
-        to_fit: False
-      b_sw_x0:
-        value: 0
-        to_fit: False
-      b_sw_yk:
-        value: 0
-        to_fit: False
-      b_sw_y0:
-        value: 0
-        to_fit: False
-      b_sw_zk:
-        value: 0
-        to_fit: False
-      b_sw_z0:
-        value: 0
-        to_fit: False
   gauss:
     func: "minkasi.derivs_from_gauss_c"
     parameters:

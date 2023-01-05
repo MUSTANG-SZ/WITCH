@@ -6,17 +6,18 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 from .utils import fft_conv
-from .structure import isobeta, gnfw, add_exponential
+from .structure import isobeta, gnfw, add_exponential, add_uniform
 
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
 
 N_PAR_ISOBETA = 9
 N_PAR_GNFW = 14
+N_PAR_UNIFORM = 8
 N_PAR_EXPONENTIAL = 14
 
 
-def helper(params, tod, xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, argnums):
+def helper(params, tod, xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, beam, argnums):
     """
     Helper function to be used when fitting with Minkasi.
     Use functools.partial to set all parameters but params and tod before passing to Minkasi.
@@ -36,6 +37,8 @@ def helper(params, tod, xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, argnum
         n_isobeta: Number of isobeta profiles to add.
 
         n_gnfw: Number of gnfw profiles to add.
+
+        n_uniform: Number of uniform ellipsoids to add.
 
         n_exponentials: Number of exponential ellipsoids to add.
 
@@ -61,12 +64,13 @@ def helper(params, tod, xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, argnum
         xyz,
         n_isobeta,
         n_gnfw,
+        n_uniform,
         n_exponentials,
         dx,
         beam,
         idx,
         idy,
-        tuple(argnums + 8),
+        tuple(argnums + 9),
         *params
     )
 
@@ -81,14 +85,9 @@ def helper(params, tod, xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, argnum
 
 @partial(
     jax.jit,
-    static_argnums=(
-        1,
-        2,
-        3,
-        4,
-    ),
+    static_argnums=( 1, 2, 3, 4, 5, 9),
 )
-def model(xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, *params):
+def model(xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, beam, idx, idy, *params):
     """
     Generically create models with substructure.
 
@@ -99,6 +98,8 @@ def model(xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, *params):
         n_isobeta: Number of isobeta profiles to add.
 
         n_gnfw: Number of gnfw profiles to add.
+
+        n_uniform: Number of uniform ellipsoids to add.
 
         n_exponentials: Number of exponential ellipsoids to add.
 
@@ -122,6 +123,7 @@ def model(xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, *params):
     params = jnp.array(params)
     isobetas = jnp.zeros((1, 1), dtype=float)
     gnfws = jnp.zeros((1, 1), dtype=float)
+    uniforms = jnp.zeros((1, 1), dtype=float)
     exponentials = jnp.zeros((1, 1), dtype=float)
     start = 0
     if n_isobeta:
@@ -131,6 +133,10 @@ def model(xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, *params):
     if n_gnfw:
         delta = n_gnfw * N_PAR_GNFW
         gnfws = params[start : start + delta].reshape((n_gnfw, N_PAR_GNFW))
+        start += delta
+    if n_uniform:
+        delta = n_uniform * N_PAR_UNIFORM
+        uniforms = params[start : start + delta].reshape((n_uniform, N_PAR_UNIFORM))
         start += delta
     if n_exponentials:
         delta = n_exponentials * N_PAR_EXPONENTIAL
@@ -145,6 +151,9 @@ def model(xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, *params):
 
     for i in range(n_gnfw):
         pressure = jnp.add(pressure, gnfw(*gnfws[i], xyz))
+
+    for i in range(n_uniform):
+        pressure = add_uniform(pressure, xyz, *uniforms[i])
 
     for i in range(n_exponentials):
         pressure = add_exponential(pressure, xyz, *exponentials[i])
@@ -171,10 +180,10 @@ def model(xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, *params):
 
 @partial(
     jax.jit,
-    static_argnums=(1, 2, 3, 4, 8),
+    static_argnums=(1, 2, 3, 4, 5, 9),
 )
 def model_grad(
-    xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, argnums, *params
+    xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, beam, idx, idy, argnums, *params
 ):
     """
     Generically create models with substructure and get their gradients.
@@ -186,6 +195,8 @@ def model_grad(
         n_isobeta: Number of isobeta profiles to add.
 
         n_gnfw: Number of gnfw profiles to add.
+
+        n_uniform: Number of uniform ellipsoids to add.
 
         n_exponentials: Number of exponential ellipsoids to add.
 
@@ -210,12 +221,12 @@ def model_grad(
 
         grad: The gradient of the model with respect to the model parameters.
     """
-    pred = model(xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, *params)
+    pred = model(xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, beam, idx, idy, *params)
 
     grad = jax.jacfwd(model, argnums=argnums)(
-        xyz, n_isobeta, n_gnfw, n_exponentials, dx, beam, idx, idy, *params
+        xyz, n_isobeta, n_gnfw, n_uniform, n_exponentials, dx, beam, idx, idy, *params
     )
     grad_padded = jnp.zeros((len(params),) + idx.shape)
-    grad_padded = grad_padded.at[jnp.array(argnums) - 8].set(jnp.array(grad))
+    grad_padded = grad_padded.at[jnp.array(argnums) - 9].set(jnp.array(grad))
 
     return pred, grad_padded
