@@ -35,7 +35,7 @@ minkasi:
   dograd: False
 models:
   double_isobeta_shock_bubbles:
-    func: "partial(helper, xyz=xyz, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(to_fit)[0], n_isobeta=2, n_gnfw=0, n_uniform=3, n_exponential=0)"
+    func: "partial(helper, xyz=xyz, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(to_fit)[0], re_eval=re_eval, n_isobeta=2, n_gnfw=0, n_uniform=3, n_exponential=0)"
     parameters:
       dx_1:
         value: 0.0 
