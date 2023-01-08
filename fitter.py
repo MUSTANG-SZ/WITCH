@@ -127,9 +127,9 @@ for model in cfg["models"].values():
         labels.append(name)
         pars.append(eval(str(par["value"])))
         to_fit.append(eval(str(par["to_fit"])))
-        if "priors" in model:
-            priors.append(model["priors"]["type"])
-            prior_vals.append(eval(str(model["priors"]["value"])))
+        if "priors" in par:
+            priors.append(par["priors"]["type"])
+            prior_vals.append(eval(str(par["priors"]["value"])))
         else:
             priors.append(None)
             prior_vals.append(None)
