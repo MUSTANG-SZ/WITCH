@@ -35,7 +35,7 @@ minkasi:
   dograd: False
 models:
   double_isobeta_bubbles:
-    func: "partial(helper, xyz=xyz, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(to_fit)[0], re_eval=re_eval, n_isobeta=2, n_gnfw=0, n_uniform=2, n_exponential=0)"
+    func: "partial(helper, xyz=xyz, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(to_fit)[0], re_eval=re_eval, idx=idx, n_isobeta=2, n_gnfw=0, n_uniform=2, n_exponential=0)"
     parameters:
       dx_1:
         value: 0.0 
@@ -53,7 +53,7 @@ models:
         value: .249
         to_fit: False
       r_3:
-        value: "model['parameters']['r_2']['value']"
+        value: "pars[idx['r_2']]"
         to_fit: False
       theta_1:
         value: "np.deg2rad(97)"
@@ -80,7 +80,7 @@ models:
         value: .122
         to_fit: False
       r_6:
-        value: "model['parameters']['r_5']['value']"
+        value: "pars[idx['r_5']]"
         to_fit: False
       theta_2:
         value: "np.deg2rad(97)"
@@ -98,7 +98,7 @@ models:
         value: "43*da"
         to_fit: False
       b_ne_z:
-        value: "np.sqrt(pars[-1]**2 + pars[-2]**2)*np.sin(np.deg2rad(0))"
+        value: "np.sqrt(pars[idx['b_ne_ra']]**2 + pars[idx['b_ne_dec']]**2)*np.sin(np.deg2rad(0))"
         to_fit: False
       b_ne_r1:
         value: "30*da"
@@ -125,7 +125,7 @@ models:
         value: "-51*da"
         to_fit: False
       b_sw_z:
-        value: "np.sqrt(pars[-1]**2 + pars[-2]**2)*np.sin(-1*np.deg2rad(0))"
+        value: "np.sqrt(pars[idx['b_sw_ra']]**2 + pars[idx['b_sw_dec']]**2)*np.sin(np.deg2rad(0))"
         to_fit: False
       b_sw_r1:
         value: "30*da"

@@ -62,6 +62,8 @@ def helper(
                  If element is a string it will be evaluated and used to 
                  set the value of the corresponsinding parameter.
 
+        idx: Dictionairy that maps parameter names to indices.
+
         n_isobeta: Number of isobeta profiles to add.
 
         n_gnfw: Number of gnfw profiles to add.
