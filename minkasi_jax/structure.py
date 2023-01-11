@@ -260,13 +260,54 @@ def add_powerlaw(
     """
     x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
+    x = jnp.where(
+        x <= x0,
+        jnp.where(
+            jnp.abs(x) > 1,
+            0.0,
+            jnp.interp(x, jnp.array((-2.0 - x0, x0)), jnp.array((-1.0, 1.0))),
+        ),
+        jnp.where(
+            jnp.abs(x) > 1,
+            0.0,
+            jnp.interp(x, jnp.array((x0, 2 - x0)), jnp.array((1.0, -1.0))),
+        ),
+    )
+    y = jnp.where(
+        y <= y0,
+        jnp.where(
+            jnp.abs(y) > 1,
+            0.0,
+            jnp.interp(y, jnp.array((-2.0 - y0, y0)), jnp.array((-1.0, 1.0))),
+        ),
+        jnp.where(
+            jnp.abs(y) > 1,
+            0.0,
+            jnp.interp(y, jnp.array((y0, 2 - y0)), jnp.array((1.0, -1.0))),
+        ),
+    )
+    z = jnp.where(
+        z <= z0,
+        jnp.where(
+            jnp.abs(z) > 1,
+            0.0,
+            jnp.interp(z, jnp.array((-2.0 - z0, z0)), jnp.array((-1.0, 1.0))),
+        ),
+        jnp.where(
+            jnp.abs(z) > 1,
+            0.0,
+            jnp.interp(z, jnp.array((z0, 2 - z0)), jnp.array((1.0, -1.0))),
+        ),
+    )
+
     powerlaw = (
-        xa * jnp.float_power(x - x0 + 1, k)
-        + ya * jnp.float_power(y - y0 + 1, k)
-        + za * jnp.float_power(z - z0 + 1, k)
+        xa * jnp.float_power(x, k)
+        + ya * jnp.float_power(y, k)
+        + za * jnp.float_power(z, k)
     )
     powerlaw *= amp / (xa + ya + za)
     powerlaw = jnp.where(jnp.isinf(powerlaw), amp, powerlaw)
+    powerlaw = jnp.where(jnp.isnan(powerlaw), 0.0, powerlaw)
 
     new_pressure = jnp.where(
         jnp.sqrt(x**2 + y**2 + z**2) > 1, pressure, (1 + powerlaw) * pressure
