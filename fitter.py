@@ -8,7 +8,7 @@ import sys
 import time
 import glob
 import shutil
-import argparse as ap
+import argparse as argp
 from functools import partial
 import yaml
 import numpy as np
@@ -35,7 +35,7 @@ def print_once(*args):
 
 
 # Parse arguments
-parser = ap.ArgumentParser(
+parser = argp.ArgumentParser(
     description="Fit cluster profiles using mikasi and minkasi_jax"
 )
 parser.add_argument("config", help="Path to config file")
@@ -116,18 +116,18 @@ beam = beam_double_gauss(
 funs = []
 npars = []
 labels = []
-pars = []
+params = []
 to_fit = []
 priors = []
 prior_vals = []
 re_eval = []
-idx = {}
+par_idx = {}
 for model in cfg["models"].values():
     npars.append(len(model["parameters"]))
     for name, par in model["parameters"].items():
         labels.append(name)
-        idx[name] = len(pars)
-        pars.append(eval(str(par["value"])))
+        par_idx[name] = len(params)
+        params.append(eval(str(par["value"])))
         to_fit.append(eval(str(par["to_fit"])))
         if "priors" in par:
             priors.append(par["priors"]["type"])
@@ -142,9 +142,9 @@ for model in cfg["models"].values():
     funs.append(eval(str(model["func"])))
 npars = np.array(npars)
 labels = np.array(labels)
-pars = np.array(pars)
+params = np.array(params)
 to_fit = np.array(to_fit, dtype=bool)
-
+priors = np.array(priors)
 
 noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
 noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
@@ -176,27 +176,27 @@ outdir = os.path.join(
     cfg["cluster"]["name"],
     "-".join(mn for mn in cfg["models"].keys()),
 )
-if cfg["paths"]["subdir"]:
+if "subdir" in cfg["paths"]:
     outdir = os.path.join(outdir, cfg["paths"]["subdir"])
 if fit:
     outdir = os.path.join(outdir, "-".join(l for l in labels[to_fit]))
 else:
     outdir = os.path.join(outdir, "not_fit")
 if sub_poly:
-    outdir += "-" + method + "_" + str(degree) 
+    outdir += "-" + method + "_" + str(degree)
 print_once("Outputs can be found in", outdir)
 if minkasi.myrank == 0:
     os.makedirs(outdir, exist_ok=True)
     shutil.copyfile(args.config, os.path.join(outdir, "config.yaml"))
 
 # Fit TODs
-pars_fit = pars
+pars_fit = params
 if fit:
     t1 = time.time()
     print_once("Started actual fitting")
     pars_fit, chisq, curve, errs = minkasi.fit_timestreams_with_derivs_manyfun(
         funs,
-        pars,
+        params,
         npars,
         todvec,
         to_fit,
@@ -207,6 +207,11 @@ if fit:
     minkasi.comm.barrier()
     t2 = time.time()
     print_once("Took", t2 - t1, "seconds to fit")
+
+    for i, re in enumerate(re_eval):
+        if not re:
+            continue
+        pars_fit[i] = eval(re)
 
     print_once("Fit parameters:")
     for l, pf, err in zip(labels, pars_fit, errs):

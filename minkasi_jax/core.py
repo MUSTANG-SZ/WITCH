@@ -28,6 +28,7 @@ def helper(
     beam,
     argnums,
     re_eval,
+    par_idx,
     n_isobeta=0,
     n_gnfw=0,
     n_uniform=0,
@@ -59,10 +60,10 @@ def helper(
         argnums: Arguments to evaluate the gradient at.
 
         re_eval: Array where each element is eather False or a string.
-                 If element is a string it will be evaluated and used to 
+                 If element is a string it will be evaluated and used to
                  set the value of the corresponsinding parameter.
 
-        idx: Dictionairy that maps parameter names to indices.
+        par_idx: Dictionairy that maps parameter names to indices.
 
         n_isobeta: Number of isobeta profiles to add.
 
