@@ -16,6 +16,7 @@ jax.config.update("jax_platform_name", "cpu")
 # Constants
 # --------------------------------------------------------
 
+ap = 0.12
 h70 = cosmo.H0.value / 7.00e01
 
 Tcmb = 2.7255
@@ -140,13 +141,43 @@ def get_da(z):
 
     Arguments:
 
-        z: The redshift at which to compute the  factor.
+        z: The redshift at which to compute the factor.
 
     Returns:
 
         da: Conversion factor from arcseconds to MPc
     """
     return jnp.interp(z, dzline, daline)
+
+
+def get_nz(z):
+    """
+    Get n(z).
+
+    Arguments:
+
+        z: The redshift at which to compute the factor.
+
+    Returns:
+
+        nz: n at the given z.
+    """
+    return jnp.interp(z, dzline, nzline)
+
+
+def get_hz(z):
+    """
+    Get h(z).
+
+    Arguments:
+
+        z: The redshift at which to compute the factor.
+
+    Returns:
+
+        hz: h at the given z.
+    """
+    return jnp.interp(z, dzline, hzline)
 
 
 # FFT Operations
@@ -229,82 +260,47 @@ def make_grid(r_map, dr):
 
 
 @jax.jit
-def add_bubble(pressure, xyz, xb, yb, zb, rb, sup):
+def transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz):
     """
-    Add bubble to 3d pressure profile.
+    Shift, rotate, and apply ellipticity to coordinate grid.
 
     Arguments:
 
-        pressure: The pressure profile
+        dx: RA of cluster center relative to grid origin
 
-        xyz: Coordinate grids, see make_grid for details
+        dy: Dec of cluster center relative to grid origin
 
-        xb: Ra of bubble's center relative to cluster center
+        dz: Line of sight offset of cluster center relative to grid origin
 
-        yb: Dec of bubble's center relative to cluster center
+        r_1: Amount to scale along x-axis
 
-        zb: Line of site offset of bubble's center relative to cluster center
+        r_2: Amount to scale along y-axis
 
-        rb: Radius of bubble
+        r_3: Amount to scale along z-axis
 
-        sup: Supression factor of bubble
+        theta: Angle to rotate in xy-plane
 
-    Returns:
-
-        pressure_b: Pressure profile with bubble added
-    """
-    # Recenter grid on bubble center
-    x = xyz[0] - xb
-    y = xyz[1] - yb
-    z = xyz[2] - zb
-
-    # Supress points inside bubble
-    pressure_b = jnp.where(
-        jnp.sqrt(x**2 + y**2 + z**2) >= rb, pressure, (1 - sup) * pressure
-    )
-    return pressure_b
-
-
-@jax.jit
-def add_shock(pressure, xyz, sr_1, sr_2, sr_3, s_theta, shock):
-    """
-    Add bubble to 3d pressure profile.
-
-    Arguments:
-
-        pressure: The pressure profile
-
-        xyz: Coordinate grids, see make_grid for details
-
-        sr_1: Amount to scale shock along x-axis
-
-        sr_2: Amount to scale shock along y-axis
-
-        sr_3: Amount to scale shock along z-axis
-
-        s_theta: Angle to rotate shock in xy-plane
-
-        shock: Factor by which pressure is enhanced within shock
+        xyz: Coordinte grid to transform
 
     Returns:
 
-        pressure_s: Pressure profile with shock added
+        xyz: Transformed coordinate grid
     """
+    # Shift origin
+    x = xyz[0] - dx
+    y = xyz[1] - dy
+    z = xyz[2] - dz
+
     # Rotate
-    xx = xyz[0] * jnp.cos(s_theta) + xyz[1] * jnp.sin(s_theta)
-    yy = xyz[1] * jnp.cos(s_theta) - xyz[0] * jnp.sin(s_theta)
-    zz = xyz[2]
+    xx = x * jnp.cos(theta) + y * jnp.sin(theta)
+    yy = y * jnp.cos(theta) - x * jnp.sin(theta)
 
     # Apply ellipticity
-    xfac = (xx / sr_1) ** 2
-    yfac = (yy / sr_2) ** 2
-    zfac = (zz / sr_3) ** 2
+    x = xx / r_1
+    y = yy / r_2
+    z = z / r_3
 
-    # Enhance points inside shock
-    pressure_s = jnp.where(
-        jnp.sqrt(xfac + yfac + zfac) > 1, pressure, (1 + shock) * pressure
-    )
-    return pressure_s
+    return x, y, z
 
 
 def tod_to_index(xi, yi, x0, y0, r_map, dr, conv_factor):

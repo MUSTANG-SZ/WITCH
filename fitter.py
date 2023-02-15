@@ -8,7 +8,7 @@ import sys
 import time
 import glob
 import shutil
-import argparse as ap
+import argparse as argp
 from functools import partial
 import yaml
 import numpy as np
@@ -17,7 +17,7 @@ from astropy.coordinates import Angle
 from astropy import units as u
 import minkasi_jax.presets_by_source as pbs
 from minkasi_jax.utils import *
-from minkasi_jax.isobeta import isobeta_helper
+from minkasi_jax import helper
 
 
 def print_once(*args):
@@ -35,7 +35,7 @@ def print_once(*args):
 
 
 # Parse arguments
-parser = ap.ArgumentParser(
+parser = argp.ArgumentParser(
     description="Fit cluster profiles using mikasi and minkasi_jax"
 )
 parser.add_argument("config", help="Path to config file")
@@ -116,28 +116,35 @@ beam = beam_double_gauss(
 funs = []
 npars = []
 labels = []
-pars = []
+params = []
 to_fit = []
 priors = []
 prior_vals = []
+re_eval = []
+par_idx = {}
 for model in cfg["models"].values():
     npars.append(len(model["parameters"]))
     for name, par in model["parameters"].items():
         labels.append(name)
-        pars.append(eval(str(par["value"])))
+        par_idx[name] = len(params)
+        params.append(eval(str(par["value"])))
         to_fit.append(eval(str(par["to_fit"])))
-        if "priors" in model:
-            priors.append(model["priors"]["type"])
-            prior_vals.append(eval(str(model["priors"]["value"])))
+        if "priors" in par:
+            priors.append(par["priors"]["type"])
+            prior_vals.append(eval(str(par["priors"]["value"])))
         else:
             priors.append(None)
             prior_vals.append(None)
+        if "re_eval" in par and par["re_eval"]:
+            re_eval.append(str(par["value"]))
+        else:
+            re_eval.append(False)
     funs.append(eval(str(model["func"])))
 npars = np.array(npars)
 labels = np.array(labels)
-pars = np.array(pars)
+params = np.array(params)
 to_fit = np.array(to_fit, dtype=bool)
-
+priors = np.array(priors)
 
 noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
 noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
@@ -169,27 +176,27 @@ outdir = os.path.join(
     cfg["cluster"]["name"],
     "-".join(mn for mn in cfg["models"].keys()),
 )
-if cfg["paths"]["subdir"]:
+if "subdir" in cfg["paths"]:
     outdir = os.path.join(outdir, cfg["paths"]["subdir"])
 if fit:
     outdir = os.path.join(outdir, "-".join(l for l in labels[to_fit]))
 else:
     outdir = os.path.join(outdir, "not_fit")
 if sub_poly:
-    outdir += "-" + method + "_" + str(degree) 
-print_once("Outputs can be found in ", outdir)
+    outdir += "-" + method + "_" + str(degree)
+print_once("Outputs can be found in", outdir)
 if minkasi.myrank == 0:
     os.makedirs(outdir, exist_ok=True)
     shutil.copyfile(args.config, os.path.join(outdir, "config.yaml"))
 
 # Fit TODs
-pars_fit = pars
+pars_fit = params
 if fit:
     t1 = time.time()
     print_once("Started actual fitting")
     pars_fit, chisq, curve, errs = minkasi.fit_timestreams_with_derivs_manyfun(
         funs,
-        pars,
+        params,
         npars,
         todvec,
         to_fit,
@@ -199,16 +206,21 @@ if fit:
     )
     minkasi.comm.barrier()
     t2 = time.time()
-    print_once("Took ", t2 - t1, " seconds to fit")
+    print_once("Took", t2 - t1, "seconds to fit")
+
+    for i, re in enumerate(re_eval):
+        if not re:
+            continue
+        pars_fit[i] = eval(re)
 
     print_once("Fit parameters:")
     for l, pf, err in zip(labels, pars_fit, errs):
-        print_once("\t", l, " = ", pf, " +/- ", err)
-    print_once("chisq = ", chisq)
+        print_once("\t", l, "=", pf, "+/-", err)
+    print_once("chisq =", chisq)
 
     if minkasi.myrank == 0:
         res_path = os.path.join(outdir, "results")
-        print_once("Saving results to ", res_path, ".npz")
+        print_once("Saving results to", res_path + ".npz")
         np.savez_compressed(
             res_path, pars_fit=pars_fit, chisq=chisq, errs=errs, curve=curve
         )
