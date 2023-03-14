@@ -3,12 +3,12 @@ cluster:
   Te: 5.0
   freq: 90e9
 paths:
-  tods: "/scratch/s/sievers/skh/tods/MOO1142/TS_EaCMS0f0_51_16_Feb_2022/"
+  tods: "/scratch/s/sievers/skh/tods/MOO1142/TS_EaCMS0f0_51_1_Mar_2023/"
   glob: "Signal_TOD*.fits"
   ndo: False
   odo: False
   outroot: "/scratch/s/sievers/skh/Reductions"
-  #subdir: "flip"
+  subdir: "new_tods"
 coords:
   z: 1.19 
   r_map: "3.0*60"
@@ -39,10 +39,10 @@ models:
     parameters:
       ps_ra:
         value: 3.0665111128123264 
-        to_fit: False 
+        to_fit: True 
       ps_dec:
         value: 0.2697068189809627 
-        to_fit: False 
+        to_fit: True 
       sigma:
         value: "1.85e-5"
         to_fit: True 
