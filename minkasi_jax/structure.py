@@ -112,6 +112,47 @@ def isobeta(dx, dy, dz, r_1, r_2, r_3, theta, beta, amp, xyz):
 
 
 @jax.jit
+def gaussian(dx, dy, dz, r_1, r_2, r_3, theta, sigma, amp, xyz):
+    """
+    Elliptical gaussian profile in 3d.
+    This function does not include smoothing or declination stretch
+    which should be applied at the end.
+
+    Arguments:
+
+        dx: RA of gaussian center relative to grid origin
+
+        dy: Dec of gaussian center relative to grid origin
+
+        dz: Line of sight offset of gaussian center relative to grid origin
+
+        r_1: Amount to scale along x-axis
+
+        r_2: Amount to scale along y-axis
+
+        r_3: Amount to scale along z-axis
+
+        theta: Angle to rotate in xy-plane
+
+        sigma: Sigma of the gaussian
+
+        amp: Amplitude of the gaussian
+
+        xyz: Coordinte grid to calculate model on
+
+    Returns:
+
+        model: The gaussian
+    """
+    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+
+    rr = x**2 + y**2 + z**2
+    power = -1 * rr / (2 * sigma**2)
+
+    return amp * jnp.exp(power)
+
+
+@jax.jit
 def add_uniform(pressure, xyz, dx, dy, dz, r_1, r_2, r_3, theta, amp):
     """
     Add ellipsoid with uniform structure to 3d pressure profile.
