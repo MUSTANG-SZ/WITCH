@@ -12,8 +12,8 @@ coords:
   z: 1.19 
   r_map: "3.0*60"
   dr: ".5"
-  x0: "Angle('11 42 46.6 hours').to(u.radian).value"
-  y0: "Angle('15:27:15.0 degrees').to(u.radian).value"
+  x0: 3.0665111128123264 
+  y0: 0.2697068189809627 
   conv_factor: "(180 * 3600) / np.pi"
 beam:
   fwhm1: "9.735"
@@ -33,12 +33,12 @@ minkasi:
   npass: 5
   dograd: False
 models:
-  double_isobeta:
-    func: "partial(helper, xyz=xyz, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(to_fit)[0], re_eval=re_eval, par_idx=par_idx, n_isobeta=1, n_powerlaw=0)"
+  isobeta_PS:
+    func: "partial(helper, xyz=xyz, dx=float(dr), beam=beam, argnums=np.where(to_fit)[0], re_eval=re_eval, par_idx=par_idx, n_isobeta=1, n_powerlaw=0)"
     parameters:
       dx_1:
         value: 0.0
-        to_fit: False
+        to_fit: False 
       dy_1:
         value: 0.0
         to_fit: False
@@ -46,13 +46,13 @@ models:
         value: 0.0
         to_fit: False
       r_1:
-        value: 36.0
-        to_fit: False
+        value: 1.0
+        to_fit: True 
       r_2:
-        value: 24.0
+        value: 1.0
         to_fit: False
       r_3:
-        value: 24.0
+        value: 1.0
         to_fit: False
       theta_1:
         value: 0.1
@@ -76,7 +76,7 @@ models:
         value: 0.2697068189809627 
         to_fit: False 
       sigma:
-        value: "1.37e-5"
+        value: "1.85e-5"
         to_fit: True 
       amp:
         value: "1.7e-4"

@@ -13,13 +13,13 @@ coords:
   z: 1.19 
   r_map: "3.0*60"
   dr: ".5"
-  x0: "Angle('11 42 46.6 hours').to(u.radian).value"
-  y0: "Angle('15:27:15.0 degrees').to(u.radian).value"
+  x0: 3.0665111128123264 
+  y0: 0.2697068189809627 
   conv_factor: "(180 * 3600) / np.pi"
 beam:
   fwhm1: "9.735"
   amp1: 0.9808
-  fwhm2: "32.627"
+  fwhm2: "40.0"
   amp2: 0.0192
 bowling:
   sub_poly: True
@@ -35,17 +35,61 @@ minkasi:
   dograd: False
 models:
   gauss:
-    func: "minkasi.derivs_from_gauss_c"
+    func: "partial(helper, xyz=xyz, dx=float(dr), beam=beam, argnums=np.where(to_fit)[0], re_eval=re_eval, par_idx=par_idx, n_gaussian=1)"
     parameters:
-      ps_ra:
-        value: 3.0665111128123264 
+      dx_1:
+        value: 0.0 
         to_fit: True 
-      ps_dec:
-        value: 0.2697068189809627 
+        #priors:
+        #  type: "flat"
+        #  value: "[5.0, 9.0]"
+      dy_1:
+        value: 0.0 
         to_fit: True 
+        #priors:
+        #  type: "flat"
+        #  value: "[1.0, 3.0]"
+      dz_1:
+        value: 0.0 
+        to_fit: False
+      r_1:
+        value: 0.7 
+        to_fit: True 
+        priors:
+          type: "flat"
+          value: "[0.6, 1.0]"
+      r_2:
+        value: 1.0
+        to_fit: False 
+      r_3:
+        value: 1.0
+        to_fit: False 
+      theta:
+        value: .448 
+        to_fit: True 
+        priors:
+          type: "flat"
+          value: "[0.0, 2*np.pi]"
       sigma:
-        value: "1.85e-5"
-        to_fit: True 
+        value: 4.0 
+        to_fit: True
+        priors:
+          type: "flat"
+          value: "[3.0, 10.0]"
       amp:
-        value: "1.7e-4"
-        to_fit: True 
+        value: .01
+        to_fit: True
+    #func: "minkasi.derivs_from_gauss_c"
+    #parameters:
+    #  ps_ra:
+    #    value: 3.0665111128123264 
+    #    to_fit: True 
+    #  ps_dec:
+    #    value: 0.2697068189809627 
+    #    to_fit: True 
+    #  sigma:
+    #    value: "1.85e-5"
+    #    to_fit: True 
+    #  amp:
+    #    value: "1.7e-4"
+    #    to_fit: True 
