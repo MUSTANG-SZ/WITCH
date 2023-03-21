@@ -35,7 +35,7 @@ minkasi:
   dograd: False
 models:
   gauss:
-    func: "partial(helper, xyz=xyz, dx=float(dr), beam=beam, argnums=np.where(to_fit)[0], re_eval=re_eval, par_idx=par_idx, n_gaussian=1)"
+    func: "partial(helper, xyz=xyz, dx=float(dr), beam=beam, argnums=np.where(_to_fit)[0], n_gaussian=1)"
     parameters:
       dx_1:
         value: 0.0 

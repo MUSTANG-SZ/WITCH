@@ -122,13 +122,14 @@ priors = []
 prior_vals = []
 re_eval = []
 par_idx = {}
-for model in cfg["models"].values():
+for mname, model in cfg["models"].items():
     npars.append(len(model["parameters"]))
+    _to_fit = []
     for name, par in model["parameters"].items():
         labels.append(name)
-        par_idx[name] = len(params)
+        par_idx[mname+"-"+name] = len(params)
         params.append(eval(str(par["value"])))
-        to_fit.append(eval(str(par["to_fit"])))
+        _to_fit.append(eval(str(par["to_fit"])))
         if "priors" in par:
             priors.append(par["priors"]["type"])
             prior_vals.append(eval(str(par["priors"]["value"])))
@@ -139,6 +140,7 @@ for model in cfg["models"].values():
             re_eval.append(str(par["value"]))
         else:
             re_eval.append(False)
+    to_fit = to_fit + _to_fit
     funs.append(eval(str(model["func"])))
 npars = np.array(npars)
 labels = np.array(labels)
