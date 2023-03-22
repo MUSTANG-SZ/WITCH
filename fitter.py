@@ -127,7 +127,7 @@ for mname, model in cfg["models"].items():
     _to_fit = []
     for name, par in model["parameters"].items():
         labels.append(name)
-        par_idx[mname+"-"+name] = len(params)
+        par_idx[mname + "-" + name] = len(params)
         params.append(eval(str(par["value"])))
         _to_fit.append(eval(str(par["to_fit"])))
         if "priors" in par:
@@ -152,13 +152,15 @@ noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
 noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
 noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
 
-# TODO: Add sim option
 sub_poly = False
 if "bowling" in cfg:
     sub_poly = cfg["bowling"]["sub_poly"]
 if sub_poly:
     method = cfg["bowling"]["method"]
     degree = cfg["bowling"]["degree"]
+sim = False
+if "sim" in cfg:
+    sim = cfg["sim"]
 for i, tod in enumerate(todvec.tods):
     ipix = skymap.get_pix(tod)
     tod.info["ipix"] = ipix
@@ -169,6 +171,15 @@ for i, tod in enumerate(todvec.tods):
             x, y = tod.info["apix"][j], tod.info["dat_calib"][j] - tod.info[method][j]
             res = np.polynomial.polynomial.polyfit(x, y, cfg["bowling"]["degree"])
             tod.info["dat_calib"][j] -= np.polynomial.polynomial.polyval(x, res)
+
+    if sim:
+        tod.info["dat_calib"] *= (-1) ** ((minkasi.myrank + minkasi.nproc * i) % 2)
+        start = 0
+        model = 0
+        for n, fun in zip(npars, funs):
+            model += fun(params[start : (start + n)], tod)[1]
+            start += n
+        tod.info["dat_calib"] += np.array(model)
 
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
@@ -186,6 +197,8 @@ else:
     outdir = os.path.join(outdir, "not_fit")
 if sub_poly:
     outdir += "-" + method + "_" + str(degree)
+if sim:
+    outdir += "-sim"
 print_once("Outputs can be found in", outdir)
 if minkasi.myrank == 0:
     os.makedirs(outdir, exist_ok=True)
