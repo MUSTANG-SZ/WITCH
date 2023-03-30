@@ -66,6 +66,8 @@ tod_names = glob.glob(os.path.join(cfg["paths"]["tods"], cfg["paths"]["glob"]))
 bad_tod, addtag = pbs.get_bad_tods(
     cfg["cluster"]["name"], ndo=cfg["paths"]["ndo"], odo=cfg["paths"]["odo"]
 )
+if "cut" in cfg["paths"]:
+    bad_tod += cfg["paths"]["cut"]
 tod_names = minkasi.cut_blacklist(tod_names, bad_tod)
 tod_names.sort()
 tod_names = tod_names[minkasi.myrank :: minkasi.nproc]
