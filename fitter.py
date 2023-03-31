@@ -49,7 +49,9 @@ args = parser.parse_args()
 
 with open(args.config, "r") as file:
     cfg = yaml.safe_load(file)
-fit = not args.nofit
+if "models" not in cfg:
+    cfg["models"] = {}
+fit = (not args.nofit) & bool(len(cfg["models"])) 
 
 # Setup coordindate stuff
 z = eval(str(cfg["coords"]["z"]))
@@ -124,6 +126,7 @@ priors = []
 prior_vals = []
 re_eval = []
 par_idx = {}
+subtract = []
 for mname, model in cfg["models"].items():
     npars.append(len(model["parameters"]))
     _to_fit = []
@@ -144,6 +147,10 @@ for mname, model in cfg["models"].items():
             re_eval.append(False)
     to_fit = to_fit + _to_fit
     funs.append(eval(str(model["func"])))
+    if "sub" in model:
+        subtract.append(model["sub"])
+    else:
+        subtract.append(True)
 npars = np.array(npars)
 labels = np.array(labels)
 params = np.array(params)
@@ -186,10 +193,11 @@ for i, tod in enumerate(todvec.tods):
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
 # Figure out output
+models = [mn + ("_ns" * ~ns) for mn, ns in zip(list(cfg["models"].keys()), subtract)]
 outdir = os.path.join(
     cfg["paths"]["outroot"],
     cfg["cluster"]["name"],
-    "-".join(mn for mn in cfg["models"].keys()),
+    "-".join(mn for mn in models),
 )
 if "subdir" in cfg["paths"]:
     outdir = os.path.join(outdir, cfg["paths"]["subdir"])
@@ -246,7 +254,9 @@ if fit:
 for tod in todvec.tods:
     start = 0
     model = 0
-    for n, fun in zip(npars, funs):
+    for n, fun, sub in zip(npars, funs, subtract):
+        if not sub:
+            continue
         model += fun(pars_fit[start : (start + n)], tod)[1]
         start += n
     tod.info["dat_calib"] -= np.array(model)
