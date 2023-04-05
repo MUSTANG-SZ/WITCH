@@ -35,6 +35,8 @@ def helper(
     dx,
     beam,
     argnums,
+    re_eval,
+    par_idx,
     n_isobeta=0,
     n_gnfw=0,
     n_gaussian=0,
@@ -66,6 +68,12 @@ def helper(
 
         argnums: Arguments to evaluate the gradient at.
 
+        re_eval: Array where each element is eather False or a string.
+                 If element is a string it will be evaluated and used to
+                 set the value of the corresponsinding parameter.
+
+        par_idx: Dictionairy that maps parameter names to indices.
+
         n_isobeta: Number of isobeta profiles to add.
 
         n_gnfw: Number of gnfw profiles to add.
@@ -87,6 +95,11 @@ def helper(
     """
     idx = tod.info["idx"]
     idy = tod.info["idy"]
+
+    for i, re in enumerate(re_eval):
+        if re is False:
+            continue
+        params[i] = eval(re)
 
     pred, grad = model_grad(
         xyz,

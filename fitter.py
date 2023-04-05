@@ -51,7 +51,7 @@ with open(args.config, "r") as file:
     cfg = yaml.safe_load(file)
 if "models" not in cfg:
     cfg["models"] = {}
-fit = (not args.nofit) & bool(len(cfg["models"])) 
+fit = (not args.nofit) & bool(len(cfg["models"]))
 
 # Setup coordindate stuff
 z = eval(str(cfg["coords"]["z"]))
@@ -130,9 +130,12 @@ subtract = []
 for mname, model in cfg["models"].items():
     npars.append(len(model["parameters"]))
     _to_fit = []
+    _re_eval = []
+    _par_idx = {}
     for name, par in model["parameters"].items():
         labels.append(name)
         par_idx[mname + "-" + name] = len(params)
+        _par_idx[mname + "-" + name] = len(_to_fit)
         params.append(eval(str(par["value"])))
         _to_fit.append(eval(str(par["to_fit"])))
         if "priors" in par:
@@ -142,10 +145,27 @@ for mname, model in cfg["models"].items():
             priors.append(None)
             prior_vals.append(None)
         if "re_eval" in par and par["re_eval"]:
-            re_eval.append(str(par["value"]))
+            _re_eval.append(str(par["value"]))
         else:
-            re_eval.append(False)
+            _re_eval.append(False)
     to_fit = to_fit + _to_fit
+    re_eval = re_eval + _re_eval
+    # Special case where function is helper
+    if model["func"][:15] == "partial(helper,":
+        func_str = model["func"][:-1]
+        if "xyz" not in func_str:
+            func_str += ", xyz=xyz"
+        if "beam" not in func_str:
+            func_str += ", beam=beam"
+        if "argnums" not in func_str:
+            func_str += ", argnums=np.where(_to_fit)[0]"
+        if "re_eval" not in func_str:
+            func_str += ", re_eval=_re_eval"
+        if "par_idx" not in func_str:
+            func_str += ", par_idx=_par_idx"
+        func_str += ")"
+        model["func"] = func_str
+
     funs.append(eval(str(model["func"])))
     if "sub" in model:
         subtract.append(model["sub"])
@@ -233,6 +253,7 @@ if fit:
     t2 = time.time()
     print_once("Took", t2 - t1, "seconds to fit")
 
+    params = pars_fit
     for i, re in enumerate(re_eval):
         if not re:
             continue
