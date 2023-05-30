@@ -53,7 +53,7 @@ models:
         value: .249
         to_fit: False
       r_3:
-        value: "params[par_idx['r_2']]"
+        value: "params[par_idx['double_isobeta_bubbles-r_2']]"
         to_fit: False
       theta_1:
         value: "np.deg2rad(97)"
@@ -80,7 +80,7 @@ models:
         value: .122
         to_fit: False
       r_6:
-        value: "params[par_idx['r_5']]"
+        value: "params[par_idx['double_isobeta_bubbles-r_5']]"
         to_fit: False
       theta_2:
         value: "np.deg2rad(97)"
@@ -98,7 +98,7 @@ models:
         value: "43*da"
         to_fit: False
       b_ne_z:
-        value: "np.sqrt(params[par_idx['b_ne_ra']]**2 + params[par_idx['b_ne_dec']]**2)*np.sin(np.deg2rad(0))"
+        value: "np.sqrt(params[par_idx['double_isobeta_bubbles-b_ne_ra']]**2 + params[par_idx['double_isobeta_bubbles-b_ne_dec']]**2)*np.sin(np.deg2rad(0))"
         to_fit: False
       b_ne_r1:
         value: "30*da"
@@ -125,7 +125,7 @@ models:
         value: "-51*da"
         to_fit: False
       b_sw_z:
-        value: "np.sqrt(params[par_idx['b_sw_ra']]**2 + params[par_idx['b_sw_dec']]**2)*np.sin(np.deg2rad(0))"
+        value: "np.sqrt(params[par_idx['double_isobeta_bubbles-b_sw_ra']]**2 + params[par_idx['double_isobeta_bubbles-b_sw_dec']]**2)*np.sin(np.deg2rad(0))"
         to_fit: False
       b_sw_r1:
         value: "30*da"

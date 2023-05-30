@@ -9,6 +9,13 @@ paths:
   odo: False
   outroot: "/scratch/s/sievers/skh/Reductions"
   subdir: "new_tods"
+  cut:
+    - "Signal_TOD-AGBT18B_215_04-s88.fits"
+    - "Signal_TOD-AGBT18B_215_04-s89.fits"
+    - "Signal_TOD-AGBT18B_215_04-s91.fits"
+    - "Signal_TOD-AGBT18B_215_04-s92.fits"
+    - "Signal_TOD-AGBT18B_215_04-s93.fits"
+    - "Signal_TOD-AGBT18B_215_04-s94.fits"
 coords:
   z: 1.19 
   r_map: "3.0*60"
@@ -17,8 +24,8 @@ coords:
   y0: 0.2697068189809627 
   conv_factor: "(180 * 3600) / np.pi"
 beam:
-  fwhm1: "9.735"
-  amp1: 0.9808
+  fwhm1: "9."
+  amp1: 1.0
   fwhm2: "40.0"
   amp2: 0.0192
 bowling:
@@ -33,22 +40,17 @@ minkasi:
   maxiter: 50
   npass: 5
   dograd: False
+sim: False 
 models:
   gauss:
-    func: "partial(helper, xyz=xyz, dx=float(dr), beam=beam, argnums=np.where(_to_fit)[0], n_gaussian=1)"
+    func: "partial(helper, xyz=xyz, dx=float(dr), beam=beam, argnums=np.where(_to_fit)[0], n_gaussian=2)"
     parameters:
       dx_1:
-        value: 0.0 
-        to_fit: True 
-        #priors:
-        #  type: "flat"
-        #  value: "[5.0, 9.0]"
+        value: 0.8
+        to_fit: False 
       dy_1:
-        value: 0.0 
-        to_fit: True 
-        #priors:
-        #  type: "flat"
-        #  value: "[1.0, 3.0]"
+        value: 1.2 
+        to_fit: False 
       dz_1:
         value: 0.0 
         to_fit: False
@@ -57,27 +59,60 @@ models:
         to_fit: True 
         priors:
           type: "flat"
-          value: "[0.6, 1.0]"
+          value: "[0.1, 1.0]"
       r_2:
         value: 1.0
         to_fit: False 
       r_3:
         value: 1.0
         to_fit: False 
-      theta:
+      theta_1:
         value: .448 
         to_fit: True 
         priors:
           type: "flat"
           value: "[0.0, 2*np.pi]"
-      sigma:
-        value: 4.0 
+      sigma_1:
+        value: 2.0 
+        to_fit: False
+      amp_1:
+        value: 0.0009485246831922859 
         to_fit: True
+      dx_4:
+        value: 0.8
+        to_fit: False 
+      dy_5:
+        value: 1.2 
+        to_fit: False 
+      dz_6:
+        value: 0.0 
+        to_fit: False
+      r_4:
+        value: 0.7 
+        to_fit: True 
         priors:
           type: "flat"
-          value: "[3.0, 10.0]"
-      amp:
-        value: .01
+          value: "[0.1, 1.0]"
+      r_5:
+        value: 1.0
+        to_fit: False 
+      r_6:
+        value: 1.0
+        to_fit: False 
+      theta_2:
+        value: .448 
+        to_fit: True 
+        priors:
+          type: "flat"
+          value: "[0.0, 2*np.pi]"
+      sigma_2:
+        value: "9.0/2.355" 
+        to_fit: False
+        priors:
+          type: "flat"
+          value: "[7.0/2.355, 11.0/2.355]"
+      amp_2:
+        value: 0.0009485246831922859 
         to_fit: True
     #func: "minkasi.derivs_from_gauss_c"
     #parameters:

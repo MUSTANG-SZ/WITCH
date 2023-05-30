@@ -8,7 +8,7 @@ paths:
   ndo: False
   odo: False
   outroot: "/scratch/s/sievers/skh/Reductions"
-  subdir: "r3=r1"
+  subdir: "r3=r2"
 coords:
   z: .216
   r_map: "3.0*60*da"
@@ -22,7 +22,7 @@ beam:
   fwhm2: "32.627 * da"
   amp2: 0.0192
 bowling:
-  sub_poly: True
+  sub_poly: False
   method: "pred2"
   degree: 2
 minkasi:
@@ -34,8 +34,8 @@ minkasi:
   npass: 5
   dograd: False
 models:
-  double_isobeta_bubbles:
-    func: "partial(helper, xyz=xyz, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(to_fit)[0], re_eval=re_eval, par_idx=par_idx, n_isobeta=2, n_gnfw=0, n_uniform=2, n_exponential=0)"
+  double_isobeta_shock:
+    func: "partial(helper, xyz=xyz, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(_to_fit)[0], n_isobeta=2, n_gnfw=0, n_uniform=1, n_exponential=0)"
     parameters:
       dx_1:
         value: 0.0 
@@ -53,14 +53,14 @@ models:
         value: .249
         to_fit: False
       r_3:
-        value: "params[par_idx['double_isobeta_bubbles-r_1']]"
+        value: "params[par_idx['double_isobeta_shock-r_2']]"
         to_fit: False
       theta_1:
         value: "np.deg2rad(97)"
         to_fit: False
       beta_1:
         value: .98
-        to_fit: False 
+        to_fit: False
       amp_1:
         value: 0
         to_fit: True
@@ -80,7 +80,7 @@ models:
         value: .122
         to_fit: False
       r_6:
-        value: "params[par_idx['double_isobeta_bubbles-r_4']]"
+        value: "params[par_idx['double_isobeta_shock-r_5']]"
         to_fit: False
       theta_2:
         value: "np.deg2rad(97)"
@@ -91,60 +91,30 @@ models:
       amp_2:
         value: 0
         to_fit: True
-      b_ne_ra:
-        value: "-15*da"
+      sx:
+        value: 0.0 
         to_fit: False
-      b_ne_dec:
-        value: "43*da"
+      sy:
+        value: 0.0
         to_fit: False
-      b_ne_z:
-        value: "np.sqrt(params[par_idx['double_isobeta_bubbles-b_ne_ra']]**2 + params[par_idx['double_isobeta_bubbles-b_ne_dec']]**2)*np.sin(np.deg2rad(0))"
+      sz:
+        value: 0.0 
         to_fit: False
-      b_ne_r1:
-        value: "30*da"
+      sr_1:
+        value: .320
         to_fit: False
-      b_ne_r2:
-        value: "30*da"
+      sr_2:
+        value: .320
         to_fit: False
-      b_ne_r3:
-        value: "30*da"
+      sr_3:
+        value: "params[par_idx['double_isobeta_shock-sr_2']]"
         to_fit: False
-      b_ne_theta:
-        value: 0 
+      s_theta:
+        value: "np.deg2rad(97)"
         to_fit: False
-      b_ne_sup:
-        value: -.5
+      shock_val:
+        value: .26
         to_fit: True
-        priors:
-          type: "flat"
-          value: "[-1.0, 0.0]"
-      b_sw_ra:
-        value: "21*da"
-        to_fit: False
-      b_sw_dec:
-        value: "-51*da"
-        to_fit: False
-      b_sw_z:
-        value: "np.sqrt(params[par_idx['double_isobeta_bubbles-b_sw_ra']]**2 + params[par_idx['double_isobeta_bubbles-b_sw_dec']]**2)*np.sin(np.deg2rad(0))"
-        to_fit: False
-      b_sw_r1:
-        value: "30*da"
-        to_fit: False
-      b_sw_r2:
-        value: "30*da"
-        to_fit: False
-      b_sw_r3:
-        value: "30*da"
-        to_fit: False
-      b_sw_theta:
-        value: 0 
-        to_fit: False
-      b_sw_sup:
-        value: -.5
-        to_fit: True
-        priors:
-          type: "flat"
-          value: "[-1.0, 0.0]"
   gauss:
     func: "minkasi.derivs_from_gauss_c"
     parameters:
