@@ -251,7 +251,7 @@ def add_exponential(
 
 @jax.jit
 def add_powerlaw(
-    pressure, xyz, dx, dy, dz, r_1, r_2, r_3, theta, amp, k, xa, x0, ya, y0, za, z0
+    pressure, xyz, dx, dy, dz, r_1, r_2, r_3, theta, amp, phi0, k_r, k_phi
 ):
     """
     Add ellipsoid with power law structure to 3d pressure profile.
@@ -278,79 +278,72 @@ def add_powerlaw(
 
         amp: Factor by which pressure is enhanced at peak of power law
 
-        k: Power of power law
+        phi0: Polar angle of nose of power law
 
-        xa: Relative amplitude of power law in RA direction
+        k_r: Slope of power law in radial dirction
 
-        x0: RA offset of power law.
-            Note that this is in transformed coordinates so x0=1 is at xs + sr_1.
-
-        ya: Relative amplitude of power law in Dec direction
-
-        y0: Dec offset of power law.
-            Note that this is in transformed coordinates so y0=1 is at ys + sr_2.
-
-        za: Relative amplitude of power law along the line of sight
-
-        z0: Line of sight offset of power law.
-            Note that this is in transformed coordinates so z0=1 is at zs + sr_3.
+        k_phi: Slope of power law in polar direction
 
     Returns:
 
         new_pressure: Pressure profile with ellipsoid added
     """
     x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
-
-    x = jnp.where(
-        x <= x0,
-        jnp.where(
-            jnp.abs(x) > 1,
-            0.0,
-            jnp.interp(x, jnp.array((-2.0 - x0, x0)), jnp.array((-1.0, 1.0))),
-        ),
-        jnp.where(
-            jnp.abs(x) > 1,
-            0.0,
-            jnp.interp(x, jnp.array((x0, 2 - x0)), jnp.array((1.0, -1.0))),
-        ),
-    )
-    y = jnp.where(
-        y <= y0,
-        jnp.where(
-            jnp.abs(y) > 1,
-            0.0,
-            jnp.interp(y, jnp.array((-2.0 - y0, y0)), jnp.array((-1.0, 1.0))),
-        ),
-        jnp.where(
-            jnp.abs(y) > 1,
-            0.0,
-            jnp.interp(y, jnp.array((y0, 2 - y0)), jnp.array((1.0, -1.0))),
-        ),
-    )
-    z = jnp.where(
-        z <= z0,
-        jnp.where(
-            jnp.abs(z) > 1,
-            0.0,
-            jnp.interp(z, jnp.array((-2.0 - z0, z0)), jnp.array((-1.0, 1.0))),
-        ),
-        jnp.where(
-            jnp.abs(z) > 1,
-            0.0,
-            jnp.interp(z, jnp.array((z0, 2 - z0)), jnp.array((1.0, -1.0))),
-        ),
-    )
+    r = jnp.sqrt(x**2 + y**2 + z**2)
+    phi = abs((jnp.arctan2(y, x) - phi0) % (2 * jnp.pi) - jnp.pi) / jnp.pi
 
     powerlaw = (
-        xa * jnp.float_power(x, k)
-        + ya * jnp.float_power(y, k)
-        + za * jnp.float_power(z, k)
+        amp
+        * (1 - jnp.float_power(1 + r, -1.0 * k_r))
+        * (1 - jnp.float_power(1 + phi, -1 * k_phi))
     )
-    powerlaw *= amp / (xa + ya + za)
-    powerlaw = jnp.where(jnp.isinf(powerlaw), amp, powerlaw)
-    powerlaw = jnp.where(jnp.isnan(powerlaw), 0.0, powerlaw)
+    new_pressure = jnp.where(r > 1, pressure, (1 + powerlaw) * pressure)
+    return new_pressure
 
-    new_pressure = jnp.where(
-        jnp.sqrt(x**2 + y**2 + z**2) > 1, pressure, (1 + powerlaw) * pressure
-    )
+
+@jax.jit
+def add_powerlaw_cos(
+    pressure, xyz, dx, dy, dz, r_1, r_2, r_3, theta, amp, phi0, k_r, omega
+):
+    """
+    Add ellipsoid with radial power law and angular cos dependant structure to 3d pressure profile.
+
+    Arguments:
+
+        pressure: The pressure profile
+
+        xyz: Coordinate grids, see make_grid for details
+
+        dx: RA of ellipsoid center relative to grid origin
+
+        dy: Dec of ellipsoid center relative to grid origin
+
+        dz: Line of sight offset of ellipsoid center relative to grid origin
+
+        r_1: Amount to scale ellipsoid along x-axis
+
+        r_2: Amount to scale ellipsoid along y-axis
+
+        r_3: Amount to scale ellipsoid along z-axis
+
+        theta: Angle to rotate ellipsoid in xy-plane
+
+        amp: Factor by which pressure is enhanced at peak of power law
+
+        phi0: Polar angle of nose of power law
+
+        k_r: Slope of power law in radial dirction
+
+        omega: Angular freqency if cos term
+
+    Returns:
+
+        new_pressure: Pressure profile with ellipsoid added
+    """
+    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+    r = jnp.sqrt(x**2 + y**2 + z**2)
+    phi = (jnp.arctan2(y, x) - phi0) % (2 * jnp.pi)
+
+    powerlaw = amp * (1 - jnp.float_power(1 + r, -1.0 * k_r)) * jnp.cos(omega * phi)
+    new_pressure = jnp.where(r > 1, pressure, (1 + powerlaw) * pressure)
     return new_pressure

@@ -13,6 +13,7 @@ from .structure import (
     add_uniform,
     add_exponential,
     add_powerlaw,
+    add_powerlaw_cos,
 )
 
 jax.config.update("jax_enable_x64", True)
@@ -23,7 +24,7 @@ N_PAR_GNFW = 14
 N_PAR_GAUSSIAN = 9
 N_PAR_UNIFORM = 8
 N_PAR_EXPONENTIAL = 14
-N_PAR_POWERLAW = 15
+N_PAR_POWERLAW = 11
 
 ARGNUM_SHIFT = 11
 
@@ -43,6 +44,7 @@ def helper(
     n_uniform=0,
     n_exponential=0,
     n_powerlaw=0,
+    n_powerlaw_cos=0,
 ):
     """
     Helper function to be used when fitting with Minkasi.
@@ -86,6 +88,8 @@ def helper(
 
         n_powerlaw: Number of power law ellipsoids to add.
 
+        n_powerlaw_cos: Number of radial power law ellipsoids with angulas cos term to add.
+
     Returns:
 
         grad: The gradient of the model with respect to the model parameters.
@@ -128,7 +132,7 @@ def helper(
 
 @partial(
     jax.jit,
-    static_argnums=(1, 2, 3, 4, 5, 6, 7),
+    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8),
 )
 def model(
     xyz,
@@ -138,6 +142,7 @@ def model(
     n_uniform,
     n_exponential,
     n_powerlaw,
+    n_powerlaw_cos,
     dx,
     beam,
     idx,
@@ -162,6 +167,8 @@ def model(
         n_exponential: Number of exponential ellipsoids to add.
 
         n_powerlaw: Number of power law ellipsoids to add.
+
+        n_powerlaw_cos: Number of radial power law ellipsoids with angulas cos term to add.
 
         dx: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
@@ -215,6 +222,12 @@ def model(
         delta = n_powerlaw * N_PAR_POWERLAW
         powerlaws = params[start : start + delta].reshape((n_powerlaw, N_PAR_POWERLAW))
         start += delta
+    if n_powerlaw_cos:
+        delta = n_powerlaw_cos * N_PAR_POWERLAW
+        powerlaw_coses = params[start : start + delta].reshape(
+            (n_powerlaw_cos, N_PAR_POWERLAW)
+        )
+        start += delta
 
     pressure = jnp.zeros((xyz[0].shape[1], xyz[1].shape[0], xyz[2].shape[2]))
     for i in range(n_isobeta):
@@ -234,6 +247,9 @@ def model(
 
     for i in range(n_powerlaw):
         pressure = add_powerlaw(pressure, xyz, *powerlaws[i])
+
+    for i in range(n_powerlaw_cos):
+        pressure = add_powerlaw_cos(pressure, xyz, *powerlaw_coses[i])
 
     # Integrate along line of site
     ip = jnp.trapz(pressure, dx=dx, axis=-1)
@@ -257,7 +273,7 @@ def model(
 
 @partial(
     jax.jit,
-    static_argnums=(1, 2, 3, 4, 5, 6, 7, 11),
+    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 12),
 )
 def model_grad(
     xyz,
@@ -267,6 +283,7 @@ def model_grad(
     n_uniform,
     n_exponential,
     n_powerlaw,
+    n_powerlaw_cos,
     dx,
     beam,
     idx,
@@ -292,6 +309,8 @@ def model_grad(
         n_exponential: Number of exponential ellipsoids to add.
 
         n_powerlaw: Number of power law ellipsoids to add.
+
+        n_powerlaw_cos: Number of radial power law ellipsoids with angulas cos term to add.
 
         dx: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
@@ -322,6 +341,7 @@ def model_grad(
         n_uniform,
         n_exponential,
         n_powerlaw,
+        n_powerlaw_cos,
         dx,
         beam,
         idx,
@@ -337,6 +357,7 @@ def model_grad(
         n_uniform,
         n_exponential,
         n_powerlaw,
+        n_powerlaw_cos,
         dx,
         beam,
         idx,
