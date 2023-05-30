@@ -1,0 +1,42 @@
+cluster:
+  name: "MOO_1142"
+  Te: 5.0
+  freq: 90e9
+paths:
+  tods: "/scratch/s/sievers/skh/tods/MOO1142/TS_EaCMS0f0_51_1_Mar_2023/"
+  glob: "Signal_TOD*.fits"
+  ndo: False
+  odo: False
+  outroot: "/scratch/s/sievers/skh/Reductions"
+  subdir: "new_tods"
+  cut:
+    - "Signal_TOD-AGBT18B_215_04-s88.fits"
+    - "Signal_TOD-AGBT18B_215_04-s89.fits"
+    - "Signal_TOD-AGBT18B_215_04-s91.fits"
+    - "Signal_TOD-AGBT18B_215_04-s92.fits"
+    - "Signal_TOD-AGBT18B_215_04-s93.fits"
+    - "Signal_TOD-AGBT18B_215_04-s94.fits"
+coords:
+  z: 1.19 
+  r_map: "3.0*60"
+  dr: ".5"
+  x0: "Angle('11 42 46.6 hours').to(u.radian).value"
+  y0: "Angle('15:27:15.0 degrees').to(u.radian).value"
+  conv_factor: "(180 * 3600) / np.pi"
+beam:
+  fwhm1: "9.735"
+  amp1: 0.9808
+  fwhm2: "32.627"
+  amp2: 0.0192
+bowling:
+  sub_poly: True 
+  method: "pred2"
+  degree: 5
+minkasi:
+  noise:
+    class: "minkasi.NoiseSmoothedSVD"
+    args: "[]"
+    kwargs: "{'fwhm':10}"
+  maxiter: 50
+  npass: 5
+  dograd: False

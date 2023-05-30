@@ -3,18 +3,24 @@ cluster:
   Te: 5.0
   freq: 90e9
 paths:
-  tods: "/scratch/s/sievers/skh/tods/MOO1142/TS_EaCMS0f0_51_1_Mar_2023/"
+  tods: "/scratch/s/sievers/skh/tods/MOO1142/TS_EaCMS0f0_51_16_Feb_2022/"
   glob: "Signal_TOD*.fits"
   ndo: False
   odo: False
   outroot: "/scratch/s/sievers/skh/Reductions"
-  subdir: "new_tods"
+  cut:
+    - "Signal_TOD-AGBT18B_215_04-s88.fits"
+    - "Signal_TOD-AGBT18B_215_04-s89.fits"
+    - "Signal_TOD-AGBT18B_215_04-s91.fits"
+    - "Signal_TOD-AGBT18B_215_04-s92.fits"
+    - "Signal_TOD-AGBT18B_215_04-s93.fits"
+    - "Signal_TOD-AGBT18B_215_04-s94.fits"
 coords:
   z: 1.19 
   r_map: "3.0*60"
-  dr: ".5"
-  x0: "Angle('11 42 46.6 hours').to(u.radian).value"
-  y0: "Angle('15:27:15.0 degrees').to(u.radian).value"
+  dr: "1."
+  x0: 3.06642436 
+  y0: 0.26972541 
   conv_factor: "(180 * 3600) / np.pi"
 beam:
   fwhm1: "9.735"
@@ -22,9 +28,9 @@ beam:
   fwhm2: "32.627"
   amp2: 0.0192
 bowling:
-  sub_poly: True 
+  sub_poly: True
   method: "pred2"
-  degree: 5
+  degree: 2
 minkasi:
   noise:
     class: "minkasi.NoiseSmoothedSVD"
@@ -34,77 +40,30 @@ minkasi:
   npass: 5
   dograd: False
 models:
-  gNFW:
-    func: "partial(helper, xyz=xyz, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(_to_fit)[0], n_gnfw=1)"
+  isobeta_shock:
+    func: "partial(helper, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), n_isobeta=1, n_powerlaw=1)"
     parameters:
       dx_1:
-        value: 0.0 
+        value: 0.0
         to_fit: False 
       dy_1:
         value: 0.0
         to_fit: False 
       dz_1:
-        value: 0.0 
-        to_fit: False
-      r_1:
-        value: 36.0 
-        to_fit: False
-      r_2:
-        value: 24.0 
-        to_fit: False
-      r_3:
-        value: 24.0 
-        to_fit: False
-      theta:
-        value: 0.1
-        to_fit: True 
-        priors:
-          type: "flat"
-          value: "[0.0, 2*np.pi]"
-      P0:
-        value: 8.403
-        to_fit: True 
-      c500:
-        value: 1.177 
-        to_fit: False 
-      m500:
-        value: "6e14"
-        to_fit: True 
-      gamma:
-        value: .3081 
-        to_fit: True 
-      alpha:
-        value: 1.051 
-        to_fit: True
-      beta:
-        value: 5.4905 
-        to_fit: True
-      z:
-        value: 1.19 
-        to_fit: False
-  isobeta_PS:
-    func: "partial(helper, xyz=xyz, dx=float(dr), beam=beam, argnums=np.where(_to_fit)[0], n_isobeta=1)"
-    parameters:
-      dx_1:
-        value: 8.0
-        to_fit: True 
-      dy_1:
-        value: 2.0
-        to_fit: True
-      dz_1:
         value: 0.0
         to_fit: False
       r_1:
-        value: 1.0
+        value: 33.0
         to_fit: True 
       r_2:
-        value: 1.0
-        to_fit: False
+        value: 18.0
+        to_fit: True
       r_3:
-        value: 1.0
+        value: "params[par_idx['isobeta_shock-r_2']]" 
         to_fit: False
+        re_eval: True
       theta_1:
-        value: 0.1
+        value: 0.1754625589496545 
         to_fit: True 
         priors:
           type: "flat"
@@ -113,23 +72,138 @@ models:
         value: .98
         to_fit: True
       amp_1:
-        value: 0
+        value: 1 
         to_fit: True
-  gauss:
-    func: "minkasi.derivs_from_gauss_c"
-    parameters:
-      ps_ra:
-        value: 3.0665111128123264 
+      dx_s:
+        value: 0.0
         to_fit: False 
-      ps_dec:
-        value: 0.2697068189809627 
+      dy_s:
+        value: 0.0
         to_fit: False 
-      sigma:
-        value: "1.931996703358835739e-05"
-        to_fit: True 
-      amp:
-        value: "1.783469e-03" 
+      dz_s:
+        value: 0.0
+        to_fit: False
+      rs_1:
+        value: 134.588
+        to_fit: False 
+      rs_2:
+        value: 138.895
+        to_fit: False
+      rs_3:
+        value: "params[par_idx['isobeta_shock-rs_2']]" 
+        to_fit: False
+      theta_s:
+        value: 0.
         to_fit: True 
         priors:
           type: "flat"
-          value: "[1.5e-03, 2.5e-03]"
+          value: "[0.0, 2*np.pi]"
+      amp_s:
+        value: 1.
+        to_fit: True
+        priors:
+          type: "flat"
+          value: "[0.0, 10.]"
+      phi_s:
+        value: 0.
+        to_fit: True
+        priors:
+          type: "flat"
+          value: "[-.2, .2]"
+      k_r:
+        value: 2
+        to_fit: True
+        priors:
+          type: "flat"
+          value: "[0.0, 10.]"
+      k_phi:
+        value: 2
+        to_fit: True
+        priors:
+          type: "flat"
+          value: "[0.0, 10.]"
+
+  double_gauss:
+    func: "partial(helper, xyz=xyz, dx=float(dr), beam=beam, argnums=np.where(_to_fit)[0], n_gaussian=2)"
+    parameters:
+      dx_1:
+        value: 19.0 
+        to_fit: False 
+      dy_1:
+        value: 4.3 
+        to_fit: False 
+      dz_1:
+        value: 0.0 
+        to_fit: False
+      r_1:
+        value: 1.0 
+        to_fit: False 
+        priors:
+          type: "flat"
+          value: "[0.8, 1.2]"
+      r_2:
+        value: 1.0
+        to_fit: False 
+      r_3:
+        value: 1.0
+        to_fit: False 
+      theta_1:
+        value: .448 
+        to_fit: False 
+        priors:
+          type: "flat"
+          value: "[0.0, 2*np.pi]"
+      sigma_1:
+        value: 4.0 
+        to_fit: False
+      amp_1:
+        value: 0.0009485246831922859 
+        to_fit: True 
+      dx_2:
+        value: 19.0 
+        to_fit: False 
+      dy_2:
+        value: 4.3 
+        to_fit: False 
+      dz_2:
+        value: 0.0 
+        to_fit: False
+      r_4:
+        value: 1.0 
+        to_fit: True 
+        priors:
+          type: "flat"
+          value: "[0.8, 1.2]"
+      r_5:
+        value: 1.0
+        to_fit: False 
+      r_6:
+        value: 1.0
+        to_fit: False 
+      theta_2:
+        value: .448 
+        to_fit: True 
+        priors:
+          type: "flat"
+          value: "[0.0, 2*np.pi]"
+      sigma_2:
+        value: 2.0 
+        to_fit: False
+      amp_2:
+        value: 0.0009485246831922859 
+        to_fit: True 
+  #gauss:
+  #  func: "minkasi.derivs_from_gauss_c"
+  #  parameters:
+  #    ps_ra:
+  #      value: 3.0665133132790805 
+  #      to_fit: False 
+  #    ps_dec:
+  #      value: 0.2697014918195695 
+  #      to_fit: False 
+  #    sigma:
+  #      value: "1.85e-5"
+  #      to_fit: True 
+  #    amp:
+  #      value: "1.7e-4"
+        #to_fit: True 
