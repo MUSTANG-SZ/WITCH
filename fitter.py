@@ -213,7 +213,7 @@ for i, tod in enumerate(todvec.tods):
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
 # Figure out output
-models = [mn + ("_ns" * ~ns) for mn, ns in zip(list(cfg["models"].keys()), subtract)]
+models = [mn + ("_ns" * (not ns)) for mn, ns in zip(list(cfg["models"].keys()), subtract)]
 outdir = os.path.join(
     cfg["paths"]["outroot"],
     cfg["cluster"]["name"],
