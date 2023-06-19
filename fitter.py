@@ -49,7 +49,9 @@ args = parser.parse_args()
 
 with open(args.config, "r") as file:
     cfg = yaml.safe_load(file)
-fit = not args.nofit
+if "models" not in cfg:
+    cfg["models"] = {}
+fit = (not args.nofit) & bool(len(cfg["models"]))
 
 # Setup coordindate stuff
 z = eval(str(cfg["coords"]["z"]))
@@ -66,6 +68,8 @@ tod_names = glob.glob(os.path.join(cfg["paths"]["tods"], cfg["paths"]["glob"]))
 bad_tod, addtag = pbs.get_bad_tods(
     cfg["cluster"]["name"], ndo=cfg["paths"]["ndo"], odo=cfg["paths"]["odo"]
 )
+if "cut" in cfg["paths"]:
+    bad_tod += cfg["paths"]["cut"]
 tod_names = minkasi.cut_blacklist(tod_names, bad_tod)
 tod_names.sort()
 tod_names = tod_names[minkasi.myrank :: minkasi.nproc]
@@ -122,13 +126,18 @@ priors = []
 prior_vals = []
 re_eval = []
 par_idx = {}
-for model in cfg["models"].values():
+subtract = []
+for mname, model in cfg["models"].items():
     npars.append(len(model["parameters"]))
+    _to_fit = []
+    _re_eval = []
+    _par_idx = {}
     for name, par in model["parameters"].items():
         labels.append(name)
-        par_idx[name] = len(params)
+        par_idx[mname + "-" + name] = len(params)
+        _par_idx[mname + "-" + name] = len(_to_fit)
         params.append(eval(str(par["value"])))
-        to_fit.append(eval(str(par["to_fit"])))
+        _to_fit.append(eval(str(par["to_fit"])))
         if "priors" in par:
             priors.append(par["priors"]["type"])
             prior_vals.append(eval(str(par["priors"]["value"])))
@@ -136,10 +145,32 @@ for model in cfg["models"].values():
             priors.append(None)
             prior_vals.append(None)
         if "re_eval" in par and par["re_eval"]:
-            re_eval.append(str(par["value"]))
+            _re_eval.append(str(par["value"]))
         else:
-            re_eval.append(False)
+            _re_eval.append(False)
+    to_fit = to_fit + _to_fit
+    re_eval = re_eval + _re_eval
+    # Special case where function is helper
+    if model["func"][:15] == "partial(helper,":
+        func_str = model["func"][:-1]
+        if "xyz" not in func_str:
+            func_str += ", xyz=xyz"
+        if "beam" not in func_str:
+            func_str += ", beam=beam"
+        if "argnums" not in func_str:
+            func_str += ", argnums=np.where(_to_fit)[0]"
+        if "re_eval" not in func_str:
+            func_str += ", re_eval=_re_eval"
+        if "par_idx" not in func_str:
+            func_str += ", par_idx=_par_idx"
+        func_str += ")"
+        model["func"] = func_str
+
     funs.append(eval(str(model["func"])))
+    if "sub" in model:
+        subtract.append(model["sub"])
+    else:
+        subtract.append(True)
 npars = np.array(npars)
 labels = np.array(labels)
 params = np.array(params)
@@ -150,13 +181,15 @@ noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
 noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
 noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
 
-# TODO: Add sim option
 sub_poly = False
 if "bowling" in cfg:
     sub_poly = cfg["bowling"]["sub_poly"]
 if sub_poly:
     method = cfg["bowling"]["method"]
     degree = cfg["bowling"]["degree"]
+sim = False
+if "sim" in cfg:
+    sim = cfg["sim"]
 for i, tod in enumerate(todvec.tods):
     ipix = skymap.get_pix(tod)
     tod.info["ipix"] = ipix
@@ -168,13 +201,23 @@ for i, tod in enumerate(todvec.tods):
             res = np.polynomial.polynomial.polyfit(x, y, cfg["bowling"]["degree"])
             tod.info["dat_calib"][j] -= np.polynomial.polynomial.polyval(x, res)
 
+    if sim:
+        tod.info["dat_calib"] *= (-1) ** ((minkasi.myrank + minkasi.nproc * i) % 2)
+        start = 0
+        model = 0
+        for n, fun in zip(npars, funs):
+            model += fun(params[start : (start + n)], tod)[1]
+            start += n
+        tod.info["dat_calib"] += np.array(model)
+
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
 # Figure out output
+models = [mn + ("_ns" * (not ns)) for mn, ns in zip(list(cfg["models"].keys()), subtract)]
 outdir = os.path.join(
     cfg["paths"]["outroot"],
     cfg["cluster"]["name"],
-    "-".join(mn for mn in cfg["models"].keys()),
+    "-".join(mn for mn in models),
 )
 if "subdir" in cfg["paths"]:
     outdir = os.path.join(outdir, cfg["paths"]["subdir"])
@@ -184,6 +227,8 @@ else:
     outdir = os.path.join(outdir, "not_fit")
 if sub_poly:
     outdir += "-" + method + "_" + str(degree)
+if sim:
+    outdir += "-sim"
 print_once("Outputs can be found in", outdir)
 if minkasi.myrank == 0:
     os.makedirs(outdir, exist_ok=True)
@@ -208,6 +253,7 @@ if fit:
     t2 = time.time()
     print_once("Took", t2 - t1, "seconds to fit")
 
+    params = pars_fit
     for i, re in enumerate(re_eval):
         if not re:
             continue
@@ -229,7 +275,9 @@ if fit:
 for tod in todvec.tods:
     start = 0
     model = 0
-    for n, fun in zip(npars, funs):
+    for n, fun, sub in zip(npars, funs, subtract):
+        if not sub:
+            continue
         model += fun(pars_fit[start : (start + n)], tod)[1]
         start += n
     tod.info["dat_calib"] -= np.array(model)
