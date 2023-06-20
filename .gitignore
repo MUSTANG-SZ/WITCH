@@ -4,3 +4,4 @@ __pycache__
 out*
 *.sh
 tags
+*.egg-info
