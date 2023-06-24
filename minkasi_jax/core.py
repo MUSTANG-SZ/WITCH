@@ -196,6 +196,7 @@ def model(
     uniforms = jnp.zeros((1, 1), dtype=float)
     exponentials = jnp.zeros((1, 1), dtype=float)
     powerlaws = jnp.zeros((1, 1), dtype=float)
+    powerlaw_coses = jnp.zeros((1, 1), dtype=float)
 
     start = 0
     if n_isobeta: 
