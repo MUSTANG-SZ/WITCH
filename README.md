@@ -22,7 +22,7 @@ The other main part of this repository is the `fitter.py` script.
 It is generically a script to perform fit models and make maps using [`minkasi`](https://github.com/sievers/minkasi),
 but there are a two key points that make it nice to use:
 
-1. A flexible configuration system that allows the user to control mapmaking and fitting parameters, model specification, IO, etc. via yaml file.
+1. A flexible configuration system that allows the user to control mapmaking and fitting parameters, model specification, IO, etc. via yaml files.
 2. First class support for models from the `minkasi_jax` library.
 
 For the most part the config files are easy to make by using one of the files in the `configs` folder as a base.
