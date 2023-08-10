@@ -113,6 +113,7 @@ def helper(
         n_uniform,
         n_exponential,
         n_powerlaw,
+        n_powerlaw_cos,
         dx,
         beam,
         idx,
