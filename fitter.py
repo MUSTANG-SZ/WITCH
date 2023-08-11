@@ -75,8 +75,14 @@ tod_names.sort()
 tod_names = tod_names[minkasi.myrank :: minkasi.nproc]
 minkasi.barrier()  # Is this needed?
 
+
+ntods = 999999 #Lazy
+if "ntods" in cfg["minkasi"]:
+    ntods = cfg["minkasi"]["ntods"]
+
 todvec = minkasi.TodVec()
-for fname in tod_names:
+for i, fname in enumerate(tod_names):
+    if i >= ntods: break
     dat = minkasi.read_tod_from_fits(fname)
     minkasi.truncate_tod(dat)
 
