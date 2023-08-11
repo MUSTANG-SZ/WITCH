@@ -10,7 +10,7 @@ import jax.scipy.optimize as sopt
 
 config.update("jax_debug_nans", True)
 config.update("jax_enable_x64", True)
-jax.config.update("jax_platform_name", "cpu")
+jax.config.update("jax_platform_name", "gpu")
 
 
 @partial(jax.jit, static_argnums=(1, 2, 3))
