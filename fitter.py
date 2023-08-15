@@ -287,7 +287,7 @@ for tod in todvec.tods:
         model += fun(pars_fit[start : (start + n)], tod)[1]
         start += n
     tod.info["dat_calib"] -= np.array(model)
-tod.set_noise(noise_class, *noise_args, **noise_kwargs)
+    tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
 # Make maps
 npass = cfg["minkasi"]["npass"]

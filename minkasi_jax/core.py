@@ -189,6 +189,7 @@ def model(
         model: The model with the specified substructure.
     """
     params = jnp.array(params)
+    params = jnp.ravel(params) #Fixes strange bug with params having dim (1,n)
     isobetas = jnp.zeros((1, 1), dtype=float)
     gnfws = jnp.zeros((1, 1), dtype=float)
     gaussians = jnp.zeros((1, 1), dtype=float)
