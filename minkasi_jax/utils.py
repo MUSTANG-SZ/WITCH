@@ -12,7 +12,7 @@ from astropy import units as u
 from astropy.cosmology import Planck15 as cosmo
 
 jax.config.update("jax_enable_x64", True)
-jax.config.update("jax_platform_name", "cpu")
+jax.config.update("jax_platform_name", "gpu")
 # Constants
 # --------------------------------------------------------
 
