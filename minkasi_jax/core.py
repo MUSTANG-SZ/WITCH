@@ -17,7 +17,7 @@ from .structure import (
 )
 
 jax.config.update("jax_enable_x64", True)
-jax.config.update("jax_platform_name", "cpu")
+jax.config.update("jax_platform_name", "gpu")
 
 N_PAR_ISOBETA = 9
 N_PAR_GNFW = 14
@@ -189,6 +189,7 @@ def model(
         model: The model with the specified substructure.
     """
     params = jnp.array(params)
+    params = jnp.ravel(params) #Fixes strange bug with params having dim (1,n)
     isobetas = jnp.zeros((1, 1), dtype=float)
     gnfws = jnp.zeros((1, 1), dtype=float)
     gaussians = jnp.zeros((1, 1), dtype=float)
@@ -197,8 +198,8 @@ def model(
     powerlaws = jnp.zeros((1, 1), dtype=float)
 
     start = 0
-    if n_isobeta:
-        delta = n_isobeta * N_PAR_ISOBETA
+    if n_isobeta: 
+        delta = n_isobeta * N_PAR_ISOBETA  
         isobetas = params[start : start + delta].reshape((n_isobeta, N_PAR_ISOBETA))
         start += delta
     if n_gnfw:

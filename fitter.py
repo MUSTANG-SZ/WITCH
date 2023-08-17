@@ -75,8 +75,14 @@ tod_names.sort()
 tod_names = tod_names[minkasi.myrank :: minkasi.nproc]
 minkasi.barrier()  # Is this needed?
 
+
+ntods = 999999 #Lazy
+if "ntods" in cfg["minkasi"]:
+    ntods = cfg["minkasi"]["ntods"]
+
 todvec = minkasi.TodVec()
-for fname in tod_names:
+for i, fname in enumerate(tod_names):
+    if i >= ntods: break
     dat = minkasi.read_tod_from_fits(fname)
     minkasi.truncate_tod(dat)
 
@@ -281,7 +287,7 @@ for tod in todvec.tods:
         model += fun(pars_fit[start : (start + n)], tod)[1]
         start += n
     tod.info["dat_calib"] -= np.array(model)
-tod.set_noise(noise_class, *noise_args, **noise_kwargs)
+    tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
 # Make maps
 npass = cfg["minkasi"]["npass"]
