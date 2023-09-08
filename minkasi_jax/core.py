@@ -17,7 +17,7 @@ from .structure import (
 )
 
 jax.config.update("jax_enable_x64", True)
-jax.config.update("jax_platform_name", "gpu")
+# jax.config.update("jax_platform_name", "gpu")
 
 N_PAR_ISOBETA = 9
 N_PAR_GNFW = 14
@@ -270,8 +270,11 @@ def model(
 
     ip = fft_conv(ip, beam)
 
-    # return jsp.ndimage.map_coordinates(ip, (idy, idx), order=0)
-    return ip[idy.ravel(), idx.ravel()].reshape(idx.shape)
+    _idx = idx.ravel()
+    _idy = idy.ravel()
+    model_out = ip[idy.ravel(), idx.ravel()].ravel()
+    model_out = jnp.where((_idx < xyz[0].shape[1]) & (_idy < xyz[1].shape[0]), model_out, 0)
+    return model_out.reshape(idx.shape)
 
 
 @partial(
