@@ -189,7 +189,7 @@ def model(
         model: The model with the specified substructure.
     """
     params = jnp.array(params)
-    params = jnp.ravel(params) #Fixes strange bug with params having dim (1,n)
+    params = jnp.ravel(params)  # Fixes strange bug with params having dim (1,n)
     isobetas = jnp.zeros((1, 1), dtype=float)
     gnfws = jnp.zeros((1, 1), dtype=float)
     gaussians = jnp.zeros((1, 1), dtype=float)
@@ -199,8 +199,8 @@ def model(
     powerlaw_coses = jnp.zeros((1, 1), dtype=float)
 
     start = 0
-    if n_isobeta: 
-        delta = n_isobeta * N_PAR_ISOBETA  
+    if n_isobeta:
+        delta = n_isobeta * N_PAR_ISOBETA
         isobetas = params[start : start + delta].reshape((n_isobeta, N_PAR_ISOBETA))
         start += delta
     if n_gnfw:
@@ -270,10 +270,7 @@ def model(
 
     ip = fft_conv(ip, beam)
 
-    _idx = idx.ravel()
-    _idy = idy.ravel()
-    model_out = ip[idy.ravel(), idx.ravel()].ravel()
-    model_out = jnp.where((_idx < xyz[0].shape[1]) & (_idy < xyz[1].shape[0]), model_out, 0)
+    model_out = ip.at[idy.ravel(), idx.ravel()].get(mode="fill", fill_value=0)
     return model_out.reshape(idx.shape)
 
 
