@@ -38,9 +38,10 @@ def sample(tods, idx_model, idy_model, id_inv, params, xyz, beam):
     for i, tod in enumerate(tods):
         idx_tod, idy_tod, dat, v, weight, id_inv = tod #unravel tod
 
-        pred = model(xyz, 2, 0, 0, 3, 0, 0, 0, -2.4995998836322247e-05, beam, idx_model, idy_model, params[:42]) #I don't think the idx_mode/idy_model arguments are right
+        #pred = model(xyz, 2, 0, 0, 3, 0, 0, 0, -2.4995998836322247e-05, beam, idx_model, idy_model, params[:42]) #I don't think the idx_mode/idy_model arguments are right
             #I think it's a hold over from doing model once then indexing.
-            
+        pred = model(xzy, 2, 0, 0, 3, 0, 0, 0, -2.5e-05, beam, idx_tod, idy_tod, params[:42]) #This works?    
+        #pred = pred[id_inv].reshape(dat.shape)
         pred = pred[id_inv].reshape(dat.shape)
         chi2 += jget_chis(dat, pred, v, weight)
 
