@@ -8,7 +8,7 @@ import numpy as np
 
 from minkasi_jax.core import model
 
-def sample(tods, idx_model, idy_model, id_inv, params, xyz, beam):
+def sample(tods, params, xyz, beam):
     """
     Generate a model realization and compute the chis of that model to data.
     TODO: model components currently hard coded.
@@ -17,15 +17,9 @@ def sample(tods, idx_model, idy_model, id_inv, params, xyz, beam):
 
         tods: Array of tod parameters. See prep tods
 
-        idx_model: x indexes of all tod pixels 
-
-        idy_model: y indexes of all tody pixels
-
-        id_inv: inverse id argument from each tod idx/idy
-
         params: model parameters
 
-        xzy: grid to evaluate model at
+        xyz: grid to evaluate model at
 
         beam: Beam to smooth by
 
@@ -40,7 +34,7 @@ def sample(tods, idx_model, idy_model, id_inv, params, xyz, beam):
 
         #pred = model(xyz, 2, 0, 0, 3, 0, 0, 0, -2.4995998836322247e-05, beam, idx_model, idy_model, params[:42]) #I don't think the idx_mode/idy_model arguments are right
             #I think it's a hold over from doing model once then indexing.
-        pred = model(xzy, 2, 0, 0, 3, 0, 0, 0, -2.5e-05, beam, idx_tod, idy_tod, params[:42]) #This works?    
+        pred = model(xyz, 2, 0, 0, 3, 0, 0, 0, -2.5e-05, beam, idx_tod, idy_tod, params[:42]) #This works?    
         #pred = pred[id_inv].reshape(dat.shape)
         pred = pred[id_inv].reshape(dat.shape)
         chi2 += jget_chis(dat, pred, v, weight)
@@ -98,38 +92,15 @@ def make_tod_stuff(todvec):
 
     Returns:
 
-        tods: a list of arrays with tod parameters that are required by sample
-
-        idx_model: an array of all tod x indexes
-
-        idy_model: an array of all tod y indexes
-
-        id_inv: an array of the individual index value of each pixel in each tod
+        tods: a list of arrays with tod parameters that are required by sample    
     """
-    idxs = np.array([])
-    idys = np.array([])
-
-    dxs = np.array([])
-    dys = np.array([])
-
     tods = []
 
     for i,tod in enumerate(todvec.tods):
-        idxs = np.append(idxs, tod.info["idx"])
-        idys = np.append(idys, tod.info["idy"])
-        dxs = np.append(dxs, tod.info["model_idx"])
-        dys = np.append(dys, tod.info["model_idy"])
 
         #un wrap stuff cause jit doesn't like having tod objects
         tods.append([jnp.array(tod.info["idx"]), jnp.array(tod.info["idy"]),
                      jnp.array(tod.info["dat_calib"]), jnp.array(tod.noise.v),
                      jnp.array(tod.noise.mywt), jnp.array(tod.info["id_inv"])])
 
-
-    idu, id_inv = np.unique(
-        np.vstack((dxs.ravel(), dys.ravel())), axis=1, return_inverse=True
-    )
-
-    idx_model, idy_model = np.array(idu[0], dtype=int), np.array(idu[1], dtype=int)
-
-    return tods, idx_model, idy_model, id_inv
+    return tods
