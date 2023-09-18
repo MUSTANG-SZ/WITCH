@@ -9,6 +9,9 @@ setup(
         "fitter": [
             "pyyaml",
             "minkasi",
+        ],
+        "profile": [
+            "tensorflow",
         ]
     },
 )
