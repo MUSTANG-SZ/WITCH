@@ -8,7 +8,7 @@ import numpy as np
 
 from minkasi_jax.core import model
 
-def sample(tods, idx_model, idy_model, lens, id_inv, shapes, params, xyz, beam):
+def sample(tods, idx_model, idy_model, id_inv, shapes, params, xyz, beam):
     """
     Generate a model realization and compute the chis of that model to data.
     TODO: model components currently hard coded.
@@ -20,8 +20,6 @@ def sample(tods, idx_model, idy_model, lens, id_inv, shapes, params, xyz, beam):
         idx_model: x indexes of all tod pixels 
 
         idy_model: y indexes of all tody pixels
-
-        lens: len of each tod #I don't think this is used any more now that we don't do indexing
 
         id_inv: inverse id argument from each tod idx/idy #Not used when not indexing
 
@@ -107,8 +105,6 @@ def make_tod_stuff(todvec):
 
         idy_model: an array of all tod y indexes
 
-        lens: the len of each tod
-
         id_inv: an array of the individual index value of each pixel in each tod
 
         shapes: the shape of each tod
@@ -119,8 +115,6 @@ def make_tod_stuff(todvec):
     dxs = np.array([])
     dys = np.array([])
 
-    lens = np.array([])
-
     shapes = np.zeros((len(todvec.tods),2), dtype=int)
 
     tods = []
@@ -128,7 +122,6 @@ def make_tod_stuff(todvec):
     for i,tod in enumerate(todvec.tods):
         idxs = np.append(idxs, tod.info["idx"])
         idys = np.append(idys, tod.info["idy"])
-        lens = np.append(lens, len(tod.info["dx"].ravel()))
         dxs = np.append(dxs, tod.info["model_idx"])
         dys = np.append(dys, tod.info["model_idy"])
         shapes[i] = np.array(tod.info["dx"].shape, dtype=int)
@@ -138,7 +131,6 @@ def make_tod_stuff(todvec):
                      jnp.array(tod.info["dat_calib"]), jnp.array(tod.noise.v),
                      jnp.array(tod.noise.mywt), jnp.array(tod.info["id_inv"])])
 
-    lens = np.array(lens, dtype=int)
 
     idu, id_inv = np.unique(
         np.vstack((dxs.ravel(), dys.ravel())), axis=1, return_inverse=True
@@ -146,4 +138,4 @@ def make_tod_stuff(todvec):
 
     idx_model, idy_model = np.array(idu[0], dtype=int), np.array(idu[1], dtype=int)
 
-    return tods, idx_model, idy_model, lens, id_inv, shapes
+    return tods, idx_model, idy_model, id_inv, shapes
