@@ -7,8 +7,17 @@ import jax.numpy as jnp
 import numpy as np
 
 from minkasi_jax.core import model
+from minkasi_jax.utils import make_grid
 
-def sample(params, tods, xyz, beam):
+import functools
+
+def construct_sampler(model_params, xyz, beam):
+    cur_sample = functools.partial(sample, model_params, xyz, beam)
+    jsample = jax.jit(cur_sample)
+
+    return jsample
+
+def sample(model_params, xyz, beam, params, tods):#, model_params, xyz, beam):
     """
     Generate a model realization and compute the chis of that model to data.
     TODO: model components currently hard coded.
@@ -18,6 +27,8 @@ def sample(params, tods, xyz, beam):
         tods: Array of tod parameters. See prep tods
 
         params: model parameters
+
+        model_params: number of each model componant 
 
         xyz: grid to evaluate model at
 
@@ -29,20 +40,17 @@ def sample(params, tods, xyz, beam):
 
     """
     chi2 = 0
+    n_iso, n_gnfw, n_gauss, n_uni, n_expo, n_power, n_power_cos = model_params
     for i, tod in enumerate(tods):
         idx_tod, idy_tod, dat, v, weight, id_inv = tod #unravel tod
-
-        #pred = model(xyz, 2, 0, 0, 3, 0, 0, 0, -2.4995998836322247e-05, beam, idx_model, idy_model, params[:42]) #I don't think the idx_mode/idy_model arguments are right
-            #I think it's a hold over from doing model once then indexing.
-        #pred = model(xyz, 2, 0, 0, 3, 0, 0, 0, -2.5e-05, beam, idx_tod, idy_tod, params[:42]) #This works?    
-        pred = model(xyz, 1, 0, 0, 0, 0, 0 , 0, -2.5e-05, beam, idx_tod, idy_tod, params)
-        #pred = pred[id_inv].reshape(dat.shape)
+   
+        pred = model(xyz, n_iso, n_gnfw, n_gauss, n_uni, n_expo, n_power, n_power_cos,
+                     -2.5e-05, beam, idx_tod, idy_tod, params)
+    
         pred = pred[id_inv].reshape(dat.shape)
         chi2 += jget_chis(dat, pred, v, weight)
 
     return chi2
-
-jsample = jax.jit(sample) #Partial call may bet better?
 
 def get_chis(dat, pred, v, weight):
     """
