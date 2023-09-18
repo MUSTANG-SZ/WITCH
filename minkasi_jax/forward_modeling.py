@@ -8,7 +8,7 @@ import numpy as np
 
 from minkasi_jax.core import model
 
-def sample(tods, idx_model, idy_model, id_inv, shapes, params, xyz, beam):
+def sample(tods, idx_model, idy_model, id_inv, params, xyz, beam):
     """
     Generate a model realization and compute the chis of that model to data.
     TODO: model components currently hard coded.
@@ -21,9 +21,7 @@ def sample(tods, idx_model, idy_model, id_inv, shapes, params, xyz, beam):
 
         idy_model: y indexes of all tody pixels
 
-        id_inv: inverse id argument from each tod idx/idy #Not used when not indexing
-
-        shapes: shape of each tod. #Not used when not indexing
+        id_inv: inverse id argument from each tod idx/idy
 
         params: model parameters
 
@@ -106,16 +104,12 @@ def make_tod_stuff(todvec):
         idy_model: an array of all tod y indexes
 
         id_inv: an array of the individual index value of each pixel in each tod
-
-        shapes: the shape of each tod
     """
     idxs = np.array([])
     idys = np.array([])
 
     dxs = np.array([])
     dys = np.array([])
-
-    shapes = np.zeros((len(todvec.tods),2), dtype=int)
 
     tods = []
 
@@ -124,7 +118,6 @@ def make_tod_stuff(todvec):
         idys = np.append(idys, tod.info["idy"])
         dxs = np.append(dxs, tod.info["model_idx"])
         dys = np.append(dys, tod.info["model_idy"])
-        shapes[i] = np.array(tod.info["dx"].shape, dtype=int)
 
         #un wrap stuff cause jit doesn't like having tod objects
         tods.append([jnp.array(tod.info["idx"]), jnp.array(tod.info["idy"]),
@@ -138,4 +131,4 @@ def make_tod_stuff(todvec):
 
     idx_model, idy_model = np.array(idu[0], dtype=int), np.array(idu[1], dtype=int)
 
-    return tods, idx_model, idy_model, id_inv, shapes
+    return tods, idx_model, idy_model, id_inv
