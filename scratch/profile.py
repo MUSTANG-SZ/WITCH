@@ -6,10 +6,9 @@ import yaml
 from minkasi_jax.utils import *
 from minkasi_jax.core import model
 
-import matplotlib.pyplot as plt
+import jax
 
-
-with open('../configs/ms0735_noSub.yaml', "r") as file:
+with open("../configs/ms0735_noSub.yaml", "r") as file:
     cfg = yaml.safe_load(file)
 
 # Setup coordindate stuff
@@ -48,20 +47,26 @@ npars = np.array(npars)
 labels = np.array(labels)
 params = np.array(params)
 
-vis_pars = params[:42]
-vis_pars[8], vis_pars[17] = -1e-5, -1e-5
+pars = params[:42]
+pars[8], pars[17] = -1e-5, -1e-5
 
 
-x = np.arange(0, 2*len(xyz[1]), dtype = int)
-y = np.arange(0, 2*len(xyz[1]), dtype = int)
+x = np.arange(0, 2 * len(xyz[1]), dtype=int)
+y = np.arange(0, 2 * len(xyz[1]), dtype=int)
 X, Y = np.meshgrid(x, y)
 
-# dr = eval(str(cfg["coords"]["dr"]))*2 #Things look wrong even without this but they look really wrong with it
-# xyz = make_grid(r_map, dr)
+dx = float(y2K_RJ(freq, Te) * dr * XMpc / me)
 
-dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
-vis_model = model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, vis_pars)
+# Now profile
+with jax.profiler.trace("/tmp/jax-trace", create_perfetto_link=True):
+    # Check without JIT
+    with jax.disable_jit():
+        profile = model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
+        profile.block_until_ready()
 
-plt.imshow(vis_model, extent = [np.min(X), np.max(X), np.min(Y), np.max(Y)], origin = 'lower')
-plt.colorbar()
-plt.show()
+    # JIT things
+    profile = model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
+    profile.block_until_ready()
+
+    profile = model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
+    profile.block_until_ready()
