@@ -12,6 +12,7 @@ setup(
         ],
         "profile": [
             "tensorflow",
+            "gitpython",
         ]
     },
 )
