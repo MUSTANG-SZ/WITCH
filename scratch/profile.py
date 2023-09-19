@@ -113,6 +113,7 @@ da = get_da(z)
 r_map = eval(str(cfg["coords"]["r_map"]))
 dr = eval(str(cfg["coords"]["dr"]))
 xyz = make_grid(r_map, dr)
+xyz_decoupled = make_grid(r_map, 2 * dr, 2 * dr, dr)
 coord_conv = eval(str(cfg["coords"]["conv_factor"]))
 x0 = eval(str(cfg["coords"]["x0"]))
 y0 = eval(str(cfg["coords"]["y0"]))
@@ -168,6 +169,17 @@ with jax.profiler.trace(
 
     profile = model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
     profile.block_until_ready()
+
+    with jax.profiler.TraceAnnotation("Grid xy 4x coarser"):
+        with jax.disable_jit():
+            profile = model(xyz_decoupled, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
+            profile.block_until_ready()
+
+        profile = model(xyz_decoupled, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
+        profile.block_until_ready()
+
+        profile = model(xyz_decoupled, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
+        profile.block_until_ready()
 
 tracedir = "/tmp/jax-trace/plugins/profile/"
 all_subdirs = [
