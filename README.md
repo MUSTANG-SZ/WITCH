@@ -65,3 +65,16 @@ When adding new models to `minkasi_jax`, be they profiles or substructure, there
 4. A block applying model needs to be added to `model`. Pressure profiles should come first then substructure. This can largely be copied from the other models, just remember to swap out the relevant variables.
 
 Adding a new model also (usually) means you should bump the minor version in the version number.
+
+### Profiling Code
+
+The script `scratch/profile.py` uses `jax` profiling tools to benchmark the library.
+It outputs a trace file understandable [perfetto](https://ui.perfetto.dev/) as well as a text file containing
+metadata about the software and hardware used while profiling.
+To use non default settings use `python profile.py --help` but in most cases the default settings are fine.
+
+The profiling script has some additional dependencies.
+To install them run:
+```
+pip install .[profile]
+```
