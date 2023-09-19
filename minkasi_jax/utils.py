@@ -232,7 +232,7 @@ def tod_hi_pass(tod, N_filt):
 
 # Model building tools
 # -----------------------------------------------------------
-def make_grid(r_map, dr):
+def make_grid(r_map, dx, dy=None, dz=None):
     """
     Make coordinate grids to build models in.
     All grids are sparse and are int(2*r_map / dr) in each dimension.
@@ -241,7 +241,13 @@ def make_grid(r_map, dr):
 
         r_map: Size of grid radially.
 
-        dr: Grid resolution, should be in same units as r_map.
+        dx: Grid resolution in x, should be in same units as r_map.
+
+        dy: Grid resolution in y, should be in same units as r_map.
+            If None then dy is set to dx.
+
+        dz: Grid resolution in z, should be in same units as r_map.
+            If None then dz is set to dx.
 
     Returns:
 
@@ -251,10 +257,15 @@ def make_grid(r_map, dr):
 
         z: Grid of z coordinates in same units as r_map
     """
+    if dy is None:
+        dy = dx
+    if dz is None:
+        dz = dx
+
     # Make grid with resolution dr and size r_map
-    x = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dr))
-    y = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dr))
-    z = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dr))
+    x = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dx))
+    y = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dy))
+    z = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dz))
 
     return jnp.meshgrid(x, y, z, sparse=True, indexing="xy")
 
