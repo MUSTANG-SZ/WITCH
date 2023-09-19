@@ -20,3 +20,9 @@ aplpy.txt
 Filter_data.xlsm
 *.swo
 scratch/profiles
+*.gif
+*.pk
+cuda/
+sims.py
+model_comparitor.py
+gpu_minkasi_jax.ipynb
