@@ -50,7 +50,7 @@ sha = repo.head.object.hexsha
 base_name = f"profile_{dt.date.today().isoformat().replace('-', '')}_{sha[:6]}_{jax.devices()[0].device_kind}"
 log_file = os.path.join(args.log_dir, base_name + ".json.gz")
 append = ""
-if args.keep_old and os.path.isfile(log_file):
+if (not args.keep_old) and os.path.isfile(log_file):
     while os.path.isfile(log_file + append):
         append += ".new"
     log_file += append
@@ -155,31 +155,34 @@ X, Y = np.meshgrid(x, y)
 dx = float(y2K_RJ(freq, Te) * dr * XMpc / me)
 
 # Now profile
-with jax.profiler.trace(
+jax.profiler.start_trace(
     "/tmp/jax-trace", create_perfetto_link=args.no_link, create_perfetto_trace=True
-):
-    # Check without JIT
-    with jax.disable_jit():
+)
+with jax.profiler.TraceAnnotation("Standard grid"):
+    with jax.profiler.TraceAnnotation("No JIT"):
+        with jax.disable_jit():
+            profile = model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
+            profile.block_until_ready()
+
+    with jax.profiler.TraceAnnotation("JITing"):
         profile = model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
         profile.block_until_ready()
 
-    # JIT things
-    profile = model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
-    profile.block_until_ready()
+    with jax.profiler.TraceAnnotation("JITed"):
+        profile = model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
+        profile.block_until_ready()
 
-    profile = model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
-    profile.block_until_ready()
-
-    with jax.profiler.TraceAnnotation("Grid xy 4x coarser"):
-        with jax.disable_jit():
-            profile = model(xyz_decoupled, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
-            profile.block_until_ready()
-
+with jax.profiler.TraceAnnotation("Grid xy 4x coarser"):
+    with jax.profiler.TraceAnnotation("JITing"):
         profile = model(xyz_decoupled, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
         profile.block_until_ready()
 
+    with jax.profiler.TraceAnnotation("JITed"):
         profile = model(xyz_decoupled, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
         profile.block_until_ready()
+
+jax.profiler.stop_trace()
+
 
 tracedir = "/tmp/jax-trace/plugins/profile/"
 all_subdirs = [
