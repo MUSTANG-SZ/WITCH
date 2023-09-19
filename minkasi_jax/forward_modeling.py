@@ -8,7 +8,7 @@ import numpy as np
 
 from minkasi_jax.core import model
 
-def sample(tods, idx_model, idy_model, lens, id_inv, shapes, params, xyz, beam):
+def sample(params, tods, xyz, beam):
     """
     Generate a model realization and compute the chis of that model to data.
     TODO: model components currently hard coded.
@@ -17,19 +17,9 @@ def sample(tods, idx_model, idy_model, lens, id_inv, shapes, params, xyz, beam):
 
         tods: Array of tod parameters. See prep tods
 
-        idx_model: x indexes of all tod pixels 
-
-        idy_model: y indexes of all tody pixels
-
-        lens: len of each tod #I don't think this is used any more now that we don't do indexing
-
-        id_inv: inverse id argument from each tod idx/idy #Not used when not indexing
-
-        shapes: shape of each tod. #Not used when not indexing
-
         params: model parameters
 
-        xzy: grid to evaluate model at
+        xyz: grid to evaluate model at
 
         beam: Beam to smooth by
 
@@ -42,9 +32,11 @@ def sample(tods, idx_model, idy_model, lens, id_inv, shapes, params, xyz, beam):
     for i, tod in enumerate(tods):
         idx_tod, idy_tod, dat, v, weight, id_inv = tod #unravel tod
 
-        pred = model(xyz, 2, 0, 0, 3, 0, 0, 0, -2.4995998836322247e-05, beam, idx_model, idy_model, params[:42]) #I don't think the idx_mode/idy_model arguments are right
+        #pred = model(xyz, 2, 0, 0, 3, 0, 0, 0, -2.4995998836322247e-05, beam, idx_model, idy_model, params[:42]) #I don't think the idx_mode/idy_model arguments are right
             #I think it's a hold over from doing model once then indexing.
-            
+        #pred = model(xyz, 2, 0, 0, 3, 0, 0, 0, -2.5e-05, beam, idx_tod, idy_tod, params[:42]) #This works?    
+        pred = model(xyz, 1, 0, 0, 0, 0, 0 , 0, -2.5e-05, beam, idx_tod, idy_tod, params)
+        #pred = pred[id_inv].reshape(dat.shape)
         pred = pred[id_inv].reshape(dat.shape)
         chi2 += jget_chis(dat, pred, v, weight)
 
@@ -101,49 +93,15 @@ def make_tod_stuff(todvec):
 
     Returns:
 
-        tods: a list of arrays with tod parameters that are required by sample
-
-        idx_model: an array of all tod x indexes
-
-        idy_model: an array of all tod y indexes
-
-        lens: the len of each tod
-
-        id_inv: an array of the individual index value of each pixel in each tod
-
-        shapes: the shape of each tod
+        tods: a list of arrays with tod parameters that are required by sample    
     """
-    idxs = np.array([])
-    idys = np.array([])
-
-    dxs = np.array([])
-    dys = np.array([])
-
-    lens = np.array([])
-
-    shapes = np.zeros((len(todvec.tods),2), dtype=int)
-
     tods = []
 
     for i,tod in enumerate(todvec.tods):
-        idxs = np.append(idxs, tod.info["idx"])
-        idys = np.append(idys, tod.info["idy"])
-        lens = np.append(lens, len(tod.info["dx"].ravel()))
-        dxs = np.append(dxs, tod.info["model_idx"])
-        dys = np.append(dys, tod.info["model_idy"])
-        shapes[i] = np.array(tod.info["dx"].shape, dtype=int)
 
         #un wrap stuff cause jit doesn't like having tod objects
         tods.append([jnp.array(tod.info["idx"]), jnp.array(tod.info["idy"]),
                      jnp.array(tod.info["dat_calib"]), jnp.array(tod.noise.v),
                      jnp.array(tod.noise.mywt), jnp.array(tod.info["id_inv"])])
 
-    lens = np.array(lens, dtype=int)
-
-    idu, id_inv = np.unique(
-        np.vstack((dxs.ravel(), dys.ravel())), axis=1, return_inverse=True
-    )
-
-    idx_model, idy_model = np.array(idu[0], dtype=int), np.array(idu[1], dtype=int)
-
-    return tods, idx_model, idy_model, lens, id_inv, shapes
+    return tods
