@@ -13,8 +13,8 @@ import functools
 
 def construct_sampler(model_params, xyz, beam):
     cur_sample = functools.partial(sample, model_params, xyz, beam)
-    jsample = jax.jit(cur_sample)
-
+    #jsample = jax.jit(cur_sample)
+    jsample = cur_sample
     return jsample
 
 def sample(model_params, xyz, beam, params, tods):#, model_params, xyz, beam):
