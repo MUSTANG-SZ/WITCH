@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name="minkasi_jax",
     packages=["minkasi_jax"],
-    version="1.2.0",
+    version="1.3.0",
     install_requires=["numpy", "astropy", "jax", "jaxlib"],
     extras_require={
         "fitter": [
