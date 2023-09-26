@@ -151,52 +151,10 @@ nwalkers, ndim = test_params2.shape
 
 model_params = [1,0,0,0,0,0,0]
 
-#my_sampler = construct_sampler(model_params, xyz, beam)
-
-from minkasi_jax.forward_modeling import jget_chis
-
-@partial(
-    jax.jit,
-    static_argnums=(1, 2, 3, 4, 5, 6, 7),
-)
-def my_sampler(params, n_iso, n_gnfw, n_gauss, n_uni, n_expo, n_power, n_power_cos, xyz, beam, tods):#, model_params, xyz, beam):
-    """
-    Generate a model realization and compute the chis of that model to data.
-    TODO: model components currently hard coded.
-
-    Arguements:
-
-        tods: Array of tod parameters. See prep tods
-
-        params: model parameters
-
-        model_params: number of each model componant
-
-        xyz: grid to evaluate model at
-
-        beam: Beam to smooth by
-
-    Returns:
-
-        chi2: the chi2 difference of the model to the tods
-
-    """
-    chi2 = 0
-    for i, tod in enumerate(tods):
-        idx_tod, idy_tod, dat, v, weight, id_inv = tod #unravel tod
-
-        pred = model(xyz, n_iso, n_gnfw, n_gauss, n_uni, n_expo, n_power, n_power_cos,
-                     -2.5e-05, beam, idx_tod, idy_tod, params)
-
-        pred = pred[id_inv].reshape(dat.shape)
-        chi2 += jget_chis(dat, pred, v, weight)
-
-    return chi2
-
-my_sampler(params, 1,0,0,0,0,0,0, xyz, beam, tods)
+my_sampler = construct_sampler(model_params, xyz, beam)
 
 sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, my_sampler, args = (1,0,0,0,0,0,0, xyz, beam, tods)
+    nwalkers, ndim, my_sampler, args = (tods,) #comma needed to not unroll tods
 )
 
 sampler.run_mcmc(test_params2, 50, skip_initial_state_check = True, progress=True)
