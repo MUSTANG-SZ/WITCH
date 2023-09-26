@@ -3,21 +3,23 @@ Master fitting and map making script.
 Docs will exist someday...
 """
 
+import argparse as argp
+import glob
 import os
+import shutil
 import sys
 import time
-import glob
-import shutil
-import argparse as argp
 from functools import partial
-import yaml
-import numpy as np
+
 import minkasi
-from astropy.coordinates import Angle
+import numpy as np
+import yaml
 from astropy import units as u
+from astropy.coordinates import Angle
+
 import minkasi_jax.presets_by_source as pbs
-from minkasi_jax.utils import *
 from minkasi_jax import helper
+from minkasi_jax.utils import *
 
 
 def print_once(*args):
@@ -73,17 +75,14 @@ if "cut" in cfg["paths"]:
     bad_tod += cfg["paths"]["cut"]
 tod_names = minkasi.cut_blacklist(tod_names, bad_tod)
 tod_names.sort()
+ntods = cfg["minkasi"].get("ntods", None)
+tod_names = tod_names[:ntods]
 tod_names = tod_names[minkasi.myrank :: minkasi.nproc]
 minkasi.barrier()  # Is this needed?
 
 
-ntods = 999999 #Lazy
-if "ntods" in cfg["minkasi"]:
-    ntods = cfg["minkasi"]["ntods"]
-
 todvec = minkasi.TodVec()
 for i, fname in enumerate(tod_names):
-    if i >= ntods: break
     dat = minkasi.read_tod_from_fits(fname)
     minkasi.truncate_tod(dat)
 
@@ -220,7 +219,9 @@ for i, tod in enumerate(todvec.tods):
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
 # Figure out output
-models = [mn + ("_ns" * (not ns)) for mn, ns in zip(list(cfg["models"].keys()), subtract)]
+models = [
+    mn + ("_ns" * (not ns)) for mn, ns in zip(list(cfg["models"].keys()), subtract)
+]
 outdir = os.path.join(
     cfg["paths"]["outroot"],
     cfg["cluster"]["name"],
