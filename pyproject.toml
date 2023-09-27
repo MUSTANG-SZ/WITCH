@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name="minkasi_jax"
+version="1.3.1"
+authors= [
+{name ="Jack Orlowski-Scherer"},
+{name ="Saianeesh Keshav Haridas"},
+]
+description = "Fast modeling of galaxy clusters using JAX"
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["galaxy clusters", "tSZ", "Sunyaev–Zeldovich", "MUSTANG2", "jax", "minkasi"]
+license = {text = "GPLv3"}
+classifiers = [ "Programming Language :: Python" ]
+dependencies = ["numpy", "astropy", "jax", "jaxlib"]
+
+[project.optional-dependencies]
+fitter = ["pyyaml", "minkasi"]
+profile = ["tensorflow", "gitpython"]
+
+[tool.setuptools]
+packages=["minkasi_jax"]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "$version"
+version_scheme = "semver"
+version_provider = "pep621"
+update_changelog_on_bump = true
