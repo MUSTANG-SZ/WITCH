@@ -7,10 +7,17 @@ import argparse as argp
 from functools import partial
 import yaml
 import numpy as np
-import minkasi
-#from jack_minkasi import minkasi
+
+import minkasi.tods.io as io
+import minkasi.parallel as parallel
+import minkasi.tods.core as tods
+import minkasi.tods.processing as tod_processing
+import minkasi.maps.skymap as skymap
+
+
 from astropy.coordinates import Angle
 from astropy import units as u
+
 import minkasi_jax.presets_by_source as pbs
 from minkasi_jax.utils import *
 from minkasi_jax import helper
@@ -22,7 +29,7 @@ import pickle as pk
 
 from matplotlib import pyplot as plt
 
-with open('/home/jorlo/dev/minkasi_jax/configs/ms0735_noSub.yaml', "r") as file:
+with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735_noSub.yaml', "r") as file:
     cfg = yaml.safe_load(file)
 #with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
@@ -43,23 +50,23 @@ tod_names = glob.glob(os.path.join(cfg["paths"]["tods"], cfg["paths"]["glob"]))
 bad_tod, addtag = pbs.get_bad_tods(
     cfg["cluster"]["name"], ndo=cfg["paths"]["ndo"], odo=cfg["paths"]["odo"]
 )
-tod_names = minkasi.cut_blacklist(tod_names, bad_tod)
+tod_names = io.cut_blacklist(tod_names, bad_tod)
 tod_names.sort()
-tod_names = tod_names[minkasi.myrank :: minkasi.nproc]
+tod_names = tod_names[parallel.myrank :: parallel.nproc]
 print('tod #: ', len(tod_names))
-minkasi.barrier()  # Is this needed?
+parallel.barrier()  # Is this needed?
 
-todvec = minkasi.TodVec()
+todvec = tods.TodVec()
 n_tod = 2
 for i, fname in enumerate(tod_names):
     if i >= n_tod: break
-    dat = minkasi.read_tod_from_fits(fname)
-    minkasi.truncate_tod(dat)
+    dat = io.read_tod_from_fits(fname)
+    tod_processing.truncate_tod(dat)
 
     
     # figure out a guess at common mode and (assumed) linear detector drifts/offset
     # drifts/offsets are removed, which is important for mode finding.  CM is *not* removed.
-    dd, pred2, cm = minkasi.fit_cm_plus_poly(dat["dat_calib"], cm_ord=3, full_out=True)
+    dd, pred2, cm = tod_processing.fit_cm_plus_poly(dat["dat_calib"], cm_ord=3, full_out=True)
     dat["dat_calib"] = dd
     dat["pred2"] = pred2
     dat["cm"] = cm
@@ -75,12 +82,12 @@ for i, fname in enumerate(tod_names):
     dat["model_idx"] = idx
     dat["model_idy"] = idy
 
-    tod = minkasi.Tod(dat)
+    tod = tods.Tod(dat)
     todvec.add_tod(tod)
 
 lims = todvec.lims()
 pixsize = 2.0 / 3600 * np.pi / 180
-skymap = minkasi.SkyMap(lims, pixsize)
+skymap = skymap.SkyMap(lims, pixsize)
 
 Te = eval(str(cfg["cluster"]["Te"]))
 freq = eval(str(cfg["cluster"]["freq"]))
