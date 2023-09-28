@@ -67,11 +67,10 @@ It is recommended that you make use of these tools to save time.
 1. Make a branch for the edits you want to make.
 2. Code.
 3. Commit your code with a [conventional commit message](https://www.conventionalcommits.org/en/v1.0.0/#summary).
-  * `cz c` gives you a wizard that will do this for you, if you followed Step 3 above then `git commit` will also do this(but not `git commit -m`).
+  * `cz c` gives you a wizard that will do this for you, if you followed Step 3 above then `git commit` will also do this (but not `git commit -m`).
 4. Repeat step 3 and 4 until the goal if your branch has been completed.
-5. Run `cz bump` to automatically bump the version.
-  * Eventually this should be done [automatically](https://commitizen-tools.github.io/commitizen/tutorials/github_actions/).
-6. Put in a PR.
+5. Put in a PR.
+5. Once the PR is merged the repo version and tag will update [automatically](https://commitizen-tools.github.io/commitizen/tutorials/github_actions/).
 
 ### Adding New Models 
 
