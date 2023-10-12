@@ -1,20 +1,20 @@
 import argparse as argp
 import datetime as dt
 import os
+import platform
 import shutil
 import subprocess
-import platform
-from astropy.coordinates import Angle
+
 import astropy.units as u
 import git
-import numpy as np
 import jax
 import jaxlib
+import numpy as np
 import yaml
+from astropy.coordinates import Angle
 
-from minkasi_jax.utils import *
 from minkasi_jax.core import model
-
+from minkasi_jax.utils import *
 
 parser = argp.ArgumentParser(description="Profile the minkasi_jax library")
 parser.add_argument(
@@ -42,6 +42,8 @@ parser.add_argument(
     "--no_link", "-nl", action="store_false", help="Don't create perfetto link"
 )
 args = parser.parse_args()
+
+jax.config.update("jax_transfer_guard", "log_explicit")
 
 # Figure out output file
 os.makedirs(args.log_dir, exist_ok=True)
@@ -148,16 +150,42 @@ pars = params[:42]
 pars[8], pars[17] = -1e-5, -1e-5
 
 
-x = np.arange(0, 2 * len(xyz[1]), dtype=int)
-y = np.arange(0, 2 * len(xyz[1]), dtype=int)
+x = np.arange(0, len(xyz[1]) / 100, dtype=int)
+y = np.arange(0, len(xyz[1]) / 100, dtype=int)
 X, Y = np.meshgrid(x, y)
+X = X.ravel()
+Y = Y.ravel()
 
 dx = float(y2K_RJ(freq, Te) * dr * XMpc / me)
+
+print(f"params shape {pars.shape}")
+print(f"grid shape {xyz[0].shape}")
+print(f"beam shape {beam.shape}")
+print(f"X shape {X.shape}")
+print(f"Y shape {Y.shape}")
 
 # Now profile
 jax.profiler.start_trace(
     "/tmp/jax-trace", create_perfetto_link=args.no_link, create_perfetto_trace=True
 )
+with jax.profiler.TraceAnnotation("Moving data"):
+    xyz = jax.device_put(xyz)
+    xyz[0].block_until_ready()
+    xyz[1].block_until_ready()
+    xyz[2].block_until_ready()
+    xyz_decoupled = jax.device_put(xyz_decoupled)
+    xyz_decoupled[0].block_until_ready()
+    xyz_decoupled[1].block_until_ready()
+    xyz_decoupled[2].block_until_ready()
+    beam = jax.device_put(beam)
+    beam.block_until_ready()
+    X = jax.device_put(X)
+    X.block_until_ready()
+    Y = jax.device_put(Y)
+    Y.block_until_ready()
+    pars = jax.device_put(pars)
+    pars.block_until_ready()
+
 with jax.profiler.TraceAnnotation("Standard grid"):
     with jax.profiler.TraceAnnotation("No JIT"):
         with jax.disable_jit():
