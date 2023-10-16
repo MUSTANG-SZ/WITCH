@@ -11,6 +11,7 @@ import sys
 import time
 from functools import partial
 
+import jax
 import minkasi
 import numpy as np
 import yaml
@@ -55,16 +56,26 @@ if "models" not in cfg:
     cfg["models"] = {}
 fit = (not args.nofit) & bool(len(cfg["models"]))
 
+# Get device
+# TODO: multi device setups
+dev_id = cfg.get("jax_device", 0)
+device = jax.devices()[dev_id]
+
 # Setup coordindate stuff
 z = eval(str(cfg["coords"]["z"]))
 da = get_da(z)
 r_map = eval(str(cfg["coords"]["r_map"]))
 dr = eval(str(cfg["coords"]["dr"]))
 dr = (lambda x: x if type(x) is tuple else (x,))(dr)
-xyz = make_grid(r_map, *dr)
 coord_conv = eval(str(cfg["coords"]["conv_factor"]))
 x0 = eval(str(cfg["coords"]["x0"]))
 y0 = eval(str(cfg["coords"]["y0"]))
+
+xyz = make_grid(r_map, *dr)
+xyz = jax.device_put(xyz, device)
+xyz[0].block_until_ready()
+xyz[1].block_until_ready()
+xyz[2].block_until_ready()
 
 # Load TODs
 tod_names = glob.glob(os.path.join(cfg["paths"]["tods"], cfg["paths"]["glob"]))
@@ -98,8 +109,8 @@ for i, fname in enumerate(tod_names):
     idu, id_inv = np.unique(
         np.vstack((idx.ravel(), idy.ravel())), axis=1, return_inverse=True
     )
-    dat["idx"] = idu[0]
-    dat["idy"] = idu[1]
+    dat["idx"] = jax.device_put(idu[0], device)
+    dat["idy"] = jax.device_put(idu[1], device)
     dat["id_inv"] = id_inv
 
     tod = minkasi.Tod(dat)
@@ -121,6 +132,7 @@ beam = beam_double_gauss(
     eval(str(cfg["beam"]["fwhm2"])),
     eval(str(cfg["beam"]["amp2"])),
 )
+beam = jax.device_put(beam, device)
 
 # Setup fit parameters
 funs = []

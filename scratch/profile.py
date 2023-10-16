@@ -1,26 +1,32 @@
 import argparse as argp
 import datetime as dt
 import os
+import platform
 import shutil
 import subprocess
-import platform
-from astropy.coordinates import Angle
+
 import astropy.units as u
 import git
-import numpy as np
 import jax
 import jaxlib
+import numpy as np
 import yaml
+from astropy.coordinates import Angle
 
+from minkasi_jax import core
 from minkasi_jax.utils import *
-from minkasi_jax.core import model
+
+
+class FakeTod:
+    def __init__(self, info):
+        self.info = info
 
 
 parser = argp.ArgumentParser(description="Profile the minkasi_jax library")
 parser.add_argument(
     "--config",
     "-c",
-    default="../configs/ms0735_noSub.yaml",
+    default="../configs/profiling/ms0735_like.yaml",
     help="Config file containing model to profile",
 )
 parser.add_argument(
@@ -42,6 +48,8 @@ parser.add_argument(
     "--no_link", "-nl", action="store_false", help="Don't create perfetto link"
 )
 args = parser.parse_args()
+
+jax.config.update("jax_transfer_guard", "log_explicit")
 
 # Figure out output file
 os.makedirs(args.log_dir, exist_ok=True)
@@ -107,6 +115,11 @@ if not args.no_meta:
 with open(args.config, "r") as file:
     cfg = yaml.safe_load(file)
 
+# Get device
+# TODO: multi device setups
+dev_id = cfg.get("jax_device", 0)
+device = jax.devices()[dev_id]
+
 # Setup coordindate stuff
 z = eval(str(cfg["coords"]["z"]))
 da = get_da(z)
@@ -118,6 +131,12 @@ coord_conv = eval(str(cfg["coords"]["conv_factor"]))
 x0 = eval(str(cfg["coords"]["x0"]))
 y0 = eval(str(cfg["coords"]["y0"]))
 
+x = np.arange(0, len(xyz[1]) / 100, dtype=int)
+y = np.arange(0, len(xyz[1]) / 100, dtype=int)
+X, Y = np.meshgrid(x, y)
+X = X.ravel()
+Y = Y.ravel()
+
 
 Te = eval(str(cfg["cluster"]["Te"]))
 freq = eval(str(cfg["cluster"]["freq"]))
@@ -128,59 +147,112 @@ beam = beam_double_gauss(
     eval(str(cfg["beam"]["fwhm2"])),
     eval(str(cfg["beam"]["amp2"])),
 )
+dx = float(y2K_RJ(freq, Te) * dr * XMpc / me)
 
-npars = []
 labels = []
 params = []
+to_fit = []
+re_eval = []
 par_idx = {}
-for cur_model in cfg["models"].values():
-    npars.append(len(cur_model["parameters"]))
-    for name, par in cur_model["parameters"].items():
+for mname, model in cfg["models"].items():
+    # We only want helper minkasi_jax functions
+    if model["func"][:15] != "partial(helper,":
+        continue
+    _to_fit = []
+    _re_eval = []
+    _par_idx = {}
+    for name, par in model["parameters"].items():
         labels.append(name)
-        par_idx[name] = len(params)
+        par_idx[mname + "-" + name] = len(params)
+        _par_idx[mname + "-" + name] = len(_to_fit)
         params.append(eval(str(par["value"])))
-
-npars = np.array(npars)
+        _to_fit.append(eval(str(par["to_fit"])))
+        if "re_eval" in par and par["re_eval"]:
+            _re_eval.append(str(par["value"]))
+        else:
+            _re_eval.append(False)
+    to_fit = to_fit + _to_fit
+    re_eval = re_eval + _re_eval
+    # Only use the first model
+    break
 labels = np.array(labels)
 params = np.array(params)
+to_fit = np.array(to_fit, dtype=bool)
+argnums = np.where(to_fit)[0]
 
-pars = params[:42]
-pars[8], pars[17] = -1e-5, -1e-5
+print(f"params shape {params.shape}")
+print(f"grid shape {xyz[0].shape}")
+print(f"beam shape {beam.shape}")
+print(f"X shape {X.shape}")
+print(f"Y shape {Y.shape}")
 
-
-x = np.arange(0, 2 * len(xyz[1]), dtype=int)
-y = np.arange(0, 2 * len(xyz[1]), dtype=int)
-X, Y = np.meshgrid(x, y)
-
-dx = float(y2K_RJ(freq, Te) * dr * XMpc / me)
+# Make a fake TOD
+info = {}
+idu, id_inv = np.unique(np.vstack((X.ravel(), Y.ravel())), axis=1, return_inverse=True)
+info["idx"] = jax.device_put(idu[0], device)
+info["idy"] = jax.device_put(idu[1], device)
+info["id_inv"] = id_inv
+info["dx"] = X
+tod = FakeTod(info)
 
 # Now profile
 jax.profiler.start_trace(
     "/tmp/jax-trace", create_perfetto_link=args.no_link, create_perfetto_trace=True
 )
+with jax.profiler.TraceAnnotation("Moving data"):
+    xyz = jax.device_put(xyz)
+    xyz[0].block_until_ready()
+    xyz[1].block_until_ready()
+    xyz[2].block_until_ready()
+    xyz_decoupled = jax.device_put(xyz_decoupled, device)
+    xyz_decoupled[0].block_until_ready()
+    xyz_decoupled[1].block_until_ready()
+    xyz_decoupled[2].block_until_ready()
+    beam = jax.device_put(beam, device)
+    beam.block_until_ready()
+    X = jax.device_put(X, device)
+    X.block_until_ready()
+    Y = jax.device_put(Y, device)
+    Y.block_until_ready()
+    params = jax.device_put(params)
+    params.block_until_ready()
+
 with jax.profiler.TraceAnnotation("Standard grid"):
     with jax.profiler.TraceAnnotation("No JIT"):
         with jax.disable_jit():
-            profile = model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
+            profile = core.model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, params)
             profile.block_until_ready()
 
     with jax.profiler.TraceAnnotation("JITing"):
-        profile = model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
+        profile = core.model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, params)
         profile.block_until_ready()
 
     with jax.profiler.TraceAnnotation("JITed"):
-        profile = model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
+        profile = core.model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, params)
         profile.block_until_ready()
 
 with jax.profiler.TraceAnnotation("Grid xy 4x coarser"):
     with jax.profiler.TraceAnnotation("JITing"):
-        profile = model(xyz_decoupled, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
+        profile = core.model(xyz_decoupled, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, params)
         profile.block_until_ready()
 
     with jax.profiler.TraceAnnotation("JITed"):
-        profile = model(xyz_decoupled, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, pars)
+        profile = core.model(xyz_decoupled, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, params)
         profile.block_until_ready()
 
+for i in range(2):
+    grad, pred = core.helper(
+        params,
+        tod,
+        xyz,
+        dx,
+        beam,
+        np.arange(5),
+        [False] * len(params),
+        par_idx,
+        n_isobeta=2,
+        n_uniform=3,
+    )
 jax.profiler.stop_trace()
 
 
