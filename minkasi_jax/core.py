@@ -3,18 +3,20 @@ Core module for generating models aed their gradients.
 """
 
 from functools import partial
+
 import jax
 import jax.numpy as jnp
-from .utils import fft_conv
+
 from .structure import (
-    isobeta,
-    gnfw,
-    gaussian,
-    add_uniform,
     add_exponential,
     add_powerlaw,
     add_powerlaw_cos,
+    add_uniform,
+    gaussian,
+    gnfw,
+    isobeta,
 )
+from .utils import fft_conv
 
 jax.config.update("jax_enable_x64", True)
 # jax.config.update("jax_platform_name", "gpu")
@@ -119,8 +121,10 @@ def helper(
         idx,
         idy,
         tuple(argnums + ARGNUM_SHIFT),
-        *params
+        *params,
     )
+    pred = jax.device_get(pred)
+    grad = jax.device_get(grad)
 
     if "id_inv" in tod.info:
         id_inv = tod.info["id_inv"]
@@ -148,7 +152,7 @@ def model(
     beam,
     idx,
     idy,
-    *params
+    *params,
 ):
     """
     Generically create models with substructure.
@@ -292,7 +296,7 @@ def model_grad(
     idx,
     idy,
     argnums,
-    *params
+    *params,
 ):
     """
     Generically create models with substructure and get their gradients.
@@ -349,7 +353,7 @@ def model_grad(
         beam,
         idx,
         idy,
-        *params
+        *params,
     )
 
     grad = jax.jacfwd(model, argnums=argnums)(
@@ -365,7 +369,7 @@ def model_grad(
         beam,
         idx,
         idy,
-        *params
+        *params,
     )
     grad_padded = jnp.zeros((len(params),) + idx.shape)
     grad_padded = grad_padded.at[jnp.array(argnums) - ARGNUM_SHIFT].set(jnp.array(grad))
