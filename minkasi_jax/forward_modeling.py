@@ -11,9 +11,24 @@ from minkasi_jax.utils import make_grid
 
 import functools
 
+def another_helper(params, tods, jsample, fixed_pars, fix_pars_ids):
+    
+    _params = np.zeros(len(params) + len(fixed_pars)
+ 
+    par_idx = 0
+    for i in range(len(_params)):
+        if i in fix_pars_ids:
+            _params[i] = fixed_pars[i]
+        else:
+            _params[i] = params[par_idx]
+            j += 1
+
+    return jsample(_params, tods)
+
 def construct_sampler(model_params, xyz, beam):
     cur_sample = functools.partial(sample, model_params, xyz, beam)
     jsample = jax.jit(cur_sample)
+    #jsample = cur_sample
 
     return jsample
 
@@ -39,18 +54,20 @@ def sample(model_params, xyz, beam, params, tods):#, model_params, xyz, beam):
         chi2: the chi2 difference of the model to the tods
 
     """
-    chi2 = 0
+    log_like = 0
     n_iso, n_gnfw, n_gauss, n_uni, n_expo, n_power, n_power_cos = model_params
     for i, tod in enumerate(tods):
-        idx_tod, idy_tod, dat, v, weight, id_inv = tod #unravel tod
+        idx_tod, idy_tod, dat, v, weight, id_inv, cut_weight = tod #unravel tod
    
         pred = model(xyz, n_iso, n_gnfw, n_gauss, n_uni, n_expo, n_power, n_power_cos,
                      -2.5e-05, beam, idx_tod, idy_tod, params)
     
         pred = pred[id_inv].reshape(dat.shape)
-        chi2 += jget_chis(dat, pred, v, weight)
+        #chi2 += jget_chis(dat, pred, v, weight)
+        norm = (0.50 * jnp.sum(jnp.log(cut_weight/2.0/jnp.pi))) 
+        log_like += jget_chis(dat, pred, v, weight) / norm 
 
-    return chi2
+    return log_like
 
 def get_chis(dat, pred, v, weight):
     """
@@ -106,10 +123,14 @@ def make_tod_stuff(todvec):
     tods = []
 
     for i,tod in enumerate(todvec.tods):
-
+        flags = np.where((jnp.array(tod.noise.mywt) != 0))
+        cut_weight = jnp.array(tod.noise.mywt[flags]) #when computing the likelihood norm, we 
+                                                      #need log(weight). We can cut weight vals
+                                                      #equal to 0 since they don't contribute.
+                                                      #Do that here once for speed
         #un wrap stuff cause jit doesn't like having tod objects
         tods.append([jnp.array(tod.info["idx"]), jnp.array(tod.info["idy"]),
                      jnp.array(tod.info["dat_calib"]), jnp.array(tod.noise.v),
-                     jnp.array(tod.noise.mywt), jnp.array(tod.info["id_inv"])])
+                     jnp.array(tod.noise.mywt), jnp.array(tod.info["id_inv"]), cut_weight])
 
     return tods
