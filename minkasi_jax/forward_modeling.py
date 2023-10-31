@@ -13,7 +13,7 @@ import functools
 
 def another_helper(params, tods, jsample, fixed_pars, fix_pars_ids):
     
-    _params = np.zeros(len(params) + len(fixed_pars)
+    _params = np.zeros(len(params) + len(fixed_pars))
  
     par_idx = 0
     for i in range(len(_params)):
@@ -32,6 +32,20 @@ def construct_sampler(model_params, xyz, beam):
 
     return jsample
 
+def sampler(params, tods, model_params, fixed_pars, fix_pars_ids):
+    _params = np.zeros(len(params) + len(fixed_pars))
+ 
+    par_idx = 0
+    for i in range(len(_params)):
+        if i in fix_pars_ids:
+            _params[i] = fixed_pars[i]
+        else:
+            _params[i] = params[par_idx]
+            j += 1
+
+    return functools.partial(sample, model_params, xyz, beam)(_params, tods)
+
+@jax.jit
 def sample(model_params, xyz, beam, params, tods):#, model_params, xyz, beam):
     """
     Generate a model realization and compute the chis of that model to data.
