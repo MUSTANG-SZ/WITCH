@@ -199,7 +199,7 @@ tods = make_tod_stuff(todvec)
 test_params = params[:9] #for speed only considering single isobeta model
 #params2 = test_params + 1e-4 * np.random.randn(20, len(test_params))
 
-
+truths = params
 
 model_params = [1,0,0,0,0,0,0]
 
@@ -214,7 +214,7 @@ jsample = jax.jit(cur_sample)
 
 
 nwalkers, ndim = params2.shape
-my_sampler = construct_sampler(model_params, xyz, beam)
+#my_sampler = construct_sampler(model_params, xyz, beam)
 
 sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability, args = (tods, jsample, model_params, xyz, beam, fixed_params, fixed_pars_ids) #comma needed to not unroll tods
