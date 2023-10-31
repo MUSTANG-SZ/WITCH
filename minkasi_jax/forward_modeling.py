@@ -47,9 +47,6 @@ def sampler(params, tods, jsample, model_params, xyz, beam, fixed_pars, fix_pars
             _params[i] = params[par_idx]
             par_idx += 1
 
-    cur_sample = functools.partial(sample, model_params, xyz, beam)
-    jsample = jax.jit(cur_sample)
-
     return jsample(_params, tods)
 
 #@jax.jit
