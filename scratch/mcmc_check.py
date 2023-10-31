@@ -32,9 +32,9 @@ import pickle as pk
 
 from matplotlib import pyplot as plt
 
-%load_ext autoreload
-%autoreload 2
-'''
+
+
+
 def log_prior(theta):
     dx, dy, dz, r1, r2, r3, theta_1, beta_1, amp_1 = theta
     if np.abs(dx) < 20 and np.abs(dy) < 20 and np.abs(dz) <20 and 0 < r1 < 1 and 0 < r2 < 1 and 0 < r3 < 1 and 0 < theta_1 < 2*np.pi and 0 < beta_1 < 2 and 0 < amp_1 < 1e6:
@@ -46,8 +46,8 @@ def log_probability(theta, tods):
     if not np.isfinite(lp):
         return -np.inf
     return lp + my_sampler(theta, tods)
-'''
 
+'''
 def log_prior(theta):
     dx, dy, dz, amp_1 = theta
     if np.abs(dx) < 20 and np.abs(dy) < 20 and np.abs(dz) <20 and 0 < amp_1 < 1e6:
@@ -59,13 +59,13 @@ def log_probability(theta, tods, jsample, model_params, xyz, beam, fixed_params,
     if not np.isfinite(lp):
         return -np.inf
     return lp + my_sampler(theta, tods, jsample, model_params, xyz, beam, fixed_params, fixed_pars_ids)
-
-#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1isobeta.yaml', "r") as file:
-#    cfg = yaml.safe_load(file)
+'''
+with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1isobeta.yaml', "r") as file:
+    cfg = yaml.safe_load(file)
 #with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
-with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1isobeta.yaml', "r") as file:
-    cfg = yaml.safe_load(file)
+#with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1isobeta.yaml', "r") as file:
+#    cfg = yaml.safe_load(file)
 fit = True
 
 # Setup coordindate stuff
@@ -197,11 +197,12 @@ for i, tod in enumerate(todvec.tods):
 tods = make_tod_stuff(todvec)
 
 test_params = params[:9] #for speed only considering single isobeta model
-#test_params2 = test_params + 1e-4 * np.random.randn(20, len(test_params))
+params2 = test_params + 1e-4 * np.random.randn(20, len(test_params))
 
-#nwalkers, ndim = test_params2.shape
+nwalkers, ndim = params2.shape
 
 model_params = [1,0,0,0,0,0,0]
+'''
 fixed_pars_ids = [3,4,5,6,7]
 fixed_params = test_params[fixed_pars_ids]
 params = test_params[[0,1,2,8]]
@@ -211,11 +212,11 @@ nwalkers, ndim = params2.shape
 #jit partial-d sample function
 cur_sample = functools.partial(sample, model_params, xyz, beam)
 jsample = jax.jit(cur_sample)
-
-#my_sampler = construct_sampler(model_params, xyz, beam)
+'''
+my_sampler = construct_sampler(model_params, xyz, beam)
 
 sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability, args = (tods, jsample, model_params, xyz, beam, fixed_params, fixed_pars_ids) #comma needed to not unroll tods
+    nwalkers, ndim, log_probability, args = (tods,)# jsample, model_params, xyz, beam, fixed_params, fixed_pars_ids) #comma needed to not unroll tods
 )
 
 sampler.run_mcmc(params2, 2000, skip_initial_state_check = True, progress=True)
