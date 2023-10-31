@@ -11,26 +11,20 @@ from minkasi_jax.utils import make_grid
 
 import functools
 
-def another_helper(params, tods, jsample, fixed_pars, fix_pars_ids):
-    
-    _params = np.zeros(len(params) + len(fixed_pars)
+def sampler(params, tods, jsample, model_params, xyz, beam, fixed_pars, fix_pars_ids):
+    _params = np.zeros(len(params) + len(fixed_pars))
  
     par_idx = 0
+    fix_idx = 0
     for i in range(len(_params)):
         if i in fix_pars_ids:
-            _params[i] = fixed_pars[i]
+            _params[i] = fixed_pars[fix_idx]
+            fix_idx += 1
         else:
             _params[i] = params[par_idx]
-            j += 1
+            par_idx += 1
 
     return jsample(_params, tods)
-
-def construct_sampler(model_params, xyz, beam):
-    cur_sample = functools.partial(sample, model_params, xyz, beam)
-    jsample = jax.jit(cur_sample)
-    #jsample = cur_sample
-
-    return jsample
 
 def sample(model_params, xyz, beam, params, tods):#, model_params, xyz, beam):
     """
