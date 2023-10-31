@@ -23,7 +23,7 @@ import minkasi_jax.presets_by_source as pbs
 from minkasi_jax.utils import *
 from minkasi_jax import helper
 from minkasi_jax.core import model
-from minkasi_jax.forward_modeling import construct_sampler, make_tod_stuff, sample
+from minkasi_jax.forward_modeling import make_tod_stuff, sample
 from minkasi_jax.forward_modeling import sampler as my_sampler
 import emcee
 import functools
