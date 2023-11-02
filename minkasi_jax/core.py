@@ -109,7 +109,7 @@ def helper(
         if re is False:
             continue
         params[i] = eval(re)
-
+    
     pred, grad = model_grad(
         xyz,
         n_isobeta,
