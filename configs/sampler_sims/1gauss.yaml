@@ -3,11 +3,11 @@ cluster:
   Te: 5.0
   freq: 90e9
 paths:
-  tods: "/home/jack/M2-TODs/RXJ1347"
+  tods: "/scratch/r/rbond/jorlo/MS0735/TS_EaCMS0f0_51_5_Oct_2021"
   glob: "Signal_TOD*.fits"
   ndo: False
   odo: False
-  outroot: "/home/jack/Reductions"
+  outroot: "/scratch/r/rbond/jorlo/Reductions"
 coords:
   z: .216
   r_map: "3.0*60*da"

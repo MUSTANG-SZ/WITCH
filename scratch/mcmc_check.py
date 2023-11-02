@@ -55,17 +55,17 @@ def log_prior(theta):
     return -np.inf
 
 def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids):
-    lp = log_prior(theta)
+    lp = log_prior(theta)    
     if not np.isfinite(lp):
         return -np.inf
     return lp + my_sampler(theta, tods, jsample, fixed_params, fixed_pars_ids)
 
-#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
-#    cfg = yaml.safe_load(file)
+with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
+    cfg = yaml.safe_load(file)
 #with open('/home/jack/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
-with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
-    cfg = yaml.safe_load(file)
+#with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
+#    cfg = yaml.safe_load(file)
 fit = True
 
 # Setup coordindate stuff
@@ -205,7 +205,9 @@ fixed_pars_ids = []
 fixed_params = params[fixed_pars_ids]
 params = params[[0,1,2,3]]
 params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
+params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
 
+print(params2[:,2])
 #jit partial-d sample function
 cur_sample = functools.partial(sample, model_params, xyz, beam)
 jsample = jax.jit(cur_sample)
@@ -228,7 +230,7 @@ flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 
 import pickle as pk
 
-with open('/home/jack/sampler/mcmc_samples.pk', 'wb') as f:
+with open('/scratch/r/rbond/jorlo/sampler/mcmc_samples.pk', 'wb') as f:
     pk.dump(flat_samples, f)
 
 truths = params
@@ -239,7 +241,7 @@ fig = corner.corner(
     flat_samples, labels=labels, truths=truths
 );
 
-plt.savefig('/home/jack/sampler/1gauss_corner.pdf')
-plt.savefig('/home/jack/sampler/1gauss_corner.png')
+plt.savefig('/scratch/r/rbond/jorlo/sampler/1gauss_corner.pdf')
+plt.savefig('/scratch/r/rbond/jorlo/sampler/1gauss_corner.png')
 
 
