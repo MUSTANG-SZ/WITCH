@@ -112,7 +112,7 @@ def isobeta(dx, dy, dz, r_1, r_2, r_3, theta, beta, amp, xyz):
 
 
 @jax.jit
-def gaussian(dx, dy, dz, r_1, r_2, r_3, theta, sigma, amp, xyz):
+def egaussian(dx, dy, dz, r_1, r_2, r_3, theta, sigma, amp, xyz):
     """
     Elliptical gaussian profile in 3d.
     This function does not include smoothing or declination stretch
@@ -151,6 +151,35 @@ def gaussian(dx, dy, dz, r_1, r_2, r_3, theta, sigma, amp, xyz):
 
     return amp * jnp.exp(power)
 
+@jax.jit
+def gaussian(dx, dy, sigma, amp, xyz):
+    """
+    Standard gaussian profile in 3d.
+    This function does not include smoothing or declination stretch
+    which should be applied at the end. The transform_grid call is
+    awkward and can probably be removed/worked around. Function exists
+    to match existing guassian interfaces.
+
+    Arguments:
+
+        dx: RA of gaussian center relative to grid origin
+
+        dy: Dec of gaussian center relative to grid origin
+
+        amp: Amplitude of the gaussian
+
+        xyz: Coordinte grid to calculate model on
+
+    Returns:
+
+        model: The gaussian    
+    """
+    x, y, z = transform_grid(dx, dy, 0, 1, 1, 1, 0, xyz)
+
+    rr = x**2 + y**2 + z**2
+    power = -1 * rr / (2 * sigma**2)
+
+    return amp * jnp.exp(power)
 
 @jax.jit
 def add_uniform(pressure, xyz, dx, dy, dz, r_1, r_2, r_3, theta, amp):
