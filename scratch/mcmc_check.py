@@ -49,7 +49,7 @@ def log_probability(theta, tods):
 
 '''
 def log_prior(theta):
-    sigma, amp_1 = theta
+    dx, dy, sigma, amp_1 = theta
     if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-8 < sigma < 1e-4 and -1 < amp_1 < 1: 
         return 0.0
     return -np.inf
@@ -60,12 +60,12 @@ def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids):
         return -np.inf
     return lp + my_sampler(theta, tods, jsample, fixed_params, fixed_pars_ids)
 
-with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
+#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
+#    cfg = yaml.safe_load(file)
+#with open('/home/jack/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
+#    cfg = yaml.safe_load(file)
+with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
     cfg = yaml.safe_load(file)
-#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
-#    cfg = yaml.safe_load(file)
-#with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
-#    cfg = yaml.safe_load(file)
 fit = True
 
 # Setup coordindate stuff
@@ -185,7 +185,7 @@ for i, tod in enumerate(todvec.tods):
         tod.info["dat_calib"] *= (-1) ** ((parallel.myrank + parallel.nproc * i) % 2)
         start = 0
         model = 0 
-        for n, fun in zip(npars, funs): 
+        for n, fun in zip(npars, funs):
             model += fun(params[start : (start + n)], tod)[1]
             start += n
         tod.info["dat_calib"] += np.array(model)
@@ -228,7 +228,7 @@ flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 
 import pickle as pk
 
-with open('/scratch/r/rbond/jorlo/sampler/mcmc_samples.pk', 'wb') as f:
+with open('/home/jack/sampler/mcmc_samples.pk', 'wb') as f:
     pk.dump(flat_samples, f)
 
 truths = params
@@ -239,7 +239,7 @@ fig = corner.corner(
     flat_samples, labels=labels, truths=truths
 );
 
-plt.savefig('/scratch/r/rbond/jorlo/sampler/1gauss_corner.pdf')
-plt.savefig('/scratch/r/rbond/jorlo/sampler/1gauss_corner.png')
+plt.savefig('/home/jack/sampler/1gauss_corner.pdf')
+plt.savefig('/home/jack/sampler/1gauss_corner.png')
 
 

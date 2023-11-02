@@ -28,7 +28,7 @@ N_PAR_UNIFORM = 8
 N_PAR_EXPONENTIAL = 14
 N_PAR_POWERLAW = 11
 
-ARGNUM_SHIFT = 11
+ARGNUM_SHIFT = 13
 
 
 def helper(
@@ -109,7 +109,7 @@ def helper(
         if re is False:
             continue
         params[i] = eval(re)
-    
+
     pred, grad = model_grad(
         xyz,
         n_isobeta,
@@ -139,7 +139,7 @@ def helper(
 
 @partial(
     jax.jit,
-    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8),
+    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
 )
 def model(
     xyz,
@@ -293,7 +293,7 @@ def model(
 
 @partial(
     jax.jit,
-    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 12),
+    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 13),
 )
 def model_grad(
     xyz,
