@@ -60,12 +60,12 @@ def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids):
         return -np.inf
     return lp + my_sampler(theta, tods, jsample, fixed_params, fixed_pars_ids)
 
-with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
-    cfg = yaml.safe_load(file)
+#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
+#    cfg = yaml.safe_load(file)
 #with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
-#with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1isobeta.yaml', "r") as file:
-#    cfg = yaml.safe_load(file)
+with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
+    cfg = yaml.safe_load(file)
 fit = True
 
 # Setup coordindate stuff
@@ -200,7 +200,7 @@ tods = make_tod_stuff(todvec)
 
 truths = params
 
-model_params = [0,0,1,0,0,0,0]
+model_params = [0,0,1,0,0,0,0,0]
 
 fixed_pars_ids = [0,1]
 fixed_params = params[fixed_pars_ids]
@@ -209,17 +209,17 @@ params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
 
 #jit partial-d sample function
 cur_sample = functools.partial(sample, model_params, xyz, beam)
-#jsample = jax.jit(cur_sample)
-jsample = cur_sample
+jsample = jax.jit(cur_sample)
+
 
 nwalkers, ndim = params2.shape
 #my_sampler = construct_sampler(model_params, xyz, beam)
 
-log_probability(params, tods, jsample, fixed_params, fixed_pars_ids)
 
-'''
+
+
 sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability, args = (tods, jsample, model_params, xyz, beam, fixed_params, fixed_pars_ids) #comma needed to not unroll tods
+    nwalkers, ndim, log_probability, args = (tods, jsample, fixed_params, fixed_pars_ids) #comma needed to not unroll tods
 )
 
 sampler.run_mcmc(params2, 2000, skip_initial_state_check = True, progress=True)
@@ -229,7 +229,7 @@ flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 
 import pickle as pk
 
-with open('/scratch/r/rbond/jorlo/mcmc_samples.pk', 'wb') as f:
+with open('/home/jack/sampler/mcmc_samples.pk', 'wb') as f:
     pk.dump(flat_samples, f)
 
 truths = params
@@ -240,7 +240,7 @@ fig = corner.corner(
     flat_samples, labels=labels, truths=truths
 );
 
-plt.savefig('/scratch/r/rbond/jorlo/MS0735/1isobeta_corner.pdf')
-plt.savefig('/scratch/r/rbond/jorlo/MS0735/1isobeta_corner.png')
+plt.savefig('/home/jack/sampler/1isogauss_corner.pdf')
+plt.savefig('/home/jack/sampler/1isogauss_corner.png')
 
-'''
+

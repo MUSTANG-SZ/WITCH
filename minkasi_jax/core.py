@@ -10,6 +10,7 @@ from .structure import (
     isobeta,
     gnfw,
     gaussian,
+    egaussian,
     add_uniform,
     add_exponential,
     add_powerlaw,
@@ -21,7 +22,8 @@ jax.config.update("jax_enable_x64", True)
 
 N_PAR_ISOBETA = 9
 N_PAR_GNFW = 14
-N_PAR_GAUSSIAN = 9
+N_PAR_GAUSSIAN = 4
+N_PAR_EGAUSSIAN = 9
 N_PAR_UNIFORM = 8
 N_PAR_EXPONENTIAL = 14
 N_PAR_POWERLAW = 11
@@ -41,6 +43,7 @@ def helper(
     n_isobeta=0,
     n_gnfw=0,
     n_gaussian=0,
+    n_egaussian=0,
     n_uniform=0,
     n_exponential=0,
     n_powerlaw=0,
@@ -82,6 +85,8 @@ def helper(
 
         n_gaussian: Number of gaussians to add.
 
+        n_egaussian: Number of eliptical gaussians to add.
+
         n_uniform: Number of uniform ellipsoids to add.
 
         n_exponential: Number of exponential ellipsoids to add.
@@ -110,6 +115,7 @@ def helper(
         n_isobeta,
         n_gnfw,
         n_gaussian,
+        n_egaussian,
         n_uniform,
         n_exponential,
         n_powerlaw,
@@ -140,6 +146,7 @@ def model(
     n_isobeta,
     n_gnfw,
     n_gaussian,
+    n_egaussian,
     n_uniform,
     n_exponential,
     n_powerlaw,
@@ -162,6 +169,8 @@ def model(
         n_gnfw: Number of gnfw profiles to add.
 
         n_gaussian: Number of gaussians to add.
+
+        n_egaussian: Number of eliptical gaussians to add.
 
         n_uniform: Number of uniform ellipsoids to add.
 
@@ -193,11 +202,12 @@ def model(
     isobetas = jnp.zeros((1, 1), dtype=float)
     gnfws = jnp.zeros((1, 1), dtype=float)
     gaussians = jnp.zeros((1, 1), dtype=float)
+    egaussians = jnp.zeros((1, 1), dtype=float)
     uniforms = jnp.zeros((1, 1), dtype=float)
     exponentials = jnp.zeros((1, 1), dtype=float)
     powerlaws = jnp.zeros((1, 1), dtype=float)
     powerlaw_coses = jnp.zeros((1, 1), dtype=float)
-
+    
     start = 0
     if n_isobeta:
         delta = n_isobeta * N_PAR_ISOBETA
@@ -210,6 +220,10 @@ def model(
     if n_gaussian:
         delta = n_gaussian * N_PAR_GAUSSIAN
         gaussians = params[start : start + delta].reshape((n_gaussian, N_PAR_GAUSSIAN))
+        start += delta
+    if n_egaussian:
+        delta = n_egaussian * N_PAR_EGAUSSIAN
+        egaussians = params[start : start + delta].reshape((n_egaussian, N_PAR_EGAUSSIAN))
         start += delta
     if n_uniform:
         delta = n_uniform * N_PAR_UNIFORM
@@ -241,6 +255,9 @@ def model(
 
     for i in range(n_gaussian):
         pressure = jnp.add(pressure, gaussian(*gaussians[i], xyz))
+
+    for i in range(n_egaussian):
+        pressure = jnp.add(presure, egaussian(*egaussians[i], xyz))
 
     for i in range(n_uniform):
         pressure = add_uniform(pressure, xyz, *uniforms[i])
@@ -283,6 +300,7 @@ def model_grad(
     n_isobeta,
     n_gnfw,
     n_gaussian,
+    n_egaussian,
     n_uniform,
     n_exponential,
     n_powerlaw,
@@ -306,6 +324,8 @@ def model_grad(
         n_gnfw: Number of gnfw profiles to add.
 
         n_gaussian: Number of gaussians to add.
+
+        n_egaussian: Number of eliptical gaussians to add.
 
         n_uniform: Number of uniform ellipsoids to add.
 
@@ -341,6 +361,7 @@ def model_grad(
         n_isobeta,
         n_gnfw,
         n_gaussian,
+        n_egaussian,
         n_uniform,
         n_exponential,
         n_powerlaw,
@@ -357,6 +378,7 @@ def model_grad(
         n_isobeta,
         n_gnfw,
         n_gaussian,
+        n_egaussian,
         n_uniform,
         n_exponential,
         n_powerlaw,
