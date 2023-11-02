@@ -66,7 +66,7 @@ def faster_get_chis(m, A, rhs, v, weight, dd = None):
     nn=predft.shape[1]
     chisq = jnp.sum(weight[:,:nn]*predft**2) - 2*jnp.dot(m, rhs)
     
-def sampler(params, tods, jsample, model_params, xyz, beam, fixed_pars, fix_pars_ids):
+def sampler(params, tods, jsample, fixed_pars, fix_pars_ids):
     _params = np.zeros(len(params) + len(fixed_pars))
  
     par_idx = 0
@@ -78,7 +78,7 @@ def sampler(params, tods, jsample, model_params, xyz, beam, fixed_pars, fix_pars
         else:
             _params[i] = params[par_idx]
             par_idx += 1
-    
+    print(_params) 
     return jsample(_params, tods)
 
 def sample(model_params, xyz, beam, params, tods):#, model_params, xyz, beam):
@@ -105,6 +105,7 @@ def sample(model_params, xyz, beam, params, tods):#, model_params, xyz, beam):
     """
     log_like = 0
     n_iso, n_gnfw, n_gauss, n_uni, n_expo, n_power, n_power_cos = model_params
+    print(n_gauss)
     for i, tod in enumerate(tods):
         idx_tod, idy_tod, dat, v, weight, id_inv, cut_weight = tod #unravel tod
    
