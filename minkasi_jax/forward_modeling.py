@@ -78,7 +78,7 @@ def sampler(params, tods, jsample, fixed_pars, fix_pars_ids):
         else:
             _params[i] = params[par_idx]
             par_idx += 1
-
+    print(_params)
     return jsample(_params, tods)
 
 def sample(model_params, xyz, beam, params, tods):#, model_params, xyz, beam):

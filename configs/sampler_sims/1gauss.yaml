@@ -40,14 +40,14 @@ minkasi:
 
 models:
   gauss:
-    func: "models.derivs_from_gauss_c"
+    func: "partial(helper, xyz=xyz, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(to_fit)[0], re_eval=re_eval, par_idx=par_idx, n_gaussian = 1)" 
     parameters:
-      ps_ra:
-        value: "Angle('07 41 44.5 hours').to(u.radian).value"
-        to_fit: False
+      dx:
+        value: "0"
+        to_fit: True
       ps_dec:
-        value: "Angle('74:14:38.7 degrees').to(u.radian).value"
-        to_fit: False
+        value: "0"
+        to_fit: True
       sigma:
         value: "1.37e-5"
         to_fit: True
