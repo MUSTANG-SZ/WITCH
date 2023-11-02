@@ -54,13 +54,13 @@ def log_prior(theta):
         return 0.0
     return -np.inf
 
-def log_probability(theta, tods, jsample, model_params, xyz, beam, fixed_params, fixed_pars_ids):
+def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids):
     lp = log_prior(theta)
     if not np.isfinite(lp):
         return -np.inf
-    return lp + my_sampler(theta, tods, jsample, model_params, xyz, beam, fixed_params, fixed_pars_ids)
+    return lp + my_sampler(theta, tods, jsample, fixed_params, fixed_pars_ids)
 
-with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1iso1gauss.yaml', "r") as file:
+with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
     cfg = yaml.safe_load(file)
 #with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
@@ -196,26 +196,28 @@ for i, tod in enumerate(todvec.tods):
 
 tods = make_tod_stuff(todvec)
 
-test_params = params[:13] #for speed only considering single isobeta model
-#params2 = test_params + 1e-4 * np.random.randn(20, len(test_params))
+#test_params = params[:13] #for speed only considering single isobeta model
 
 truths = params
 
-model_params = [1,0,1,0,0,0,0]
+model_params = [0,0,1,0,0,0,0]
 
-fixed_pars_ids = [0,1,2,3,4,5,6,7,8,9,10]
-fixed_params = test_params[fixed_pars_ids]
-params = test_params[[11, 12]]
+fixed_pars_ids = [0,1]
+fixed_params = params[fixed_pars_ids]
+params = params[[2,3]]
 params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
 
 #jit partial-d sample function
 cur_sample = functools.partial(sample, model_params, xyz, beam)
-jsample = jax.jit(cur_sample)
-
+#jsample = jax.jit(cur_sample)
+jsample = cur_sample
 
 nwalkers, ndim = params2.shape
 #my_sampler = construct_sampler(model_params, xyz, beam)
 
+log_probability(params, tods, jsample, fixed_params, fixed_pars_ids)
+
+'''
 sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability, args = (tods, jsample, model_params, xyz, beam, fixed_params, fixed_pars_ids) #comma needed to not unroll tods
 )
@@ -241,4 +243,4 @@ fig = corner.corner(
 plt.savefig('/scratch/r/rbond/jorlo/MS0735/1isobeta_corner.pdf')
 plt.savefig('/scratch/r/rbond/jorlo/MS0735/1isobeta_corner.png')
 
-
+'''
