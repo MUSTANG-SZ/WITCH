@@ -64,8 +64,8 @@ def faster_get_chis(m, A, rhs, v, weight, dd = None):
     tmp=jnp.hstack([Am_rot,jnp.fliplr(Am_rot[:,1:-1])]) #mirror pred so we can do dct of first kind
     predft=jnp.real(jnp.fft.rfft(tmp,axis=1))
     nn=predft.shape[1]
-    chisq = jnp.sum(weight[:,:nn]*predft**2)
-
+    chisq = jnp.sum(weight[:,:nn]*predft**2) - 2*jnp.dot(m, rhs)
+    
 def sampler(params, tods, jsample, model_params, xyz, beam, fixed_pars, fix_pars_ids):
     _params = np.zeros(len(params) + len(fixed_pars))
  
@@ -78,7 +78,7 @@ def sampler(params, tods, jsample, model_params, xyz, beam, fixed_pars, fix_pars
         else:
             _params[i] = params[par_idx]
             par_idx += 1
-
+    
     return jsample(_params, tods)
 
 def sample(model_params, xyz, beam, params, tods):#, model_params, xyz, beam):

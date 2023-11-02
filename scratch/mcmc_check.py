@@ -49,8 +49,8 @@ def log_probability(theta, tods):
 
 '''
 def log_prior(theta):
-    dx, dy, dz, amp_1 = theta
-    if np.abs(dx) < 20 and np.abs(dy) < 20 and np.abs(dz) <20 and 0 < amp_1 < 1e6:
+    sigma, amp_1 = theta
+    if 0 < sigma < 1e-4 and -1 < amp_1 < 1: 
         return 0.0
     return -np.inf
 
@@ -60,12 +60,12 @@ def log_probability(theta, tods, jsample, model_params, xyz, beam, fixed_params,
         return -np.inf
     return lp + my_sampler(theta, tods, jsample, model_params, xyz, beam, fixed_params, fixed_pars_ids)
 
-#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1isobeta.yaml', "r") as file:
-#    cfg = yaml.safe_load(file)
+with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1iso1gauss.yaml', "r") as file:
+    cfg = yaml.safe_load(file)
 #with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
-with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1isobeta.yaml', "r") as file:
-    cfg = yaml.safe_load(file)
+#with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1isobeta.yaml', "r") as file:
+#    cfg = yaml.safe_load(file)
 fit = True
 
 # Setup coordindate stuff
@@ -196,16 +196,16 @@ for i, tod in enumerate(todvec.tods):
 
 tods = make_tod_stuff(todvec)
 
-test_params = params[:9] #for speed only considering single isobeta model
+test_params = params[:13] #for speed only considering single isobeta model
 #params2 = test_params + 1e-4 * np.random.randn(20, len(test_params))
 
 truths = params
 
-model_params = [1,0,0,0,0,0,0]
+model_params = [1,0,1,0,0,0,0]
 
-fixed_pars_ids = [3,4,5,6,7]
+fixed_pars_ids = [0,1,2,3,4,5,6,7,8,9,10]
 fixed_params = test_params[fixed_pars_ids]
-params = test_params[[0,1,2,8]]
+params = test_params[[11, 12]]
 params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
 
 #jit partial-d sample function
