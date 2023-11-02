@@ -49,11 +49,12 @@ def sample(model_params, xyz, beam, params, tods):#, model_params, xyz, beam):
 
     """
     log_like = 0
-    n_iso, n_gnfw, n_gauss, n_uni, n_expo, n_power, n_power_cos = model_params
+    n_iso, n_gnfw, n_gauss, n_egauss, n_uni, n_expo, n_power, n_power_cos = model_params
+
     for i, tod in enumerate(tods):
         idx_tod, idy_tod, dat, v, weight, id_inv, cut_weight = tod #unravel tod
    
-        pred = model(xyz, n_iso, n_gnfw, n_gauss, n_uni, n_expo, n_power, n_power_cos,
+        pred = model(xyz, n_iso, n_gnfw, n_gauss, n_egauss, n_uni, n_expo, n_power, n_power_cos,
                      -2.5e-05, beam, idx_tod, idy_tod, params)
     
         pred = pred[id_inv].reshape(dat.shape)

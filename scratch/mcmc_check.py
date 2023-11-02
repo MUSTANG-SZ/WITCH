@@ -49,23 +49,23 @@ def log_probability(theta, tods):
 
 '''
 def log_prior(theta):
-    dx, dy, dz, amp_1 = theta
-    if np.abs(dx) < 20 and np.abs(dy) < 20 and np.abs(dz) <20 and 0 < amp_1 < 1e6:
+    dx, dy, sigma, amp_1 = theta
+    if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-8 < sigma < 1e-4 and -1 < amp_1 < 1: 
         return 0.0
     return -np.inf
 
-def log_probability(theta, tods, jsample, model_params, xyz, beam, fixed_params, fixed_pars_ids):
-    lp = log_prior(theta)
+def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids):
+    lp = log_prior(theta)    
     if not np.isfinite(lp):
         return -np.inf
-    return lp + my_sampler(theta, tods, jsample, model_params, xyz, beam, fixed_params, fixed_pars_ids)
+    return lp + my_sampler(theta, tods, jsample, fixed_params, fixed_pars_ids)
 
-#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1isobeta.yaml', "r") as file:
-#    cfg = yaml.safe_load(file)
-#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
-#    cfg = yaml.safe_load(file)
-with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1isobeta.yaml', "r") as file:
+with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
     cfg = yaml.safe_load(file)
+#with open('/home/jack/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
+#    cfg = yaml.safe_load(file)
+#with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
+#    cfg = yaml.safe_load(file)
 fit = True
 
 # Setup coordindate stuff
@@ -184,8 +184,7 @@ for i, tod in enumerate(todvec.tods):
     if sim:
         tod.info["dat_calib"] *= (-1) ** ((parallel.myrank + parallel.nproc * i) % 2)
         start = 0
-        model = 0
-    
+        model = 0 
         for n, fun in zip(npars, funs):
             model += fun(params[start : (start + n)], tod)[1]
             start += n
@@ -196,18 +195,19 @@ for i, tod in enumerate(todvec.tods):
 
 tods = make_tod_stuff(todvec)
 
-test_params = params[:9] #for speed only considering single isobeta model
-#params2 = test_params + 1e-4 * np.random.randn(20, len(test_params))
+#test_params = params[:13] #for speed only considering single isobeta model
 
 truths = params
 
-model_params = [1,0,0,0,0,0,0]
+model_params = [0,0,1,0,0,0,0,0]
 
-fixed_pars_ids = [3,4,5,6,7]
-fixed_params = test_params[fixed_pars_ids]
-params = test_params[[0,1,2,8]]
+fixed_pars_ids = []
+fixed_params = params[fixed_pars_ids]
+params = params[[0,1,2,3]]
 params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
+params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
 
+print(params2[:,2])
 #jit partial-d sample function
 cur_sample = functools.partial(sample, model_params, xyz, beam)
 jsample = jax.jit(cur_sample)
@@ -216,8 +216,11 @@ jsample = jax.jit(cur_sample)
 nwalkers, ndim = params2.shape
 #my_sampler = construct_sampler(model_params, xyz, beam)
 
+
+
+
 sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability, args = (tods, jsample, model_params, xyz, beam, fixed_params, fixed_pars_ids) #comma needed to not unroll tods
+    nwalkers, ndim, log_probability, args = (tods, jsample, fixed_params, fixed_pars_ids) #comma needed to not unroll tods
 )
 
 sampler.run_mcmc(params2, 2000, skip_initial_state_check = True, progress=True)
@@ -227,7 +230,7 @@ flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 
 import pickle as pk
 
-with open('/scratch/r/rbond/jorlo/mcmc_samples.pk', 'wb') as f:
+with open('/scratch/r/rbond/jorlo/sampler/mcmc_samples.pk', 'wb') as f:
     pk.dump(flat_samples, f)
 
 truths = params
@@ -238,7 +241,7 @@ fig = corner.corner(
     flat_samples, labels=labels, truths=truths
 );
 
-plt.savefig('/scratch/r/rbond/jorlo/MS0735/1isobeta_corner.pdf')
-plt.savefig('/scratch/r/rbond/jorlo/MS0735/1isobeta_corner.png')
+plt.savefig('/scratch/r/rbond/jorlo/sampler/1gauss_corner.pdf')
+plt.savefig('/scratch/r/rbond/jorlo/sampler/1gauss_corner.png')
 
 
