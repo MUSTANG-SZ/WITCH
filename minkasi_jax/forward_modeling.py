@@ -29,7 +29,7 @@ def faster_get_chis(m, x, y, rhs, v, weight, dd = None):
     the first term only has to do with the data. If we care about the absolute value of chi2,
     which we do at the end, then we can include it in calculation. For MCMC however, we only
     care about the relative delta chi2 between models. So we can drop that term. For the other
-    terms;
+    terms
 
     mm = m^T A^T N^-1 A m
 
