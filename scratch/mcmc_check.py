@@ -32,7 +32,8 @@ import pickle as pk
 
 from matplotlib import pyplot as plt
 
-
+#%load_ext autoreload
+#%autoreload 2
 
 '''
 def log_prior(theta):
@@ -64,7 +65,7 @@ with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml'
     cfg = yaml.safe_load(file)
 #with open('/home/jack/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
-#with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
+#with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
 fit = True
 
@@ -124,7 +125,7 @@ for i, fname in enumerate(tod_names):
 
 lims = todvec.lims()
 pixsize = 2.0 / 3600 * np.pi / 180
-skymap = skymap.SkyMap(lims, pixsize)
+skymap = skymap.SkyMap(lims, pixsize, square=True, multiple = 2)
 
 Te = eval(str(cfg["cluster"]["Te"]))
 freq = eval(str(cfg["cluster"]["freq"]))
@@ -193,7 +194,11 @@ for i, tod in enumerate(todvec.tods):
 
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
-tods = make_tod_stuff(todvec)
+dr = pixsize
+r_map = skymap.map.shape[1]*dr/2
+xyz = make_grid(r_map, dr)
+
+tods = make_tod_stuff(todvec, skymap)
 
 #test_params = params[:13] #for speed only considering single isobeta model
 
