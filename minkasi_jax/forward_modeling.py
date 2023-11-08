@@ -15,7 +15,8 @@ from minkasi.maps.mapset import Mapset
 
 import functools
 
-def faster_get_chis(m, x, y, rhs, v, weight, dd = None):
+@jax.jit
+def get_chis(m, x, y, rhs, v, weight, dd = None):
     """
     A faster, but more importantly much less memory intensive, way to get chis. 
     The idea is chi^2 = (d-Am)^T N^-1 (d-Am). Previously we would calculate the residuals d-Am 
@@ -71,9 +72,9 @@ def faster_get_chis(m, x, y, rhs, v, weight, dd = None):
     tmp=jnp.hstack([model_rot,jnp.fliplr(model_rot[:,1:-1])]) #mirror pred so we can do dct of first kind
     predft=jnp.real(jnp.fft.rfft(tmp,axis=1))
     nn=predft.shape[1]
-    print(rhs.shape)
-    chisq = jnp.sum(weight[:,:nn]*predft**2) - 2*jnp.dot(rhs.ravel(), m.ravel())
 
+    chisq = jnp.sum(weight[:,:nn]*predft**2) - 2*jnp.dot(rhs.ravel(), m.ravel())
+    
     return chisq
     
 def sampler(params, tods, jsample, fixed_pars, fix_pars_ids):
@@ -91,11 +92,10 @@ def sampler(params, tods, jsample, fixed_pars, fix_pars_ids):
 
     return jsample(_params, tods)
 
-def faster_sample(model_params, xyz, beam, x_map, y_map, params, tods):#, model_params, xyz, beam):
+def sample(model_params, xyz, beam, x_map, y_map, params, tods):#, model_params, xyz, beam):
     """
     Generate a model realization and compute the chis of that model to data.
-    TODO: model components currently hard coded.
-
+    
     Arguements:
 
         tods: Array of tod parameters. See prep tods
@@ -120,90 +120,15 @@ def faster_sample(model_params, xyz, beam, x_map, y_map, params, tods):#, model_
                      -2.5e-05, beam, x_map, y_map, params)
 
     for i, tod in enumerate(tods):
-        x, y, rhs, v, weight = tod #unravel tod
-    
-        flags = jnp.where((weight != 0))
-        cut_weight = weight.at[flags].set(1e-30) #Set 0 weights to very small
-        norm = (0.50 * jnp.sum(jnp.log(cut_weight/2.0/jnp.pi))) 
-        log_like += faster_get_chis(m, x, y, rhs, v, weight) / norm 
+        x, y, rhs, v, weight, norm = tod #unravel tod
+       
+        log_like += jget_chis(m, x, y, rhs, v, weight) / norm 
 
     return log_like
-
-def sample(model_params, xyz, beam, params, tods):#, model_params, xyz, beam):
-    """
-    Generate a model realization and compute the chis of that model to data.
-    TODO: model components currently hard coded.
-
-    Arguements:
-
-        tods: Array of tod parameters. See prep tods
-
-        params: model parameters
-
-        model_params: number of each model componant 
-
-        xyz: grid to evaluate model at
-
-        beam: Beam to smooth by
-
-    Returns:
-
-        chi2: the chi2 difference of the model to the tods
-
-    """
-    log_like = 0
-    n_iso, n_gnfw, n_gauss, n_egauss, n_uni, n_expo, n_power, n_power_cos = model_params
-
-    for i, tod in enumerate(tods):
-        idx_tod, idy_tod, dat, v, weight, id_inv, cut_weight = tod #unravel tod
-   
-        pred = model(xyz, n_iso, n_gnfw, n_gauss, n_egauss, n_uni, n_expo, n_power, n_power_cos,
-                     -2.5e-05, beam, idx_tod, idy_tod, params)
-    
-        pred = pred[id_inv].reshape(dat.shape)
-
-        norm = (0.50 * jnp.sum(jnp.log(cut_weight/2.0/jnp.pi))) 
-        log_like += jget_chis(dat, pred, v, weight) / norm 
-
-    return log_like
-
-def get_chis(dat, pred, v, weight):
-    """
-    Compute the chi2 difference of data and model given some weights.
-
-    Arguments:
-
-        data: the data
-
-        pred: the model prediction
-
-        v: tod.noise.v ?
-
-        weights: data weights
-
-    Returns:
-
-        chis2: the chi2 difference of the model to the data given the weights
-
-    """
-
-
-    resid = dat - pred #TODO: Due to time to put arrays on gpu it's faster to compute resid
-                       #in numpy and then pass to get_chis. Most time this will itself be inside
-                       #a jitted function so it won't matter but for the times it's not it will
-                       #be a good speedup
-    resid = resid.at[:,0].set((jnp.sqrt(0.5)*resid)[:,0])
-    resid = resid.at[:,-1].set((jnp.sqrt(0.5)*resid)[:,-1])
-    resid_rot = jnp.dot(v,resid)
-    tmp=jnp.hstack([resid_rot,jnp.fliplr(resid_rot[:,1:-1])]) #mirror pred so we can do dct of first kind
-    predft=jnp.real(jnp.fft.rfft(tmp,axis=1))
-    nn=predft.shape[1]
-    chisq = jnp.sum(weight[:,:nn]*predft**2)
-    return chisq
 
 jget_chis = jax.jit(get_chis)
 
-def make_tod_stuff_fast(todvec, skymap, lims = None, pixsize =  2.0 / 3600 * np.pi / 180):
+def make_tod_stuff(todvec, skymap, lims = None, pixsize =  2.0 / 3600 * np.pi / 180):
     tods = []
     if lims == None:
         lims = todvec.lims()
@@ -223,38 +148,14 @@ def make_tod_stuff_fast(todvec, skymap, lims = None, pixsize =  2.0 / 3600 * np.
         di = todgrid[:,0].reshape(tod.get_data_dims()).flatten()
         dj = todgrid[:,1].reshape(tod.get_data_dims()).flatten()
         #un wrap stuff cause jit doesn't like having tod objects
+        norm = -np.sum(np.log(tod.noise.mywt[tod.noise.mywt!=0.00])-np.log(2.00*np.pi))
+
         tods.append([jnp.array(di),
                      jnp.array(dj),
                      jnp.array(mapset.maps[0].map),
                      jnp.array(tod.noise.v),
-                     jnp.array(tod.noise.mywt)])
+                     jnp.array(tod.noise.mywt),
+                     norm]) 
     return tods
 
-def make_tod_stuff(todvec):
-    """
-    Generate variables needed for sample from a todvec. TODO: since we're moving away from
-    indexing in sample, this function can be greatly simplified. Note it should generally only be    run once so there's no point in jitting it.
-    
 
-    Arguments:
-        
-        todvec: a minkasi todvec object
-
-    Returns:
-
-        tods: a list of arrays with tod parameters that are required by sample    
-    """
-    tods = []
-
-    for i,tod in enumerate(todvec.tods):
-        flags = np.where((jnp.array(tod.noise.mywt) != 0))
-        cut_weight = jnp.array(tod.noise.mywt[flags]) #when computing the likelihood norm, we 
-                                                      #need log(weight). We can cut weight vals
-                                                      #equal to 0 since they don't contribute.
-                                                      #Do that here once for speed
-        #un wrap stuff cause jit doesn't like having tod objects
-        tods.append([jnp.array(tod.info["idx"]), jnp.array(tod.info["idy"]),
-                     jnp.array(tod.info["dat_calib"]), jnp.array(tod.noise.v),
-                     jnp.array(tod.noise.mywt), jnp.array(tod.info["id_inv"]), cut_weight])
-
-    return tods

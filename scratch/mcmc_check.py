@@ -198,6 +198,10 @@ dr = pixsize
 r_map = skymap.map.shape[1]*dr/2
 xyz = make_grid(r_map, dr)
 
+x = np.arange(0, skymap.map.shape[0], dtype=int)
+y = np.arange(0, skymap.map.shape[1], dtype=int)
+X, Y = np.meshgrid(x, y)
+
 tods = make_tod_stuff(todvec, skymap)
 
 #test_params = params[:13] #for speed only considering single isobeta model
@@ -214,9 +218,8 @@ params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
 
 print(params2[:,2])
 #jit partial-d sample function
-cur_sample = functools.partial(sample, model_params, xyz, beam)
+cur_sample = functools.partial(sample, model_params, xyz, beam, X, Y)
 jsample = jax.jit(cur_sample)
-
 
 nwalkers, ndim = params2.shape
 #my_sampler = construct_sampler(model_params, xyz, beam)
@@ -228,7 +231,7 @@ sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability, args = (tods, jsample, fixed_params, fixed_pars_ids) #comma needed to not unroll tods
 )
 
-sampler.run_mcmc(params2, 2000, skip_initial_state_check = True, progress=True)
+sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
 
 
 flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
