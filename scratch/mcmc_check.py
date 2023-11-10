@@ -61,12 +61,12 @@ def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids):
         return -np.inf
     return lp + my_sampler(theta, tods, jsample, fixed_params, fixed_pars_ids)
 
-#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
-#    cfg = yaml.safe_load(file)
+with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
+    cfg = yaml.safe_load(file)
 #with open('/home/jack/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
-with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml', "r") as file:
-    cfg = yaml.safe_load(file)
+#with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml', "r") as file:
+#    cfg = yaml.safe_load(file)
 fit = True
 
 # Setup coordindate stuff
@@ -78,6 +78,8 @@ xyz = make_grid(r_map, dr)
 coord_conv = eval(str(cfg["coords"]["conv_factor"]))
 x0 = eval(str(cfg["coords"]["x0"]))
 y0 = eval(str(cfg["coords"]["y0"]))
+print("da: ", da)
+print("dr, r_map: ", dr, r_map)
 
 # Load TODs
 tod_names = glob.glob(os.path.join(cfg["paths"]["tods"], cfg["paths"]["glob"]))
@@ -127,12 +129,12 @@ lims = todvec.lims()
 pixsize = 2.0 / 3600 * np.pi / 180
 skymap = SkyMap(lims, pixsize, square=True, multiple = 2)
 
-dr = pixsize
+dr = pixsize*da * (3600*180/np.pi)
 r_map = skymap.map.shape[1]*dr/2
 xyz = make_grid(r_map, dr)
-
+print("dr, r_map: ", dr, r_map)
 #Remake idx/idy after getting maplims
-todvec = mtods.TodVec()
+print("map, xyz: ", skymap.map.shape, xyz[0].shape)
 for i, tod in enumerate(todvec.tods):
     if fname == "/scratch/r/rbond/jorlo/MS0735/TS_EaCMS0f0_51_5_Oct_2021/Signal_TOD-AGBT21A_123_03-s20.fits": continue
     dat = tod.info
@@ -229,7 +231,7 @@ for i, tod in enumerate(todvec.tods):
     print(tod.info["fname"])
     ipix = skymap.get_pix(tod)
     tod.info["ipix"] = ipix
-    
+    print(tod.info["idx"], tod.info["idy"]) 
     if sim:
         tod.info["dat_calib"] *= (-1) ** ((parallel.myrank + parallel.nproc * i) % 2)
         start = 0
@@ -271,7 +273,7 @@ nwalkers, ndim = params2.shape
 
 
 
-
+'''
 sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability, args = (tods, jsample, fixed_params, fixed_pars_ids) #comma needed to not unroll tods
 )
@@ -297,4 +299,4 @@ fig = corner.corner(
 plt.savefig('/home/jack/sampler/1gauss_corner.pdf')
 plt.savefig('/home/jack/sampler/1gauss_corner.png')
 
-
+'''
