@@ -12,7 +12,7 @@ import minkasi.tods.io as io
 import minkasi.parallel as parallel
 import minkasi.tods.core as mtods
 import minkasi.tods.processing as tod_processing
-import minkasi.maps.skymap as skymap
+from minkasi.maps.skymap import SkyMap
 from minkasi.fitting import models
 from minkasi.mapmaking import noise
 
@@ -21,7 +21,7 @@ from astropy import units as u
 
 import minkasi_jax.presets_by_source as pbs
 from minkasi_jax.utils import *
-from minkasi_jax import helper
+from minkasi_jax.core import helper
 from minkasi_jax.core import model
 from minkasi_jax.forward_modeling import make_tod_stuff, sample
 from minkasi_jax.forward_modeling import sampler as my_sampler
@@ -61,12 +61,12 @@ def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids):
         return -np.inf
     return lp + my_sampler(theta, tods, jsample, fixed_params, fixed_pars_ids)
 
-with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
-    cfg = yaml.safe_load(file)
+#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
+#    cfg = yaml.safe_load(file)
 #with open('/home/jack/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
-#with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml', "r") as file:
-#    cfg = yaml.safe_load(file)
+with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml', "r") as file:
+    cfg = yaml.safe_load(file)
 fit = True
 
 # Setup coordindate stuff
@@ -125,7 +125,27 @@ for i, fname in enumerate(tod_names):
 
 lims = todvec.lims()
 pixsize = 2.0 / 3600 * np.pi / 180
-skymap = skymap.SkyMap(lims, pixsize, square=True, multiple = 2)
+skymap = SkyMap(lims, pixsize, square=True, multiple = 2)
+
+dr = pixsize
+r_map = skymap.map.shape[1]*dr/2
+xyz = make_grid(r_map, dr)
+
+#Remake idx/idy after getting maplims
+todvec = mtods.TodVec()
+for i, tod in enumerate(todvec.tods):
+    if fname == "/scratch/r/rbond/jorlo/MS0735/TS_EaCMS0f0_51_5_Oct_2021/Signal_TOD-AGBT21A_123_03-s20.fits": continue
+    dat = tod.info
+    # Make pixelized RA/Dec TODs
+    idx, idy = tod_to_index(dat["dx"], dat["dy"], x0, y0, r_map, dr, coord_conv)
+    idu, id_inv = np.unique(
+        np.vstack((idx.ravel(), idy.ravel())), axis=1, return_inverse=True
+    )
+    dat["idx"] = idu[0]
+    dat["idy"] = idu[1]
+    dat["id_inv"] = id_inv
+    dat["model_idx"] = idx
+    dat["model_idy"] = idy
 
 Te = eval(str(cfg["cluster"]["Te"]))
 freq = eval(str(cfg["cluster"]["freq"]))
@@ -146,13 +166,19 @@ priors = []
 prior_vals = []
 re_eval = []
 par_idx = {}
-for cur_model in cfg["models"].values():
-    npars.append(len(cur_model["parameters"]))
-    for name, par in cur_model["parameters"].items():
+subtract = []
+
+for mname, model in cfg["models"].items():
+    npars.append(len(model["parameters"]))
+    _to_fit = []
+    _re_eval = []
+    _par_idx = {}
+    for name, par in model["parameters"].items():
         labels.append(name)
-        par_idx[name] = len(params)
+        par_idx[mname + "-" + name] = len(params)
+        _par_idx[mname + "-" + name] = len(_to_fit)
         params.append(eval(str(par["value"])))
-        to_fit.append(eval(str(par["to_fit"])))
+        _to_fit.append(eval(str(par["to_fit"])))
         if "priors" in par:
             priors.append(par["priors"]["type"])
             prior_vals.append(eval(str(par["priors"]["value"])))
@@ -160,10 +186,32 @@ for cur_model in cfg["models"].values():
             priors.append(None)
             prior_vals.append(None)
         if "re_eval" in par and par["re_eval"]:
-            re_eval.append(str(par["value"]))
+            _re_eval.append(str(par["value"]))
         else:
-            re_eval.append(False)
-    2.627 * da, funs.append(eval(str(cur_model["func"])))
+            _re_eval.append(False)
+    to_fit = to_fit + _to_fit
+    re_eval = re_eval + _re_eval
+    # Special case where function is helper
+    if model["func"][:15] == "partial(helper,":
+        func_str = model["func"][:-1]
+        if "xyz" not in func_str:
+            func_str += ", xyz=xyz"
+        if "beam" not in func_str:
+            func_str += ", beam=beam"
+        if "argnums" not in func_str:
+            func_str += ", argnums=np.where(_to_fit)[0]"
+        if "re_eval" not in func_str:
+            func_str += ", re_eval=_re_eval"
+        if "par_idx" not in func_str:
+            func_str += ", par_idx=_par_idx"
+        func_str += ")"
+        model["func"] = func_str
+
+    funs.append(eval(str(model["func"])))
+    if "sub" in model:
+        subtract.append(model["sub"])
+    else:
+        subtract.append(True)
 
 npars = np.array(npars)
 labels = np.array(labels)
@@ -189,14 +237,11 @@ for i, tod in enumerate(todvec.tods):
         for n, fun in zip(npars, funs):
             model += fun(params[start : (start + n)], tod)[1]
             start += n
+            print(np.max(np.abs(np.array(model))))
         tod.info["dat_calib"] += np.array(model)
 
 
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
-
-dr = pixsize
-r_map = skymap.map.shape[1]*dr/2
-xyz = make_grid(r_map, dr)
 
 x = np.arange(0, skymap.map.shape[0], dtype=int)
 y = np.arange(0, skymap.map.shape[1], dtype=int)
@@ -238,7 +283,7 @@ flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 
 import pickle as pk
 
-with open('/scratch/r/rbond/jorlo/sampler/mcmc_samples.pk', 'wb') as f:
+with open('/home/jack/sampler/mcmc_samples.pk', 'wb') as f:
     pk.dump(flat_samples, f)
 
 truths = params
@@ -249,7 +294,7 @@ fig = corner.corner(
     flat_samples, labels=labels, truths=truths
 );
 
-plt.savefig('/scratch/r/rbond/jorlo/sampler/1gauss_corner.pdf')
-plt.savefig('/scratch/r/rbond/jorlo/sampler/1gauss_corner.png')
+plt.savefig('/home/jack/sampler/1gauss_corner.pdf')
+plt.savefig('/home/jack/sampler/1gauss_corner.png')
 
 
