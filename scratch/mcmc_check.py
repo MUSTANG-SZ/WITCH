@@ -128,13 +128,13 @@ for i, fname in enumerate(tod_names):
 lims = todvec.lims()
 pixsize = 2.0 / 3600 * np.pi / 180
 skymap = SkyMap(lims, pixsize, square=True, multiple = 2)
+print("skymap, xyz: ", skymap.map.shape, xyz[0].shape)
+#dr = pixsize*da * (3600*180/np.pi)
+#r_map = skymap.map.shape[1]*dr/2
+#xyz = make_grid(r_map, dr)
 
-dr = pixsize*da * (3600*180/np.pi)
-r_map = skymap.map.shape[1]*dr/2
-xyz = make_grid(r_map, dr)
-print("dr, r_map: ", dr, r_map)
 #Remake idx/idy after getting maplims
-print("map, xyz: ", skymap.map.shape, xyz[0].shape)
+'''
 for i, tod in enumerate(todvec.tods):
     if fname == "/scratch/r/rbond/jorlo/MS0735/TS_EaCMS0f0_51_5_Oct_2021/Signal_TOD-AGBT21A_123_03-s20.fits": continue
     dat = tod.info
@@ -147,8 +147,8 @@ for i, tod in enumerate(todvec.tods):
     dat["idy"] = idu[1]
     dat["id_inv"] = id_inv
     dat["model_idx"] = idx
-    dat["model_idy"] = idy
-
+    dat["model_idy"] = np.max(idy, 0)
+'''
 Te = eval(str(cfg["cluster"]["Te"]))
 freq = eval(str(cfg["cluster"]["freq"]))
 beam = beam_double_gauss(
