@@ -137,10 +137,10 @@ def helper(
     return grad, pred
 
 
-@partial(
-    jax.jit,
-    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
-)
+#@partial(
+#    jax.jit,
+#    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
+#)
 def model(
     xyz,
     n_isobeta,
@@ -253,11 +253,8 @@ def model(
     for i in range(n_gnfw):
         pressure = jnp.add(pressure, gnfw(*gnfws[i], xyz))
 
-    for i in range(n_gaussian):
-        pressure = jnp.add(pressure, gaussian(*gaussians[i], xyz))
-
     for i in range(n_egaussian):
-        pressure = jnp.add(presure, egaussian(*egaussians[i], xyz))
+        pressure = jnp.add(pressure, egaussian(*egaussians[i], xyz))
 
     for i in range(n_uniform):
         pressure = add_uniform(pressure, xyz, *uniforms[i])
@@ -273,7 +270,7 @@ def model(
 
     # Integrate along line of site
     ip = jnp.trapz(pressure, dx=dx, axis=-1)
-
+    
     bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
         (ip.shape[1] - beam.shape[1]) / 2
     )
@@ -287,14 +284,17 @@ def model(
 
     ip = fft_conv(ip, beam)
 
+    for i in range(n_gaussian):
+        ip = jnp.add(ip, gaussian(*gaussians[i], xyz))
+
     model_out = ip.at[idy.ravel(), idx.ravel()].get(mode="fill", fill_value=0)
     return model_out.reshape(idx.shape)
 
 
-@partial(
-    jax.jit,
-    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 13),
-)
+#@partial(
+#    jax.jit,
+#    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 13),
+#)
 def model_grad(
     xyz,
     n_isobeta,
