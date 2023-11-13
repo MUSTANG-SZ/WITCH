@@ -166,6 +166,8 @@ def gaussian(dx, dy, sigma, amp, xyz):
 
         dy: Dec of gaussian center relative to grid origin
 
+        sigma: The effective, beam-convolved half-width of the point source. 
+
         amp: Amplitude of the gaussian
 
         xyz: Coordinte grid to calculate model on
