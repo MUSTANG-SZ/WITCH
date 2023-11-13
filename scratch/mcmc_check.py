@@ -61,12 +61,12 @@ def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids):
         return -np.inf
     return lp + my_sampler(theta, tods, jsample, fixed_params, fixed_pars_ids)
 
-with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
-    cfg = yaml.safe_load(file)
+#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
+#    cfg = yaml.safe_load(file)
 #with open('/home/jack/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
-#with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml', "r") as file:
-#    cfg = yaml.safe_load(file)
+with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml', "r") as file:
+    cfg = yaml.safe_load(file)
 fit = True
 
 # Setup coordindate stuff
@@ -78,8 +78,6 @@ xyz = make_grid(r_map, dr)
 coord_conv = eval(str(cfg["coords"]["conv_factor"]))
 x0 = eval(str(cfg["coords"]["x0"]))
 y0 = eval(str(cfg["coords"]["y0"]))
-print("da: ", da)
-print("dr, r_map: ", dr, r_map)
 
 # Load TODs
 tod_names = glob.glob(os.path.join(cfg["paths"]["tods"], cfg["paths"]["glob"]))
@@ -112,7 +110,7 @@ for i, fname in enumerate(tod_names):
     dat["cm"] = cm
 
     # Make pixelized RA/Dec TODs
-    idx, idy = tod_to_index(dat["dx"], dat["dy"], x0, y0, r_map, dr, coord_conv)
+    idx, idy = tod_to_index(dat["dx"], dat["dy"], x0, y0, xyz, coord_conv)
     idu, id_inv = np.unique(
         np.vstack((idx.ravel(), idy.ravel())), axis=1, return_inverse=True
     )
