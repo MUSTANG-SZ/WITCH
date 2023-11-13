@@ -47,13 +47,30 @@ Instructions on installing `minkasi` can be found [here](https://github.com/siev
 ## Contributing
 
 All are welcome to contribute to this repository, be it code or config files.
-A few things to keep in mind:
-
-* In general contributions other than minor changes should follow the branch/fork -> PR -> merge workflow.
-* The `minkasi_jax` library loosely follows [semantic versioning](https://semver.org/) so try to remember to update the version in `setup.py` when appropriate.
-* Code should be [PEP8](https://peps.python.org/pep-0008/) wherever possible. Tools like [`black`](https://github.com/psf/black) are helpful for this. It is also good to setup a linter in your text editor that tells you when you violate PEP8.
-
+In general contributions other than minor changes should follow the branch/fork -> PR -> merge workflow.
 If you are going to contribute regularly, contact one of us to get push access to the repository.
+
+### Style and Standards
+In general contributions should be [PEP8](https://peps.python.org/pep-0008/) with commits in the [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) format.
+This library follows [semantic versioning](https://semver.org/), so changes that bump the version should do so by editing `pyproject.toml`.
+
+In order to make following these rules easier this repository is setup to work with [commitizen](https://commitizen-tools.github.io/commitizen/) and [pre-commit](https://pre-commit.com/).
+It is recommended that you make use of these tools to save time.
+
+#### Getting Started
+1. Install both tools with `pip install commitizen pre-commit`.
+2. `cd` into the `minkasi_jax` repository it you aren't already in it.
+3. (Optional) Setup `commitizen` to automatically run when you run `git commit`. Follow instruction [here](https://commitizen-tools.github.io/commitizen/tutorials/auto_prepare_commit_message/).
+4. Make sure the `pre-commit` hook is installed by running `pre-commit install`.
+
+#### Example Workflow
+1. Make a branch for the edits you want to make.
+2. Code.
+3. Commit your code with a [conventional commit message](https://www.conventionalcommits.org/en/v1.0.0/#summary).
+  * `cz c` gives you a wizard that will do this for you, if you followed Step 3 above then `git commit` will also do this (but not `git commit -m`).
+4. Repeat step 3 and 4 until the goal if your branch has been completed.
+5. Put in a PR.
+5. Once the PR is merged the repo version and tag will update [automatically](https://commitizen-tools.github.io/commitizen/tutorials/github_actions/).
 
 ### Adding New Models 
 
@@ -65,3 +82,16 @@ When adding new models to `minkasi_jax`, be they profiles or substructure, there
 4. A block applying model needs to be added to `model`. Pressure profiles should come first then substructure. This can largely be copied from the other models, just remember to swap out the relevant variables.
 
 Adding a new model also (usually) means you should bump the minor version in the version number.
+
+### Profiling Code
+
+The script `scratch/profile.py` uses `jax` profiling tools to benchmark the library.
+It outputs a trace file understandable [perfetto](https://ui.perfetto.dev/) as well as a text file containing
+metadata about the software and hardware used while profiling.
+To use non default settings use `python profile.py --help` but in most cases the default settings are fine.
+
+The profiling script has some additional dependencies.
+To install them run:
+```
+pip install .[profile]
+```
