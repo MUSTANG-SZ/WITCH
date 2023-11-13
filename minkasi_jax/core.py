@@ -139,6 +139,7 @@ def helper(
         tuple(argnums + ARGNUM_SHIFT),
         *params,
     )
+
     pred = jax.device_get(pred)
     grad = jax.device_get(grad)
 
@@ -312,6 +313,9 @@ def model(
 
     ip = fft_conv(ip, beam)
 
+    for i in range(n_gaussian):
+        ip = jnp.add(ip, gaussian(*gaussians[i], xyz))
+    
     model_out = ip.at[idy.ravel(), idx.ravel()].get(mode="fill", fill_value=0)
     return model_out.reshape(idx.shape)
 
