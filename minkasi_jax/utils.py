@@ -295,10 +295,35 @@ def make_grid_from_skymap(skymap, z_map, dz):
     _z = jnp.linspace(-1 * z_map, z_map, 2 * int(z_map / dz))
     x, y, z = jnp.meshgrid(_x, _y, _z, sparse=True, indexing="xy")
 
-    # Convert x and y to ra/dec
-    ra, dec = skymap.wcs.wcs_pix2world(x, y, 0, ra_dec_order=True)
+    # Pad so we don't need to broadcast
+    x_flat = x.ravel()
+    y_flat = y.ravel()
+    len_diff = len(x_flat) - len(y_flat)
+    if len_diff > 0:
+        y_flat = jnp.pad(y_flat, (0, len_diff), "edge")
+    elif len_diff < 0:
+        x_flat = jnp.pad(x_flat, (0, abs(len_diff)), "edge")
 
-    return np.deg2rad(ra), np.deg2rad(dec), z
+    # Convert x and y to ra/dec
+    ra_dec = skymap.wcs.wcs_pix2world(
+        jnp.column_stack((x_flat, y_flat)), 0, ra_dec_order=True
+    )
+    ra_dec = np.deg2rad(ra_dec)
+    ra = ra_dec[:, 0]
+    dec = ra_dec[:, 1]
+
+    # Remove padding
+    if len_diff > 0:
+        dec = dec[: (-1 * len_diff)]
+    elif len_diff < 0:
+        ra = ra[:len_diff]
+
+    # Sparse indexing to save mem
+    x[0] = ra
+    y[:, 0] = dec
+
+    return x, y, z
+
 
 @jax.jit
 def transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz):
@@ -374,7 +399,6 @@ def tod_to_index(xi, yi, x0, y0, grid, conv_factor):
 
     dx *= conv_factor
     dy *= conv_factor
-
 
     # Assuming sparse indexing here
     idx = np.digitize(dx, grid[0].ravel())
