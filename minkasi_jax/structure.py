@@ -241,8 +241,7 @@ def gaussian(dx, dy, sigma, amp, xyz):
         model: The gaussian    
     """
     x, y, z = transform_grid(dx, dy, 0, 1, 1, 1, 0, xyz)
-
-    rr = x**2 + y**2 + z**2
+    rr = x[...,0]**2 + y[...,0]**2
     power = -1 * rr / (2 * sigma**2)
 
     return amp * jnp.exp(power)
