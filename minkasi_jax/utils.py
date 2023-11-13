@@ -270,6 +270,36 @@ def make_grid(r_map, dx, dy=None, dz=None):
     return jnp.meshgrid(x, y, z, sparse=True, indexing="xy")
 
 
+def make_grid_from_skymap(skymap, z_map, dz):
+    """
+    Make coordinate grids to build models in.
+    All grids are sparse and are int(2*r_map / dr) in each dimension.
+
+    Arguments:
+
+        z_map: Size of grid along LOS, in radians.
+
+        dz: Grid resolution along LOS, in radians.
+
+    Returns:
+
+        x: Grid of x coordinates in radians.
+
+        y: Grid of y coordinates in radians.
+
+        z: Grid of z coordinates in radians.
+    """
+    # make grid
+    _x = jnp.arange(skymap.nx)
+    _y = jnp.arange(skymap.ny)
+    _z = jnp.linspace(-1 * z_map, z_map, 2 * int(z_map / dz))
+    x, y, z = jnp.meshgrid(_x, _y, _z, sparse=True, indexing="xy")
+
+    # Convert x and y to ra/dec
+    ra, dec = skymap.wcs.wcs_pix2world(x, y, 0, ra_dec_order=True)
+
+    return np.deg2rad(ra), np.deg2rad(dec), z
+
 @jax.jit
 def transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz):
     """
