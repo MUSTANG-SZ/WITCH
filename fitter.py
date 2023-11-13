@@ -12,7 +12,7 @@ import time
 from functools import partial
 
 import jax
-import minkasi
+import minkasi.minkasi_all as minkasi
 import numpy as np
 import yaml
 from astropy import units as u
@@ -91,9 +91,10 @@ tod_names = tod_names[:ntods]
 tod_names = tod_names[minkasi.myrank :: minkasi.nproc]
 minkasi.barrier()  # Is this needed?
 
-
+n_tods = 10
 todvec = minkasi.TodVec()
 for i, fname in enumerate(tod_names):
+    if i >= n_tods: continue
     dat = minkasi.read_tod_from_fits(fname)
     minkasi.truncate_tod(dat)
 
@@ -125,6 +126,7 @@ skymap = minkasi.SkyMap(lims, pixsize)
 
 Te = eval(str(cfg["cluster"]["Te"]))
 freq = eval(str(cfg["cluster"]["freq"]))
+print(dr)
 beam = beam_double_gauss(
     dr,
     eval(str(cfg["beam"]["fwhm1"])),
@@ -226,6 +228,7 @@ for i, tod in enumerate(todvec.tods):
         for n, fun in zip(npars, funs):
             model += fun(params[start : (start + n)], tod)[1]
             start += n
+            print(np.amax(np.abs(model)))
         tod.info["dat_calib"] += np.array(model)
 
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
