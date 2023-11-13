@@ -344,7 +344,7 @@ def transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz):
     return x, y, z
 
 
-def tod_to_index(xi, yi, x0, y0, r_map, dr, conv_factor):
+def tod_to_index(xi, yi, x0, y0, grid, conv_factor):
     """
     Convert RA/Dec TODs to index space.
 
@@ -358,9 +358,7 @@ def tod_to_index(xi, yi, x0, y0, r_map, dr, conv_factor):
 
         y0: Dec at center of model. Nominally the cluster center.
 
-        r_map: Radial size of grid
-
-        dr: Pixel size
+        grid: The grid to index on.
 
         conv_factor: Conversion factor to put RA and Dec in same units as r_map.
                      Nominally (da * 180 * 3600) / pi
@@ -376,11 +374,11 @@ def tod_to_index(xi, yi, x0, y0, r_map, dr, conv_factor):
 
     dx *= conv_factor
     dy *= conv_factor
-    full_rmap = jnp.arange(-1 * r_map, r_map, dr)
 
-    idx, idy = (dx + r_map) / (2 * r_map) * len(full_rmap), (-dy + r_map) / (
-        2 * r_map
-    ) * len(full_rmap)
+
+    # Assuming sparse indexing here
+    idx = np.digitize(dx, grid[0].ravel())
+    idy = np.digitize(dy, grid[1].ravel())
 
     idx = np.rint(idx).astype(int)
     idy = np.rint(idy).astype(int)

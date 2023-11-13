@@ -71,8 +71,8 @@ coord_conv = eval(str(cfg["coords"]["conv_factor"]))
 x0 = eval(str(cfg["coords"]["x0"]))
 y0 = eval(str(cfg["coords"]["y0"]))
 
-xyz = make_grid(r_map, *dr)
-xyz = jax.device_put(xyz, device)
+xyz_host = make_grid(r_map, *dr)
+xyz = jax.device_put(xyz_host, device)
 xyz[0].block_until_ready()
 xyz[1].block_until_ready()
 xyz[2].block_until_ready()
@@ -104,8 +104,8 @@ for i, fname in enumerate(tod_names):
     dat["pred2"] = pred2
     dat["cm"] = cm
 
-    # Make pixelized RA/Dec TODs 
-    idx, idy = tod_to_index(dat["dx"], dat["dy"], x0, y0, r_map, dr, coord_conv)
+    # Make pixelized RA/Dec TODs
+    idx, idy = tod_to_index(dat["dx"], dat["dy"], x0, y0, xyz_host, coord_conv)
     idu, id_inv = np.unique(
         np.vstack((idx.ravel(), idy.ravel())), axis=1, return_inverse=True
     )
