@@ -10,8 +10,8 @@ paths:
   outroot: "/scratch/r/rbond/jorlo/Reductions"
 coords:
   z: .216
-  r_map: "3.0*60*da"
-  dr: ".5*da"
+  r_map: "5.5*60*da"
+  dr: "2*da"
   x0: "Angle('07 41 44.5 hours').to(u.radian).value"
   y0: "Angle('74:14:38.7 degrees').to(u.radian).value"
   conv_factor: "(da * 180 * 3600) / np.pi"
