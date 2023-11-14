@@ -16,7 +16,7 @@ from minkasi.maps.mapset import Mapset
 import functools
 
 @jax.jit
-def get_chis(m, x, y, rhs, v, weight, dd = None):
+def get_chis(m, idx, idy, rhs, v, weight, dd = None):
     """
     A faster, but more importantly much less memory intensive, way to get chis. 
     The idea is chi^2 = (d-Am)^T N^-1 (d-Am). Previously we would calculate the residuals d-Am 
@@ -43,10 +43,10 @@ def get_chis(m, x, y, rhs, v, weight, dd = None):
     ----------
     m : NDArray[np.floating]
         The model evaluated at all the map pixels
-    x : NDArray[np.floating]
-        2D array of tod x indicies
-    y : NDArray[np.floating]
-        2D array of tod y indicies
+    idx : NDArray[np.floating]
+        tod.info["model_idx"], the x index output by tod_to_index
+    idy : NDArray[np.floating]
+        tod.info["model_idy"], the y index output by tod_to_index
     rhs : NDArray[np.floating]
         The map output of todvec.make_rhs. Note this is how the data enters into the chi2 calc.
     v : NDArray[np.floating]
@@ -64,16 +64,16 @@ def get_chis(m, x, y, rhs, v, weight, dd = None):
         The chi2 of the model m to the data.
     """
 
-    model = jax.scipy.ndimage.map_coordinates(m, (x,y),0).reshape((v.shape[1], -1))
+    model = m.at[idy, idx].get(mode = "fill", fill_value=0)
 
-    model = model.at[:,0].set((jnp.sqrt(0.5)*model)[:,0])
-    model = model.at[:,-1].set((jnp.sqrt(0.5)*model)[:,-1])
+    #model = model.at[:,0].set((jnp.sqrt(0.5)*model)[:,0]) #This doesn't actually do anything
+    #model = model.at[:,-1].set((jnp.sqrt(0.5)*model)[:,-1])
     model_rot = jnp.dot(v,model)
     tmp=jnp.hstack([model_rot,jnp.fliplr(model_rot[:,1:-1])]) #mirror pred so we can do dct of first kind
     predft=jnp.real(jnp.fft.rfft(tmp,axis=1))
     nn=predft.shape[1]
 
-    chisq = jnp.sum(weight[:,:nn]*predft**2) - 2*jnp.dot(rhs.ravel(), m.ravel())
+    chisq = jnp.sum(weight[:,:nn]*predft**2) - 2*jnp.dot(rhs.ravel(), m.ravel()) / 2 #Man IDK about this factor of 2
     
     return chisq
     
@@ -92,7 +92,7 @@ def sampler(params, tods, jsample, fixed_pars, fix_pars_ids):
 
     return jsample(_params, tods)
 
-def sample(model_params, xyz, beam, x_map, y_map, params, tods):#, model_params, xyz, beam):
+def sample(model_params, xyz, beam, params, tods):#, model_params, xyz, beam):
     """
     Generate a model realization and compute the chis of that model to data.
     
@@ -117,7 +117,7 @@ def sample(model_params, xyz, beam, x_map, y_map, params, tods):#, model_params,
     n_iso, n_gnfw, n_gauss, n_egauss, n_uni, n_expo, n_power, n_power_cos = model_params
 
     m = model(xyz, n_iso, n_gnfw, n_gauss, n_egauss, n_uni, n_expo, n_power, n_power_cos,
-                     -2.5e-05, beam, x_map, y_map, params)
+                     -2.5e-05, beam, params)
 
     for i, tod in enumerate(tods):
         x, y, rhs, v, weight, norm = tod #unravel tod
@@ -143,15 +143,17 @@ def make_tod_stuff(todvec, skymap, lims = None, pixsize =  2.0 / 3600 * np.pi / 
         mapset.add_map(refmap)
         temp_todvec.make_rhs(mapset)
         
-        todgrid = refmap.wcs.wcs_world2pix(np.array([np.rad2deg(tod.info['dx'].flatten()),
-                                                    np.rad2deg(tod.info['dy'].flatten())]).T,1)
-        di = todgrid[:,0].reshape(tod.get_data_dims()).flatten()
-        dj = todgrid[:,1].reshape(tod.get_data_dims()).flatten()
+        #todgrid = refmap.wcs.wcs_world2pix(np.array([np.rad2deg(tod.info['dx'].flatten()),
+        #                                            np.rad2deg(tod.info['dy'].flatten())]).T,1)
+        #di = todgrid[:,0].reshape(tod.get_data_dims()).flatten()
+        #dj = todgrid[:,1].reshape(tod.get_data_dims()).flatten()
         #un wrap stuff cause jit doesn't like having tod objects
         norm = -np.sum(np.log(tod.noise.mywt[tod.noise.mywt!=0.00])-np.log(2.00*np.pi))
 
-        tods.append([jnp.array(di),
-                     jnp.array(dj),
+        tods.append([#jnp.array(di),
+                     #jnp.array(dj),
+                     jnp.array(tod.info["model_idx"]),
+                     jnp.array(tod.info["model_idy"]),
                      jnp.array(mapset.maps[0].map),
                      jnp.array(tod.noise.v),
                      jnp.array(tod.noise.mywt),
