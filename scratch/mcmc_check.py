@@ -49,24 +49,24 @@ def log_probability(theta, tods):
     return lp + my_sampler(theta, tods)
 
 '''
-def log_prior(theta):
+def log_prior(theta, da):
     dx, dy, sigma, amp_1 = theta
-    if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-8 < sigma < 1e-4 and -1 < amp_1 < 1: 
+    if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*da < sigma < 30*da and -10 < amp_1 < 10: 
         return 0.0
     return -np.inf
 
-def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids):
-    lp = log_prior(theta)    
+def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids, da):
+    lp = log_prior(theta, da)    
     if not np.isfinite(lp):
         return -np.inf
     return lp + my_sampler(theta, tods, jsample, fixed_params, fixed_pars_ids)
 
-with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
-    cfg = yaml.safe_load(file)
+#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
+#    cfg = yaml.safe_load(file)
 #with open('/home/jack/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
-#with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml', "r") as file:
-#    cfg = yaml.safe_load(file)
+with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml', "r") as file:
+    cfg = yaml.safe_load(file)
 #fit = True
 
 # Setup coordindate stuff
