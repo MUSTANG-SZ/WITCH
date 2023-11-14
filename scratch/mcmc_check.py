@@ -131,22 +131,6 @@ print("skymap, xyz: ", skymap.map.shape, xyz[0].shape)
 #r_map = skymap.map.shape[1]*dr/2
 #xyz = make_grid(r_map, dr)
 
-#Remake idx/idy after getting maplims
-'''
-for i, tod in enumerate(todvec.tods):
-    if fname == "/scratch/r/rbond/jorlo/MS0735/TS_EaCMS0f0_51_5_Oct_2021/Signal_TOD-AGBT21A_123_03-s20.fits": continue
-    dat = tod.info
-    # Make pixelized RA/Dec TODs
-    idx, idy = tod_to_index(dat["dx"], dat["dy"], x0, y0, r_map, dr, coord_conv)
-    idu, id_inv = np.unique(
-        np.vstack((idx.ravel(), idy.ravel())), axis=1, return_inverse=True
-    )
-    dat["idx"] = idu[0]
-    dat["idy"] = idu[1]
-    dat["id_inv"] = id_inv
-    dat["model_idx"] = idx
-    dat["model_idy"] = np.max(idy, 0)
-'''
 Te = eval(str(cfg["cluster"]["Te"]))
 freq = eval(str(cfg["cluster"]["freq"]))
 beam = beam_double_gauss(
@@ -229,7 +213,6 @@ for i, tod in enumerate(todvec.tods):
     print(tod.info["fname"])
     ipix = skymap.get_pix(tod)
     tod.info["ipix"] = ipix
-    print(tod.info["idx"], tod.info["idy"]) 
     if sim:
         tod.info["dat_calib"] *= (-1) ** ((parallel.myrank + parallel.nproc * i) % 2)
         start = 0
@@ -237,15 +220,10 @@ for i, tod in enumerate(todvec.tods):
         for n, fun in zip(npars, funs):
             model += fun(params[start : (start + n)], tod)[1]
             start += n
-            print(np.max(np.abs(np.array(model))))
         tod.info["dat_calib"] += np.array(model)
 
 
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
-
-x = np.arange(0, skymap.map.shape[0], dtype=int)
-y = np.arange(0, skymap.map.shape[1], dtype=int)
-X, Y = np.meshgrid(x, y)
 
 tods = make_tod_stuff(todvec, skymap)
 
@@ -263,10 +241,12 @@ params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
 
 print(params2[:,2])
 #jit partial-d sample function
-cur_sample = functools.partial(sample, model_params, xyz, beam, X, Y)
+cur_sample = functools.partial(sample, model_params, xyz, beam)
 jsample = jax.jit(cur_sample)
 
 nwalkers, ndim = params2.shape
+
+jsample(params, tods)
 #my_sampler = construct_sampler(model_params, xyz, beam)
 
 
