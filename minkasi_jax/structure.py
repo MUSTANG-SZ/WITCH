@@ -166,6 +166,8 @@ def gaussian(dx, dy, sigma, amp, xyz):
 
         dy: Dec of gaussian center relative to grid origin
 
+        sigma: The effective, beam-convolved half-width of the point source. 
+
         amp: Amplitude of the gaussian
 
         xyz: Coordinte grid to calculate model on
@@ -175,7 +177,6 @@ def gaussian(dx, dy, sigma, amp, xyz):
         model: The gaussian    
     """
     x, y, z = transform_grid(dx, dy, 0, 1, 1, 1, 0, xyz)
-
     rr = x[...,0]**2 + y[...,0]**2
     power = -1 * rr / (2 * sigma**2)
     return amp * jnp.exp(power)

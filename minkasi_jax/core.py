@@ -129,6 +129,7 @@ def helper(
         tuple(argnums + ARGNUM_SHIFT),
         *params,
     )
+
     pred = jax.device_get(pred)
     grad = jax.device_get(grad)
 
@@ -141,10 +142,10 @@ def helper(
     return grad, pred
 
 
-# @partial(
-#    jax.jit,
-#    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
-# )
+@partial(
+    jax.jit,
+    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
+)
 def model(
     xyz,
     n_isobeta,
