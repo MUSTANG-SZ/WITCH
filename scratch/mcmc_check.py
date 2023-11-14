@@ -49,14 +49,14 @@ def log_probability(theta, tods):
     return lp + my_sampler(theta, tods)
 
 '''
-def log_prior(theta):
+def log_prior(theta, da):
     dx, dy, sigma, amp_1 = theta
-    if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-8 < sigma < 1e-4 and -1 < amp_1 < 1: 
+    if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*da < sigma < 30*da and -10 < amp_1 < 10: 
         return 0.0
     return -np.inf
 
-def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids):
-    lp = log_prior(theta)    
+def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids, da):
+    lp = log_prior(theta, da)    
     if not np.isfinite(lp):
         return -np.inf
     return lp + my_sampler(theta, tods, jsample, fixed_params, fixed_pars_ids)
@@ -67,7 +67,7 @@ def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids):
 #    cfg = yaml.safe_load(file)
 with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml', "r") as file:
     cfg = yaml.safe_load(file)
-fit = True
+#fit = True
 
 # Setup coordindate stuff
 z = eval(str(cfg["coords"]["z"]))
@@ -131,22 +131,6 @@ print("skymap, xyz: ", skymap.map.shape, xyz[0].shape)
 #r_map = skymap.map.shape[1]*dr/2
 #xyz = make_grid(r_map, dr)
 
-#Remake idx/idy after getting maplims
-'''
-for i, tod in enumerate(todvec.tods):
-    if fname == "/scratch/r/rbond/jorlo/MS0735/TS_EaCMS0f0_51_5_Oct_2021/Signal_TOD-AGBT21A_123_03-s20.fits": continue
-    dat = tod.info
-    # Make pixelized RA/Dec TODs
-    idx, idy = tod_to_index(dat["dx"], dat["dy"], x0, y0, r_map, dr, coord_conv)
-    idu, id_inv = np.unique(
-        np.vstack((idx.ravel(), idy.ravel())), axis=1, return_inverse=True
-    )
-    dat["idx"] = idu[0]
-    dat["idy"] = idu[1]
-    dat["id_inv"] = id_inv
-    dat["model_idx"] = idx
-    dat["model_idy"] = np.max(idy, 0)
-'''
 Te = eval(str(cfg["cluster"]["Te"]))
 freq = eval(str(cfg["cluster"]["freq"]))
 beam = beam_double_gauss(
@@ -201,7 +185,6 @@ for i, tod in enumerate(todvec.tods):
     print(tod.info["fname"])
     ipix = skymap.get_pix(tod)
     tod.info["ipix"] = ipix
-    print(tod.info["idx"], tod.info["idy"]) 
     if sim:
         tod.info["dat_calib"] *= (-1) ** ((parallel.myrank + parallel.nproc * i) % 2)
         start = 0
@@ -213,14 +196,6 @@ for i, tod in enumerate(todvec.tods):
 
 
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
-
-dr = pixsize
-r_map = skymap.map.shape[1]*dr/2
-xyz = make_grid(r_map, dr)
-
-x = np.arange(0, skymap.map.shape[0], dtype=int)
-y = np.arange(0, skymap.map.shape[1], dtype=int)
-X, Y = np.meshgrid(x, y)
 
 tods = make_tod_stuff(todvec, skymap)
 
@@ -238,15 +213,17 @@ params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
 
 print(params2[:,2])
 #jit partial-d sample function
-cur_sample = functools.partial(sample, model_params, xyz, beam, X, Y)
+cur_sample = functools.partial(sample, model_params, xyz, beam)
 jsample = jax.jit(cur_sample)
 
 nwalkers, ndim = params2.shape
+
+jsample(params, tods)
 #my_sampler = construct_sampler(model_params, xyz, beam)
 
 
 
-'''
+
 sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability, args = (tods, jsample, fixed_params, fixed_pars_ids) #comma needed to not unroll tods
 )
@@ -258,7 +235,9 @@ flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 
 import pickle as pk
 
-with open('/scratch/r/rbond/jorlo/sampler/mcmc_samples.pk', 'wb') as f:
+odir = '/scratch/r/rbond/jorlo/forward-modeling/'
+
+with open(odir+'mcmc_samples.pk', 'wb') as f:
     pk.dump(flat_samples, f)
 
 truths = params
@@ -269,7 +248,5 @@ fig = corner.corner(
     flat_samples, labels=labels, truths=truths
 );
 
-plt.savefig('/scratch/r/rbond/jorlo/sampler/1gauss_corner.pdf')
-plt.savefig('/scratch/r/rbond/jorlo/sampler/1gauss_corner.png')
-
-'''
+plt.savefig(odir+'1gauss_corner.pdf')
+plt.savefig(odir+'1gauss_corner.png')
