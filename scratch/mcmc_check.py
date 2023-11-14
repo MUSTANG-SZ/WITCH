@@ -61,13 +61,13 @@ def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids):
         return -np.inf
     return lp + my_sampler(theta, tods, jsample, fixed_params, fixed_pars_ids)
 
-#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
-#    cfg = yaml.safe_load(file)
+with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
+    cfg = yaml.safe_load(file)
 #with open('/home/jack/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
-with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml', "r") as file:
-    cfg = yaml.safe_load(file)
-fit = True
+#with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml', "r") as file:
+#    cfg = yaml.safe_load(file)
+#fit = True
 
 # Setup coordindate stuff
 z = eval(str(cfg["coords"]["z"]))
@@ -251,7 +251,7 @@ jsample(params, tods)
 
 
 
-'''
+
 sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability, args = (tods, jsample, fixed_params, fixed_pars_ids) #comma needed to not unroll tods
 )
@@ -263,7 +263,9 @@ flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 
 import pickle as pk
 
-with open('/home/jack/sampler/mcmc_samples.pk', 'wb') as f:
+odir = '/scratch/r/rbond/jorlo/forward-modeling/'
+
+with open(odir+'mcmc_samples.pk', 'wb') as f:
     pk.dump(flat_samples, f)
 
 truths = params
@@ -274,7 +276,7 @@ fig = corner.corner(
     flat_samples, labels=labels, truths=truths
 );
 
-plt.savefig('/home/jack/sampler/1gauss_corner.pdf')
-plt.savefig('/home/jack/sampler/1gauss_corner.png')
+plt.savefig(odir+'1gauss_corner.pdf')
+plt.savefig(odir+'1gauss_corner.png')
 
-'''
+

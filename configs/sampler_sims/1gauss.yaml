@@ -48,7 +48,7 @@ models:
         value: "0"
         to_fit: True
       sigma:
-        value: "1.37e-5"
+        value: "9.5*da"
         to_fit: True
       amp:
         value: "1e-2"
