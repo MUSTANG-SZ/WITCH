@@ -220,24 +220,24 @@ with jax.profiler.TraceAnnotation("Moving data"):
 with jax.profiler.TraceAnnotation("Standard grid"):
     with jax.profiler.TraceAnnotation("No JIT"):
         with jax.disable_jit():
-            profile = core.model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, params)
+            profile = core.model(xyz, 2, 0, 0, 0, 3, 0, 0, 0, dx, beam, params)
             profile.block_until_ready()
 
     with jax.profiler.TraceAnnotation("JITing"):
-        profile = core.model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, params)
+        profile = core.model(xyz, 2, 0, 0, 0, 3, 0, 0, 0, dx, beam, params)
         profile.block_until_ready()
 
     with jax.profiler.TraceAnnotation("JITed"):
-        profile = core.model(xyz, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, params)
+        profile = core.model(xyz, 2, 0, 0, 0, 3, 0, 0, 0, dx, beam, params)
         profile.block_until_ready()
 
 with jax.profiler.TraceAnnotation("Grid xy 4x coarser"):
     with jax.profiler.TraceAnnotation("JITing"):
-        profile = core.model(xyz_decoupled, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, params)
+        profile = core.model(xyz_decoupled, 2, 0, 0, 0, 3, 0, 0, 0, dx, beam, params)
         profile.block_until_ready()
 
     with jax.profiler.TraceAnnotation("JITed"):
-        profile = core.model(xyz_decoupled, 2, 0, 0, 3, 0, 0, 0, dx, beam, X, Y, params)
+        profile = core.model(xyz_decoupled, 2, 0, 0, 0, 3, 0, 0, 0, dx, beam, params)
         profile.block_until_ready()
 
 for i in range(2):

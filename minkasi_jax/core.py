@@ -8,15 +8,14 @@ import jax
 import jax.numpy as jnp
 
 from .structure import (
-    isobeta,
-    gnfw,
-    gaussian,
-    egaussian,
-    add_uniform,
     add_exponential,
     add_powerlaw,
     add_powerlaw_cos,
     add_uniform,
+    egaussian,
+    gaussian,
+    gnfw,
+    isobeta,
 )
 from .utils import fft_conv
 
@@ -113,7 +112,7 @@ def helper(
             continue
         params[i] = eval(re)
 
-    pred, grad = model_grad(
+    pred, grad = model_tod_grad(
         xyz,
         n_isobeta,
         n_gnfw,
@@ -142,10 +141,10 @@ def helper(
     return grad, pred
 
 
-#@partial(
+# @partial(
 #    jax.jit,
 #    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
-#)
+# )
 def model(
     xyz,
     n_isobeta,
@@ -158,8 +157,6 @@ def model(
     n_powerlaw_cos,
     dx,
     beam,
-    idx,
-    idy,
     *params,
 ):
     """
@@ -191,16 +188,11 @@ def model(
 
         beam: Beam to convolve by, should be a 2d array.
 
-        idx: RA TOD in units of pixels.
-             Should have Dec stretch applied.
-
-        idy: Dec TOD in units of pixels.
-
         params: 1D array of model parameters.
 
     Returns:
 
-        model: The model with the specified substructure.
+        model: The model with the specified substructure evaluated on the grid.
     """
     params = jnp.array(params)
     params = jnp.ravel(params)  # Fixes strange bug with params having dim (1,n)
@@ -212,7 +204,7 @@ def model(
     exponentials = jnp.zeros((1, 1), dtype=float)
     powerlaws = jnp.zeros((1, 1), dtype=float)
     powerlaw_coses = jnp.zeros((1, 1), dtype=float)
-    
+
     start = 0
     if n_isobeta:
         delta = n_isobeta * N_PAR_ISOBETA
@@ -228,7 +220,9 @@ def model(
         start += delta
     if n_egaussian:
         delta = n_egaussian * N_PAR_EGAUSSIAN
-        egaussians = params[start : start + delta].reshape((n_egaussian, N_PAR_EGAUSSIAN))
+        egaussians = params[start : start + delta].reshape(
+            (n_egaussian, N_PAR_EGAUSSIAN)
+        )
         start += delta
     if n_uniform:
         delta = n_uniform * N_PAR_UNIFORM
@@ -275,7 +269,7 @@ def model(
 
     # Integrate along line of site
     ip = jnp.trapz(pressure, dx=dx, axis=-1)
-    
+
     bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
         (ip.shape[1] - beam.shape[1]) / 2
     )
@@ -292,15 +286,14 @@ def model(
     for i in range(n_gaussian):
         ip = jnp.add(ip, gaussian(*gaussians[i], xyz))
 
-    model_out = ip.at[idy.ravel(), idx.ravel()].get(mode="fill", fill_value=0)
-    return model_out.reshape(idx.shape)
+    return ip
 
 
-#@partial(
+# @partial(
 #    jax.jit,
-#    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 13),
-#)
-def model_grad(
+#    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
+# )
+def model_tod(
     xyz,
     n_isobeta,
     n_gnfw,
@@ -314,42 +307,69 @@ def model_grad(
     beam,
     idx,
     idy,
-    argnums,
     *params,
 ):
     """
-    Generically create models with substructure and get their gradients.
+    A wrapper around model that unwraps it into a TOD.
+    Only the additional arguments are described here, see model for the others.
+    Note that the additional arguments are passed **before** the *params argument.
 
     Arguments:
-
-        xyz: Coordinate grid to compute profile on.
-
-        n_isobeta: Number of isobeta profiles to add.
-
-        n_gnfw: Number of gnfw profiles to add.
-
-        n_gaussian: Number of gaussians to add.
-
-        n_egaussian: Number of eliptical gaussians to add.
-
-        n_uniform: Number of uniform ellipsoids to add.
-
-        n_exponential: Number of exponential ellipsoids to add.
-
-        n_powerlaw: Number of power law ellipsoids to add.
-
-        n_powerlaw_cos: Number of radial power law ellipsoids with angulas cos term to add.
-
-        dx: Factor to scale by while integrating.
-            Since it is a global factor it can contain unit conversions.
-            Historically equal to y2K_RJ * dr * da * XMpc / me.
-
-        beam: Beam to convolve by, should be a 2d array.
 
         idx: RA TOD in units of pixels.
              Should have Dec stretch applied.
 
         idy: Dec TOD in units of pixels.
+
+    Returns:
+
+        model: The model with the specified substructure.
+               Has the same shape as idx.
+    """
+    ip = model(
+        xyz,
+        n_isobeta,
+        n_gnfw,
+        n_gaussian,
+        n_egaussian,
+        n_uniform,
+        n_exponential,
+        n_powerlaw,
+        n_powerlaw_cos,
+        dx,
+        beam,
+        *params,
+    )
+
+    model_out = ip.at[idy.ravel(), idx.ravel()].get(mode="fill", fill_value=0)
+    return model_out.reshape(idx.shape)
+
+
+# @partial(
+#    jax.jit,
+#    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 11),
+# )
+def model_grad(
+    xyz,
+    n_isobeta,
+    n_gnfw,
+    n_gaussian,
+    n_egaussian,
+    n_uniform,
+    n_exponential,
+    n_powerlaw,
+    n_powerlaw_cos,
+    dx,
+    beam,
+    argnums,
+    *params,
+):
+    """
+    A wrapper around model that also returns the gradients of the model.
+    Only the additional arguments are described here, see model for the others.
+    Note that the additional arguments are passed **before** the *params argument.
+
+    Arguments:
 
         argnums: The arguments to evaluate the gradient at
 
@@ -373,8 +393,6 @@ def model_grad(
         n_powerlaw_cos,
         dx,
         beam,
-        idx,
-        idy,
         *params,
     )
 
@@ -390,11 +408,89 @@ def model_grad(
         n_powerlaw_cos,
         dx,
         beam,
+        *params,
+    )
+    grad_padded = jnp.zeros((len(params),) + pred.shape)
+    grad_padded = grad_padded.at[jnp.array(argnums) - ARGNUM_SHIFT].set(jnp.array(grad))
+
+    return pred, grad_padded
+
+
+# @partial(
+#    jax.jit,
+#    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 13),
+# )
+def model_tod_grad(
+    xyz,
+    n_isobeta,
+    n_gnfw,
+    n_gaussian,
+    n_egaussian,
+    n_uniform,
+    n_exponential,
+    n_powerlaw,
+    n_powerlaw_cos,
+    dx,
+    beam,
+    idx,
+    idy,
+    argnums,
+    *params,
+):
+    """
+    A wrapper around model_tod that also returns the gradients of the model.
+    Only the additional arguments are described here, see model for the others.
+    Note that the additional arguments are passed **before** the *params argument.
+
+    Arguments:
+
+        idx: RA TOD in units of pixels.
+             Should have Dec stretch applied.
+
+        idy: Dec TOD in units of pixels.
+
+        argnums: The arguments to evaluate the gradient at
+
+    Returns:
+
+        model: The model with the specified substructure.
+
+        grad: The gradient of the model with respect to the model parameters.
+    """
+    pred = model_tod(
+        xyz,
+        n_isobeta,
+        n_gnfw,
+        n_gaussian,
+        n_egaussian,
+        n_uniform,
+        n_exponential,
+        n_powerlaw,
+        n_powerlaw_cos,
+        dx,
+        beam,
         idx,
         idy,
         *params,
     )
-    grad_padded = jnp.zeros((len(params),) + idx.shape)
+
+    grad = jax.jacfwd(model_tod, argnums=argnums)(
+        xyz,
+        n_isobeta,
+        n_gnfw,
+        n_gaussian,
+        n_egaussian,
+        n_uniform,
+        n_exponential,
+        n_powerlaw,
+        n_powerlaw_cos,
+        dx,
+        beam,
+        idx,
+        idy,
+        *params,
+    )
+    grad_padded = jnp.zeros((len(params),) + pred.shape)
     grad_padded = grad_padded.at[jnp.array(argnums) - ARGNUM_SHIFT].set(jnp.array(grad))
 
     return pred, grad_padded
