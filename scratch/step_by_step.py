@@ -169,6 +169,10 @@ noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
 noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
 noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
 
+############################################################################
+# Check if I can simply fit mapspace models                                #
+############################################################################
+
 from minkasi_jax.core import model
 import numpy as np
 
@@ -215,7 +219,9 @@ import corner
 fig = corner.corner(
     flat_samples, labels=labels, truths=truths
 )
-
+############################################################################
+# Now fit models in TOD space. Start with a square TOD that matches map.   #
+############################################################################
 
 def log_likelihood_tod(theta, idx, idy, data):
      cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, theta)
@@ -229,6 +235,35 @@ def log_probability_tod(theta, idx, idy, data):
          return -np.inf
      return lp + log_likelihood_tod(theta, idx, idy, data)
 
+x = np.arange(0, len(xyz[0][0]), dtype=int)
+y = np.arange(0, len(xyz[0][0]), dtype=int)
+X, Y = np.meshgrid(x, y)
+
+data_tod = vis_model.at[Y, X].get(mode="fill", fill_value = 0)
+
+params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
+params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
+
+nwalkers, ndim = params2.shape
+
+sampler = emcee.EnsembleSampler(
+    nwalkers, ndim, log_probability_tod, args = (data_tod, X, Y)
+)
+
+sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
+flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
+
+import corner
+
+fig = corner.corner(
+    flat_samples, labels=labels, truths=truths
+)
+
+
+
+
+
+
 idx = todvec.tods[0].info["model_idx"]
 idy = todvec.tods[0].info["model_idy"]
 data_tod = vis_model.at[idy, idx].get(mode = "fill", fill_value = 0)
@@ -240,6 +275,54 @@ nwalkers, ndim = params2.shape
 
 sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability_tod, args = (data_tod, idx, idy)
+)
+
+sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
+flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
+
+import corner
+
+fig = corner.corner(
+    flat_samples, labels=labels, truths=truths
+)
+
+
+
+from minkasi_jax.core import model
+import numpy as np
+
+def log_likelihood(theta, data):
+     cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, theta)
+     return -0.5 * np.sum((data-cur_model)**2)
+
+def log_prior(theta):
+     dx, dy, sigma, amp_1 = theta
+     if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*0.0036 < sigma < 30*0.0036 and -10 < amp_1 < 10:
+         return 0.0
+     return -np.inf
+
+def log_probability(theta, data):
+     lp = log_prior(theta)
+     if not np.isfinite(lp):
+         return -np.inf
+     return lp + log_likelihood(theta, data)
+
+dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
+
+vis_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
+noise = np.random.rand(330, 330)*0.1*params[3]
+
+data = vis_model+noise
+
+truths = params
+
+params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
+params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
+
+nwalkers, ndim = params2.shape
+
+sampler = emcee.EnsembleSampler(
+    nwalkers, ndim, log_probability, args = (vis_model,)
 )
 
 sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
