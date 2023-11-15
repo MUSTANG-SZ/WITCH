@@ -1,0 +1,59 @@
+cluster:
+  name: "MS0735"
+  Te: 5.0
+  freq: 90e9
+paths:
+  tods: "/home/jack/M2-TODs/MS0735/"
+  glob: "Signal_TOD*.fits"
+  ndo: False
+  odo: False
+  outroot: "/home/jack/Reductions"
+coords:
+  z: .216
+  r_map: "5.5*60*da"
+  dr: "2.0*da"
+  x0: "Angle('07 41 44.5 hours').to(u.radian).value"
+  y0: "Angle('74:14:38.7 degrees').to(u.radian).value"
+  conv_factor: "(da * 180 * 3600) / np.pi"
+beam:
+  fwhm1: "9.735 * da"
+  amp1: 0.9808
+  fwhm2: "32.627 * da"
+  amp2: 0.0192
+
+sim: True
+
+bowling:
+  sub_poly: False
+  method: "pred2"
+  degree: 2
+minkasi:
+  noise:
+    class: "noise.NoiseSmoothedSVD"
+    args: "[]"
+    kwargs: "{'fwhm':10}"
+  maxiter: 20
+  npass: 5
+  dograd: False
+  ntods: 10
+
+models:
+  gauss:
+    func: "partial(helper, xyz=xyz, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(to_fit)[0], re_eval=re_eval, par_idx=par_idx, n_gaussian = 1)" 
+    parameters:
+      dx:
+        value: "0"
+        to_fit: True
+      dy:
+        value: "0"
+        to_fit: True
+      sigma:
+        value: "9.5*da"
+        to_fit: True
+      amp:
+        value: "1e0"
+        to_fit: True
+
+
+
+
