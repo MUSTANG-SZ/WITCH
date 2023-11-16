@@ -184,7 +184,6 @@ def log_prior(theta):
      dx, dy, sigma, amp_1 = theta
      if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*0.0036 < sigma < 30*0.0036 and -10 < amp_1 < 10:
          return 0.0
-     print("Here")
      return -np.inf
 
 def log_probability(theta, data):
@@ -378,4 +377,57 @@ nwalkers, ndim = params2.shape
 
 sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability, args = (data,)
+)
+
+
+####################################################################
+# Removing dx/dy kinda works......                                 #
+####################################################################
+
+from minkasi_jax.core import model
+import numpy as np
+
+def log_likelihood(theta, data):
+     params = [0, 0, theta[0], theta[1]]
+     cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
+     return -0.5 * np.sum((data-cur_model)**2)
+
+def log_prior(theta):
+     sigma, amp = theta
+     if -1 < sigma < 1 and -1 < amp < 1:
+         return 0.0
+
+     return -np.inf
+
+def log_probability(theta, data):
+     lp = log_prior(theta)
+     if not np.isfinite(lp):
+         return -np.inf
+     return lp + log_likelihood(theta, data)
+
+dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
+params[3] = 1e-2
+vis_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
+noise = np.random.rand(330, 330)*0.1*params[3]
+
+data = vis_model+noise
+
+truths = params
+
+params2 = np.array([params[2], params[3]])
+params2 = params2 + 1e-2*np.random.randn(2*len(params2), len(params2))
+
+nwalkers, ndim = params2.shape
+
+sampler = emcee.EnsembleSampler(
+    nwalkers, ndim, log_probability, args = (vis_model,)
+)
+
+sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
+flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
+
+import corner
+
+fig = corner.corner(
+    flat_samples, labels=labels[2:], truths=truths[2:]
 )
