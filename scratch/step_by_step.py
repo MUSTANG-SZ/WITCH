@@ -178,7 +178,7 @@ import numpy as np
 
 def log_likelihood(theta, data):
      cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, theta)
-     return -0.5 * np.sum((data-cur_model)**2)
+     return -0.5 * np.sum(((data-cur_model)/1e-6)**2)
 
 def log_prior(theta):
      dx, dy, sigma, amp_1 = theta
@@ -226,7 +226,7 @@ def log_likelihood_tod(theta, idx, idy, data):
      cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, theta)
      cur_model = cur_model.at[idy.astype(int), idx.astype(int)].get(mode = "fill", fill_value = 0)
 
-     return -1/2 * np.sum((data-cur_model)**2)
+     return -1/2 * np.sum(((data-cur_model)/1e-6)**2)
 
 def log_probability_tod(theta, idx, idy, data):
      lp = log_prior(theta)
@@ -246,7 +246,7 @@ params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
 nwalkers, ndim = params2.shape
 
 sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability_tod, args = (data_tod, X, Y)
+    nwalkers, ndim, log_probability_tod, args = (X, Y, data_tod)
 )
 
 sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
@@ -258,10 +258,9 @@ fig = corner.corner(
     flat_samples, labels=labels, truths=truths
 )
 
-
-
-
-
+############################################################################
+# TOD shape TOD                                                            #
+############################################################################
 
 idx = todvec.tods[0].info["model_idx"]
 idy = todvec.tods[0].info["model_idy"]
@@ -273,7 +272,7 @@ params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
 nwalkers, ndim = params2.shape
 
 sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability_tod, args = (data_tod, idx, idy)
+    nwalkers, ndim, log_probability_tod, args = (idx, idy, data_tod)
 )
 
 sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
