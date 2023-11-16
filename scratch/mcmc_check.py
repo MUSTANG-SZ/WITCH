@@ -225,7 +225,7 @@ jsample(params, tods)
 
 
 sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability, args = (tods, jsample, fixed_params, fixed_pars_ids) #comma needed to not unroll tods
+    nwalkers, ndim, log_probability, args = (tods, jsample, fixed_params, fixed_pars_ids, da) #comma needed to not unroll tods
 )
 
 sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
