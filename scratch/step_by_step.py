@@ -193,7 +193,7 @@ def log_probability(theta, data):
      return lp + log_likelihood(theta, data)
 
 dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
-
+params[3] = 1e-3
 vis_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
 noise = np.random.rand(330, 330)*0.1*params[3]
 
@@ -237,6 +237,7 @@ def log_probability_tod(theta, idx, idy, data):
 x = np.arange(0, len(xyz[0][0]), dtype=int)
 y = np.arange(0, len(xyz[0][0]), dtype=int)
 X, Y = np.meshgrid(x, y)
+params[3] = 1e-3
 
 data_tod = vis_model.at[Y, X].get(mode="fill", fill_value = 0)
 
@@ -285,148 +286,34 @@ fig = corner.corner(
 )
 
 
+############################################################################
+# Real TOD Model                                                           #
+############################################################################
 
-from minkasi_jax.core import model
-import numpy as np
+lims = todvec.lims()
+pixsize = 2.0 / 3600 * np.pi / 180
+skymap = SkyMap(lims, pixsize, square=True, multiple = 2)
 
-def log_likelihood(theta, data):
-     cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, theta)
-     return -0.5 * np.sum((data-cur_model)**2)
-
-def log_prior(theta):
-     dx, dy, sigma, amp_1 = theta
-     if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*0.0036 < sigma < 30*0.0036 and -10 < amp_1 < 10:
-         return 0.0
-     return -np.inf
-
-def log_probability(theta, data):
-     lp = log_prior(theta)
-     if not np.isfinite(lp):
-         return -np.inf
-     return lp + log_likelihood(theta, data)
-
-dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
-
-vis_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
-noise = np.random.rand(330, 330)*0.1*params[3]
-
-data = vis_model+noise
-
-truths = params
-
-params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
-params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
-
-nwalkers, ndim = params2.shape
-
-sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability, args = (vis_model,)
-)
-
-sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
-flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
-
-import corner
-
-fig = corner.corner(
-    flat_samples, labels=labels, truths=truths
-)
-
-from minkasi_jax.core import model
-import numpy as np
-
-def log_likelihood(theta, data):
-     dx, dy, sigma, amp = theta
-     sigma = np.exp(sigma)
-     amp = np.exp(amp)
-     params = [dx, dy, sigma, amp]
-     cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
-     ll = -0.5 * np.sum((data-cur_model)**2)
-     return ll
-
-def log_prior(theta):
-     dx, dy, sigma, amp_1 = theta
-     if np.abs(dx) < 20 and np.abs(dy) < 20 and -6 < sigma < 3 and -10 < amp_1 < 1:
-         return 0.0
-     return -np.inf
-
-def log_probability(theta, data):
-     lp = log_prior(theta)
-     if not np.isfinite(lp):
-         return -np.inf
-     ll = log_likelihood(theta, data)
-     return lp + ll
-
-dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
-params[3] = 1e-2
-vis_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
-noise = np.random.rand(vis_model.shape[0], vis_model.shape[1])*0.4*params[3]
+sim = True #This script is for simming, the option to turn off is here only for debugging
+#TODO: Write this to use minkasi_jax.core.model
+for i, tod in enumerate(todvec.tods):
+    print(tod.info["fname"])
+    ipix = skymap.get_pix(tod)
+    tod.info["ipix"] = ipix
+    if sim:
+        tod.info["dat_calib"] *= (-1) ** ((parallel.myrank + parallel.nproc * i) % 2)
+        start = 0
+        sim_model = 0 
+        for n, fun in zip(npars, funs):
+            sim_model = 0  += fun(params[start : (start + n)], tod)[1]
+            start += n
+        tod.info["dat_calib"] += np.array(sim_model = 0 )
 
 
-data = vis_model+noise
-truths = params
+    tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
-log_params = params.copy()
-log_params[2] = np.log(log_params[2])
-log_params[3] = np.log(log_params[3])
+idx = todvec.tods[0].info["model_idx"]
+idy = todvec.tods[0].info["model_idy"]
 
-params2 = log_params + 1e-2*np.random.randn(2*len(params), len(params))
+data_tod = todvec.tods[0].info["dat_calib"]
 
-nwalkers, ndim = params2.shape
-
-sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability, args = (data,)
-)
-
-
-####################################################################
-# Removing dx/dy kinda works......                                 #
-####################################################################
-
-from minkasi_jax.core import model
-import numpy as np
-
-def log_likelihood(theta, data):
-     params = [0, 0, theta[0], theta[1]]
-     cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
-     return -0.5 * np.sum((data-cur_model)**2)
-
-def log_prior(theta):
-     sigma, amp = theta
-     if -1 < sigma < 1 and -1 < amp < 1:
-         return 0.0
-
-     return -np.inf
-
-def log_probability(theta, data):
-     lp = log_prior(theta)
-     if not np.isfinite(lp):
-         return -np.inf
-     return lp + log_likelihood(theta, data)
-
-dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
-params[3] = 1e-2
-vis_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
-noise = np.random.rand(330, 330)*0.1*params[3]
-
-data = vis_model+noise
-
-truths = params
-
-params2 = np.array([params[2], params[3]])
-params2 = params2 + 1e-2*np.random.randn(2*len(params2), len(params2))
-
-nwalkers, ndim = params2.shape
-
-sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability, args = (vis_model,)
-)
-
-sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
-flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
-
-import corner
-
-fig = corner.corner(
-    flat_samples, labels=labels[2:], truths=truths[2:]
-)
