@@ -289,6 +289,20 @@ fig = corner.corner(
 ############################################################################
 # Real TOD Model                                                           #
 ############################################################################
+from minkasi_jax.core import model
+import numpy as np
+
+def log_likelihood_tod(theta, idx, idy, data):
+     cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, theta)
+     cur_model = cur_model.at[idy.astype(int), idx.astype(int)].get(mode = "fill", fill_value = 0)
+
+     return -1/2 * np.sum(((data-cur_model)/1e-6)**2)
+
+def log_probability_tod(theta, idx, idy, data):
+     lp = log_prior(theta)
+     if not np.isfinite(lp):
+         return -np.inf
+     return lp + log_likelihood_tod(theta, idx, idy, data)
 
 lims = todvec.lims()
 pixsize = 2.0 / 3600 * np.pi / 180
@@ -301,13 +315,13 @@ for i, tod in enumerate(todvec.tods):
     ipix = skymap.get_pix(tod)
     tod.info["ipix"] = ipix
     if sim:
-        tod.info["dat_calib"] *= (-1) ** ((parallel.myrank + parallel.nproc * i) % 2)
+        tod.info["dat_calib"] *= 0
         start = 0
         sim_model = 0 
         for n, fun in zip(npars, funs):
-            sim_model = 0  += fun(params[start : (start + n)], tod)[1]
+            sim_model += fun(params[start : (start + n)], tod)[1]
             start += n
-        tod.info["dat_calib"] += np.array(sim_model = 0 )
+        tod.info["dat_calib"] += np.array(sim_model)
 
 
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
@@ -316,4 +330,22 @@ idx = todvec.tods[0].info["model_idx"]
 idy = todvec.tods[0].info["model_idy"]
 
 data_tod = todvec.tods[0].info["dat_calib"]
+truths = params
 
+params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
+params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
+
+nwalkers, ndim = params2.shape
+
+sampler = emcee.EnsembleSampler(
+    nwalkers, ndim, log_probability_tod, args = (idx, idy, data_tod)
+)
+
+sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
+flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
+
+import corner
+
+fig = corner.corner(
+    flat_samples, labels=labels, truths=truths
+)
