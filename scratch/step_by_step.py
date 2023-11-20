@@ -284,6 +284,12 @@ def log_likelihood_tod(theta, idx, idy, data):
 
      return -1/2 * np.sum(((data-cur_model)/1e-6)**2)
 
+def log_prior(theta):
+     dx, dy, sigma, amp_1 = theta
+     if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*0.0036 < sigma < 30*0.0036 and -10 < amp_1 < 10:
+         return 0.0
+     return -np.inf
+
 def log_probability_tod(theta, idx, idy, data):
      lp = log_prior(theta)
      if not np.isfinite(lp):
@@ -311,7 +317,7 @@ sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability_tod, args = (idx, idy, data_tod)
 )
 
-sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
+sampler.run_mcmc(params2, 5000, skip_initial_state_check = True, progress=True)
 flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 
 import corner
@@ -349,6 +355,8 @@ lims = todvec.lims()
 pixsize = 2.0 / 3600 * np.pi / 180
 skymap = SkyMap(lims, pixsize, square=True, multiple = 2)
 dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
+params[3] = 1e-3
+
 
 sim = True #This script is for simming, the option to turn off is here only for debugging
 #TODO: Write this to use minkasi_jax.core.model
