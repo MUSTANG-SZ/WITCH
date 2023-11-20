@@ -222,17 +222,32 @@ fig = corner.corner(
 # Now fit models in TOD space. Start with a square TOD that matches map.   #
 ############################################################################
 
+from minkasi_jax.core import model
+import numpy as np
+
+
 def log_likelihood_tod(theta, idx, idy, data):
      cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, theta)
      cur_model = cur_model.at[idy.astype(int), idx.astype(int)].get(mode = "fill", fill_value = 0)
 
      return -1/2 * np.sum(((data-cur_model)/1e-6)**2)
 
+def log_prior(theta):
+     dx, dy, sigma, amp_1 = theta
+     if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*0.0036 < sigma < 30*0.0036 and -10 < amp_1 < 10:
+         return 0.0
+     return -np.inf
+
 def log_probability_tod(theta, idx, idy, data):
      lp = log_prior(theta)
      if not np.isfinite(lp):
          return -np.inf
      return lp + log_likelihood_tod(theta, idx, idy, data)
+
+dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
+params[3] = 1e-3
+vis_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
+
 
 x = np.arange(0, len(xyz[0][0]), dtype=int)
 y = np.arange(0, len(xyz[0][0]), dtype=int)
@@ -250,7 +265,7 @@ sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability_tod, args = (X, Y, data_tod)
 )
 
-sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
+sampler.run_mcmc(params2, 5000, skip_initial_state_check = True, progress=True)
 flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 
 import corner
@@ -262,6 +277,32 @@ fig = corner.corner(
 ############################################################################
 # TOD shape TOD                                                            #
 ############################################################################
+
+def log_likelihood_tod(theta, idx, idy, data):
+     cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, theta)
+     cur_model = cur_model.at[idy.astype(int), idx.astype(int)].get(mode = "fill", fill_value = 0)
+
+     return -1/2 * np.sum(((data-cur_model)/1e-6)**2)
+
+def log_prior(theta):
+     dx, dy, sigma, amp_1 = theta
+     if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*0.0036 < sigma < 30*0.0036 and -10 < amp_1 < 10:
+         return 0.0
+     return -np.inf
+
+def log_probability_tod(theta, idx, idy, data):
+     lp = log_prior(theta)
+     if not np.isfinite(lp):
+         return -np.inf
+     return lp + log_likelihood_tod(theta, idx, idy, data)
+
+
+from minkasi_jax.core import model
+import numpy as np
+
+dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
+params[3] = 1e-3
+vis_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
 
 idx = todvec.tods[0].info["model_idx"]
 idy = todvec.tods[0].info["model_idy"]
@@ -276,13 +317,13 @@ sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability_tod, args = (idx, idy, data_tod)
 )
 
-sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
+sampler.run_mcmc(params2, 5000, skip_initial_state_check = True, progress=True)
 flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 
 import corner
 
 fig = corner.corner(
-    flat_samples, labels=labels, truths=truths
+    flat_samples, labels=labels, truths=params
 )
 
 
@@ -304,9 +345,18 @@ def log_probability_tod(theta, idx, idy, data):
          return -np.inf
      return lp + log_likelihood_tod(theta, idx, idy, data)
 
+def log_prior(theta):
+     dx, dy, sigma, amp_1 = theta
+     if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*0.0036 < sigma < 30*0.0036 and -10 < amp_1 < 10:
+         return 0.0
+     return -np.inf
+
 lims = todvec.lims()
 pixsize = 2.0 / 3600 * np.pi / 180
 skymap = SkyMap(lims, pixsize, square=True, multiple = 2)
+dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
+params[3] = 1e-3
+
 
 sim = True #This script is for simming, the option to turn off is here only for debugging
 #TODO: Write this to use minkasi_jax.core.model
@@ -341,7 +391,76 @@ sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability_tod, args = (idx, idy, data_tod)
 )
 
-sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
+sampler.run_mcmc(params2, 5000, skip_initial_state_check = True, progress=True)
+flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
+
+import corner
+
+fig = corner.corner(
+    flat_samples, labels=labels, truths=truths
+)
+
+############################################################################
+# Real TOD Model, func call                                                #
+############################################################################
+from minkasi_jax.core import model
+import numpy as np
+
+def log_likelihood_tod(theta, idx, idy, data):
+     cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, theta)
+     cur_model = cur_model.at[idy.astype(int), idx.astype(int)].get(mode = "fill", fill_value = 0)
+
+     return -1/2 * np.sum(((data-cur_model)/1e-6)**2)
+
+def log_probability_tod(theta, idx, idy, data):
+     lp = log_prior(theta)
+     if not np.isfinite(lp):
+         return -np.inf
+     return lp + log_likelihood_tod(theta, idx, idy, data)
+
+def log_prior(theta):
+     dx, dy, sigma, amp_1 = theta
+     if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*0.0036 < sigma < 30*0.0036 and -10 < amp_1 < 10:
+         return 0.0
+     return -np.inf
+
+lims = todvec.lims()
+pixsize = 2.0 / 3600 * np.pi / 180
+skymap = SkyMap(lims, pixsize, square=True, multiple = 2)
+
+for i, tod in enumerate(todvec.tods):
+    print(tod.info["fname"])
+    ipix = skymap.get_pix(tod)
+    tod.info["ipix"] = ipix
+
+    tod.set_noise(noise_class, *noise_args, **noise_kwargs)
+    
+    if sim:
+        #tod.info["dat_calib"] *= (-1) ** ((parallel.myrank + parallel.nproc * i) % 2)
+        tod.info["dat_calib"] = 0
+        start = 0
+        cur_model = 0 
+        for n, fun in zip(npars, funs):
+            cur_model += fun(params[start : (start + n)], tod)[1]
+            start += n
+        tod.info["dat_calib"] += np.array(cur_model)
+
+idx = todvec.tods[0].info["model_idx"]
+idy = todvec.tods[0].info["model_idy"]
+
+data_tod = todvec.tods[0].info["dat_calib"]
+truths = params
+
+params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
+params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
+
+nwalkers, ndim = params2.shape
+
+sampler = emcee.EnsembleSampler(
+    nwalkers, ndim, log_probability_tod, args = (idx, idy, data_tod)
+)
+
+sampler.run_mcmc(params2, 5000, skip_initial_state_check = True, progress=True)
 flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 
 import corner

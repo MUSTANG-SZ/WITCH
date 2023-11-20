@@ -21,8 +21,8 @@ from astropy import units as u
 
 import minkasi_jax.presets_by_source as pbs
 from minkasi_jax.utils import *
-from minkasi_jax import helper
-from minkasi_jax.core import model
+from minkasi_jax.core import helper
+from minkasi_jax.core import model as mink_model
 from minkasi_jax.forward_modeling import make_tod_stuff, sample
 from minkasi_jax.forward_modeling import sampler as my_sampler
 import emcee
@@ -180,22 +180,30 @@ noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
 noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
 
 sim = True #This script is for simming, the option to turn off is here only for debugging
+dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
+
 #TODO: Write this to use minkasi_jax.core.model
 for i, tod in enumerate(todvec.tods):
     print(tod.info["fname"])
     ipix = skymap.get_pix(tod)
     tod.info["ipix"] = ipix
+
     if sim:
         tod.info["dat_calib"] *= (-1) ** ((parallel.myrank + parallel.nproc * i) % 2)
+        #tod.info["dat_calib"] = 0
         start = 0
         model = 0 
         for n, fun in zip(npars, funs):
             model += fun(params[start : (start + n)], tod)[1]
             start += n
+
         tod.info["dat_calib"] += np.array(model)
 
-
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
+
+
+
+    
 
 tods = make_tod_stuff(todvec, skymap)
 
