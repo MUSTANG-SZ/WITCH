@@ -64,7 +64,8 @@ def get_chis(m, idx, idy, rhs, v, weight, dd = None):
         The chi2 of the model m to the data.
     """
 
-    model = m.at[idy, idx].get(mode = "fill", fill_value=0)
+    model = m.at[idy.astype(int), idx.astype(int)].get(mode = "fill", fill_value = 0)
+
 
     #model = model.at[:,0].set((jnp.sqrt(0.5)*model)[:,0]) #This doesn't actually do anything
     #model = model.at[:,-1].set((jnp.sqrt(0.5)*model)[:,-1])
