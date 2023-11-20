@@ -213,17 +213,27 @@ for i, tod in enumerate(todvec.tods):
     print(tod.info["fname"])
     ipix = skymap.get_pix(tod)
     tod.info["ipix"] = ipix
+
+    tod.set_noise(noise_class, *noise_args, **noise_kwargs)
+
     if sim:
-        tod.info["dat_calib"] *= (-1) ** ((parallel.myrank + parallel.nproc * i) % 2)
+        #tod.info["dat_calib"] *= (-1) ** ((parallel.myrank + parallel.nproc * i) % 2)
+        tod.info["dat_calib"] = 0
+        '''
         start = 0
         model = 0 
         for n, fun in zip(npars, funs):
             model += fun(params[start : (start + n)], tod)[1]
             start += n
-        tod.info["dat_calib"] += np.array(model)
+        '''
+        vis_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
+        idx = todvec.tods[0].info["model_idx"]
+        idy = todvec.tods[0].info["model_idy"]
+        data_tod = vis_model.at[idy, idx].get(mode = "fill", fill_value = 0)
+        tod.info["dat_calib"] += np.array(data_tod)
 
 
-    tod.set_noise(noise_class, *noise_args, **noise_kwargs)
+    
 
 tods = make_tod_stuff(todvec, skymap)
 

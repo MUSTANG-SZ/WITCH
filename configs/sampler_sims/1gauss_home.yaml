@@ -51,7 +51,7 @@ models:
         value: "9.5*da"
         to_fit: True
       amp:
-        value: "1e0"
+        value: "1e-2"
         to_fit: True
 
 
