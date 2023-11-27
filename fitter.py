@@ -104,8 +104,7 @@ for i, fname in enumerate(tod_names):
     dat["pred2"] = pred2
     dat["cm"] = cm
 
-    # Make pixelized RA/Dec TODs
-    print(x0, y0, r_map, dr, coord_conv)
+    # Make pixelized RA/Dec TODs 
     idx, idy = tod_to_index(dat["dx"], dat["dy"], x0, y0, r_map, dr, coord_conv)
     idu, id_inv = np.unique(
         np.vstack((idx.ravel(), idy.ravel())), axis=1, return_inverse=True
