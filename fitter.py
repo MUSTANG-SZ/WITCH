@@ -21,7 +21,7 @@ from astropy.coordinates import Angle
 import minkasi_jax.presets_by_source as pbs
 from minkasi_jax import helper
 from minkasi_jax.utils import *
-
+import minkasi.minkasi_all as minkasi
 
 def print_once(*args):
     """
@@ -76,7 +76,7 @@ xyz = jax.device_put(xyz, device)
 xyz[0].block_until_ready()
 xyz[1].block_until_ready()
 xyz[2].block_until_ready()
-
+dr = eval(str(cfg["coords"]["r_map"]))
 # Load TODs
 tod_names = glob.glob(os.path.join(cfg["paths"]["tods"], cfg["paths"]["glob"]))
 bad_tod, addtag = pbs.get_bad_tods(
@@ -84,7 +84,7 @@ bad_tod, addtag = pbs.get_bad_tods(
 )
 if "cut" in cfg["paths"]:
     bad_tod += cfg["paths"]["cut"]
-tod_names = minkasi.cut_blacklist(tod_names, bad_tod)
+#tod_names = minkasi.cut_blacklist(tod_names, bad_tod)
 tod_names.sort()
 ntods = cfg["minkasi"].get("ntods", None)
 tod_names = tod_names[:ntods]
@@ -105,6 +105,7 @@ for i, fname in enumerate(tod_names):
     dat["cm"] = cm
 
     # Make pixelized RA/Dec TODs
+    print(x0, y0, r_map, dr, coord_conv)
     idx, idy = tod_to_index(dat["dx"], dat["dy"], x0, y0, r_map, dr, coord_conv)
     idu, id_inv = np.unique(
         np.vstack((idx.ravel(), idy.ravel())), axis=1, return_inverse=True
