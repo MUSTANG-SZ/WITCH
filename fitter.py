@@ -76,7 +76,7 @@ xyz = jax.device_put(xyz, device)
 xyz[0].block_until_ready()
 xyz[1].block_until_ready()
 xyz[2].block_until_ready()
-dr = eval(str(cfg["coords"]["r_map"]))
+dr = eval(str(cfg["coords"]["dr"]))
 # Load TODs
 tod_names = glob.glob(os.path.join(cfg["paths"]["tods"], cfg["paths"]["glob"]))
 bad_tod, addtag = pbs.get_bad_tods(
