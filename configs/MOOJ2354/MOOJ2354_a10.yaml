@@ -15,7 +15,7 @@ coords:
   dr: ".5"
   x0: "Angle('23:54:42.6 hours').to(u.radian).value"
   y0: "Angle('31:50:54.0 degrees').to(u.radian).value"
-  conv_factor: "(da * 180 * 3600) / np.pi"
+  conv_factor: "(180 * 3600) / np.pi"
 beam:
   fwhm1: "9.735"
   amp1: 0.9808
