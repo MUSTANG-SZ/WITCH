@@ -1,5 +1,5 @@
 cluster:
-  name: "MOOJ234"
+  name: "MOOJ2354"
   Te: 5.0
   freq: 90e9
 paths:
@@ -14,7 +14,7 @@ coords:
   r_map: "3.0*60"
   dr: ".5"
   x0: "Angle('23:54:42.6 hours').to(u.radian).value"
-  y0: "Angle('31:50:54.0 degrees').to(u.radian).value"
+  y0: "Angle('35:07:11.0 degrees').to(u.radian).value"
   conv_factor: "(180 * 3600) / np.pi"
 beam:
   fwhm1: "9.735"
