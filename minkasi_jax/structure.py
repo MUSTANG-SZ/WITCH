@@ -2,13 +2,18 @@
 Functions for generating structure.
 This includes both cluster profiles and substructure.
 """
+from functools import partial
+
 import jax
 import jax.numpy as jnp
 from .utils import transform_grid, ap, h70, get_nz, get_hz
 
 
-@jax.jit
-def gnfw(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z, xyz):
+@partial(
+    jax.jit,
+    static_argnums=(14),
+)
+def gnfw(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z, fit_r500, xyz):
     """
     Elliptical gNFW pressure profile in 3d.
     This function does not include smoothing or declination stretch
@@ -46,16 +51,24 @@ def gnfw(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z
 
         xyz: Coordinte grid to calculate model on
 
+        fix_r500: If True, overrides r_1/r_2/r_3 to be equal to the r500 value associated with m500
+
     Returns:
 
         model: The gnfw model
     """
     nz = get_nz(z)
     hz = get_hz(z)
+    if fix_r500:
+        da = get_da(z)
 
     x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
     r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
+
+    if fix_r500:
+        r_1, r_2, r_3 = r500 / da, r500 / da, r500 / da
+
     r = c500 * jnp.sqrt(x**2 + y**2 + z**2) / r500
     denominator = (r**gamma) * (1 + r**alpha) ** ((beta - gamma) / alpha)
 
