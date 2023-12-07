@@ -22,7 +22,7 @@ jax.config.update("jax_enable_x64", True)
 # jax.config.update("jax_platform_name", "gpu")
 
 N_PAR_ISOBETA = 9
-N_PAR_GNFW = 14
+N_PAR_GNFW = 15
 N_PAR_GAUSSIAN = 9
 N_PAR_UNIFORM = 8
 N_PAR_EXPONENTIAL = 14
