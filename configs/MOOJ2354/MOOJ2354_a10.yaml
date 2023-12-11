@@ -11,7 +11,7 @@ paths:
   subdir: "MOOJ2354_A10"
 coords:
   z: 0.97 
-  r_map: "3.0*60"
+  r_map: "5.0*60"
   dr: ".5"
   x0: "Angle('23:54:42.6 hours').to(u.radian).value"
   y0: "Angle('35:07:11.0 degrees').to(u.radian).value"
@@ -81,4 +81,7 @@ models:
         to_fit: False
       z:
         value: 0.97 
+        to_fit: False
+      fix_r500:
+        value: True
         to_fit: False
