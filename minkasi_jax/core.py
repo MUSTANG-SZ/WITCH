@@ -303,7 +303,7 @@ def model_grad(
     xyz,
     n_isobeta,
     n_gnfw,
-    n_10
+    n_a10,
     n_gaussian,
     n_uniform,
     n_exponential,
