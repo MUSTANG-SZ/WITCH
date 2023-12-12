@@ -13,7 +13,7 @@ from .utils import transform_grid, ap, h70, get_nz, get_hz
     jax.jit,
     static_argnums=(14),
 )
-def gnfw(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z, fit_r500, xyz):
+def gnfw(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z, fix_r500, xyz):
     """
     Elliptical gNFW pressure profile in 3d.
     This function does not include smoothing or declination stretch
