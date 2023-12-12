@@ -35,25 +35,16 @@ minkasi:
   dograd: False
 models:
   a10:
-    func: "partial(helper, xyz=xyz, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(_to_fit)[0], n_gnfw=1, n_powerlaw=0)"
+    func: "partial(helper, xyz=xyz, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(_to_fit)[0], n_a10=1)"
     parameters:
       dx_1:
         value: 0.0 
-        to_fit: True 
+        to_fit: False
       dy_1:
         value: 0.0
-        to_fit: True 
+        to_fit: False 
       dz_1:
         value: 0.0 
-        to_fit: False
-      r_1:
-        value: 0.5 
-        to_fit: False
-      r_2:
-        value: 0.5
-        to_fit: False
-      r_3:
-        value: 0.5
         to_fit: False
       theta:
         value: 0.0
@@ -82,6 +73,4 @@ models:
       z:
         value: 0.97 
         to_fit: False
-      fix_r500:
-        value: True
-        to_fit: False
+      
