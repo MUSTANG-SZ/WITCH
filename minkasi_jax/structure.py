@@ -8,6 +8,7 @@ import jax
 import jax.numpy as jnp
 from .utils import transform_grid, ap, h70, get_nz, get_hz, get_da
 
+
 @jax.jit
 def gnfw(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z, xyz):
     """
@@ -70,10 +71,11 @@ def gnfw(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z
 
     return P500 * P0 / denominator
 
+
 @jax.jit
 def a10(dx, dy, dz, theta, P0, c500, m500, gamma, alpha, beta, z, xyz):
     """
-    Elliptical gNFW pressure profile in 3d based on Arnaud2010.
+    gNFW pressure profile in 3d based on Arnaud2010.
     Compared to the function gnfw, this function fixes r1/r2/r3 to r500.
     This function does not include smoothing or declination stretch
     which should be applied at the end.
@@ -85,12 +87,6 @@ def a10(dx, dy, dz, theta, P0, c500, m500, gamma, alpha, beta, z, xyz):
         dy: Dec of cluster center relative to grid origin
 
         dz: Line of sight offset of cluster center relative to grid origin
-
-        r_1: Amount to scale along x-axis
-
-        r_2: Amount to scale along y-axis
-
-        r_3: Amount to scale along z-axis
 
         theta: Angle to rotate in xy-plane
 
@@ -117,14 +113,14 @@ def a10(dx, dy, dz, theta, P0, c500, m500, gamma, alpha, beta, z, xyz):
 
     nz = get_nz(z)
     hz = get_hz(z)
-    da = get_da(z) #TODO pass these arguments rather than recompute them everytime???
+    da = get_da(z)  # TODO pass these arguments rather than recompute them everytime???
 
     r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
     r_1, r_2, r_3 = r500 / da, r500 / da, r500 / da
 
     x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
-    r = c500 * jnp.sqrt(x**2 + y**2 + z**2) / r500
+    r = c500 * jnp.sqrt(x**2 + y**2 + z**2)
     denominator = (r**gamma) * (1 + r**alpha) ** ((beta - gamma) / alpha)
 
     P500 = (
