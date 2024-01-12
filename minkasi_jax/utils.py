@@ -407,6 +407,9 @@ def tod_to_index(xi, yi, x0, y0, grid, conv_factor):
     idx = np.rint(idx).astype(int)
     idy = np.rint(idy).astype(int)
 
+    idx = jnp.where(idx < 0, idx + 2 * len(full_rmap), idx)
+    idy = jnp.where(idy < 0, idy + 2 * len(full_rmap), idy)
+
     return idx, idy
 
 
