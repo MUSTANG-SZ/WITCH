@@ -15,6 +15,7 @@ from .structure import (
     egaussian,
     gaussian,
     gnfw,
+    a10,
     isobeta,
 )
 from .utils import fft_conv
@@ -26,6 +27,7 @@ N_PAR_ISOBETA = 9
 N_PAR_GNFW = 14
 N_PAR_GAUSSIAN = 4
 N_PAR_EGAUSSIAN = 9
+N_PAR_A10 = 11
 N_PAR_UNIFORM = 8
 N_PAR_EXPONENTIAL = 14
 N_PAR_POWERLAW = 11
@@ -44,6 +46,7 @@ def helper(
     par_idx,
     n_isobeta=0,
     n_gnfw=0,
+    n_a10=0,
     n_gaussian=0,
     n_egaussian=0,
     n_uniform=0,
@@ -85,6 +88,8 @@ def helper(
 
         n_gnfw: Number of gnfw profiles to add.
 
+        n_a10: Number of Arnaud2010 profiles to add.
+
         n_gaussian: Number of gaussians to add.
 
         n_egaussian: Number of eliptical gaussians to add.
@@ -116,6 +121,7 @@ def helper(
         xyz,
         n_isobeta,
         n_gnfw,
+        n_a10,
         n_gaussian,
         n_egaussian,
         n_uniform,
@@ -150,6 +156,7 @@ def model(
     xyz,
     n_isobeta,
     n_gnfw,
+    n_a10,
     n_gaussian,
     n_egaussian,
     n_uniform,
@@ -170,6 +177,8 @@ def model(
         n_isobeta: Number of isobeta profiles to add.
 
         n_gnfw: Number of gnfw profiles to add.
+
+        n_a10: Number of Arnaud2010 profiles to add.
 
         n_gaussian: Number of gaussians to add.
 
@@ -199,6 +208,7 @@ def model(
     params = jnp.ravel(params)  # Fixes strange bug with params having dim (1,n)
     isobetas = jnp.zeros((1, 1), dtype=float)
     gnfws = jnp.zeros((1, 1), dtype=float)
+    a10s = jnp.zeros((1, 1), dtype=float)
     gaussians = jnp.zeros((1, 1), dtype=float)
     egaussians = jnp.zeros((1, 1), dtype=float)
     uniforms = jnp.zeros((1, 1), dtype=float)
@@ -215,6 +225,10 @@ def model(
         delta = n_gnfw * N_PAR_GNFW
         gnfws = params[start : start + delta].reshape((n_gnfw, N_PAR_GNFW))
         start += delta
+    if n_a10:
+        delta = n_a10 * N_PAR_A10
+        a10s = params[start : start + delta].reshape((n_a10, N_PAR_A10))
+        start += delta 
     if n_gaussian:
         delta = n_gaussian * N_PAR_GAUSSIAN
         gaussians = params[start : start + delta].reshape((n_gaussian, N_PAR_GAUSSIAN))
@@ -252,12 +266,18 @@ def model(
 
     for i in range(n_gnfw):
         pressure = jnp.add(pressure, gnfw(*gnfws[i], xyz))
+        
+    for i in range(n_uniform):
+        pressure = add_uniform(pressure, xyz, *uniforms[i])
 
     for i in range(n_egaussian):
         pressure = jnp.add(pressure, egaussian(*egaussians[i], xyz))
 
-    for i in range(n_uniform):
-        pressure = add_uniform(pressure, xyz, *uniforms[i])
+    for i in range(n_gaussian):
+        pressure = jnp.add(pressure, gaussian(*gaussians[i], xyz))
+        
+    for i in range(n_a10):
+        pressure = jnp.add(pressure, a10(*a10s[i], xyz))
 
     for i in range(n_exponential):
         pressure = add_exponential(pressure, xyz, *exponentials[i])
@@ -346,14 +366,17 @@ def model_tod(
     return model_out.reshape(idx.shape)
 
 
-# @partial(
-#    jax.jit,
-#    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 11),
-# )
+
+@partial(
+    jax.jit,
+    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 11),
+)
+
 def model_grad(
     xyz,
     n_isobeta,
     n_gnfw,
+    n_a10,
     n_gaussian,
     n_egaussian,
     n_uniform,
@@ -371,6 +394,10 @@ def model_grad(
     Note that the additional arguments are passed **before** the *params argument.
 
     Arguments:
+    
+        n_a10: Number of Arnaud2010 profiles to add.
+
+        n_gaussian: Number of gaussians to add.
 
         argnums: The arguments to evaluate the gradient at
 
@@ -462,6 +489,7 @@ def model_tod_grad(
         xyz,
         n_isobeta,
         n_gnfw,
+        n_a10,
         n_gaussian,
         n_egaussian,
         n_uniform,
@@ -479,6 +507,7 @@ def model_tod_grad(
         xyz,
         n_isobeta,
         n_gnfw,
+        n_a10,
         n_gaussian,
         n_egaussian,
         n_uniform,

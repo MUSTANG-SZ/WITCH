@@ -2,9 +2,11 @@
 Functions for generating structure.
 This includes both cluster profiles and substructure.
 """
+from functools import partial
+
 import jax
 import jax.numpy as jnp
-from .utils import transform_grid, ap, h70, get_nz, get_hz
+from .utils import transform_grid, ap, h70, get_nz, get_hz, get_da
 
 
 @jax.jit
@@ -56,7 +58,69 @@ def gnfw(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z
     x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
     r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
+
     r = c500 * jnp.sqrt(x**2 + y**2 + z**2) / r500
+    denominator = (r**gamma) * (1 + r**alpha) ** ((beta - gamma) / alpha)
+
+    P500 = (
+        1.65e-03
+        * (m500 / (3.00e14 / h70)) ** (2.00 / 3.00 + ap)
+        * hz ** (8.00 / 3.00)
+        * h70**2
+    )
+
+    return P500 * P0 / denominator
+
+
+@jax.jit
+def a10(dx, dy, dz, theta, P0, c500, m500, gamma, alpha, beta, z, xyz):
+    """
+    gNFW pressure profile in 3d based on Arnaud2010.
+    Compared to the function gnfw, this function fixes r1/r2/r3 to r500.
+    This function does not include smoothing or declination stretch
+    which should be applied at the end.
+
+    Arguments:
+
+        dx: RA of cluster center relative to grid origin
+
+        dy: Dec of cluster center relative to grid origin
+
+        dz: Line of sight offset of cluster center relative to grid origin
+
+        theta: Angle to rotate in xy-plane
+
+        P0: Amplitude of the pressure profile
+
+        c500: Concentration parameter at a density contrast of 500
+
+        m500: Mass at a density contrast of 500
+
+        gamma: The central slope
+
+        alpha: The intermediate slope
+
+        beta: The outer slope
+
+        z: Redshift of cluster
+
+        xyz: Coordinte grid to calculate model on
+
+    Returns:
+
+        model: The gnfw model
+    """
+
+    nz = get_nz(z)
+    hz = get_hz(z)
+    da = get_da(z)  # TODO pass these arguments rather than recompute them everytime???
+
+    r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
+    r_1, r_2, r_3 = r500 / da, r500 / da, r500 / da
+
+    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+
+    r = c500 * jnp.sqrt(x**2 + y**2 + z**2)
     denominator = (r**gamma) * (1 + r**alpha) ** ((beta - gamma) / alpha)
 
     P500 = (
