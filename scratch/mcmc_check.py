@@ -12,7 +12,7 @@ import minkasi.tods.io as io
 import minkasi.parallel as parallel
 import minkasi.tods.core as mtods
 import minkasi.tods.processing as tod_processing
-import minkasi.maps.skymap as skymap
+from minkasi.maps.skymap import SkyMap
 from minkasi.fitting import models
 from minkasi.mapmaking import noise
 
@@ -150,13 +150,19 @@ priors = []
 prior_vals = []
 re_eval = []
 par_idx = {}
-for cur_model in cfg["models"].values():
-    npars.append(len(cur_model["parameters"]))
-    for name, par in cur_model["parameters"].items():
+subtract = []
+
+for mname, model in cfg["models"].items():
+    npars.append(len(model["parameters"]))
+    _to_fit = []
+    _re_eval = []
+    _par_idx = {}
+    for name, par in model["parameters"].items():
         labels.append(name)
-        par_idx[name] = len(params)
+        par_idx[mname + "-" + name] = len(params)
+        _par_idx[mname + "-" + name] = len(_to_fit)
         params.append(eval(str(par["value"])))
-        to_fit.append(eval(str(par["to_fit"])))
+        _to_fit.append(eval(str(par["to_fit"])))
         if "priors" in par:
             priors.append(par["priors"]["type"])
             prior_vals.append(eval(str(par["priors"]["value"])))
@@ -164,10 +170,32 @@ for cur_model in cfg["models"].values():
             priors.append(None)
             prior_vals.append(None)
         if "re_eval" in par and par["re_eval"]:
-            re_eval.append(str(par["value"]))
+            _re_eval.append(str(par["value"]))
         else:
-            re_eval.append(False)
-    2.627 * da, funs.append(eval(str(cur_model["func"])))
+            _re_eval.append(False)
+    to_fit = to_fit + _to_fit
+    re_eval = re_eval + _re_eval
+    # Special case where function is helper
+    if model["func"][:15] == "partial(helper,":
+        func_str = model["func"][:-1]
+        if "xyz" not in func_str:
+            func_str += ", xyz=xyz"
+        if "beam" not in func_str:
+            func_str += ", beam=beam"
+        if "argnums" not in func_str:
+            func_str += ", argnums=np.where(_to_fit)[0]"
+        if "re_eval" not in func_str:
+            func_str += ", re_eval=_re_eval"
+        if "par_idx" not in func_str:
+            func_str += ", par_idx=_par_idx"
+        func_str += ")"
+        model["func"] = func_str
+
+    funs.append(eval(str(model["func"])))
+    if "sub" in model:
+        subtract.append(model["sub"])
+    else:
+        subtract.append(True)
 
 npars = np.array(npars)
 labels = np.array(labels)
@@ -258,3 +286,5 @@ fig = corner.corner(
 
 plt.savefig(odir+'1gauss_corner.pdf')
 plt.savefig(odir+'1gauss_corner.png')
+
+
