@@ -1,3 +1,33 @@
+## 2.0.0 (2024-01-15)
+
+### Feat
+
+- spilt creation of model from indexing it onto a tod
+- modify tod pixilization to work on any grid
+- add in function to get grid from skymap
+- faster get_chis
+- new gaussian modeling
+- new streamlined sampler
+- adding mcmc check
+- working towards being able to fix parameters
+- deved constructor function for sampler
+
+### Fix
+
+- fixing merge issue
+- include da in smapler call
+- finally sorted sim issues and other sim improvements
+- restoring jit
+- updating to work with minkasi refactor
+- do sparse grid creation even when using a skymap
+- fixing dr/r_map units
+- updating imports to conform to new minkasi standards
+
+### Perf
+
+- typing idx/idy for robustness
+- removing dx/dy seems to help fitting
+
 ## 1.5.0 (2024-01-08)
 
 ### Feat
