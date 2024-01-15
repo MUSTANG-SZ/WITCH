@@ -33,6 +33,7 @@ N_PAR_EXPONENTIAL = 14
 N_PAR_POWERLAW = 11
 
 ARGNUM_SHIFT = 13
+ARGNUM_SHIFT_TOD = ARGNUM_SHIFT + 2
 
 
 def helper(
@@ -132,7 +133,7 @@ def helper(
         beam,
         idx,
         idy,
-        tuple(argnums + ARGNUM_SHIFT),
+        tuple(argnums + ARGNUM_SHIFT_TOD),
         *params,
     )
 
@@ -148,22 +149,10 @@ def helper(
     return grad, pred
 
 
-<<<<<<< HEAD
 @partial(
     jax.jit,
     static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
 )
-||||||| parent of 97df10d (feat!: spilt creation of model from indexing it onto a tod)
-#@partial(
-#    jax.jit,
-#    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
-#)
-=======
-# @partial(
-#    jax.jit,
-#    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
-# )
->>>>>>> 97df10d (feat!: spilt creation of model from indexing it onto a tod)
 def model(
     xyz,
     n_isobeta,
@@ -286,7 +275,7 @@ def model(
         pressure = jnp.add(pressure, gaussian(*gaussians[i], xyz))
 
     for i in range(n_egaussian):
-        pressure = jnp.add(presure, egaussian(*egaussians[i], xyz))
+        pressure = jnp.add(pressure, egaussian(*egaussians[i], xyz))
 
     for i in range(n_uniform):
         pressure = add_uniform(pressure, xyz, *uniforms[i])
@@ -318,39 +307,15 @@ def model(
 
     for i in range(n_gaussian):
         ip = jnp.add(ip, gaussian(*gaussians[i], xyz))
-<<<<<<< HEAD
-    
-    model_out = ip.at[idy.ravel(), idx.ravel()].get(mode="fill", fill_value=0)
-    return model_out.reshape(idx.shape)
-||||||| parent of 97df10d (feat!: spilt creation of model from indexing it onto a tod)
-
-    model_out = ip.at[idy.ravel(), idx.ravel()].get(mode="fill", fill_value=0)
-    return model_out.reshape(idx.shape)
-=======
 
     return ip
->>>>>>> 97df10d (feat!: spilt creation of model from indexing it onto a tod)
 
 
-<<<<<<< HEAD
 @partial(
-    jax.jit,
-    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 13),
+   jax.jit,
+   static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
 )
-def model_grad(
-||||||| parent of 97df10d (feat!: spilt creation of model from indexing it onto a tod)
-#@partial(
-#    jax.jit,
-#    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 13),
-#)
-def model_grad(
-=======
-# @partial(
-#    jax.jit,
-#    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
-# )
 def model_tod(
->>>>>>> 97df10d (feat!: spilt creation of model from indexing it onto a tod)
     xyz,
     n_isobeta,
     n_gnfw,
@@ -374,60 +339,6 @@ def model_tod(
 
     Arguments:
 
-<<<<<<< HEAD
-        xyz: Coordinate grid to compute profile on.
-
-        n_isobeta: Number of isobeta profiles to add.
-
-        n_gnfw: Number of gnfw profiles to add.
-
-        n_a10: Number of Arnaud2010 profiles to add.
-
-        n_gaussian: Number of gaussians to add.
-
-        n_egaussian: Number of eliptical gaussians to add.
-
-        n_uniform: Number of uniform ellipsoids to add.
-
-        n_exponential: Number of exponential ellipsoids to add.
-
-        n_powerlaw: Number of power law ellipsoids to add.
-
-        n_powerlaw_cos: Number of radial power law ellipsoids with angulas cos term to add.
-
-        dx: Factor to scale by while integrating.
-            Since it is a global factor it can contain unit conversions.
-            Historically equal to y2K_RJ * dr * da * XMpc / me.
-
-        beam: Beam to convolve by, should be a 2d array.
-
-||||||| parent of 97df10d (feat!: spilt creation of model from indexing it onto a tod)
-        xyz: Coordinate grid to compute profile on.
-
-        n_isobeta: Number of isobeta profiles to add.
-
-        n_gnfw: Number of gnfw profiles to add.
-
-        n_gaussian: Number of gaussians to add.
-
-        n_egaussian: Number of eliptical gaussians to add.
-
-        n_uniform: Number of uniform ellipsoids to add.
-
-        n_exponential: Number of exponential ellipsoids to add.
-
-        n_powerlaw: Number of power law ellipsoids to add.
-
-        n_powerlaw_cos: Number of radial power law ellipsoids with angulas cos term to add.
-
-        dx: Factor to scale by while integrating.
-            Since it is a global factor it can contain unit conversions.
-            Historically equal to y2K_RJ * dr * da * XMpc / me.
-
-        beam: Beam to convolve by, should be a 2d array.
-
-=======
->>>>>>> 97df10d (feat!: spilt creation of model from indexing it onto a tod)
         idx: RA TOD in units of pixels.
              Should have Dec stretch applied.
 
@@ -442,6 +353,7 @@ def model_tod(
         xyz,
         n_isobeta,
         n_gnfw,
+        n_a10,
         n_gaussian,
         n_egaussian,
         n_uniform,
@@ -457,14 +369,15 @@ def model_tod(
     return model_out.reshape(idx.shape)
 
 
-# @partial(
-#    jax.jit,
-#    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 11),
-# )
+@partial(
+   jax.jit,
+   static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 12),
+)
 def model_grad(
     xyz,
     n_isobeta,
     n_gnfw,
+    n_a10,
     n_gaussian,
     n_egaussian,
     n_uniform,
@@ -530,14 +443,15 @@ def model_grad(
     return pred, grad_padded
 
 
-# @partial(
-#    jax.jit,
-#    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 13),
-# )
+@partial(
+   jax.jit,
+   static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 14),
+)
 def model_tod_grad(
     xyz,
     n_isobeta,
     n_gnfw,
+    n_a10,
     n_gaussian,
     n_egaussian,
     n_uniform,
@@ -575,6 +489,7 @@ def model_tod_grad(
         xyz,
         n_isobeta,
         n_gnfw,
+        n_a10,
         n_gaussian,
         n_egaussian,
         n_uniform,
@@ -592,6 +507,7 @@ def model_tod_grad(
         xyz,
         n_isobeta,
         n_gnfw,
+        n_a10,
         n_gaussian,
         n_egaussian,
         n_uniform,
@@ -605,6 +521,6 @@ def model_tod_grad(
         *params,
     )
     grad_padded = jnp.zeros((len(params),) + pred.shape)
-    grad_padded = grad_padded.at[jnp.array(argnums) - ARGNUM_SHIFT].set(jnp.array(grad))
+    grad_padded = grad_padded.at[jnp.array(argnums) - ARGNUM_SHIFT_TOD].set(jnp.array(grad))
 
     return pred, grad_padded
