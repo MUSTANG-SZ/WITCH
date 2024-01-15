@@ -1,3 +1,10 @@
+## 2.0.1 (2024-01-15)
+
+### Fix
+
+- make mcmc check consistent with sampler branch
+- several minor fixes, mostly from merge errors but also use seperate ARGNUM_SHIFTS for the two cases
+
 ## 2.0.0 (2024-01-15)
 
 ### Feat
