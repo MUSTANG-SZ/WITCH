@@ -3,10 +3,10 @@ A set of utility functions and constants used for unit conversions
 and adding generic structure common to multiple models.
 """
 from functools import partial
+
 import jax
 import jax.numpy as jnp
 import numpy as np
-
 from astropy import constants as const
 from astropy import units as u
 from astropy.cosmology import Planck15 as cosmo
@@ -42,6 +42,7 @@ dzline = jnp.array(dzline)
 hzline = jnp.array(hzline.value)
 nzline = jnp.array(nzline.value)
 daline = jnp.array(daline.value)
+
 
 # Unit conversions
 # --------------------------------------------------------
@@ -267,7 +268,7 @@ def make_grid(r_map, dx, dy=None, dz=None):
     y = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dy))
     z = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dz))
 
-    return jnp.meshgrid(x, y, z, sparse=True, indexing="xy")
+    return jnp.meshgrid(x, y, z, sparse=True, indexing="ij")
 
 
 def make_grid_from_skymap(skymap, z_map, dz):
@@ -293,7 +294,7 @@ def make_grid_from_skymap(skymap, z_map, dz):
     _x = jnp.arange(skymap.nx)
     _y = jnp.arange(skymap.ny)
     _z = jnp.linspace(-1 * z_map, z_map, 2 * int(z_map / dz))
-    x, y, z = jnp.meshgrid(_x, _y, _z, sparse=True, indexing="xy")
+    x, y, z = jnp.meshgrid(_x, _y, _z, sparse=True, indexing="ij")
 
     # Pad so we don't need to broadcast
     x_flat = x.ravel()
@@ -319,8 +320,8 @@ def make_grid_from_skymap(skymap, z_map, dz):
         ra = ra[:len_diff]
 
     # Sparse indexing to save mem
-    x[0] = ra
-    y[:, 0] = dec
+    x[:, 0, 0] = ra
+    y[0, :, 0] = dec
 
     return x, y, z
 
@@ -407,8 +408,8 @@ def tod_to_index(xi, yi, x0, y0, grid, conv_factor):
     idx = np.rint(idx).astype(int)
     idy = np.rint(idy).astype(int)
 
-    idx = jnp.where(idx < 0, idx + 2 * len(full_rmap), idx)
-    idy = jnp.where(idy < 0, idy + 2 * len(full_rmap), idy)
+    idx = jnp.where(idx < 0, idx + 2 * grid[0].shape[0], idx)
+    idy = jnp.where(idy < 0, idy + 2 * grid[1].shape[1], idy)
 
     return idx, idy
 
