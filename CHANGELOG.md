@@ -1,3 +1,9 @@
+## 2.0.2 (2024-01-19)
+
+### Fix
+
+- various indexing bugs, also switch to ij indexing
+
 ## 2.0.1 (2024-01-15)
 
 ### Fix
