@@ -8,15 +8,15 @@ import jax
 import jax.numpy as jnp
 
 from .structure import (
+    a10,
     add_exponential,
     add_powerlaw,
     add_powerlaw_cos,
     add_uniform,
-    gnfw,
-    a10,
-    isobeta,
     egaussian,
     gaussian,
+    gnfw,
+    isobeta,
 )
 from .utils import fft_conv
 
@@ -229,7 +229,7 @@ def model(
     if n_a10:
         delta = n_a10 * N_PAR_A10
         a10s = params[start : start + delta].reshape((n_a10, N_PAR_A10))
-        start += delta 
+        start += delta
     if n_gaussian:
         delta = n_gaussian * N_PAR_GAUSSIAN
         gaussians = params[start : start + delta].reshape((n_gaussian, N_PAR_GAUSSIAN))
@@ -261,7 +261,7 @@ def model(
         )
         start += delta
 
-    pressure = jnp.zeros((xyz[0].shape[1], xyz[1].shape[0], xyz[2].shape[2]))
+    pressure = jnp.zeros((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
     for i in range(n_isobeta):
         pressure = jnp.add(pressure, isobeta(*isobetas[i], xyz))
 
@@ -312,8 +312,8 @@ def model(
 
 
 @partial(
-   jax.jit,
-   static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
+    jax.jit,
+    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
 )
 def model_tod(
     xyz,
@@ -365,13 +365,13 @@ def model_tod(
         *params,
     )
 
-    model_out = ip.at[idy.ravel(), idx.ravel()].get(mode="fill", fill_value=0)
+    model_out = ip.at[idx.ravel(), idy.ravel()].get(mode="fill", fill_value=0)
     return model_out.reshape(idx.shape)
 
 
 @partial(
-   jax.jit,
-   static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 12),
+    jax.jit,
+    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 12),
 )
 def model_grad(
     xyz,
@@ -444,8 +444,8 @@ def model_grad(
 
 
 @partial(
-   jax.jit,
-   static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 14),
+    jax.jit,
+    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 14),
 )
 def model_tod_grad(
     xyz,
@@ -521,6 +521,8 @@ def model_tod_grad(
         *params,
     )
     grad_padded = jnp.zeros((len(params),) + pred.shape)
-    grad_padded = grad_padded.at[jnp.array(argnums) - ARGNUM_SHIFT_TOD].set(jnp.array(grad))
+    grad_padded = grad_padded.at[jnp.array(argnums) - ARGNUM_SHIFT_TOD].set(
+        jnp.array(grad)
+    )
 
     return pred, grad_padded
