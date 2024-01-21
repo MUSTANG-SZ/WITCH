@@ -291,9 +291,9 @@ def make_grid_from_skymap(skymap, z_map, dz):
         z: Grid of z coordinates in radians.
     """
     # make grid
-    _x = jnp.arange(skymap.nx)
-    _y = jnp.arange(skymap.ny)
-    _z = jnp.linspace(-1 * z_map, z_map, 2 * int(z_map / dz))
+    _x = jnp.arange(skymap.nx, dtype=float)
+    _y = jnp.arange(skymap.ny, dtype=float)
+    _z = jnp.linspace(-1 * z_map, z_map, 2 * int(z_map / dz), dtype=float)
     x, y, z = jnp.meshgrid(_x, _y, _z, sparse=True, indexing="ij")
 
     # Pad so we don't need to broadcast
@@ -320,8 +320,8 @@ def make_grid_from_skymap(skymap, z_map, dz):
         ra = ra[:len_diff]
 
     # Sparse indexing to save mem
-    x.at[:, 0, 0].set(ra)
-    y.at[0, :, 0].set(dec)
+    x = x.at[:, 0, 0].set(ra)
+    y = y.at[0, :, 0].set(dec)
 
     return x, y, z
 
