@@ -1,3 +1,9 @@
+## 2.0.3 (2024-01-21)
+
+### Fix
+
+- use jax syntax for setting arrays
+
 ## 2.0.2 (2024-01-19)
 
 ### Fix
