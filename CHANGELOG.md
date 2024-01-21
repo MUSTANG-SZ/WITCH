@@ -1,3 +1,9 @@
+## 2.0.4 (2024-01-21)
+
+### Fix
+
+- make sure grid is floats and return the modified arrays
+
 ## 2.0.3 (2024-01-21)
 
 ### Fix
