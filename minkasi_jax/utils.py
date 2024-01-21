@@ -320,8 +320,8 @@ def make_grid_from_skymap(skymap, z_map, dz):
         ra = ra[:len_diff]
 
     # Sparse indexing to save mem
-    x[:, 0, 0] = ra
-    y[0, :, 0] = dec
+    x.at[:, 0, 0].set(ra)
+    y.at[0, :, 0].set(dec)
 
     return x, y, z
 
