@@ -1,3 +1,9 @@
+## 2.1.0 (2024-01-22)
+
+### Feat
+
+- Added centering to make_grid_from_skymap
+
 ## 2.0.4 (2024-01-21)
 
 ### Fix
