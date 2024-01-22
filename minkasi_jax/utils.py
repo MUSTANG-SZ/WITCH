@@ -271,7 +271,7 @@ def make_grid(r_map, dx, dy=None, dz=None):
     return jnp.meshgrid(x, y, z, sparse=True, indexing="ij")
 
 
-def make_grid_from_skymap(skymap, z_map, dz):
+def make_grid_from_skymap(skymap, z_map, dz, x0 = None, y0 = None):
     """
     Make coordinate grids to build models in.
     All grids are sparse and are int(2*r_map / dr) in each dimension.
@@ -281,6 +281,10 @@ def make_grid_from_skymap(skymap, z_map, dz):
         z_map: Size of grid along LOS, in radians.
 
         dz: Grid resolution along LOS, in radians.
+        
+        x0: Map x center in radians. If None, grid center is used.
+
+        y0: Map y center in radians. If None, grid center is used.
 
     Returns:
 
@@ -318,6 +322,14 @@ def make_grid_from_skymap(skymap, z_map, dz):
         dec = dec[: (-1 * len_diff)]
     elif len_diff < 0:
         ra = ra[:len_diff]
+
+    if not x0:
+        x0 = (skymap.lims[1] + skymap.lims[0]) / 2
+    if not y0:
+        y0 = (skymap.lims[3] + skymap.lims[2]) / 2
+
+    ra -= x0
+    dec -= y0
 
     # Sparse indexing to save mem
     x = x.at[:, 0, 0].set(ra)
