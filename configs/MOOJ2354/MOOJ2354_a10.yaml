@@ -35,7 +35,7 @@ minkasi:
   dograd: False
 models:
   a10:
-    func: "partial(helper, xyz=xyz, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(_to_fit)[0], n_a10=1)"
+    func: "partial(helper, xyz=xyz, dx=float(da*y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(_to_fit)[0], n_a10=1)"
     parameters:
       dx_1:
         value: 0.0 
