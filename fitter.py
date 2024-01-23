@@ -126,7 +126,7 @@ skymap = minkasi.SkyMap(lims, pixsize)
 
 Te = eval(str(cfg["cluster"]["Te"]))
 freq = eval(str(cfg["cluster"]["freq"]))
-print(dr)
+
 beam = beam_double_gauss(
     dr,
     eval(str(cfg["beam"]["fwhm1"])),
