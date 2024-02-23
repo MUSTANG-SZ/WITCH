@@ -39,13 +39,13 @@ models:
     parameters:
       dx_1:
         value: 0.0 
-        to_fit: False
+        to_fit: True
         priors:
           type: "flat"
           value: "(np.array([-3.0, 3.0])*u.arcsec).to(u.radian).value"
       dy_1:
         value: 0.0
-        to_fit: False 
+        to_fit: True 
         priors:
           type: "flat"
           value: "(np.array([-3.0, 3.0])*u.arcsec).to(u.radian).value"
@@ -62,7 +62,7 @@ models:
         value: 1.177 
         to_fit: False 
       m500:
-        value: "5e14"
+        value: "0e14"
         to_fit: True 
       gamma:
         value: .3081 

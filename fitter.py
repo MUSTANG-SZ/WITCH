@@ -91,13 +91,14 @@ tod_names = tod_names[:ntods]
 tod_names = tod_names[minkasi.myrank :: minkasi.nproc]
 minkasi.barrier()  # Is this needed?
 
-n_tods = 10
+n_tods = 999999
 todvec = minkasi.TodVec()
 for i, fname in enumerate(tod_names):
     if i >= n_tods: continue
     dat = minkasi.read_tod_from_fits(fname)
     minkasi.truncate_tod(dat)
-
+    minkasi.downsample_tod(dat)
+    minkasi.truncate_tod(dat)
     # figure out a guess at common mode and (assumed) linear detector drifts/offset
     # drifts/offsets are removed, which is important for mode finding.  CM is *not* removed.
     dd, pred2, cm = minkasi.fit_cm_plus_poly(dat["dat_calib"], cm_ord=3, full_out=True)
