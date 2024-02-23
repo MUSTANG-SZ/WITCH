@@ -260,6 +260,10 @@ if minkasi.myrank == 0:
 
 # Fit TODs
 pars_fit = params
+
+if fit:
+    params *= 1.1 #Don't start at exactly the right value
+
 if fit:
     t1 = time.time()
     print_once("Started actual fitting")
