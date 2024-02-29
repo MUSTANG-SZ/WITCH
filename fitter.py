@@ -48,6 +48,12 @@ parser.add_argument(
     action="store_true",
     help="Don't actually fit, just use values from config",
 )
+parser.add_argument(
+    "--nosub",
+    "-ns",
+    action="store_true",
+    help="Don't subtract the sim'd or fit model. Useful for mapmaking a sim'd cluster"
+)
 args = parser.parse_args()
 
 with open(args.config, "r") as file:
@@ -253,6 +259,9 @@ if sub_poly:
     outdir += "-" + method + "_" + str(degree)
 if sim:
     outdir += "-sim"
+if args.nosub:
+    outdir += "-no_sub"
+
 print_once("Outputs can be found in", outdir)
 if minkasi.myrank == 0:
     os.makedirs(outdir, exist_ok=True)
@@ -261,7 +270,7 @@ if minkasi.myrank == 0:
 # Fit TODs
 pars_fit = params
 
-if fit:
+if sim:
     params *= 1.1 #Don't start at exactly the right value
 
 if fit:
@@ -300,16 +309,17 @@ if fit:
         )
 
 # Subtract model from TODs
-for tod in todvec.tods:
-    start = 0
-    model = 0
-    for n, fun, sub in zip(npars, funs, subtract):
-        if not sub:
-            continue
-        model += fun(pars_fit[start : (start + n)], tod)[1]
-        start += n
-    tod.info["dat_calib"] -= np.array(model)
-    tod.set_noise(noise_class, *noise_args, **noise_kwargs)
+if not args.nosub:
+    for tod in todvec.tods:
+        start = 0
+        model = 0
+        for n, fun, sub in zip(npars, funs, subtract):
+            if not sub:
+                continue
+            model += fun(pars_fit[start : (start + n)], tod)[1]
+            start += n
+        tod.info["dat_calib"] -= np.array(model)
+        tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
 # Make maps
 npass = cfg["minkasi"]["npass"]
