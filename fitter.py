@@ -271,7 +271,7 @@ if minkasi.myrank == 0:
 pars_fit = params
 
 if sim:
-    params *= 1.1 #Don't start at exactly the right value
+    params[to_fit] *= 1.1 #Don't start at exactly the right value
 
 if fit:
     t1 = time.time()
