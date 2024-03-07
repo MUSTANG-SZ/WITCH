@@ -1,3 +1,13 @@
+## 2.2.0 (2024-03-07)
+
+### Feat
+
+- do static argnums and argnum shift via function inspection
+
+### Fix
+
+- jnp.trapz depracation
+
 ## 2.1.0 (2024-01-22)
 
 ### Feat
