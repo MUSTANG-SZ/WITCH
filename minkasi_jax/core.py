@@ -7,6 +7,12 @@ from functools import partial
 
 import jax
 import jax.numpy as jnp
+
+if hasattr(jnp, "trapz"):
+    trapz = jnp.trapz
+else:
+    from jax.scipy.integrate import trapezoid as trapz
+
 import numpy as np
 
 from .structure import (
@@ -313,7 +319,7 @@ def model(
         pressure = add_powerlaw_cos(pressure, xyz, *powerlaw_coses[i])
 
     # Integrate along line of site
-    ip = jnp.trapz(pressure, dx=dx, axis=-1)
+    ip = trapz(pressure, dx=dx, axis=-1)
 
     bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
         (ip.shape[1] - beam.shape[1]) / 2
