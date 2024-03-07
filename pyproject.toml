@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name="minkasi_jax"
-version="2.1.0"
+version="2.2.0"
 authors= [
 {name ="Jack Orlowski-Scherer"},
 {name ="Saianeesh Keshav Haridas"},
