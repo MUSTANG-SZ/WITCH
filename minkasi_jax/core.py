@@ -2,10 +2,12 @@
 Core module for generating models aed their gradients.
 """
 
+import inspect
 from functools import partial
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from .structure import (
     a10,
@@ -23,17 +25,41 @@ from .utils import fft_conv
 jax.config.update("jax_enable_x64", True)
 # jax.config.update("jax_platform_name", "gpu")
 
-N_PAR_ISOBETA = 9
-N_PAR_GNFW = 14
-N_PAR_A10 = 11
-N_PAR_GAUSSIAN = 4
-N_PAR_EGAUSSIAN = 9
-N_PAR_UNIFORM = 8
-N_PAR_EXPONENTIAL = 14
-N_PAR_POWERLAW = 11
+# Do some signature inspection to avoid hard coding
+model_sig = inspect.signature(model)
+model_grad_sig = inspect.signature(model_grad)
+model_tod_sig = inspect.signature(model_tod)
+model_tod_grad_sig = inspect.signature(model_tod_grad)
 
-ARGNUM_SHIFT = 13
-ARGNUM_SHIFT_TOD = ARGNUM_SHIFT + 2
+# Get argnum shifts, -1 is for param
+ARGNUM_SHIFT = len(model_sig.parameters) - 1
+ARGNUM_SHIFT_TOD = len(model_tod_sig.parameters) - 1
+
+# Figure out static argnums
+model_static = _get_static(model_sig)
+model_grad_static = _get_static(model_grad_sig)
+model_tod_static = _get_static(model_tod_sig)
+model_tod_grad_static = _get_static(model_tod_grad_sig)
+
+# Get number of parameters for each structure
+# The -1 is because xyz doesn't count
+# For now a line needs to be added for each new model but this could be more magic down the line
+N_PAR_ISOBETA = len(inspect.signature(isobeta).parameters) - 1
+N_PAR_GNFW = len(inspect.signature(gnfw).parameters) - 1
+N_PAR_A10 = len(inspect.signature(a10).parameters) - 1
+N_PAR_GAUSSIAN = len(inspect.signature(gaussian).parameters) - 1
+N_PAR_EGAUSSIAN = len(inspect.signature(egaussian).parameters) - 1
+N_PAR_UNIFORM = len(inspect.signature(add_uniform).parameters) - 1
+N_PAR_EXPONENTIAL = len(inspect.signature(add_exponential).parameters) - 1
+N_PAR_POWERLAW = len(inspect.signature(add_powerlaw).parameters) - 1
+
+
+def _get_static(signature, prefix_list=["n_", "argnums"]):
+    par_names = np.array(list(signature.parameters.keys()), dtype=str)
+    static_msk = np.zeros_like(par_names, dtype=bool)
+    for prefix in prefix_list:
+        static_msk += np.char.startswith(par_names, prefix)
+    return tuple(np.where(static_msk)[0])
 
 
 def helper(
@@ -149,10 +175,7 @@ def helper(
     return grad, pred
 
 
-@partial(
-    jax.jit,
-    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
-)
+@partial(jax.jit, static_argnums=model_static)
 def model(
     xyz,
     n_isobeta,
@@ -311,10 +334,7 @@ def model(
     return ip
 
 
-@partial(
-    jax.jit,
-    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9),
-)
+@partial(jax.jit, static_argnums=model_tod_static)
 def model_tod(
     xyz,
     n_isobeta,
@@ -369,10 +389,7 @@ def model_tod(
     return model_out.reshape(idx.shape)
 
 
-@partial(
-    jax.jit,
-    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 12),
-)
+@partial(jax.jit, static_argnums=model_grad_static)
 def model_grad(
     xyz,
     n_isobeta,
@@ -443,10 +460,7 @@ def model_grad(
     return pred, grad_padded
 
 
-@partial(
-    jax.jit,
-    static_argnums=(1, 2, 3, 4, 5, 6, 7, 8, 9, 14),
-)
+@partial(jax.jit, static_argnums=model_tod_grad_static)
 def model_tod_grad(
     xyz,
     n_isobeta,
