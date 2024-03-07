@@ -26,3 +26,6 @@ cuda/
 sims.py
 model_comparitor.py
 gpu_minkasi_jax.ipynb
+sim_fitter.ipynb
+
+
