@@ -1,3 +1,9 @@
+## 2.2.1 (2024-03-08)
+
+### Fix
+
+- do inspections after function def
+
 ## 2.2.0 (2024-03-07)
 
 ### Feat
