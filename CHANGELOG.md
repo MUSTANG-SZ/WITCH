@@ -1,3 +1,9 @@
+## 2.3.0 (2024-03-08)
+
+### Feat
+
+- print starting params for sims. Also switching to sci notation for params
+
 ## 2.2.1 (2024-03-08)
 
 ### Fix
