@@ -54,6 +54,12 @@ parser.add_argument(
     action="store_true",
     help="Don't subtract the sim'd or fit model. Useful for mapmaking a sim'd cluster"
 )
+parser.add_argument(
+    "--wnoise",
+    "-wn",
+    action="store_true",
+    help="Use whitenoise instead of map noise. Only for use with sim"
+)
 args = parser.parse_args()
 
 with open(args.config, "r") as file:
@@ -229,7 +235,12 @@ for i, tod in enumerate(todvec.tods):
             tod.info["dat_calib"][j] -= np.polynomial.polynomial.polyval(x, res)
 
     if sim:
-        tod.info["dat_calib"] *= (-1) ** ((minkasi.myrank + minkasi.nproc * i) % 2)
+        if args.wnoise:
+            temp = np.percentile(np.diff(tod.info["dat_calib"]), [33,68])
+            scale = (temp[1]-temp[0])/np.sqrt(8) 
+            tod.info["dat_calib"] = np.random.normal(0, scale, size=tod.info["dat_calib"].shape) 
+        else: 
+            tod.info["dat_calib"] *= (-1) ** ((minkasi.myrank + minkasi.nproc * i) % 2)
         start = 0
         model = 0
         for n, fun in zip(npars, funs):
