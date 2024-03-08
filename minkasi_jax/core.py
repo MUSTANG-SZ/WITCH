@@ -3,7 +3,6 @@ Core module for generating models aed their gradients.
 """
 
 import inspect
-from functools import partial
 
 import jax
 import jax.numpy as jnp
@@ -30,22 +29,6 @@ from .utils import fft_conv
 
 jax.config.update("jax_enable_x64", True)
 # jax.config.update("jax_platform_name", "gpu")
-
-# Do some signature inspection to avoid hard coding
-model_sig = inspect.signature(model)
-model_grad_sig = inspect.signature(model_grad)
-model_tod_sig = inspect.signature(model_tod)
-model_tod_grad_sig = inspect.signature(model_tod_grad)
-
-# Get argnum shifts, -1 is for param
-ARGNUM_SHIFT = len(model_sig.parameters) - 1
-ARGNUM_SHIFT_TOD = len(model_tod_sig.parameters) - 1
-
-# Figure out static argnums
-model_static = _get_static(model_sig)
-model_grad_static = _get_static(model_grad_sig)
-model_tod_static = _get_static(model_tod_sig)
-model_tod_grad_static = _get_static(model_tod_grad_sig)
 
 # Get number of parameters for each structure
 # The -1 is because xyz doesn't count
@@ -181,7 +164,6 @@ def helper(
     return grad, pred
 
 
-@partial(jax.jit, static_argnums=model_static)
 def model(
     xyz,
     n_isobeta,
@@ -340,7 +322,6 @@ def model(
     return ip
 
 
-@partial(jax.jit, static_argnums=model_tod_static)
 def model_tod(
     xyz,
     n_isobeta,
@@ -395,7 +376,6 @@ def model_tod(
     return model_out.reshape(idx.shape)
 
 
-@partial(jax.jit, static_argnums=model_grad_static)
 def model_grad(
     xyz,
     n_isobeta,
@@ -466,7 +446,6 @@ def model_grad(
     return pred, grad_padded
 
 
-@partial(jax.jit, static_argnums=model_tod_grad_static)
 def model_tod_grad(
     xyz,
     n_isobeta,
@@ -546,3 +525,26 @@ def model_tod_grad(
     )
 
     return pred, grad_padded
+
+
+# Do some signature inspection to avoid hard coding
+model_sig = inspect.signature(model)
+model_grad_sig = inspect.signature(model_grad)
+model_tod_sig = inspect.signature(model_tod)
+model_tod_grad_sig = inspect.signature(model_tod_grad)
+
+# Get argnum shifts, -1 is for param
+ARGNUM_SHIFT = len(model_sig.parameters) - 1
+ARGNUM_SHIFT_TOD = len(model_tod_sig.parameters) - 1
+
+# Figure out static argnums
+model_static = _get_static(model_sig)
+model_grad_static = _get_static(model_grad_sig)
+model_tod_static = _get_static(model_tod_sig)
+model_tod_grad_static = _get_static(model_tod_grad_sig)
+
+# Now JIT
+model = jax.jit(model, static_argnums=model_static)
+model_grad = jax.jit(model_grad, static_argnums=model_grad_static)
+model_tod = jax.jit(model_tod, static_argnums=model_tod_static)
+model_tod_grad = jax.jit(model_tod_grad, static_argnums=model_tod_grad_static)
