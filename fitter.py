@@ -282,6 +282,9 @@ if minkasi.myrank == 0:
 pars_fit = params
 
 if sim:
+    print_once("Starting pars: \n")
+    for i, label in enumerate(labels):
+        print_once(label, ": {:.2e}".format(params[i]))
     params[to_fit] *= 1.1 #Don't start at exactly the right value
 
 if fit:
@@ -309,7 +312,7 @@ if fit:
 
     print_once("Fit parameters:")
     for l, pf, err in zip(labels, pars_fit, errs):
-        print_once("\t", l, "=", pf, "+/-", err)
+        print_once("\t", l, "= {:.2e} +/- {:.2e}".format(pf, eff))
     print_once("chisq =", chisq)
 
     if minkasi.myrank == 0:
