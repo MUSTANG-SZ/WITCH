@@ -271,7 +271,7 @@ def make_grid(r_map, dx, dy=None, dz=None):
     return jnp.meshgrid(x, y, z, sparse=True, indexing="ij")
 
 
-def make_grid_from_skymap(skymap, z_map, dz, x0 = None, y0 = None):
+def make_grid_from_skymap(skymap, z_map, dz, x0=None, y0=None):
     """
     Make coordinate grids to build models in.
     All grids are sparse and are int(2*r_map / dr) in each dimension.
@@ -281,7 +281,7 @@ def make_grid_from_skymap(skymap, z_map, dz, x0 = None, y0 = None):
         z_map: Size of grid along LOS, in radians.
 
         dz: Grid resolution along LOS, in radians.
-        
+
         x0: Map x center in radians. If None, grid center is used.
 
         y0: Map y center in radians. If None, grid center is used.
@@ -420,8 +420,9 @@ def tod_to_index(xi, yi, x0, y0, grid, conv_factor):
     idx = np.rint(idx).astype(int)
     idy = np.rint(idy).astype(int)
 
-    idx = jnp.where(idx < 0, idx + 2 * grid[0].shape[0], idx)
-    idy = jnp.where(idy < 0, idy + 2 * grid[1].shape[1], idy)
+    # Ensure out of bounds for stuff not in grid
+    idx = jnp.where((idx < 0) + (idx >= grid[0].shape[0]), 2 * grid[0].shape[0], idx)
+    idy = jnp.where((idy < 0) + (idy >= grid[1].shape[1]), 2 * grid[1].shape[1], idy)
 
     return idx, idy
 
