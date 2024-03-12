@@ -312,7 +312,7 @@ if fit:
 
     print_once("Fit parameters:")
     for l, pf, err in zip(labels, pars_fit, errs):
-        print_once("\t", l, "= {:.2e} +/- {:.2e}".format(pf, eff))
+        print_once("\t", l, "= {:.2e} +/- {:.2e}".format(pf, err))
     print_once("chisq =", chisq)
 
     if minkasi.myrank == 0:
