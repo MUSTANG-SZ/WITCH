@@ -1,3 +1,9 @@
+## 2.3.1 (2024-03-14)
+
+### Fix
+
+- ensure that samples outside of grid are 0
+
 ## 2.3.0 (2024-03-08)
 
 ### Feat
