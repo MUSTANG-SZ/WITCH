@@ -49,6 +49,13 @@ parser.add_argument(
     help="Don't actually fit, just use values from config",
 )
 parser.add_argument(
+    "--fitnum",
+    "-fn",
+    action="store_true",
+    default=int(5),
+    help="Number of fitting rounds to peform"
+)
+parser.add_argument(
     "--nosub",
     "-ns",
     action="store_true",
@@ -288,40 +295,41 @@ if sim:
     params[to_fit] *= 1.1 #Don't start at exactly the right value
 
 if fit:
-    t1 = time.time()
-    print_once("Started actual fitting")
-    pars_fit, chisq, curve, errs = minkasi.fit_timestreams_with_derivs_manyfun(
-        funs,
-        params,
-        npars,
-        todvec,
-        to_fit,
-        maxiter=cfg["minkasi"]["maxiter"],
-        priors=priors,
-        prior_vals=prior_vals,
-    )
-    minkasi.comm.barrier()
-    t2 = time.time()
-    print_once("Took", t2 - t1, "seconds to fit")
-
-    params = pars_fit
-    for i, re in enumerate(re_eval):
-        if not re:
-            continue
-        pars_fit[i] = eval(re)
-
-    print_once("Fit parameters:")
-    for l, pf, err in zip(labels, pars_fit, errs):
-        print_once("\t", l, "= {:.2e} +/- {:.2e}".format(pf, err))
-    print_once("chisq =", chisq)
-
-    if minkasi.myrank == 0:
-        res_path = os.path.join(outdir, "results")
-        print_once("Saving results to", res_path + ".npz")
-        np.savez_compressed(
-            res_path, pars_fit=pars_fit, chisq=chisq, errs=errs, curve=curve
+    for i in range(args.fitnum):
+        t1 = time.time()
+        pars_fit, chisq, curve, errs = minkasi.fit_timestreams_with_derivs_manyfun(
+            funs,
+            params,
+            npars,
+            todvec,
+            to_fit,
+            maxiter=cfg["minkasi"]["maxiter"],
+            priors=priors,
+            prior_vals=prior_vals,
         )
-
+        minkasi.comm.barrier()
+        t2 = time.time()
+        print_once("Took", t2 - t1, "seconds to fit")
+    
+        params = pars_fit
+        for i, re in enumerate(re_eval):
+            if not re:
+                continue
+            pars_fit[i] = eval(re)
+    
+        print_once("Fit parameters, {}th:".format(i))
+        for l, pf, err in zip(labels, pars_fit, errs):
+            print_once("\t", l, "= {:.2e} +/- {:.2e}".format(pf, err))
+        print_once("chisq =", chisq)
+    
+        if minkasi.myrank == 0:
+            res_path = os.path.join(outdir, "results")
+            print_once("Saving results to", res_path + "_{}.npz".format(i))
+            np.savez_compressed(
+                res_path, pars_fit=pars_fit, chisq=chisq, errs=errs, curve=curve
+            )
+        params=pars_fit.copy()
+    
 # Subtract model from TODs
 if not args.nosub:
     for tod in todvec.tods:
