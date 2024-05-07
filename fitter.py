@@ -312,10 +312,10 @@ if fit:
         print_once("Took", t2 - t1, "seconds to fit")
     
         params = pars_fit
-        for i, re in enumerate(re_eval):
+        for j, re in enumerate(re_eval):
             if not re:
                 continue
-            pars_fit[i] = eval(re)
+            pars_fit[j] = eval(re)
     
         print_once("Fit parameters, {}th:".format(i))
         for l, pf, err in zip(labels, pars_fit, errs):
@@ -329,6 +329,18 @@ if fit:
                 res_path, pars_fit=pars_fit, chisq=chisq, errs=errs, curve=curve
             )
         params=pars_fit.copy()
+
+        for i, tod in enumerate(todvec.tods):
+            temp = tod.copy()
+            start = 0
+            model = 0
+            for n, fun in zip(npars, funs):
+                model += fun(pars_fit[start : (start + n)], tod)[1]
+                start += n
+            temp.info["dat_calib"] -= np.array(model)
+        
+            tod.set_noise(noise_class, tod.info["dat_calib"] - model, *noise_args, **noise_kwargs)
+        
 minkasi.barrier() 
 # Subtract model from TODs
 if not args.nosub:
