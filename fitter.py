@@ -95,7 +95,7 @@ xyz = jax.device_put(xyz_host, device)
 xyz[0].block_until_ready()
 xyz[1].block_until_ready()
 xyz[2].block_until_ready()
-dr = eval(str(cfg["coords"]["dr"]))
+
 # Load TODs
 tod_names = glob.glob(os.path.join(cfg["paths"]["tods"], cfg["paths"]["glob"]))
 bad_tod, addtag = pbs.get_bad_tods(
@@ -148,7 +148,7 @@ Te = eval(str(cfg["cluster"]["Te"]))
 freq = eval(str(cfg["cluster"]["freq"]))
 
 beam = beam_double_gauss(
-    dr,
+    dr[0],
     eval(str(cfg["beam"]["fwhm1"])),
     eval(str(cfg["beam"]["amp1"])),
     eval(str(cfg["beam"]["fwhm2"])),
@@ -329,7 +329,7 @@ if fit:
                 res_path, pars_fit=pars_fit, chisq=chisq, errs=errs, curve=curve
             )
         params=pars_fit.copy()
-    
+minkasi.barrier() 
 # Subtract model from TODs
 if not args.nosub:
     for tod in todvec.tods:
