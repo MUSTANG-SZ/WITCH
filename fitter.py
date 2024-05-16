@@ -331,13 +331,11 @@ if fit:
         params=pars_fit.copy()
 
         for i, tod in enumerate(todvec.tods):
-            temp = tod.copy()
             start = 0
             model = 0
             for n, fun in zip(npars, funs):
                 model += fun(pars_fit[start : (start + n)], tod)[1]
                 start += n
-            temp.info["dat_calib"] -= np.array(model)
         
             tod.set_noise(noise_class, tod.info["dat_calib"] - model, *noise_args, **noise_kwargs)
         
