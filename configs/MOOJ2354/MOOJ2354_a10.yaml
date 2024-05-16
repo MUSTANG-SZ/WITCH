@@ -62,14 +62,14 @@ models:
         value: 1.177 
         to_fit: False 
       m500:
-        value: "4.4e14"
+        value: "5.4e14"
         to_fit: True 
       gamma:
         value: .3081 
-        to_fit: True 
-        priors:
-          type: "True"
-          value: "[0.0, 1.0]"
+        to_fit: False 
+        #priors:
+          #type: "flat"
+          #value: "[0.0, 1.0]"
       alpha:
         value: 1.051 
         to_fit: False
