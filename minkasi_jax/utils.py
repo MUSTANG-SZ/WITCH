@@ -2,6 +2,7 @@
 A set of utility functions and constants used for unit conversions
 and adding generic structure common to multiple models.
 """
+
 from functools import partial
 
 import jax
