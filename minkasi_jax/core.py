@@ -15,6 +15,14 @@ else:
 import numpy as np
 
 from .structure import (
+    N_PAR_A10,
+    N_PAR_EGAUSSIAN,
+    N_PAR_EXPONENTIAL,
+    N_PAR_GAUSSIAN,
+    N_PAR_GNFW,
+    N_PAR_ISOBETA,
+    N_PAR_POWERLAW,
+    N_PAR_UNIFORM,
     a10,
     add_exponential,
     add_powerlaw,
@@ -27,21 +35,20 @@ from .structure import (
 )
 from .utils import bilinear_interp, fft_conv
 
+ORDER = (
+    "isobeta",
+    "gnfw",
+    "a10",
+    "gaussian",
+    "egaussian",
+    "uniform",
+    "exponential",
+    "powerlaw",
+    "powerlaw_cos",
+)
+
 jax.config.update("jax_enable_x64", True)
 # jax.config.update("jax_platform_name", "gpu")
-
-# Get number of parameters for each structure
-# The -1 is because xyz doesn't count
-# -2 for Uniform, expo, and power as they also take a pressure arg that doesn't count
-# For now a line needs to be added for each new model but this could be more magic down the line
-N_PAR_ISOBETA = len(inspect.signature(isobeta).parameters) - 1
-N_PAR_GNFW = len(inspect.signature(gnfw).parameters) - 1
-N_PAR_A10 = len(inspect.signature(a10).parameters) - 1
-N_PAR_GAUSSIAN = len(inspect.signature(gaussian).parameters) - 1
-N_PAR_EGAUSSIAN = len(inspect.signature(egaussian).parameters) - 1
-N_PAR_UNIFORM = len(inspect.signature(add_uniform).parameters) - 2
-N_PAR_EXPONENTIAL = len(inspect.signature(add_exponential).parameters) - 2
-N_PAR_POWERLAW = len(inspect.signature(add_powerlaw).parameters) - 2
 
 
 def _get_static(signature, prefix_list=["n_", "argnums"]):
