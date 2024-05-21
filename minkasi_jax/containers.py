@@ -33,6 +33,10 @@ class Parameter:
     fit: list[bool]
     prior: Optional[tuple[float, float]] = None  # Only flat for now
 
+    @property
+    def fit_ever(self) -> bool:
+        return np.any(self.fit)
+
 
 @dataclass
 class Structure:
@@ -61,6 +65,8 @@ class Model:
     name: str
     structures: list[Structure]
     xyz: jax.Array
+    x0: float
+    y0: float
     dz: float
     beam: jax.Array
     n_rounds: int
@@ -113,6 +119,13 @@ class Model:
             ]
         return to_fit
 
+    @property
+    def to_fit_ever(self) -> list[bool]:
+        to_fit = []
+        for structure in self.structures:
+            to_fit += [parameter.fit_ever for parameter in structure.parameters]
+        return to_fit
+
     def minkasi_helper(
         self, tod: Tod, params: NDArray[np.floating]
     ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
@@ -132,8 +145,8 @@ class Model:
 
             pred: The  model with the specified substructure.
         """
-        dx = tod.info["dx"]
-        dy = tod.info["dy"]
+        dx = tod.info["dx"] - self.x0
+        dy = tod.info["dy"] - self.y0
 
         pred, grad = core.model_tod_grad(
             self.xyz,
@@ -210,4 +223,4 @@ class Model:
             "name", "".join([structure.name for structure in structures])
         )
 
-        return cls(name, structures, xyz, dz, beam, n_rounds)
+        return cls(name, structures, xyz, x0, y0, dz, beam, n_rounds)
