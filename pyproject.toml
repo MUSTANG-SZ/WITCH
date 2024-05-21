@@ -21,6 +21,9 @@ dependencies = ["numpy", "astropy", "jax", "jaxlib"]
 fitter = ["pyyaml", "minkasi"]
 profile = ["tensorflow", "gitpython"]
 
+[project.scripts]
+mj_fitter = "minkasi_jax:fitter"
+
 [tool.setuptools]
 packages=["minkasi_jax"]
 
