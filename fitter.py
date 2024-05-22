@@ -326,7 +326,7 @@ if fit:
             res_path = os.path.join(outdir, "results")
             print_once("Saving results to", res_path + "_{}.npz".format(i))
             np.savez_compressed(
-                res_path, pars_fit=pars_fit, chisq=chisq, errs=errs, curve=curve
+                res_path+"_{}".format(i), pars_fit=pars_fit, chisq=chisq, errs=errs, curve=curve
             )
         params=pars_fit.copy()
 
