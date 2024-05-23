@@ -103,7 +103,8 @@ bad_tod, addtag = pbs.get_bad_tods(
 )
 if "cut" in cfg["paths"]:
     bad_tod += cfg["paths"]["cut"]
-#tod_names = minkasi.cut_blacklist(tod_names, bad_tod)
+
+tod_names = minkasi.cut_blacklist(tod_names, bad_tod)
 tod_names.sort()
 ntods = cfg["minkasi"].get("ntods", None)
 tod_names = tod_names[:ntods]
