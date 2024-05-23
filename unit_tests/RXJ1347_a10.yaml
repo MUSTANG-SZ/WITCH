@@ -42,13 +42,13 @@ models:
         to_fit: True
         priors:
           type: "flat"
-          value: "np.array([-20.0, 20.0])"
+          value: "np.array([-9.0, 9.0])"
       dy_1:
         value: 0.0
         to_fit: True 
         priors:
           type: "flat"
-          value: "np.array([-20.0, 20.0])"
+          value: "np.array([-9.0, 9.0])"
       dz_1:
         value: 0.0 
         to_fit: False
@@ -62,7 +62,7 @@ models:
         value: 1.177 
         to_fit: False 
       m500:
-        value: "2.4e14"
+        value: "1.0e15"
         to_fit: True 
       gamma:
         value: .3081 
@@ -93,7 +93,7 @@ models:
           value: "np.array([-9.0, 9.0])"
       sigma:
         value: "4"
-        to_fit: True
+        to_fit: False 
         priors:
           type: "flat"
           value: "np.array([2,9])" 
