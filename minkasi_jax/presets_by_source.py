@@ -193,6 +193,12 @@ def get_m2team_def(name):
 
 def get_bad_tods(name,ndo=False,odo=False):
 
+    try:
+        name = str(name).lower().strip("_")
+    except TypeError:
+        print("Error: name is not a string. TOD cuts will not be properly applied")
+        return [], ""
+
     addtag="svprods_"
 
     bad_215_01=['Signal_TOD-AGBT18B_215_01-s'+str(ss)+'.fits' for ss in [0]] # Maybe 6,7 and 8 too?
@@ -233,10 +239,9 @@ def get_bad_tods(name,ndo=False,odo=False):
     bad_tod.extend(bad_175_01)   ;bad_tod.extend(bad_175_04);  bad_tod.extend(bad_175_06);  bad_tod.extend(bad_175_07)
 
 
-    if name == 'MOO_1046':
+    if name == 'moo1046' or name == 'mooj1046':
         #tod_files='/home/scratch/sdicker/AGBT18B_215/IDL_maps_current/moo1046/Signal_TOD-'+myproj+'.fits'
-        #addtag="svprods_mcen_SDTODs_"
-
+        #addtag="svprods_mcen_SDTODs_"  
         if ndo:
             bad_tod=['Signal_TOD-AGBT18B_215_10-s'+str(ss)+'.fits' for ss in range(30)] # 
             addtag="svprods_NDO_"
@@ -244,7 +249,12 @@ def get_bad_tods(name,ndo=False,odo=False):
             bad_tod=['Signal_TOD-AGBT18B_091_02-s'+str(ss)+'.fits' for ss in range(50)] # 
             addtag="svprods_ODO_"
 
-    if name == 'MOO_1142':
+    if name == 'moo1142' or name == 'mooj1142' :
+        bad_215_04=['Signal_TOD-AGBT18B_215_04-s'+str(ss)+'.fits' for ss in [52,53,54,86,87,88,89,91,92,93]]
+        bad_019_02=['Signal_TOD-AGBT20A_019_02-s'+str(ss)+'.fits' for ss in [28,43]]
+        bad_005_02=['Signal_TOD-AGBT23B_005_02-s'+str(ss)+'.fits' for ss in [17,39]]
+        bad_005_08=['Signal_TOD-AGBT23B_005_08-s'+str(ss)+'.fits' for ss in [14,16,17,18,26,27,28,29]]
+        bad_tod.extend(bad_215_04); bad_tod.extend(bad_019_02); bad_tod.extend(bad_005_02); bad_tod.extend(bad_005_08)
         if ndo:
             bad_tod=['Signal_TOD-AGBT18B_215_04-s'+str(ss)+'.fits' for ss in range(100)] # 
             addtag="svprods_NDO_"

@@ -1,20 +1,13 @@
 cluster:
-  name: "MOO_1142"
+  name: "MOO1142"
   Te: 5.0
   freq: 90e9
 paths:
-  tods: "/scratch/s/sievers/skh/tods/MOO1142/TS_EaCMS0f0_51_16_Feb_2022/"
+  tods: "/scratch/r/rbond/jorlo/M2-TODs/MOOJ1142"
   glob: "Signal_TOD*.fits"
   ndo: False
   odo: False
-  outroot: "/scratch/s/sievers/skh/Reductions"
-  cut:
-    - "Signal_TOD-AGBT18B_215_04-s88.fits"
-    - "Signal_TOD-AGBT18B_215_04-s89.fits"
-    - "Signal_TOD-AGBT18B_215_04-s91.fits"
-    - "Signal_TOD-AGBT18B_215_04-s92.fits"
-    - "Signal_TOD-AGBT18B_215_04-s93.fits"
-    - "Signal_TOD-AGBT18B_215_04-s94.fits"
+  outroot: "/scratch/r/rbond/jorlo/Reductions" 
 coords:
   z: 1.19 
   r_map: "3.0*60"
@@ -28,7 +21,7 @@ beam:
   fwhm2: "32.627"
   amp2: 0.0192
 bowling:
-  sub_poly: True
+  sub_poly: False
   method: "pred2"
   degree: 2
 minkasi:
@@ -41,7 +34,7 @@ minkasi:
   dograd: False
 models:
   isobeta_shock:
-    func: "partial(helper, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), n_isobeta=1, n_powerlaw=1)"
+    func: "partial(helper,  dx=float(da*y2K_RJ(freq, Te)*dr[-1]*XMpc/me), n_isobeta=1, n_powerlaw=1)"
     parameters:
       dx_1:
         value: 0.0
