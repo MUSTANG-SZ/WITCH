@@ -427,6 +427,73 @@ def tod_to_index(xi, yi, x0, y0, grid, conv_factor):
     return idx, idy
 
 
+@jax.jit
+def bilinear_interp(x, y, xp, yp, fp):
+    """
+    JAX implementation of bilinear interpolation.
+    Out of bounds values are set to 0.
+    Using the repeated linear interpolation method here,
+    see https://en.wikipedia.org/wiki/Bilinear_interpolation#Repeated_linear_interpolation.
+
+    Arguments:
+
+        x: X values to return interpolated values at.
+
+        y: Y values to return interpolated values at.
+
+        xp: X values to interpolate with, should be 1D.
+            Assumed to be sorted.
+
+        yp: Y values to interpolate with, should be 1D.
+            Assumed to be sorted.
+
+        fp: Functon values at (xp, yp), should have shape (len(xp), len(yp)).
+            Note that if you are using meshgrid, we assume 'ij' indexing.
+
+    Return:
+
+        f: The interpolated values
+    """
+    if len(xp.shape) != 1:
+        raise ValueError("xp must be 1D")
+    if len(yp.shape) != 1:
+        raise ValueError("yp must be 1D")
+    if fp.shape != xp.shape + yp.shape:
+        raise ValueError(
+            "Incompatible shapes for fp, xp, yp: %s, %s, %s",
+            fp.shape,
+            xp.shape,
+            yp.shape,
+        )
+
+    # Figure out bounds and mapping
+    # This breaks if xp, yp is not sorted
+    ix = jnp.clip(jnp.searchsorted(xp, x, side="right"), 1, len(xp) - 1)
+    iy = jnp.clip(jnp.searchsorted(yp, y, side="right"), 1, len(yp) - 1)
+    q_11 = fp[ix - 1, iy - 1]
+    q_21 = fp[ix, iy - 1]
+    q_12 = fp[ix - 1, iy]
+    q_22 = fp[ix, iy]
+
+    # Interpolate in x to start
+    denom_x = xp[ix] - xp[ix - 1]
+    dx_1 = x - xp[ix - 1]
+    dx_2 = xp[ix] - x
+    f_xy1 = (dx_2 * q_11 + dx_1 * q_21) / denom_x
+    f_xy2 = (dx_2 * q_12 + dx_1 * q_22) / denom_x
+
+    # Now do y as well
+    denom_y = yp[iy] - yp[iy - 1]
+    dy_1 = y - yp[iy - 1]
+    dy_2 = yp[iy] - y
+    f = (dy_2 * f_xy1 + dy_1 * f_xy2) / denom_y
+
+    # Zero out the out of bounds values
+    f = jnp.where((x < xp[0]) + (x > xp[-1]) + (y < yp[0]) + (y > yp[-1]), 0.0, f)
+
+    return f
+
+
 def beam_double_gauss(dr, fwhm1=9.735, amp1=0.9808, fwhm2=32.627, amp2=0.0192):
     """
     Helper function to generate a double gaussian beam.

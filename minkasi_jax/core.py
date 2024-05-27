@@ -25,7 +25,7 @@ from .structure import (
     gnfw,
     isobeta,
 )
-from .utils import fft_conv
+from .utils import bilinear_interp, fft_conv
 
 jax.config.update("jax_enable_x64", True)
 # jax.config.update("jax_platform_name", "gpu")
@@ -56,7 +56,9 @@ def helper(
     params,
     tod,
     xyz,
-    dx,
+    x0,
+    y0,
+    dz,
     beam,
     argnums,
     re_eval,
@@ -79,15 +81,19 @@ def helper(
 
         params: 1D array of model parameters.
 
-        tod: The TOD, assumed that idx and idy are in tod.info.
+        tod: The TOD, assumed that idz and idy are in tod.info.
              Optionally also include id_inv. In this case it is assumed that
-             idx and idy are flattened and passed through np.unique such that
-             each (idx[i], idy[i]) is unique and id_inv is the inverse index
+             idz and idy are flattened and passed through np.unique such that
+             each (idz[i], idy[i]) is unique and id_inv is the inverse index
              mapping obtained by setting return_inverse=True.
 
         xyz: Coordinate grid to compute profile on.
 
-        dx: Factor to scale by while integrating.
+        x0: The x coordinate of xyz's origin
+
+        y0: The y coordinate of xyz's origin
+
+        dz: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
             Historically equal to y2K_RJ * dr * da * XMpc / me.
 
@@ -126,8 +132,8 @@ def helper(
 
         pred: The isobeta model with the specified substructure.
     """
-    idx = tod.info["idx"]
-    idy = tod.info["idy"]
+    dx = (tod.info["dx"] - x0) * 180 * 3600 / np.pi
+    dy = (tod.info["dy"] - y0) * 180 * 3600 / np.pi
 
     for i, re in enumerate(re_eval):
         if re is False:
@@ -145,22 +151,16 @@ def helper(
         n_exponential,
         n_powerlaw,
         n_powerlaw_cos,
-        dx,
+        dz,
         beam,
-        idx,
-        idy,
+        dx,
+        dy,
         tuple(argnums + ARGNUM_SHIFT_TOD),
         *params,
     )
 
     pred = jax.device_get(pred)
     grad = jax.device_get(grad)
-
-    if "id_inv" in tod.info:
-        id_inv = tod.info["id_inv"]
-        shape = tod.info["dx"].shape
-        pred = pred[id_inv].reshape(shape)
-        grad = grad[:, id_inv].reshape((len(grad),) + shape)
 
     return grad, pred
 
@@ -176,7 +176,7 @@ def model(
     n_exponential,
     n_powerlaw,
     n_powerlaw_cos,
-    dx,
+    dz,
     beam,
     *params,
 ):
@@ -205,7 +205,7 @@ def model(
 
         n_powerlaw_cos: Number of radial power law ellipsoids with angulas cos term to add.
 
-        dx: Factor to scale by while integrating.
+        dz: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
             Historically equal to y2K_RJ * dr * da * XMpc / me.
 
@@ -302,7 +302,7 @@ def model(
         pressure = add_powerlaw_cos(pressure, xyz, *powerlaw_coses[i])
 
     # Integrate along line of site
-    ip = trapz(pressure, dx=dx, axis=-1)
+    ip = trapz(pressure, dx=dz, axis=-1)
 
     bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
         (ip.shape[1] - beam.shape[1]) / 2
@@ -334,10 +334,10 @@ def model_tod(
     n_exponential,
     n_powerlaw,
     n_powerlaw_cos,
-    dx,
+    dz,
     beam,
-    idx,
-    idy,
+    dx,
+    dy,
     *params,
 ):
     """
@@ -347,15 +347,15 @@ def model_tod(
 
     Arguments:
 
-        idx: RA TOD in units of pixels.
-             Should have Dec stretch applied.
+        dx: RA TOD in units of pixels.
+            Should have Dec stretch applied.
 
-        idy: Dec TOD in units of pixels.
+        dy: Dec TOD in units of pixels.
 
     Returns:
 
         model: The model with the specified substructure.
-               Has the same shape as idx.
+               Has the same shape as idz.
     """
     ip = model(
         xyz,
@@ -368,13 +368,14 @@ def model_tod(
         n_exponential,
         n_powerlaw,
         n_powerlaw_cos,
-        dx,
+        dz,
         beam,
         *params,
     )
 
-    model_out = ip.at[idx.ravel(), idy.ravel()].get(mode="fill", fill_value=0)
-    return model_out.reshape(idx.shape)
+    # Assuming xyz is sparse and ij indexed here
+    model_out = bilinear_interp(dx, dy, xyz[0].ravel(), xyz[1].ravel(), ip)
+    return model_out
 
 
 def model_grad(
@@ -388,7 +389,7 @@ def model_grad(
     n_exponential,
     n_powerlaw,
     n_powerlaw_cos,
-    dx,
+    dz,
     beam,
     argnums,
     *params,
@@ -421,7 +422,7 @@ def model_grad(
         n_exponential,
         n_powerlaw,
         n_powerlaw_cos,
-        dx,
+        dz,
         beam,
         *params,
     )
@@ -437,7 +438,7 @@ def model_grad(
         n_exponential,
         n_powerlaw,
         n_powerlaw_cos,
-        dx,
+        dz,
         beam,
         *params,
     )
@@ -458,10 +459,10 @@ def model_tod_grad(
     n_exponential,
     n_powerlaw,
     n_powerlaw_cos,
-    dx,
+    dz,
     beam,
-    idx,
-    idy,
+    dx,
+    dy,
     argnums,
     *params,
 ):
@@ -472,10 +473,10 @@ def model_tod_grad(
 
     Arguments:
 
-        idx: RA TOD in units of pixels.
-             Should have Dec stretch applied.
+        dx: RA TOD in units of pixels.
+            Should have Dec stretch applied.
 
-        idy: Dec TOD in units of pixels.
+        dy: Dec TOD in the same units as xyz.
 
         argnums: The arguments to evaluate the gradient at
 
@@ -496,10 +497,10 @@ def model_tod_grad(
         n_exponential,
         n_powerlaw,
         n_powerlaw_cos,
-        dx,
+        dz,
         beam,
-        idx,
-        idy,
+        dx,
+        dy,
         *params,
     )
 
@@ -514,10 +515,10 @@ def model_tod_grad(
         n_exponential,
         n_powerlaw,
         n_powerlaw_cos,
-        dx,
+        dz,
         beam,
-        idx,
-        idy,
+        dx,
+        dy,
         *params,
     )
     grad_padded = jnp.zeros((len(params),) + pred.shape)

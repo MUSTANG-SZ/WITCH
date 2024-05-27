@@ -21,7 +21,7 @@ from astropy.coordinates import Angle
 import minkasi_jax.presets_by_source as pbs
 from minkasi_jax import helper
 from minkasi_jax.utils import *
-import minkasi.minkasi_all as minkasi
+
 
 def print_once(*args):
     """
@@ -53,19 +53,19 @@ parser.add_argument(
     "-fn",
     action="store_true",
     default=int(5),
-    help="Number of fitting rounds to peform"
+    help="Number of fitting rounds to peform",
 )
 parser.add_argument(
     "--nosub",
     "-ns",
     action="store_true",
-    help="Don't subtract the sim'd or fit model. Useful for mapmaking a sim'd cluster"
+    help="Don't subtract the sim'd or fit model. Useful for mapmaking a sim'd cluster",
 )
 parser.add_argument(
     "--wnoise",
     "-wn",
     action="store_true",
-    help="Use whitenoise instead of map noise. Only for use with sim"
+    help="Use whitenoise instead of map noise. Only for use with sim",
 )
 args = parser.parse_args()
 
@@ -83,10 +83,10 @@ device = jax.devices()[dev_id]
 # Setup coordindate stuff
 z = eval(str(cfg["coords"]["z"]))
 da = get_da(z)
+coord_conv = eval(str(cfg["coords"]["conv_factor"]))
 r_map = eval(str(cfg["coords"]["r_map"]))
 dr = eval(str(cfg["coords"]["dr"]))
 dr = (lambda x: x if type(x) is tuple else (x,))(dr)
-coord_conv = eval(str(cfg["coords"]["conv_factor"]))
 x0 = eval(str(cfg["coords"]["x0"]))
 y0 = eval(str(cfg["coords"]["y0"]))
 
@@ -103,7 +103,6 @@ bad_tod, addtag = pbs.get_bad_tods(
 )
 if "cut" in cfg["paths"]:
     bad_tod += cfg["paths"]["cut"]
-
 tod_names = minkasi.cut_blacklist(tod_names, bad_tod)
 tod_names.sort()
 ntods = cfg["minkasi"].get("ntods", None)
@@ -114,7 +113,8 @@ minkasi.barrier()  # Is this needed?
 n_tods = 999999
 todvec = minkasi.TodVec()
 for i, fname in enumerate(tod_names):
-    if i >= n_tods: continue
+    if i >= n_tods:
+        continue
     dat = minkasi.read_tod_from_fits(fname)
     minkasi.truncate_tod(dat)
     minkasi.downsample_tod(dat)
@@ -125,15 +125,6 @@ for i, fname in enumerate(tod_names):
     dat["dat_calib"] = dd
     dat["pred2"] = pred2
     dat["cm"] = cm
-
-    # Make pixelized RA/Dec TODs
-    idx, idy = tod_to_index(dat["dx"], dat["dy"], x0, y0, xyz_host, coord_conv)
-    idu, id_inv = np.unique(
-        np.vstack((idx.ravel(), idy.ravel())), axis=1, return_inverse=True
-    )
-    dat["idx"] = jax.device_put(idu[0], device)
-    dat["idy"] = jax.device_put(idu[1], device)
-    dat["id_inv"] = id_inv
 
     tod = minkasi.Tod(dat)
     todvec.add_tod(tod)
@@ -196,6 +187,10 @@ for mname, model in cfg["models"].items():
         func_str = model["func"][:-1]
         if "xyz" not in func_str:
             func_str += ", xyz=xyz"
+        if "x0" not in func_str:
+            func_str += ", x0=x0"
+        if "y0" not in func_str:
+            func_str += ", y0=y0"
         if "beam" not in func_str:
             func_str += ", beam=beam"
         if "argnums" not in func_str:
@@ -205,6 +200,9 @@ for mname, model in cfg["models"].items():
         if "par_idx" not in func_str:
             func_str += ", par_idx=_par_idx"
         func_str += ")"
+        # Becasue we renamed the factor...
+        func_str = func_str.replace(",dx=", ",dz=")
+        func_str = func_str.replace(", dx=", ", dz=")
         model["func"] = func_str
 
     funs.append(eval(str(model["func"])))
@@ -244,10 +242,12 @@ for i, tod in enumerate(todvec.tods):
 
     if sim:
         if args.wnoise:
-            temp = np.percentile(np.diff(tod.info["dat_calib"]), [33,68])
-            scale = (temp[1]-temp[0])/np.sqrt(8) 
-            tod.info["dat_calib"] = np.random.normal(0, scale, size=tod.info["dat_calib"].shape) 
-        else: 
+            temp = np.percentile(np.diff(tod.info["dat_calib"]), [33, 68])
+            scale = (temp[1] - temp[0]) / np.sqrt(8)
+            tod.info["dat_calib"] = np.random.normal(
+                0, scale, size=tod.info["dat_calib"].shape
+            )
+        else:
             tod.info["dat_calib"] *= (-1) ** ((minkasi.myrank + minkasi.nproc * i) % 2)
         start = 0
         model = 0
@@ -293,7 +293,7 @@ if sim:
     print_once("Starting pars: \n")
     for i, label in enumerate(labels):
         print_once(label, ": {:.2e}".format(params[i]))
-    params[to_fit] *= 1.1 #Don't start at exactly the right value
+    params[to_fit] *= 1.1  # Don't start at exactly the right value
 
 if fit:
     for i in range(args.fitnum):
@@ -311,25 +311,25 @@ if fit:
         minkasi.comm.barrier()
         t2 = time.time()
         print_once("Took", t2 - t1, "seconds to fit")
-    
+
         params = pars_fit
         for j, re in enumerate(re_eval):
             if not re:
                 continue
             pars_fit[j] = eval(re)
-    
+
         print_once("Fit parameters, {}th:".format(i))
         for l, pf, err in zip(labels, pars_fit, errs):
             print_once("\t", l, "= {:.2e} +/- {:.2e}".format(pf, err))
         print_once("chisq =", chisq)
-    
+
         if minkasi.myrank == 0:
             res_path = os.path.join(outdir, "results")
             print_once("Saving results to", res_path + "_{}.npz".format(i))
             np.savez_compressed(
                 res_path+"_{}".format(i), pars_fit=pars_fit, chisq=chisq, errs=errs, curve=curve
             )
-        params=pars_fit.copy()
+        params = pars_fit.copy()
 
         for i, tod in enumerate(todvec.tods):
             start = 0
@@ -337,10 +337,12 @@ if fit:
             for n, fun in zip(npars, funs):
                 model += fun(pars_fit[start : (start + n)], tod)[1]
                 start += n
-        
-            tod.set_noise(noise_class, tod.info["dat_calib"] - model, *noise_args, **noise_kwargs)
-        
-minkasi.barrier() 
+
+            tod.set_noise(
+                noise_class, tod.info["dat_calib"] - model, *noise_args, **noise_kwargs
+            )
+
+minkasi.barrier()
 # Subtract model from TODs
 if not args.nosub:
     for tod in todvec.tods:
