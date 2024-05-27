@@ -1,3 +1,9 @@
+## 2.4.0 (2024-05-27)
+
+### Feat
+
+- switch to bilinear interp
+
 ## 2.3.1 (2024-03-14)
 
 ### Fix
