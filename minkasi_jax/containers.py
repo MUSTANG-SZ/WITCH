@@ -29,13 +29,14 @@ if TYPE_CHECKING:
 @dataclass
 class Parameter:
     name: str
-    val: float
     fit: list[bool]
+    val: float
+    err: float = 0
     prior: Optional[tuple[float, float]] = None  # Only flat for now
 
     @property
     def fit_ever(self) -> bool:
-        return np.any(self.fit)
+        return bool(np.any(self.fit))
 
 
 @dataclass
@@ -71,6 +72,7 @@ class Model:
     beam: jax.Array
     n_rounds: int
     cur_round: int = 0
+    chisq: float = np.inf
     original_order: list[int] = field(init=False)
 
     def __post_init__(self):
@@ -125,6 +127,36 @@ class Model:
         for structure in self.structures:
             to_fit += [parameter.fit_ever for parameter in structure.parameters]
         return to_fit
+
+    def __repr__(self) -> str:
+        rep = self.name + ":\n"
+        rep += f"Round {self.cur_round} out of {self.n_rounds}\n"
+        for i in self.original_order:
+            struct = self.structures[i]
+            rep += "\t" + struct.name + ":\n"
+            for par in struct.parameters:
+                rep += (
+                    "\t\t"
+                    + par.name
+                    + "*" * par.fit[self.cur_round]
+                    + str(par.prior) * (par.prior is not None)
+                    + " = "
+                    + str(par.val)
+                    + " ± "
+                    + str(par.err)
+                    + "\n"
+                )
+        rep += f"chisq is {self.chisq}"
+        return rep
+
+    def update(self, vals, errs, chisq):
+        n = 0
+        for struct in self.structures:
+            for par in struct.parameters:
+                par.val = vals[n]
+                par.err = errs[n]
+                n += 1
+        self.chisq = chisq
 
     def minkasi_helper(
         self, tod: Tod, params: NDArray[np.floating]
@@ -217,7 +249,7 @@ class Model:
                 priors = param.get("priors", None)
                 if priors is not None:
                     priors = eval(str(priors))
-                parameters.append(Parameter(par_name, val, fit, priors))
+                parameters.append(Parameter(par_name, fit, val, priors))
             structures.append(Structure(name, structure["structure"], parameters))
         name = cfg["model"].get(
             "name", "".join([structure.name for structure in structures])

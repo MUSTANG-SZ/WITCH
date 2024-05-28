@@ -265,13 +265,9 @@ def main():
             t2 = time.time()
             print_once("Took", t2 - t1, "seconds to fit")
 
+            model.update(pars_fit, errs, chisq)
+            print_once(model)
             params = pars_fit.copy()
-
-            print_once("Fit parameters, {}th:".format(i))
-            # TODO: Make this the repr for model?
-            for l, pf, err in zip(model.par_names, pars_fit, errs):
-                print_once("\t", l, "= {:.2e} +/- {:.2e}".format(pf, err))
-            print_once("chisq =", chisq)
 
             if minkasi.myrank == 0:
                 res_path = os.path.join(outdir, "results")
