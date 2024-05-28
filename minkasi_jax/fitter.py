@@ -9,6 +9,7 @@ import os
 import shutil
 import sys
 import time
+from copy import deepcopy
 from functools import partial
 
 import jax
@@ -65,9 +66,14 @@ def make_parser() -> argp.ArgumentParser:
 
 
 def load_tods(cfg: dict) -> minkasi.tods.TodVec:
-    tod_names = glob.glob(os.path.join(cfg["paths"]["tods"], cfg["paths"]["glob"]))
+    todroot = cfg["paths"]["tods"]
+    if not os.path.isabs(todroot):
+        todroot = os.path.join(
+            os.environ.get("MJ_TODROOT", os.environ["HOME"]), todroot
+        )
+    tod_names = glob.glob(os.path.join(todroot, cfg["paths"]["glob"]))
     bad_tod, _ = pbs.get_bad_tods(
-        cfg["cluster"]["name"], ndo=cfg["paths"]["ndo"], odo=cfg["paths"]["odo"]
+        cfg["name"], ndo=cfg["paths"]["ndo"], odo=cfg["paths"]["odo"]
     )
     if "cut" in cfg["paths"]:
         bad_tod += cfg["paths"]["cut"]
@@ -148,11 +154,16 @@ def process_tods(
     return ""
 
 
-def get_outdir(cfg, config_path, bowl_str, model):
+def get_outdir(cfg, bowl_str, model):
     name = model.name + ("_ns" * (not cfg["sub"]))
+    outroot = cfg["paths"]["outroot"]
+    if not os.path.isabs(outroot):
+        outroot = os.path.join(
+            os.environ.get("MJ_OUTROOT", os.environ["HOME"]), outroot
+        )
     outdir = os.path.join(
-        cfg["paths"]["outroot"],
-        cfg["cluster"]["name"],
+        outroot,
+        cfg["name"],
         "-" + name,
     )
     if "subdir" in cfg["paths"]:
@@ -177,9 +188,39 @@ def get_outdir(cfg, config_path, bowl_str, model):
     print_once("Outputs can be found in", outdir)
     if minkasi.myrank == 0:
         os.makedirs(outdir, exist_ok=True)
-        shutil.copyfile(config_path, os.path.join(outdir, "config.yaml"))
+        with open(os.path.join(outdir, "config.yaml"), "w") as file:
+            yaml.dump(cfg, file)
 
     return outdir
+
+
+def deep_merge(a: dict, b: dict) -> dict:
+    """
+    Based on https://gist.github.com/angstwad/bf22d1822c38a92ec0a9?permalink_comment_id=3517209
+    """
+    result = deepcopy(a)
+    for bk, bv in b.items():
+        av = result.get(bk)
+        if isinstance(av, dict) and isinstance(bv, dict):
+            result[bk] = deep_merge(av, bv)
+        else:
+            result[bk] = deepcopy(bv)
+    return result
+
+
+def load_config(start_cfg, cfg_path):
+    """
+    We want to load a config and if it has the key "base",
+    load that as well and merge them.
+    We only want to take things from base that are not in the original config
+    so we merge the original into the newly loaded one.
+    """
+    with open(cfg_path, "r") as file:
+        new_cfg = yaml.safe_load(file)
+    cfg = deep_merge(new_cfg, start_cfg)
+    if "base" in new_cfg:
+        return load_config(cfg, new_cfg["base"])
+    return cfg
 
 
 def main():
@@ -187,9 +228,7 @@ def main():
     args = parser.parse_args()
 
     # TODO: Serialize cfg to a data class (pydantic?)
-    # TODO: Recursive configs
-    with open(args.config, "r") as file:
-        cfg = yaml.safe_load(file)
+    cfg = load_config({}, args.config)
     if "models" not in cfg:
         cfg["models"] = {}
     cfg["fit"] = (not args.nofit) & bool(len(cfg["models"]))
@@ -226,7 +265,7 @@ def main():
     )
 
     # Get output
-    outdir = get_outdir(cfg, args.config, bowl_str, model)
+    outdir = get_outdir(cfg, bowl_str, model)
 
     # Now we fit
     pars_fit = params.copy()
