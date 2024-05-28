@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from functools import partial
 from typing import TYPE_CHECKING, Optional
 
+import dill
 import jax
 import numpy as np
 
@@ -194,6 +195,29 @@ class Model:
         grad = jax.device_get(grad)
 
         return grad, pred
+
+    def save(self, path: str):
+        """
+        Serialize the model to a file with dill.
+
+        Arguments:
+
+            path: The file to save to.
+        """
+        with open(path, "wb") as f:
+            dill.dump(self, f)
+
+    @classmethod
+    def load(cls, path: str) -> Self:
+        """
+        Load the model from a file with dill.
+
+        Arguments:
+
+            path: The path to the saved model
+        """
+        with open(path, "rb") as f:
+            return dill.load(f)
 
     @classmethod
     def from_cfg(cls, cfg: dict) -> Self:
