@@ -117,6 +117,7 @@ def get_grad_prior(
     mapset: minkasi.maps.Mapset,
     gradmap: minkasi.maps.Maptype,
     *args,
+    **kwargs,
 ) -> tuple[minkasi.mapmaking.HasPrior, minkasi.maps.Mapset]:
     """
     Make a gradient based prior. This helps avoid errors due to sharp features.
@@ -132,6 +133,8 @@ def get_grad_prior(
 
         *args: Additional arguments to pass to get_grad_mask_2d.
 
+        **kwargs: Kewword arguments to pass to get_grad_mask_2d.
+
     Returns:
 
         prior: A prior to pass to run_pcg_wprior.
@@ -139,7 +142,7 @@ def get_grad_prior(
         new_mapset: A mapset with the original map and a cleared prior map.
     """
     gradmap.map[:] = minkasi.mapmaking.noise.get_grad_mask_2d(
-        mapset.maps[0], todvec, *args
+        mapset.maps[0], todvec, *args, **kwargs
     )
     prior = minkasi.mapmaking.timestream.tsModel(todvec, minkasi.tods.cuts.CutsCompact)
     for tod in todvec.tods:
