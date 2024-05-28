@@ -249,7 +249,7 @@ def main():
             (
                 pars_fit,
                 chisq,
-                curve,
+                _,
                 errs,
             ) = minkasi.fitting.fit_timestreams_with_derivs_manyfun(
                 funs,
@@ -270,12 +270,10 @@ def main():
             params = pars_fit.copy()
 
             if minkasi.myrank == 0:
-                res_path = os.path.join(outdir, "results")
-                print_once("Saving results to", res_path + "_{}.npz".format(i))
+                res_path = os.path.join(outdir, f"results_{i}.dill")
+                print_once("Saving results to", res_path)
                 # TODO: switch to h5?
-                np.savez_compressed(
-                    res_path, pars_fit=pars_fit, chisq=chisq, errs=errs, curve=curve
-                )
+                model.save(res_path)
 
             # Reestimate noise
             for i, tod in enumerate(todvec.tods):
