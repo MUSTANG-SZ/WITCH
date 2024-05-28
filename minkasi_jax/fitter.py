@@ -6,13 +6,10 @@ Docs will exist someday...
 import argparse as argp
 import glob
 import os
-import shutil
 import sys
 import time
 from copy import deepcopy
-from functools import partial
 
-import jax
 import minkasi
 import numpy as np
 import yaml
