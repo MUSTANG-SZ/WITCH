@@ -22,6 +22,7 @@ from minkasi_jax import utils as mju  # pyright: ignore [reportUnusedImport]
 
 from . import core
 from .structure import STRUCT_N_PAR
+from .utils import rad_to_arcsec
 
 if TYPE_CHECKING:
     from minkasi.tods import Tod
@@ -66,10 +67,10 @@ class Structure:
 class Model:
     name: str
     structures: list[Structure]
-    xyz: jax.Array
-    x0: float
-    y0: float
-    dz: float
+    xyz: jax.Array  # arcseconds
+    x0: float  # rad
+    y0: float  # rad
+    dz: float  # arcseconds * unknown
     beam: jax.Array
     n_rounds: int
     cur_round: int = 0
@@ -168,7 +169,7 @@ class Model:
         Arguments:
 
             tod: A minkasi tod instance.
-                'dx' and 'dy' must be in tod.info.
+                'dx' and 'dy' must be in tod.info and be in radians.
 
             params: An array of model parameters.
 
@@ -176,10 +177,10 @@ class Model:
 
             grad: The gradient of the model with respect to the model parameters.
 
-            pred: The  model with the specified substructure.
+            pred: The model with the specified substructure.
         """
-        dx = tod.info["dx"] - self.x0
-        dy = tod.info["dy"] - self.y0
+        dx = (tod.info["dx"] - self.x0) * rad_to_arcsec
+        dy = (tod.info["dy"] - self.y0) * rad_to_arcsec
 
         pred, grad = core.model_tod_grad(
             self.xyz,
@@ -241,7 +242,6 @@ class Model:
         r_map = eval(str(cfg["coords"]["r_map"]))
         dr = eval(str(cfg["coords"]["dr"]))
         dz = eval(str(cfg["coords"].get("dz", dr)))
-        coord_conv = eval(str(cfg["coords"]["conv_factor"]))
         x0 = eval(str(cfg["coords"]["x0"]))
         y0 = eval(str(cfg["coords"]["y0"]))
 

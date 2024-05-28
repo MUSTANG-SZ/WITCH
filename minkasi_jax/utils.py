@@ -29,6 +29,8 @@ Xthom = const.sigma_T.to(u.cm**2).value
 Mparsec = u.Mpc.to(u.cm)
 XMpc = Xthom * Mparsec
 
+rad_to_arcsec = (180 * 3600) / np.pi
+
 # Cosmology
 # --------------------------------------------------------
 dzline = np.linspace(0.00, 5.00, 1000)
