@@ -2,11 +2,14 @@
 Functions for generating structure.
 This includes both cluster profiles and substructure.
 """
+
+import inspect
 from functools import partial
 
 import jax
 import jax.numpy as jnp
-from .utils import transform_grid, ap, h70, get_nz, get_hz, get_da
+
+from .utils import ap, get_da, get_hz, get_nz, h70, transform_grid
 
 
 @jax.jit
@@ -215,6 +218,7 @@ def egaussian(dx, dy, dz, r_1, r_2, r_3, theta, sigma, amp, xyz):
 
     return amp * jnp.exp(power)
 
+
 @jax.jit
 def gaussian(dx, dy, sigma, amp, xyz):
     """
@@ -230,7 +234,7 @@ def gaussian(dx, dy, sigma, amp, xyz):
 
         dy: Dec of gaussian center relative to grid origin
 
-        sigma: The effective, beam-convolved half-width of the point source. 
+        sigma: The effective, beam-convolved half-width of the point source.
 
         amp: Amplitude of the gaussian
 
@@ -238,13 +242,14 @@ def gaussian(dx, dy, sigma, amp, xyz):
 
     Returns:
 
-        model: The gaussian    
+        model: The gaussian
     """
     x, y, z = transform_grid(dx, dy, 0, 1, 1, 1, 0, xyz)
-    rr = x[...,0]**2 + y[...,0]**2
+    rr = x[..., 0] ** 2 + y[..., 0] ** 2
     power = -1 * rr / (2 * sigma**2)
 
     return amp * jnp.exp(power)
+
 
 @jax.jit
 def add_uniform(pressure, xyz, dx, dy, dz, r_1, r_2, r_3, theta, amp):
@@ -441,3 +446,41 @@ def add_powerlaw_cos(
     powerlaw = amp * (1 - jnp.float_power(1 + r, -1.0 * k_r)) * jnp.cos(omega * phi)
     new_pressure = jnp.where(r > 1, pressure, (1 + powerlaw) * pressure)
     return new_pressure
+
+
+# Get number of parameters for each structure
+# The -1 is because xyz doesn't count
+# -2 for Uniform, expo, and power as they also take a pressure arg that doesn't count
+# For now a line needs to be added for each new model but this could be more magic down the line
+N_PAR_ISOBETA = len(inspect.signature(isobeta).parameters) - 1
+N_PAR_GNFW = len(inspect.signature(gnfw).parameters) - 1
+N_PAR_A10 = len(inspect.signature(a10).parameters) - 1
+N_PAR_GAUSSIAN = len(inspect.signature(gaussian).parameters) - 1
+N_PAR_EGAUSSIAN = len(inspect.signature(egaussian).parameters) - 1
+N_PAR_UNIFORM = len(inspect.signature(add_uniform).parameters) - 2
+N_PAR_EXPONENTIAL = len(inspect.signature(add_exponential).parameters) - 2
+N_PAR_POWERLAW = len(inspect.signature(add_powerlaw).parameters) - 2
+
+# Make a convenience mapping
+STRUCT_FUNCS = {
+    "a10": a10,
+    "exponential": add_exponential,
+    "powerlaw": add_powerlaw,
+    "powerlaw_cos": add_powerlaw_cos,
+    "uniform": add_uniform,
+    "egaussian": egaussian,
+    "gaussian": gaussian,
+    "gnfw": gnfw,
+    "isobeta": isobeta,
+}
+STRUCT_N_PAR = {
+    "a10": N_PAR_A10,
+    "exponential": N_PAR_EXPONENTIAL,
+    "powerlaw": N_PAR_POWERLAW,
+    "powerlaw_cos": N_PAR_POWERLAW,
+    "uniform": N_PAR_UNIFORM,
+    "egaussian": N_PAR_EGAUSSIAN,
+    "gaussian": N_PAR_GAUSSIAN,
+    "gnfw": N_PAR_GNFW,
+    "isobeta": N_PAR_ISOBETA,
+}

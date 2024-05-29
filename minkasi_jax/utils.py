@@ -2,6 +2,7 @@
 A set of utility functions and constants used for unit conversions
 and adding generic structure common to multiple models.
 """
+
 from functools import partial
 
 import jax
@@ -27,6 +28,8 @@ Xthom = const.sigma_T.to(u.cm**2).value
 
 Mparsec = u.Mpc.to(u.cm)
 XMpc = Xthom * Mparsec
+
+rad_to_arcsec = (180 * 3600) / np.pi
 
 # Cosmology
 # --------------------------------------------------------

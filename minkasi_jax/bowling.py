@@ -3,10 +3,11 @@ Tools for dealing with bowling in maps
 """
 
 from functools import partial
+
 import jax
 import jax.numpy as jnp
-from jax.config import config
 import jax.scipy.optimize as sopt
+from jax.config import config
 
 config.update("jax_debug_nans", True)
 config.update("jax_enable_x64", True)

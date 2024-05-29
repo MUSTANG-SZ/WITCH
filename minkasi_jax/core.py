@@ -15,6 +15,14 @@ else:
 import numpy as np
 
 from .structure import (
+    N_PAR_A10,
+    N_PAR_EGAUSSIAN,
+    N_PAR_EXPONENTIAL,
+    N_PAR_GAUSSIAN,
+    N_PAR_GNFW,
+    N_PAR_ISOBETA,
+    N_PAR_POWERLAW,
+    N_PAR_UNIFORM,
     a10,
     add_exponential,
     add_powerlaw,
@@ -27,21 +35,20 @@ from .structure import (
 )
 from .utils import bilinear_interp, fft_conv
 
+ORDER = (
+    "isobeta",
+    "gnfw",
+    "a10",
+    "gaussian",
+    "egaussian",
+    "uniform",
+    "exponential",
+    "powerlaw",
+    "powerlaw_cos",
+)
+
 jax.config.update("jax_enable_x64", True)
 # jax.config.update("jax_platform_name", "gpu")
-
-# Get number of parameters for each structure
-# The -1 is because xyz doesn't count
-# -2 for Uniform, expo, and power as they also take a pressure arg that doesn't count
-# For now a line needs to be added for each new model but this could be more magic down the line
-N_PAR_ISOBETA = len(inspect.signature(isobeta).parameters) - 1
-N_PAR_GNFW = len(inspect.signature(gnfw).parameters) - 1
-N_PAR_A10 = len(inspect.signature(a10).parameters) - 1
-N_PAR_GAUSSIAN = len(inspect.signature(gaussian).parameters) - 1
-N_PAR_EGAUSSIAN = len(inspect.signature(egaussian).parameters) - 1
-N_PAR_UNIFORM = len(inspect.signature(add_uniform).parameters) - 2
-N_PAR_EXPONENTIAL = len(inspect.signature(add_exponential).parameters) - 2
-N_PAR_POWERLAW = len(inspect.signature(add_powerlaw).parameters) - 2
 
 
 def _get_static(signature, prefix_list=["n_", "argnums"]):
@@ -50,119 +57,6 @@ def _get_static(signature, prefix_list=["n_", "argnums"]):
     for prefix in prefix_list:
         static_msk += np.char.startswith(par_names, prefix)
     return tuple(np.where(static_msk)[0])
-
-
-def helper(
-    params,
-    tod,
-    xyz,
-    x0,
-    y0,
-    dz,
-    beam,
-    argnums,
-    re_eval,
-    par_idx,
-    n_isobeta=0,
-    n_gnfw=0,
-    n_a10=0,
-    n_gaussian=0,
-    n_egaussian=0,
-    n_uniform=0,
-    n_exponential=0,
-    n_powerlaw=0,
-    n_powerlaw_cos=0,
-):
-    """
-    Helper function to be used when fitting with Minkasi.
-    Use functools.partial to set all parameters but params and tod before passing to Minkasi.
-
-    Arguments:
-
-        params: 1D array of model parameters.
-
-        tod: The TOD, assumed that idz and idy are in tod.info.
-             Optionally also include id_inv. In this case it is assumed that
-             idz and idy are flattened and passed through np.unique such that
-             each (idz[i], idy[i]) is unique and id_inv is the inverse index
-             mapping obtained by setting return_inverse=True.
-
-        xyz: Coordinate grid to compute profile on.
-
-        x0: The x coordinate of xyz's origin
-
-        y0: The y coordinate of xyz's origin
-
-        dz: Factor to scale by while integrating.
-            Since it is a global factor it can contain unit conversions.
-            Historically equal to y2K_RJ * dr * da * XMpc / me.
-
-        beam: Beam to convolve by, should be a 2d array.
-
-        argnums: Arguments to evaluate the gradient at.
-
-        re_eval: Array where each element is eather False or a string.
-                 If element is a string it will be evaluated and used to
-                 set the value of the corresponsinding parameter.
-
-        par_idx: Dictionairy that maps parameter names to indices.
-
-        n_isobeta: Number of isobeta profiles to add.
-
-        n_gnfw: Number of gnfw profiles to add.
-
-        n_a10: Number of Arnaud2010 profiles to add.
-
-        n_gaussian: Number of gaussians to add.
-
-        n_egaussian: Number of eliptical gaussians to add.
-
-        n_uniform: Number of uniform ellipsoids to add.
-
-        n_exponential: Number of exponential ellipsoids to add.
-
-        n_powerlaw: Number of power law ellipsoids to add.
-
-        n_powerlaw_cos: Number of radial power law ellipsoids with angulas cos term to add.
-
-    Returns:
-
-        grad: The gradient of the model with respect to the model parameters.
-                Reshaped to be the correct format for Minkasi.
-
-        pred: The isobeta model with the specified substructure.
-    """
-    dx = (tod.info["dx"] - x0) * 180 * 3600 / np.pi
-    dy = (tod.info["dy"] - y0) * 180 * 3600 / np.pi
-
-    for i, re in enumerate(re_eval):
-        if re is False:
-            continue
-        params[i] = eval(re)
-
-    pred, grad = model_tod_grad(
-        xyz,
-        n_isobeta,
-        n_gnfw,
-        n_a10,
-        n_gaussian,
-        n_egaussian,
-        n_uniform,
-        n_exponential,
-        n_powerlaw,
-        n_powerlaw_cos,
-        dz,
-        beam,
-        dx,
-        dy,
-        tuple(argnums + ARGNUM_SHIFT_TOD),
-        *params,
-    )
-
-    pred = jax.device_get(pred)
-    grad = jax.device_get(grad)
-
-    return grad, pred
 
 
 def model(
