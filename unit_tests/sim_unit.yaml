@@ -1,48 +1,32 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "base_unit.yaml"
+
+# Cluster name
+# Used both for the output path as well as to load presets
 name: "SIM"
-sim: True
-fit: True
-n_rounds: 4
-constants:
-  Te: 5.0
-  freq: "90e9"
-  z: 0.451
-paths:
-  tods: "RXJ1347"
-  glob: "Signal_TOD*.fits"
-  ndo: False
-  odo: False
-  outroot: ""
-coords:
-  r_map: "3.0*60"
-  dr: "1.0"
-  x0: "(206.8776*u.degree).to(u.radian).value"
-  y0: "(-11.7528*u.degree).to(u.radian).value"  
-beam:
-  fwhm1: "9.735"
-  amp1: 0.9808
-  fwhm2: "32.627"
-  amp2: 0.0192
-bowling:
-  sub_poly: False 
-  method: "pred2"
-  degree: 5
-minkasi:
-  noise:
-    class: "minkasi.mapmaking.noise.NoiseSmoothedSVD"
-    args: "[]"
-    kwargs: "{'fwhm':10}"
-  maxiter: 10
-  npass: 5
-  dograd: False
+sim: True # If True use TODs to make noise and add a simulated cluster
+
+# Define the model
 model:
+  # Unit conversion to apply at the end
+  # Will be evaled
   unit_conversion: "float(mju.get_da(constants['z'])*mju.y2K_RJ(constants['freq'], constants['Te'])*mju.XMpc/mju.me)"
+  # Structure to include in the model
   structures:
+    # Name of the first structure
     a10:
-      structure: "a10"
+      structure: "a10" # What type of structure it is
+      # Parameters for the structure
       parameters:
-        dx_1:
-          value: 0.0 
-          to_fit: [True, True, False, True]
+        dx_1: # Name of the first parameter
+          value: 0.0 # Value to use/start at, will be evaled
+          # Set to True for the rounds where we want to fit this param
+          # If you set it to just True of False it will be that for all rounds
+          # If not provided assumed to be False
+          to_fit: [True, True, False, True] 
+          # Range to prior to, will be evaled
           priors: [-9.0, 9.0]
         dy_1:
           value: 0.0
