@@ -1,3 +1,9 @@
+## 3.1.0 (2024-05-29)
+
+### Feat
+
+- allow base config to be relative
+
 ## 3.0.0 (2024-05-29)
 
 ### Feat
