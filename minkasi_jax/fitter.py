@@ -214,7 +214,10 @@ def load_config(start_cfg, cfg_path):
         new_cfg = yaml.safe_load(file)
     cfg = deep_merge(new_cfg, start_cfg)
     if "base" in new_cfg:
-        return load_config(cfg, new_cfg["base"])
+        base_path = new_cfg["base"]
+        if not os.path.isabs(base_path):
+            base_path = os.path.join(os.path.dirname(cfg_path), base_path)
+        return load_config(cfg, base_path)
     return cfg
 
 
