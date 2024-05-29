@@ -1,21 +1,22 @@
-cluster:
-  name: "SIM"
+name: "SIM"
+sim: True
+fit: True
+n_rounds: 4
+constants:
   Te: 5.0
-  freq: 90e9
+  freq: "90e9"
+  z: 0.451
 paths:
-  tods: "/scratch/r/rbond/jorlo/M2-TODs/RXJ1347"
+  tods: "RXJ1347"
   glob: "Signal_TOD*.fits"
   ndo: False
   odo: False
-  outroot: "/scratch/r/rbond/jorlo/Reductions"
-  subdir: "SIM"
+  outroot: ""
 coords:
-  z: 0.451
   r_map: "3.0*60"
   dr: "1.0"
   x0: "(206.8776*u.degree).to(u.radian).value"
   y0: "(-11.7528*u.degree).to(u.radian).value"  
-  conv_factor: "(180 * 3600) / np.pi"
 beam:
   fwhm1: "9.735"
   amp1: 0.9808
@@ -27,128 +28,100 @@ bowling:
   degree: 5
 minkasi:
   noise:
-    class: "minkasi.NoiseSmoothedSVD"
+    class: "minkasi.mapmaking.noise.NoiseSmoothedSVD"
     args: "[]"
     kwargs: "{'fwhm':10}"
   maxiter: 10
   npass: 5
   dograd: False
-sim: True
-models:
-  a10:
-    func: "partial(helper, xyz=xyz, dx=float(da*y2K_RJ(freq, Te)*dr[-1]*XMpc/me), beam=beam, argnums=np.where(_to_fit)[0], n_a10=1, n_gaussian=1, n_uniform=2)"
-    parameters:
-      dx_1:
-        value: 0.0 
-        to_fit: True
-        priors:
-          type: "flat"
-          value: "np.array([-9.0, 9.0])"
-      dy_1:
-        value: 0.0
-        to_fit: True 
-        priors:
-          type: "flat"
-          value: "np.array([-9.0, 9.0])"
-      dz_1:
-        value: 0.0 
-        to_fit: False
-      theta:
-        value: 0.0
-        to_fit: False    
-      P0:
-        value: 8.403
-        to_fit: False
-      c500:
-        value: 1.177 
-        to_fit: False 
-      m500:
-        value: "1.5e15"
-        to_fit: True 
-      gamma:
-        value: .3081 
-        to_fit: False 
-        #priors:
-          #type: "flat"
-          #value: "[0.0, 1.0]"
-      alpha:
-        value: 1.551 
-        to_fit: False
-      beta:
-        value: 5.4905 
-        to_fit: False
-      z:
-        value: 0.97 
-        to_fit: False
-      dx_g:
-        value: 0.0
-        to_fit: True
-        priors:
-          type: "flat"
-          value: "np.array([-9.0, 9.0])"
-      dy_g:
-        value: 0.0
-        to_fit: True
-        priors:
-          type: "flat"
-          value: "np.array([-9.0, 9.0])"
-      sigma:
-        value: "4"
-        to_fit: False
-      amp_g:
-        value: 0.002
-        to_fit: True
-      b_ne_ra:
-        value: "-15"
-        to_fit: False
-      b_ne_dec:
-        value: "15"
-        to_fit: False
-      b_ne_z:
-        value: "0"
-        to_fit: False
-      b_ne_r1:
-        value: "30"
-        to_fit: False
-      b_ne_r2:
-        value: "30"
-        to_fit: False
-      b_ne_r3:
-        value: "30"
-        to_fit: False
-      b_ne_theta:
-        value: 0
-        to_fit: False
-      b_ne_sup:
-        value: -0.75
-        to_fit: True
-        priors:
-          type: "flat"
-          value: "[-1.0, 0.0]"
-      b_sw_ra:
-        value: "15"
-        to_fit: False
-      b_sw_dec:
-        value: "-15"
-        to_fit: False
-      b_sw_z:
-        value: "0"
-        to_fit: False
-      b_sw_r1:
-        value: "30"
-        to_fit: False
-      b_sw_r2:
-        value: "30"
-        to_fit: False
-      b_sw_r3:
-        value: "30"
-        to_fit: False
-      b_sw_theta:
-        value: 0
-        to_fit: False
-      b_sw_sup:
-        value: -0.75
-        to_fit: True
-        priors:
-          type: "flat"
-          value: "[-1.0, 0.0]"
+model:
+  unit_conversion: "float(mju.get_da(constants['z'])*mju.y2K_RJ(constants['freq'], constants['Te'])*mju.XMpc/mju.me)"
+  structures:
+    a10:
+      structure: "a10"
+      parameters:
+        dx_1:
+          value: 0.0 
+          to_fit: [True, True, False, True]
+          priors: [-9.0, 9.0]
+        dy_1:
+          value: 0.0
+          to_fit: [True, True, False, True]
+          priors: [-9.0, 9.0]
+        dz_1:
+          value: 0.0 
+        theta:
+          value: 0.0
+        P0:
+          value: 8.403
+        c500:
+          value: 1.177 
+        m500:
+          value: "1.5e15"
+          to_fit: [True, False, True, True] 
+        gamma:
+          value: .3081 
+        alpha:
+          value: 1.551 
+        beta:
+          value: 5.4905 
+        z:
+          value: 0.97 
+    ps_gauss:
+      structure: "gaussian"
+      parameters:
+        dx_g:
+          value: 0.0
+          to_fit: [True, True, False, True]
+          priors: [-9.0, 9.0]
+        dy_g:
+          value: 0.0
+          to_fit: [True, True, False, True]
+          priors: [-9.0, 9.0]
+        sigma:
+          value: 4
+        amp_g:
+          value: 0.002
+          to_fit: [True, False, True, True]
+    bubble_ne:
+      structure: "uniform"
+      parameters:
+        b_ne_ra:
+          value: "-15"
+        b_ne_dec:
+          value: "15"
+        b_ne_z:
+          value: "0"
+        b_ne_r1:
+          value: "30"
+        b_ne_r2:
+          value: "30"
+        b_ne_r3:
+          value: "30"
+        b_ne_theta:
+          value: 0
+        b_ne_sup:
+          value: -0.75
+          to_fit: [False, True, True, True]
+          priors: [-1.0, 0.0]
+    bubble_sw:
+      structure: "uniform"
+      parameters:
+        b_sw_ra:
+          value: "15"
+        b_sw_dec:
+          value: "-15"
+        b_sw_z:
+          value: "0"
+        b_sw_r1:
+          value: "30"
+        b_sw_r2:
+          value: "30"
+        b_sw_r3:
+          value: "30"
+        b_sw_theta:
+          value: 0
+        b_sw_sup:
+          value: -0.75
+          to_fit: [False, True, True, True]
+          priors: [-1.0, 0.0]
