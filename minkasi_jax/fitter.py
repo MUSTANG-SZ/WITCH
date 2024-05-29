@@ -18,6 +18,7 @@ import minkasi_jax.presets_by_source as pbs
 
 from . import core
 from . import mapmaking as mm
+from . import utils as mju
 from .containers import Model
 
 
@@ -74,7 +75,7 @@ def load_tods(cfg: dict) -> minkasi.tods.TodVec:
     )
     if "cut" in cfg["paths"]:
         bad_tod += cfg["paths"]["cut"]
-    tod_names = minkasi.tods.utils.cut_blacklist(tod_names, bad_tod)
+    tod_names = minkasi.tods.io.cut_blacklist(tod_names, bad_tod)
     tod_names.sort()
     ntods = cfg["minkasi"].get("ntods", None)
     tod_names = tod_names[:ntods]
@@ -89,7 +90,7 @@ def load_tods(cfg: dict) -> minkasi.tods.TodVec:
         minkasi.tods.processing.truncate_tod(dat)
         # figure out a guess at common mode and (assumed) linear detector drifts/offset
         # drifts/offsets are removed, which is important for mode finding.  CM is *not* removed.
-        dd, pred2, cm = minkasi.processing.fit_cm_plus_poly(
+        dd, pred2, cm = minkasi.tods.processing.fit_cm_plus_poly(
             dat["dat_calib"], cm_ord=3, full_out=True
         )
         dat["dat_calib"] = dd
@@ -138,9 +139,10 @@ def process_tods(
             pred = core.model_tod(
                 model.xyz,
                 *model.n_struct,
+                model.dz,
                 model.beam,
-                tod.info["dx"],
-                tod.info["dy"],
+                (tod.info["dx"] - model.x0) * mju.rad_to_arcsec,
+                (tod.info["dy"] - model.y0) * mju.rad_to_arcsec,
                 *model.pars,
             )
             tod.info["dat_calib"] += np.array(pred)
@@ -158,11 +160,7 @@ def get_outdir(cfg, bowl_str, model):
         outroot = os.path.join(
             os.environ.get("MJ_OUTROOT", os.environ["HOME"]), outroot
         )
-    outdir = os.path.join(
-        outroot,
-        cfg["name"],
-        "-" + name,
-    )
+    outdir = os.path.join(outroot, cfg["name"], name)
     if "subdir" in cfg["paths"]:
         outdir = os.path.join(outdir, cfg["paths"]["subdir"])
     if cfg["fit"]:
@@ -226,14 +224,14 @@ def main():
 
     # TODO: Serialize cfg to a data class (pydantic?)
     cfg = load_config({}, args.config)
-    if "models" not in cfg:
-        cfg["models"] = {}
-    cfg["fit"] = (not args.nofit) & bool(len(cfg["models"]))
+    cfg["fit"] = cfg.get("fit", "model" in cfg)
     cfg["sim"] = cfg.get("sim", False)
     cfg["map"] = cfg.get("map", True)
     cfg["sub"] = cfg.get("sub", True)
     if args.nosub:
         cfg["sub"] = False
+    if args.nofit:
+        cfg["fit"] = False
 
     # Get TODs
     todvec = load_tods(cfg)
@@ -316,9 +314,10 @@ def main():
                 pred = core.model_tod(
                     model.xyz,
                     *model.n_struct,
+                    model.dz,
                     model.beam,
-                    tod.info["dx"],
-                    tod.info["dy"],
+                    (tod.info["dx"] - model.x0) * mju.rad_to_arcsec,
+                    (tod.info["dy"] - model.y0) * mju.rad_to_arcsec,
                     *params,
                 )
 
@@ -339,9 +338,10 @@ def main():
         pred = core.model_tod(
             model.xyz,
             *model.n_struct,
+            model.dz,
             model.beam,
-            tod.info["dx"],
-            tod.info["dy"],
+            (tod.info["dx"] - model.x0) * mju.rad_to_arcsec,
+            (tod.info["dy"] - model.y0) * mju.rad_to_arcsec,
             *params,
         )
         if cfg["sub"]:
@@ -361,7 +361,8 @@ def main():
     print_once("finished hits and naive")
 
     # Take 1 over hits map
-    ihits = hits.copy().invert
+    ihits = hits.copy()
+    ihits.invert()
 
     # Save weights and noise maps
     _ = mm.make_weights(todvec, skymap, outdir)

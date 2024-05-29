@@ -3,8 +3,7 @@ Data classes for describing models in a structured way
 """
 
 from dataclasses import dataclass, field
-from functools import partial
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 import dill
 import jax
@@ -15,17 +14,15 @@ import numpy as np
 from astropy import units as u  # type: ignore [reportUnusedImport]
 from astropy.coordinates import Angle  # pyright: ignore [reportUnusedImport]
 from jax.typing import ArrayLike
+from minkasi.tods import Tod
 from numpy.typing import NDArray
 from typing_extensions import Self
 
 from minkasi_jax import utils as mju  # pyright: ignore [reportUnusedImport]
 
 from . import core
+from . import utils as mju
 from .structure import STRUCT_N_PAR
-from .utils import rad_to_arcsec
-
-if TYPE_CHECKING:
-    from minkasi.tods import Tod
 
 
 @dataclass
@@ -132,7 +129,7 @@ class Model:
 
     def __repr__(self) -> str:
         rep = self.name + ":\n"
-        rep += f"Round {self.cur_round} out of {self.n_rounds}\n"
+        rep += f"Round {self.cur_round + 1} out of {self.n_rounds}\n"
         for i in self.original_order:
             struct = self.structures[i]
             rep += "\t" + struct.name + ":\n"
@@ -161,17 +158,17 @@ class Model:
         self.chisq = chisq
 
     def minkasi_helper(
-        self, tod: Tod, params: NDArray[np.floating]
+        self, params: NDArray[np.floating], tod: Tod
     ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
         """
         Helper function to work with minkasi fitting routines.
 
         Arguments:
 
+            params: An array of model parameters.
+
             tod: A minkasi tod instance.
                 'dx' and 'dy' must be in tod.info and be in radians.
-
-            params: An array of model parameters.
 
         Returns:
 
@@ -179,16 +176,18 @@ class Model:
 
             pred: The model with the specified substructure.
         """
-        dx = (tod.info["dx"] - self.x0) * rad_to_arcsec
-        dy = (tod.info["dy"] - self.y0) * rad_to_arcsec
+        dx = (tod.info["dx"] - self.x0) * mju.rad_to_arcsec
+        dy = (tod.info["dy"] - self.y0) * mju.rad_to_arcsec
+        argnums = tuple(np.where(self.to_fit)[0] + core.ARGNUM_SHIFT_TOD)
 
         pred, grad = core.model_tod_grad(
             self.xyz,
             *self.n_struct,
+            self.dz,
             self.beam,
             dx,
             dy,
-            tuple(np.where(self.to_fit)[0] + core.ARGNUM_SHIFT_TOD),
+            argnums,
             *params,
         )
 
@@ -231,7 +230,7 @@ class Model:
         """
         # Load constants
         constants = {
-            name: eval(str(const)) for name, const in cfg.get("constants", {})
+            name: eval(str(const)) for name, const in cfg.get("constants", {}).items()
         }  # pyright: ignore [reportUnusedVariable]
 
         # Get jax device
@@ -262,21 +261,29 @@ class Model:
         beam = jax.device_put(beam, device)
 
         n_rounds = cfg.get("n_rounds", 1)
-        dz = dz * cfg["model"]["unit_conversion"]
+        dz = dz * eval(str(cfg["model"]["unit_conversion"]))
 
         structures = []
-        for name, structure in cfg["model"].items():
+        for name, structure in cfg["model"]["structures"].items():
             parameters = []
-            for par_name, param in structure["parameters"].keys():
+            for par_name, param in structure["parameters"].items():
                 val = eval(str(param["value"]))
-                fit = param.get("fit", [False] * n_rounds)
+                fit = param.get("to_fit", [False] * n_rounds)
+                if isinstance(fit, bool):
+                    fit = [fit] * n_rounds
+                if len(fit) != n_rounds:
+                    raise ValueError(
+                        "to_fit has %d entries but we only have %d rounds",
+                        len(fit),
+                        n_rounds,
+                    )
                 priors = param.get("priors", None)
                 if priors is not None:
                     priors = eval(str(priors))
-                parameters.append(Parameter(par_name, fit, val, priors))
+                parameters.append(Parameter(par_name, fit, val, 0.0, priors))
             structures.append(Structure(name, structure["structure"], parameters))
         name = cfg["model"].get(
-            "name", "".join([structure.name for structure in structures])
+            "name", "-".join([structure.name for structure in structures])
         )
 
         return cls(name, structures, xyz, x0, y0, dz, beam, n_rounds)

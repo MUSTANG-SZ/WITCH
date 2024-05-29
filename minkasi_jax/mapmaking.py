@@ -115,10 +115,10 @@ def reestimate_noise_from_map(
 def get_grad_prior(
     todvec: minkasi.tods.TodVec,
     mapset: minkasi.maps.Mapset,
-    gradmap: minkasi.maps.Maptype,
+    gradmap: minkasi.maps.MapType,
     *args,
     **kwargs,
-) -> tuple[minkasi.mapmaking.HasPrior, minkasi.maps.Mapset]:
+) -> tuple[minkasi.mapmaking.pcg.HasPrior, minkasi.maps.Mapset]:
     """
     Make a gradient based prior. This helps avoid errors due to sharp features.
 
@@ -167,7 +167,7 @@ def solve_map(
     todvec: minkasi.tods.TodVec,
     x0: minkasi.maps.Mapset,
     ihits: minkasi.maps.MapType,
-    prior: Optional[minkasi.mapmaking.HasPrior],
+    prior: Optional[minkasi.mapmaking.pcg.HasPrior],
     maxiters: int,
     save_iters: list[int],
     outdir: str,
