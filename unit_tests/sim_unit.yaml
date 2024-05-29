@@ -1,48 +1,88 @@
+# Cluster name
+# Used both for the output path as well as to load presets
 name: "SIM"
-sim: True
-fit: True
-n_rounds: 4
+sim: True # If True use TODs to make noise and add a simulated cluster
+fit: True # If True fit the cluster, overridden by command line
+sub: True # If True the cluster before mapmaking, overridden by command line
+n_rounds: 4 # How many rounds of fitting to try
+
+# Constants for use in the model and grid construction
+# Can be used as a dict ie: constants['z']
+# All are passed through eval
 constants:
   Te: 5.0
   freq: "90e9"
   z: 0.451
+
 paths:
+  # Location of TOD files
+  # If an absolute path then that is used directly
+  # If a relative path taken relative to MJ_TODROOT
   tods: "RXJ1347"
-  glob: "Signal_TOD*.fits"
-  ndo: False
-  odo: False
+  glob: "Signal_TOD*.fits" # Pattern to search for TODs with
+  ndo: False # ?
+  odo: False # ?
+  # Directory to use as root for outputs
+  # If an absolute path then that is used directly
+  # If a relative path taken relative to MJ_OUTROOT
   outroot: ""
+  subdir: "" # Subdirectory to use
+  # Final outdir will be something like: outroot/name/model_name/subdir
+
+# Defines the grid
+# All are passed through eval
 coords:
-  r_map: "3.0*60"
-  dr: "1.0"
-  x0: "(206.8776*u.degree).to(u.radian).value"
-  y0: "(-11.7528*u.degree).to(u.radian).value"  
+  r_map: "3.0*60" # Radial size of grid in arcseconds 
+  dr: "1.0" # Pixel size of grid in x and y in arcseconds
+  dz: 1.0 # Pixel size along the LOS, if not provided dr is used
+  x0: "(206.8776*u.degree).to(u.radian).value" # RA of grid origin in radians
+  y0: "(-11.7528*u.degree).to(u.radian).value" # Dec of grid origin in radian 
+
+# Defines the beam 
+# All are passed through eval
+# Note that these define a double gaussian
 beam:
-  fwhm1: "9.735"
-  amp1: 0.9808
-  fwhm2: "32.627"
-  amp2: 0.0192
+  fwhm1: "9.735" # FWHM in arcseconds of the first gaussian
+  amp1: 0.9808 # Amplitude of the first gaussian
+  fwhm2: "32.627" # FWHM in arcseconds of the second gaussian
+  amp2: 0.0192 # Amplitude of the second gaussian
+
+# Settings for subtracting off a bowl before fitting
 bowling:
-  sub_poly: False 
-  method: "pred2"
-  degree: 5
+  sub_poly: False # If true fit and subtract a polynomial bowl
+  method: "pred2" # Which common mode to subtract before bowl fitting
+  degree: 5 # Degree of the polynomial to fit to the bowl
+
+# Settings to pass to minkasi for mapmaking and fitting
 minkasi:
+  # Defines the noise model
   noise:
-    class: "minkasi.mapmaking.noise.NoiseSmoothedSVD"
-    args: "[]"
-    kwargs: "{'fwhm':10}"
-  maxiter: 10
-  npass: 5
-  dograd: False
+    class: "minkasi.mapmaking.noise.NoiseSmoothedSVD" # Noise class to use
+    args: "[]" # Arguments to pass to apply_noise
+    kwargs: "{'fwhm':10}" # kwargs to pass to apply_noise
+  maxiter: 10 # Maximum fit iterations per round
+  npass: 5 # How many passes of mapmaking to run
+  dograd: False # If True then use gradient priors when mapmaking
+
+# Define the model
 model:
+  # Unit conversion to apply at the end
+  # Will be evaled
   unit_conversion: "float(mju.get_da(constants['z'])*mju.y2K_RJ(constants['freq'], constants['Te'])*mju.XMpc/mju.me)"
+  # Structure to include in the model
   structures:
+    # Name of the first structure
     a10:
-      structure: "a10"
+      structure: "a10" # What type of structure it is
+      # Parameters for the structure
       parameters:
-        dx_1:
-          value: 0.0 
-          to_fit: [True, True, False, True]
+        dx_1: # Name of the first parameter
+          value: 0.0 # Value to use/start at, will be evaled
+          # Set to True for the rounds where we want to fit this param
+          # If you set it to just True of False it will be that for all rounds
+          # If not provided assumed to be False
+          to_fit: [True, True, False, True] 
+          # Range to prior to, will be evaled
           priors: [-9.0, 9.0]
         dy_1:
           value: 0.0
