@@ -1,3 +1,38 @@
+## 3.0.0 (2024-05-29)
+
+### Feat
+
+- recursive configs and relative paths
+- set coord units
+- add serialization of model dclass
+- repr for model
+- add some convenience classes in prep for new fitter script
+- switch to bilinear interp
+- added unit tests
+- adding itterative fitting
+- print starting params for sims. Also switching to sci notation for params
+- adding white noise option for sims
+- do static argnums and argnum shift via function inspection
+- adding no sub functionality
+- adding downsampling to fitter and small parameter changes
+
+### Fix
+
+- many small bugs
+- also allow kwargs
+- more npars issues :)
+- ensure that samples outside of grid are 0
+- do inspections after function def
+- jnp.trapz depracation
+- undoing default
+- only change variables that are being fit
+- Dont start at the right value when simming
+
+### Refactor
+
+- streamlined fitter and made it a part of the core library
+- move some inspections around and add variables to make working with things dynamically easier
+
 ## 2.4.0 (2024-05-27)
 
 ### Feat
