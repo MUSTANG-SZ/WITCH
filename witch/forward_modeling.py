@@ -84,7 +84,8 @@ def get_chis(m, idx, idy, rhs, v, weight, dd=None):
     nn = model_rft.shape[1]
 
     chisq = (
-        jnp.sum(weight[:, :nn] * model_rft**2) - 2 * jnp.dot(rhs.ravel(), m.ravel()) / 2
+        jnp.sum(weight[:, :nn] * model_rft**2)
+        - 2 * jnp.dot(rhs.ravel(), m.ravel()) / 2
     )  # Man IDK about this factor of 2
 
     return chisq
@@ -140,7 +141,9 @@ def sample(cur_model, theta, tods):  # , model_params, xyz, beam):
     for i, tod in enumerate(tods):
         x, y, rhs, v, weight, norm = tod  # unravel tod
 
+
         log_like += -0.50*(jget_chis(m, x, y, cur_model.xyz, rhs, v, weight) - norm)
+
 
     return log_like
 
