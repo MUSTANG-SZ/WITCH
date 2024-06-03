@@ -1,59 +1,19 @@
-cluster:
-  name: "MS0735"
-  Te: 5.0
-  freq: 90e9
-paths:
-  tods: "/scratch/r/rbond/jorlo/MS0735/TS_EaCMS0f0_51_5_Oct_2021"
-  glob: "Signal_TOD*.fits"
-  ndo: False
-  odo: False
-  outroot: "/scratch/r/rbond/jorlo/Reductions"
-coords:
-  z: .216
-  r_map: "5.5*60*da"
-  dr: "2*da"
-  x0: "Angle('07 41 44.5 hours').to(u.radian).value"
-  y0: "Angle('74:14:38.7 degrees').to(u.radian).value"
-  conv_factor: "(da * 180 * 3600) / np.pi"
-beam:
-  fwhm1: "9.735 * da"
-  amp1: 0.9808
-  fwhm2: "32.627 * da"
-  amp2: 0.0192
-
-sim: True
-
-bowling:
-  sub_poly: False
-  method: "pred2"
-  degree: 2
-minkasi:
-  noise:
-    class: "noise.NoiseSmoothedSVD"
-    args: "[]"
-    kwargs: "{'fwhm':10}"
-  maxiter: 20
-  npass: 5
-  dograd: False
-  ntods: 10
-
-models:
-  gauss:
-    func: "partial(helper, xyz=xyz, dx=float(y2K_RJ(freq, Te)*dr*XMpc/me), beam=beam, argnums=np.where(to_fit)[0], re_eval=re_eval, par_idx=par_idx, n_gaussian = 1)" 
-    parameters:
-      dx:
-        value: "0"
-        to_fit: True
-      ps_dec:
-        value: "0"
-        to_fit: True
-      sigma:
-        value: "9.5*da"
-        to_fit: True
-      amp:
-        value: "1e-2"
-        to_fit: True
-
-
-
-
+base: "base_sampler.yaml"
+name: "RXJ1347"
+model:
+  unit_conversion: "float(mju.get_da(constants['z'])*mju.y2K_RJ(constants['freq'], constants['Te'])*mju.XMpc/mju.me)"
+  structures:
+    ps_gauss:
+      structure: "gaussian"
+      parameters:
+        dx_g:
+          value: 0.0
+          to_fit: True
+        dy_g:
+          value: 0.0
+          to_fit: True 
+        sigma:
+          value: 4
+        amp_g:
+          value: 0.002
+          to_fit: True 
