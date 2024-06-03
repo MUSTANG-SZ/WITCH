@@ -14,9 +14,11 @@ from minkasi.maps.mapset import Mapset
 from minkasi_jax.core import model
 from minkasi_jax.utils import make_grid
 
+from .utils import bilinear_interp, rad_to_arcsec
+
 
 @jax.jit
-def get_chis(m, idx, idy, rhs, v, weight, dd=None):
+def get_chis(m, dx, dy, xyz, rhs, v, weight, dd=None):
     """
     A faster, but more importantly much less memory intensive, way to get chis.
     The idea is chi^2 = (d-Am)^T N^-1 (d-Am). Previously we would calculate the residuals d-Am
@@ -43,10 +45,12 @@ def get_chis(m, idx, idy, rhs, v, weight, dd=None):
     ----------
     m : NDArray[np.floating]
         The model evaluated at all the map pixels
-    idx : NDArray[np.floating]
-        tod.info["model_idx"], the x index output by tod_to_index
-    idy : NDArray[np.floating]
-        tod.info["model_idy"], the y index output by tod_to_index
+    dx : NDArray[np.floating]
+        RA TOD in the same units as the grid.
+    dy : NDArray[np.floating]
+        Dec TOD in the same units as the grid.
+    xyz : tuple[jax.Array]
+        Grid that model was evaluated on, used for interpolation.
     rhs : NDArray[np.floating]
         The map output of todvec.make_rhs. Note this is how the data enters into the chi2 calc.
     v : NDArray[np.floating]
@@ -63,8 +67,7 @@ def get_chis(m, idx, idy, rhs, v, weight, dd=None):
     chi2 : np.floating
         The chi2 of the model m to the data.
     """
-
-    model = m.at[idy.astype(int), idx.astype(int)].get(mode="fill", fill_value=0)
+    model = bilinear_interp(dx, dy, xyz[0].ravel(), xyz[1].ravel(), m)
 
     # model = model.at[:,0].set((jnp.sqrt(0.5)*model)[:,0]) #This doesn't actually do anything
     # model = model.at[:,-1].set((jnp.sqrt(0.5)*model)[:,-1])
@@ -148,7 +151,9 @@ def sample(model_params, xyz, beam, params, tods):  # , model_params, xyz, beam)
 jget_chis = jax.jit(get_chis)
 
 
-def make_tod_stuff(todvec, skymap, lims=None, pixsize=2.0 / 3600 * np.pi / 180):
+def make_tod_stuff(
+    todvec, skymap, lims=None, pixsize=2.0 / 3600 * np.pi / 180, x0=0.0, y0=0.0
+):
     tods = []
     if lims == None:
         lims = todvec.lims()
@@ -174,8 +179,8 @@ def make_tod_stuff(todvec, skymap, lims=None, pixsize=2.0 / 3600 * np.pi / 180):
         tods.append(
             [  # jnp.array(di),
                 # jnp.array(dj),
-                jnp.array(tod.info["model_idx"]),
-                jnp.array(tod.info["model_idy"]),
+                (jnp.array(tod.info["dx"]) - x0) * rad_to_arcsec,
+                (jnp.array(tod.info["dy"]) - y0) * rad_to_arcsec,
                 jnp.array(mapset.maps[0].map),
                 jnp.array(tod.noise.v),
                 jnp.array(tod.noise.mywt),
