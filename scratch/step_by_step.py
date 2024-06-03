@@ -117,6 +117,70 @@ pars_fit = params.copy()
 # Check if I can simply fit mapspace models                                #
 ############################################################################
 
+vis_model = core.model(
+    model.xyz,
+    *model.n_struct,
+    model.dz,
+    model.beam,
+    *params,
+)
+
+noise = scipy.stats.norm.rvs(size=vis_model.shape,loc=0.00,scale=1.00E-05) 
+dat_model  = vis_model+noise
+
+def log_likelihood(theta):
+    cur_model = core.model(model.xyz, *model.n_struct, model.dz, model.beam, *theta) 
+    return -0.5 * jp.sum(((dat_model-cur_model)/1e-5)**2)
+
+def log_prior(theta):
+     dx, dy, sigma, amp_1 = theta
+    #if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*0.0036 < sigma < 30*0.0036 and -10 < amp_1 < 10:
+     if np.abs(dx) < 20 and np.abs(dy) < 20 and 1 < sigma < 10 and -10 < amp_1 < 10:
+         return 0.0
+     return -np.inf
+
+def log_probability(theta):
+     lp = log_prior(theta)
+     if not np.isfinite(lp):
+         return -np.inf
+     else:
+        ll = log_likelihood(theta)
+        return lp + ll
+
+truths = params
+
+params2 = params + 1e-1*np.random.randn(2*len(params), len(params))
+params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
+
+nwalkers, ndim = params2.shape
+
+sampler = emcee.EnsembleSampler(
+    nwalkers, ndim, log_probability
+)
+
+sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
+flat_samples = sampler.get_chain(discard=5000, thin=15, flat=True)
+
+import corner
+
+fig = corner.corner(
+    flat_samples, labels=model.par_names, truths=truths
+)
+
+plt.show(); plt.close()
+
+out_model = np.array([core.model(model.xyz,*model.n_struct,model.dz,model.beam,*samp) for samp in flat_samples])
+out_model = np.array([corner.quantile(out,0.50)[0] for out in out_model.reshape(out_model.shape[0],-1).T]).reshape(out_model.shape[1:])
+
+plt.subplot(131); plt.imshow(dat_model); plt.colorbar()
+plt.subplot(132); plt.imshow(out_model); plt.colorbar()
+plt.subplot(133); plt.imshow(dat_model-out_model); plt.colorbar()
+plt.show(); plt.close()
+
+############################################################################
+# Check if I can simply fit mapspace models                                #
+############################################################################
+
 def log_likelihood(theta, data):
      cur_model = core.model(model.xyz, *model.n_struct, model.dz, model.beam, *params) 
      return -0.5 * np.sum(((data-cur_model)/1e-6)**2)
