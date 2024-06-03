@@ -15,16 +15,20 @@ import minkasi.tods.processing as tod_processing
 from minkasi.maps.skymap import SkyMap
 from minkasi.fitting import models
 from minkasi.mapmaking import noise
+import minkasi
+
 
 from astropy.coordinates import Angle
 from astropy import units as u
 
 import minkasi_jax.presets_by_source as pbs
 from minkasi_jax.utils import *
-from minkasi_jax.core import helper
-from minkasi_jax.core import model
+import minkasi_jax.core as core
 from minkasi_jax.forward_modeling import make_tod_stuff, sample
 from minkasi_jax.forward_modeling import sampler as my_sampler
+from minkasi_jax.fitter import get_outdir, make_parser, load_tods, process_tods, load_config
+from minkasi_jax.containers import Model
+
 import emcee
 import functools
 
@@ -35,149 +39,86 @@ from matplotlib import pyplot as plt
 #%load_ext autoreload
 #%autoreload 2
 
-with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml', "r") as file:
+path = "/home/jorlo/dev/minkasi_jax/configs/sampler_sims/"
+with open(path + '/1gauss.yaml', "r") as file:
     cfg = yaml.safe_load(file)
 #fit = True
 
-# Setup coordindate stuff
-z = eval(str(cfg["coords"]["z"]))
-da = get_da(z)
-r_map = eval(str(cfg["coords"]["r_map"]))
-dr = eval(str(cfg["coords"]["dr"]))
-xyz = make_grid(r_map, dr)
-coord_conv = eval(str(cfg["coords"]["conv_factor"]))
-x0 = eval(str(cfg["coords"]["x0"]))
-y0 = eval(str(cfg["coords"]["y0"]))
+parser = make_parser()
+args = parser.parse_args()
 
-# Load TODs
-tod_names = glob.glob(os.path.join(cfg["paths"]["tods"], cfg["paths"]["glob"]))
-bad_tod, addtag = pbs.get_bad_tods(
-    cfg["cluster"]["name"], ndo=cfg["paths"]["ndo"], odo=cfg["paths"]["odo"]
-)
-tod_names = io.cut_blacklist(tod_names, bad_tod)
-tod_names.sort()
-tod_names = tod_names[parallel.myrank :: parallel.nproc]
-print('tod #: ', len(tod_names))
-parallel.barrier()  # Is this needed?
+# TODO: Serialize cfg to a data class (pydantic?)
+cfg = load_config({}, args.config)
+cfg["fit"] = cfg.get("fit", "model" in cfg)
+cfg["sim"] = cfg.get("sim", False)
+cfg["map"] = cfg.get("map", True)
+cfg["sub"] = cfg.get("sub", True)
+if args.nosub:
+    cfg["sub"] = False
+if args.nofit:
+    cfg["fit"] = False
 
-todvec = mtods.TodVec()
-n_tod = 10
-for i, fname in enumerate(tod_names):
-    if fname == "/scratch/r/rbond/jorlo/MS0735/TS_EaCMS0f0_51_5_Oct_2021/Signal_TOD-AGBT21A_123_03-s20.fits": continue
-    if i >= n_tod: break
-    dat = io.read_tod_from_fits(fname)
+# Get TODs
+todvec = load_tods(cfg)
 
-    tod_processing.truncate_tod(dat)
-    tod_processing.downsample_tod(dat)   #sometimes we have faster sampled data than we need.
-                                  #this fixes that.  You don't need to, though.
-    tod_processing.truncate_tod(dat)  
-    
-    # figure out a guess at common mode and (assumed) linear detector drifts/offset
-    # drifts/offsets are removed, which is important for mode finding.  CM is *not* removed.
-    dd, pred2, cm = tod_processing.fit_cm_plus_poly(dat["dat_calib"], cm_ord=3, full_out=True)
-    dat["dat_calib"] = dd
-    dat["pred2"] = pred2
-    dat["cm"] = cm
+# make a template map with desired pixel size an limits that cover the data
+# todvec.lims() is MPI-aware and will return global limits, not just
+# the ones from private TODs
+lims = todvec.lims()
+pixsize = 2.0 / 3600 * np.pi / 180
+skymap = minkasi.maps.SkyMap(lims, pixsize)
 
-    # Make pixelized RA/Dec TODs
-    idx, idy = tod_to_index(dat["dx"], dat["dy"], x0, y0, xyz, coord_conv)
-    idu, id_inv = np.unique(
-        np.vstack((idx.ravel(), idy.ravel())), axis=1, return_inverse=True
-    )
-    dat["idx"] = idu[0]
-    dat["idy"] = idu[1]
-    dat["id_inv"] = id_inv
-    dat["model_idx"] = idx
-    dat["model_idy"] = idy
+# Define the model and get stuff setup for minkasi
+model = Model.from_cfg(cfg)
+funs = [model.minkasi_helper]
+params = np.array(model.pars)
+npars = np.array([len(params)])
+prior_vals = model.priors
+priors = [None if prior is None else "flat" for prior in prior_vals]
 
-    tod = mtods.Tod(dat)
-    todvec.add_tod(tod)
-
-Te = eval(str(cfg["cluster"]["Te"]))
-freq = eval(str(cfg["cluster"]["freq"]))
-beam = beam_double_gauss(
-    dr,
-    eval(str(cfg["beam"]["fwhm1"])),
-    eval(str(cfg["beam"]["amp1"])),
-    eval(str(cfg["beam"]["fwhm2"])),
-    eval(str(cfg["beam"]["amp2"])),
-)
-
-funs = []
-npars = []
-labels = []
-params = []
-to_fit = []
-priors = []
-prior_vals = []
-re_eval = []
-par_idx = {}
-subtract = []
-
-for mname, model in cfg["models"].items():
-    npars.append(len(model["parameters"]))
-    _to_fit = []
-    _re_eval = []
-    _par_idx = {}
-    for name, par in model["parameters"].items():
-        labels.append(name)
-        par_idx[mname + "-" + name] = len(params)
-        _par_idx[mname + "-" + name] = len(_to_fit)
-        params.append(eval(str(par["value"])))
-        _to_fit.append(eval(str(par["to_fit"])))
-        if "priors" in par:
-            priors.append(par["priors"]["type"])
-            prior_vals.append(eval(str(par["priors"]["value"])))
-        else:
-            priors.append(None)
-            prior_vals.append(None)
-        if "re_eval" in par and par["re_eval"]:
-            _re_eval.append(str(par["value"]))
-        else:
-            _re_eval.append(False)
-    to_fit = to_fit + _to_fit
-    re_eval = re_eval + _re_eval
-    # Special case where function is helper
-    if model["func"][:15] == "partial(helper,":
-        func_str = model["func"][:-1]
-        if "xyz" not in func_str:
-            func_str += ", xyz=xyz"
-        if "beam" not in func_str:
-            func_str += ", beam=beam"
-        if "argnums" not in func_str:
-            func_str += ", argnums=np.where(_to_fit)[0]"
-        if "re_eval" not in func_str:
-            func_str += ", re_eval=_re_eval"
-        if "par_idx" not in func_str:
-            func_str += ", par_idx=_par_idx"
-        func_str += ")"
-        model["func"] = func_str
-
-    funs.append(eval(str(model["func"])))
-    if "sub" in model:
-        subtract.append(model["sub"])
-    else:
-        subtract.append(True)
-
-npars = np.array(npars)
-labels = np.array(labels)
-params = np.array(params)
-to_fit = np.array(to_fit, dtype=bool)
-priors = np.array(priors)
-
+# Deal with bowling and simming in TODs and setup noise
 noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
 noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
 noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
+bowl_str = process_tods(
+    args, cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
+)
+
+# make a template map with desired pixel size an limits that cover the data
+# todvec.lims() is MPI-aware and will return global limits, not just
+# the ones from private TODs
+lims = todvec.lims()
+pixsize = 2.0 / 3600 * np.pi / 180
+skymap = minkasi.maps.SkyMap(lims, pixsize)
+
+# Define the model and get stuff setup for minkasi
+model = Model.from_cfg(cfg)
+funs = [model.minkasi_helper]
+params = np.array(model.pars)
+npars = np.array([len(params)])
+prior_vals = model.priors
+priors = [None if prior is None else "flat" for prior in prior_vals]
+
+# Deal with bowling and simming in TODs and setup noise
+noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
+noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
+noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
+bowl_str = process_tods(
+    args, cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
+)
+
+# Get output
+outdir = get_outdir(cfg, bowl_str, model)
+
+# Now we fit
+pars_fit = params.copy()
 
 ############################################################################
 # Check if I can simply fit mapspace models                                #
 ############################################################################
 
-from minkasi_jax.core import model
-import numpy as np
-
 def log_likelihood(theta, data):
-     cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, theta)
+     cur_model = core.model(model.xyz, *model.n_struct, model.dz, model.beam, *params) 
      return -0.5 * np.sum(((data-cur_model)/1e-6)**2)
 
 def log_prior(theta):
@@ -192,10 +133,15 @@ def log_probability(theta, data):
          return -np.inf
      return lp + log_likelihood(theta, data)
 
-dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
-params[3] = 1e-3
-vis_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
-noise = np.random.rand(330, 330)*0.1*params[3]
+vis_model = core.model(
+    model.xyz,
+    *model.n_struct,
+    model.dz,
+    model.beam,
+    *params,
+)
+
+noise = np.random.rand(model.xyz[0].shape[0], model.xyz[1].shape[1])*0.1*params[3]
 
 data = vis_model+noise
 
@@ -216,8 +162,11 @@ flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 import corner
 
 fig = corner.corner(
-    flat_samples, labels=labels, truths=truths
+    flat_samples, labels=model.par_names, truths=truths
 )
+
+plt.show()
+plt.close()
 ############################################################################
 # Now fit models in TOD space. Start with a square TOD that matches map.   #
 ############################################################################
