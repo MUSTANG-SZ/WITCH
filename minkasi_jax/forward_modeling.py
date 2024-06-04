@@ -85,23 +85,23 @@ def get_chis(m, dx, dy, xyz, rhs, v, weight, dd=None):
     return chisq
 
 
-def sampler(params, tods, jsample, fixed_pars, fix_pars_ids):
-    _params = np.zeros(len(params) + len(fixed_pars))
+def sampler(theta, tods, jsample, fixed_pars, fix_pars_ids):
+    _theta = np.zeros(len(theta) + len(fixed_pars))
 
     par_idx = 0
     fix_idx = 0
-    for i in range(len(_params)):
+    for i in range(len(_theta)):
         if i in fix_pars_ids:
-            _params[i] = fixed_pars[fix_idx]
+            _theta[i] = fixed_pars[fix_idx]
             fix_idx += 1
         else:
-            _params[i] = params[par_idx]
+            _theta[i] = theta[par_idx]
             par_idx += 1
 
-    return jsample(_params, tods)
+    return jsample(_theta, tods)
 
 
-def sample(model_params, xyz, beam, params, tods):  # , model_params, xyz, beam):
+def sample(cur_model, theta, tods):  # , model_params, xyz, beam):
     """
     Generate a model realization and compute the chis of that model to data.
 
@@ -123,27 +123,19 @@ def sample(model_params, xyz, beam, params, tods):  # , model_params, xyz, beam)
 
     """
     log_like = 0
-    n_iso, n_gnfw, n_gauss, n_egauss, n_uni, n_expo, n_power, n_power_cos = model_params
 
     m = model(
-        xyz,
-        n_iso,
-        n_gnfw,
-        n_gauss,
-        n_egauss,
-        n_uni,
-        n_expo,
-        n_power,
-        n_power_cos,
-        -2.5e-05,
-        beam,
-        params,
+        cur_model.xyz,
+        *cur_model.n_struct,
+        cur_model.dz, 
+        cur_model.beam,
+        *theta,
     )
 
     for i, tod in enumerate(tods):
         x, y, rhs, v, weight, norm = tod  # unravel tod
 
-        log_like += -0.50*(jget_chis(m, x, y, rhs, v, weight) - norm)
+        log_like += -0.50*(jget_chis(m, x, y, cur_model.xyz, rhs, v, weight) - norm)
 
     return log_like
 
