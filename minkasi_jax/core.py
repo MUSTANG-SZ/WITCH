@@ -177,9 +177,6 @@ def model(
     for i in range(n_a10):
         pressure = jnp.add(pressure, a10(*a10s[i], xyz))
 
-    for i in range(n_gaussian):
-        pressure = jnp.add(pressure, gaussian(*gaussians[i], xyz))
-
     for i in range(n_egaussian):
         pressure = jnp.add(pressure, egaussian(*egaussians[i], xyz))
 
