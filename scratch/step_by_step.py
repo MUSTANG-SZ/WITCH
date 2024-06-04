@@ -7,6 +7,12 @@ import shutil
 import sys
 import time
 from functools import partial
+<<<<<<< HEAD
+=======
+import yaml
+import numpy as np
+import scipy 
+>>>>>>> 1d74263 (refactor mcmc_check)
 
 import emcee
 import minkasi.parallel as parallel
@@ -37,10 +43,12 @@ from astropy import units as u
 import minkasi_jax.presets_by_source as pbs
 from minkasi_jax.utils import *
 import minkasi_jax.core as core
-from minkasi_jax.forward_modeling import make_tod_stuff, sample
+from minkasi_jax.forward_modeling import make_tod_stuff, sample, get_chis
 from minkasi_jax.forward_modeling import sampler as my_sampler
 from minkasi_jax.fitter import get_outdir, make_parser, load_tods, process_tods, load_config
 from minkasi_jax.containers import Model
+
+import jax.numpy as jp
 
 import emcee
 import functools
@@ -127,6 +135,9 @@ pixsize = 2.0 / 3600 * np.pi / 180
 skymap = minkasi.maps.SkyMap(lims, pixsize)
 
 
+
+
+
 # Define the model and get stuff setup for minkasi
 model = Model.from_cfg(cfg)
 funs = [model.minkasi_helper]
@@ -142,6 +153,17 @@ noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
 bowl_str = process_tods(
     args, cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
 )
+
+
+
+# make a template map with desired pixel size an limits that cover the data
+# todvec.lims() is MPI-aware and will return global limits, not just
+# the ones from private TODs
+lims = todvec.lims()
+pixsize = 2.0 / 3600 * np.pi / 180
+skymap = minkasi.maps.SkyMap(lims, pixsize)
+xyz = make_grid_from_skymap(skymap, cfg["coords"]["r_map"], cfg["coords"]["dr"])
+
 
 # Get output
 outdir = get_outdir(cfg, bowl_str, model)
@@ -200,7 +222,7 @@ params2 = params + 1e-1*np.random.randn(2*len(params), len(params))
 params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
 
 nwalkers, ndim = params2.shape
-
+"""
 sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability
 )
@@ -223,43 +245,33 @@ plt.subplot(131); plt.imshow(dat_model); plt.colorbar()
 plt.subplot(132); plt.imshow(out_model); plt.colorbar()
 plt.subplot(133); plt.imshow(dat_model-out_model); plt.colorbar()
 plt.show(); plt.close()
-
+"""
+###########################################################################
+# Now fit models in TOD space. Start with a square TOD that matches map.   #
 ############################################################################
-# Check if I can simply fit mapspace models                                #
-############################################################################
->>>>>>> c6ac539 (map-space fit + no-data likelihood)
 
-def log_likelihood(theta, data):
-     cur_model = core.model(model.xyz, *model.n_struct, model.dz, model.beam, *params) 
-     return -0.5 * np.sum(((data-cur_model)/1e-6)**2)
+
+def log_likelihood_tod(theta, tod):
+     idx, idy, rhs, v, weight, norm = tod
+     cur_model =  core.model(model.xyz, *model.n_struct, model.dz, model.beam, *theta) 
+      
+     return -0.5*(get_chis(cur_model, idx, idy, model.xyz, rhs, v, weight) + norm)
 
 
 def log_prior(theta):
-    dx, dy, sigma, amp_1 = theta
-    if (
-        np.abs(dx) < 20
-        and np.abs(dy) < 20
-        and 1e-2 * 0.0036 < sigma < 30 * 0.0036
-        and -10 < amp_1 < 10
-    ):
-        return 0.0
-    return -np.inf
+     dx, dy, sigma, amp_1 = theta
+     if np.abs(dx) < 20 and np.abs(dy) < 20 and 1 < sigma < 8 and -10 < amp_1 < 10:
+         return 0.0
+     return -np.inf
 
-
-def log_probability(theta, data):
-    lp = log_prior(theta)
-    if not np.isfinite(lp):
-        return -np.inf
-    return lp + log_likelihood(theta, data)
-
-
-
-dx = float(y2K_RJ(freq, Te) * dr * XMpc / me)
-params[3] = 1e-3
-vis_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
-noise = np.random.rand(330, 330) * 0.1 * params[3]
-
-vis_model = core.model(
+def log_probability_tod(theta, data):
+     lp = log_prior(theta)
+     if not np.isfinite(lp):
+         return -np.inf
+     return lp + log_likelihood_tod(theta, data)
+"""
+vis_model = core.model_tod(
+>>>>>>> 1d74263 (refactor mcmc_check)
     model.xyz,
     *model.n_struct,
     model.dz,
@@ -267,80 +279,18 @@ vis_model = core.model(
     *params,
 )
 
-noise = np.random.rand(model.xyz[0].shape[0], model.xyz[1].shape[1])*0.1*params[3]
+noise = scipy.stats.norm.rvs(size=vis_model.shape,loc=0.00,scale=1.00E-05)
+dat_model  = vis_model+noise 
+"""
 
 
-data = vis_model + noise
+tods = make_tod_stuff(todvec, skymap, x0=model.x0, y0=model.y0)
 
-truths = params
+x = np.arange(0, len(model.xyz[0][0]), dtype=int)
+y = np.arange(0, len(model.xyz[0][0]), dtype=int)
 
-params2 = params + 1e-4 * np.random.randn(2 * len(params), len(params))
-params2[:, 2] = np.abs(params2[:, 2])  # Force sigma positive
-
-nwalkers, ndim = params2.shape
-
-sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probability, args=(vis_model,))
-
-sampler.run_mcmc(params2, 10000, skip_initial_state_check=True, progress=True)
-flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
-
-import corner
-
-
-fig = corner.corner(flat_samples, labels=labels, truths=truths)
-
-fig = corner.corner(
-    flat_samples, labels=model.par_names, truths=truths
-)
-
-plt.show()
-plt.close()
-
-############################################################################
-# Now fit models in TOD space. Start with a square TOD that matches map.   #
-############################################################################
-
-import numpy as np
-from minkasi_jax.core import model
-
-
-def log_likelihood_tod(theta, idx, idy, data):
-    cur_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, theta)
-    cur_model = cur_model.at[idy.astype(int), idx.astype(int)].get(
-        mode="fill", fill_value=0
-    )
-
-    return -1 / 2 * np.sum(((data - cur_model) / 1e-6) ** 2)
-
-
-def log_prior(theta):
-    dx, dy, sigma, amp_1 = theta
-    if (
-        np.abs(dx) < 20
-        and np.abs(dy) < 20
-        and 1e-2 * 0.0036 < sigma < 30 * 0.0036
-        and -10 < amp_1 < 10
-    ):
-        return 0.0
-    return -np.inf
-
-
-def log_probability_tod(theta, idx, idy, data):
-    lp = log_prior(theta)
-    if not np.isfinite(lp):
-        return -np.inf
-    return lp + log_likelihood_tod(theta, idx, idy, data)
-
-
-dx = float(y2K_RJ(freq, Te) * dr * XMpc / me)
-params[3] = 1e-3
-vis_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
-
-
-x = np.arange(0, len(xyz[0][0]), dtype=int)
-y = np.arange(0, len(xyz[0][0]), dtype=int)
 X, Y = np.meshgrid(x, y)
-params[3] = 1e-3
+
 
 data_tod = vis_model.at[Y, X].get(mode="fill", fill_value=0)
 
@@ -350,7 +300,7 @@ params2[:, 2] = np.abs(params2[:, 2])  # Force sigma positive
 nwalkers, ndim = params2.shape
 
 sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability_tod, args=(X, Y, data_tod)
+   nwalkers, ndim, log_probability_tod, args = (tods[0],)
 )
 
 sampler.run_mcmc(params2, 5000, skip_initial_state_check=True, progress=True)
@@ -358,7 +308,11 @@ flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 
 import corner
 
-fig = corner.corner(flat_samples, labels=labels, truths=truths)
+ig = corner.corner(
+    flat_samples, labels=labels, truths=truths
+)
+plt.savefig("corner2.png")
+plt.close()
 
 ############################################################################
 # TOD shape TOD                                                            #

@@ -3,7 +3,7 @@ cluster:
   Te: 5.0
   freq: 90e9
 paths:
-  tods: "/home/jack/M2-TODs/MS0735/"
+  tods: "/mnt/welch/MUSTANG/M2-TODs/RXJ1347/"
   glob: "Signal_TOD*.fits"
   ndo: False
   odo: False
