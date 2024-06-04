@@ -1,5 +1,6 @@
 base: "base_sampler.yaml"
 name: "RXJ1347"
+sim: True
 model:
   unit_conversion: "float(mju.get_da(constants['z'])*mju.y2K_RJ(constants['freq'], constants['Te'])*mju.XMpc/mju.me)"
   structures:
@@ -15,5 +16,5 @@ model:
         sigma:
           value: 4
         amp_g:
-          value: 0.002
+          value: 0.2
           to_fit: True 

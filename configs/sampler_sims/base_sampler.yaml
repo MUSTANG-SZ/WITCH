@@ -28,8 +28,8 @@ paths:
 # Defines the grid
 # All are passed through eval
 coords:
-  r_map: "3.0*60" # Radial size of grid in arcseconds 
-  dr: "1.0" # Pixel size of grid in x and y in arcseconds
+  r_map: 30.0 # Radial size of grid in arcseconds 
+  dr: 1.0 # Pixel size of grid in x and y in arcseconds
   dz: 1.0 # Pixel size along the LOS, if not provided dr is used
   x0: "(206.8776*u.degree).to(u.radian).value" # RA of grid origin in radians
   y0: "(-11.7528*u.degree).to(u.radian).value" # Dec of grid origin in radian 
@@ -59,3 +59,4 @@ minkasi:
   maxiter: 10 # Maximum fit iterations per round
   npass: 5 # How many passes of mapmaking to run
   dograd: False # If True then use gradient priors when mapmaking
+    #ntods: 1
