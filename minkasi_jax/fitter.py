@@ -104,7 +104,7 @@ def load_tods(cfg: dict) -> minkasi.tods.TodVec:
 
 
 def process_tods(
-    args, cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
+    cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
 ) -> str:
     bowling = cfg.get("bowling", {})
     sub_poly = bowling.get("sub_poly", False)
@@ -126,7 +126,7 @@ def process_tods(
                 tod.info["dat_calib"][j] -= np.polynomial.polynomial.polyval(x, res)
 
         if sim:
-            if args.wnoise:
+            if cfg["wnoise"]:
                 temp = np.percentile(np.diff(tod.info["dat_calib"]), [33, 68])
                 scale = (temp[1] - temp[0]) / np.sqrt(8)
                 tod.info["dat_calib"] = np.random.normal(
@@ -229,8 +229,11 @@ def main():
     cfg = load_config({}, args.config)
     cfg["fit"] = cfg.get("fit", "model" in cfg)
     cfg["sim"] = cfg.get("sim", False)
+    cfg["wnoise"] = cfg.get("wnoise", False)
     cfg["map"] = cfg.get("map", True)
     cfg["sub"] = cfg.get("sub", True)
+    if args.wnoise:
+        cfg["wnoise"] = True
     if args.nosub:
         cfg["sub"] = False
     if args.nofit:
@@ -259,7 +262,7 @@ def main():
     noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
     noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
     bowl_str = process_tods(
-        args, cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
+        cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
     )
 
     # Get output
