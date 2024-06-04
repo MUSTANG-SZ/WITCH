@@ -134,11 +134,16 @@ def sample(cur_model, theta, tods):  # , model_params, xyz, beam):
     )
 
     for i, tod in enumerate(tods):
-        x, y, rhs, v, weight, norm = tod  # unravel tod
+        x, y, rhs, v, weight, norm, data = tod  # unravel tod
 
-        log_like += -0.50 * (jget_chis(m, x, y, cur_model.xyz, rhs, v, weight) + norm)
+    #   log_like += -0.50 * (jget_chis(m, x, y, cur_model.xyz, rhs, v, weight) + norm)
 
+        model_tod = data-bilinear_interp(x, y, cur_model.xyz[0].ravel(), cur_model.xyz[1].ravel(),m)
+        model_rot = jnp.dot(v, model_tod)
+        model_tmp = jnp.hstack([model_rot, jnp.fliplr(model_rot[:, 1:-1])])
+        model_rft = jnp.real(jnp.fft.rfft(model_tmp, axis=1))
 
+        log_like += -0.50*jnp.sum(weight*model_rft**2)
     return log_like
 
 
@@ -169,7 +174,7 @@ def make_tod_stuff(
         norm = -np.sum(
             np.log(tod.noise.mywt[tod.noise.mywt != 0.00]) - np.log(2.00 * np.pi)
         )
-
+        
         tods.append(
             [  # jnp.array(di),
                 # jnp.array(dj),
@@ -179,6 +184,7 @@ def make_tod_stuff(
                 jnp.array(tod.noise.v),
                 jnp.array(tod.noise.mywt),
                 norm,
+                tod.info["dat_calib"],
             ]
         )
     return tods
