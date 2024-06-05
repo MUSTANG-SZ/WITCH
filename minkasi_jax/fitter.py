@@ -141,7 +141,7 @@ def process_tods(
                 *model.n_struct,
                 model.dz,
                 model.beam,
-                (tod.info["dx"] - model.x0) * mju.rad_to_arcsec,
+                (tod.info["dx"] - model.x0) * mju.rad_to_arcsec * np.cos(model.y0),
                 (tod.info["dy"] - model.y0) * mju.rad_to_arcsec,
                 *model.pars,
             )
@@ -322,7 +322,7 @@ def main():
                     *model.n_struct,
                     model.dz,
                     model.beam,
-                    (tod.info["dx"] - model.x0) * mju.rad_to_arcsec,
+                    (tod.info["dx"] - model.x0) * mju.rad_to_arcsec * np.cos(model.y0),
                     (tod.info["dy"] - model.y0) * mju.rad_to_arcsec,
                     *params,
                 )
@@ -346,7 +346,7 @@ def main():
             *model.n_struct,
             model.dz,
             model.beam,
-            (tod.info["dx"] - model.x0) * mju.rad_to_arcsec,
+            (tod.info["dx"] - model.x0) * mju.rad_to_arcsec * np.cos(model.y0),
             (tod.info["dy"] - model.y0) * mju.rad_to_arcsec,
             *params,
         )

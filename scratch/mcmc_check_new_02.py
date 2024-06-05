@@ -102,7 +102,7 @@ elif False: # (m^t A^t N^-1 d) likelihood
         m_irt = m_irt.at[:, 0].multiply(0.50)
         m_irt = m_irt.at[:,-1].multiply(0.50)
         return jnp.sum(m_irt*d_tod)-0.50*jnp.sum(m_irt*m_tod)
-else: # rhs likelihood
+elif False: # rhs likelihood
     @jax.jit
     def getlike(theta,x,y,rhs):
         m = mjcore.model(model.xyz,*model.n_struct,model.dz,model.beam,*theta)
@@ -118,6 +118,11 @@ else: # rhs likelihood
         m_irt = m_irt.at[:, 0].multiply(0.50)
         m_irt = m_irt.at[:,-1].multiply(0.50)
         return jnp.sum(rhs*m)-0.50*jnp.sum(m_irt*m_tod)
+else:
+    @jax.jit
+    def getlike(theta,tods):
+        return sample(model,theta,tods)
+
 
 def getprob(theta):
     prior = np.array([p.logpdf(theta[pi]) for pi, p in enumerate(priors)])
@@ -134,11 +139,10 @@ nwalk, ndims = 3*len(params), len(params)
 steps = 2
 for step in range(steps):
     tods = make_tod_stuff(todvec,skymap,x0=model.x0,y0=model.y0)
-    x, y, rhs, v, weight, norm, d_tod = tods[0]
 
     pinit = params[None,:]*(1.00+0.01*np.random.rand(nwalk,ndims))
 
-    sampler = emcee.EnsembleSampler(nwalk,ndims,getpost,args=(x,y,rhs))
+    sampler = emcee.EnsembleSampler(nwalk,ndims,getpost,args=(tods,))
     sampler.run_mcmc(pinit,500,skip_initial_state_check=True,progress=True)
 
     samples = sampler.get_chain(discard=100,thin=10,flat=True)
@@ -164,6 +168,11 @@ for step in range(steps):
     else:
         pars_new = np.array([corner.quantile(samples[:,p],0.50)[0] for p in range(samples.shape[1])])
         pred_new = mjcore.model(model.xyz,*model.n_struct,model.dz,model.beam,*pars_new)
-        pred_new = bilinear_interp(x,y,model.xyz[0].ravel(),model.xyz[1].ravel(),pred_new)
+        
+        for ti, tod in enumerate(tods):
+            
+            x, y, rhs, v, weight, norm, dd = tod
+            pred_tod = bilinear_interp(x,y,model.xyz[0].ravel(),model.xyz[1].ravel(),pred_new)
 
-        todvec.tods[0].set_noise(noise_class,todvec.tods[0].info["dat_calib"]-pred_new,*noise_args,**noise_kwargs)
+            todvec.tods[ti].set_noise(noise_class,todvec.tods[ti].info["dat_calib"]-pred_tod,*noise_args,**noise_kwargs)
+            del pred_tod

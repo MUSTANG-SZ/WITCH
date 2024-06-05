@@ -15,7 +15,19 @@ from minkasi_jax.core import model
 from minkasi_jax.utils import make_grid
 
 from .utils import bilinear_interp, rad_to_arcsec
+    
+@jax.jit
+def get_mfilt(m_tod,v,weight):
+    m_rot = jnp.dot(v,m_tod)
 
+    m_tmp = jnp.hstack([m_rot,jnp.fliplr(m_rot[:,1:-1])])
+    m_rft = jnp.real(jnp.fft.rfft(m_tmp,axis=1))
+
+    m_ift = jnp.fft.irfft(weight*m_rft,axis=1,norm='forward')[:,:d_tod.shape[1]]
+    m_irt = jnp.dot(v.T,m_ift)
+    m_irt = m_irt.at[:, 0].multiply(0.50)
+    m_irt = m_irt.at[:,-1].multiply(0.50)
+    return m_irt
 
 @jax.jit
 def get_chis(m, dx, dy, xyz, rhs, v, weight, dd=None):
@@ -67,24 +79,13 @@ def get_chis(m, dx, dy, xyz, rhs, v, weight, dd=None):
     chi2 : np.floating
         The chi2 of the model m to the data.
     """
-    model = bilinear_interp(dx, dy, xyz[0].ravel(), xyz[1].ravel(), m)
+
+    m_tod = bilinear_interp(dx,dy,xyz[0].ravel(),xyz[1].ravel(),m)
+    m_irt = get_mfilt(m_tod,v,weight)
     
-    # model = model.at[:,0].set((jnp.sqrt(0.5)*model)[:,0]) #This doesn't actually do anything
-    # model = model.at[:,-1].set((jnp.sqrt(0.5)*model)[:,-1])
-    model_rot = jnp.dot(v, model)
-    tmp = jnp.hstack(
-        [model_rot, jnp.fliplr(model_rot[:, 1:-1])]
-    )  # mirror pred so we can do dct of first kind
-    model_rft = jnp.real(jnp.fft.rfft(tmp, axis=1))
-    nn = model_rft.shape[1]
-
-    chisq = (
-        jnp.sum(weight[:, :nn] * model_rft**2)
-        - 2 * jnp.dot(rhs.ravel(), m.ravel()) / 2
-    )  # Man IDK about this factor of 2
-
+    chisq =  -2.00*jnp.sum(rhs*m)+jnp.sum(m_irt*m_tod)
+    if dd is not None: chisq += dd
     return chisq
-
 
 def sampler(theta, tods, jsample, fixed_pars, fix_pars_ids):
     _theta = np.zeros(len(theta) + len(fixed_pars))
@@ -134,16 +135,16 @@ def sample(cur_model, theta, tods):  # , model_params, xyz, beam):
     )
 
     for i, tod in enumerate(tods):
-        x, y, rhs, v, weight, norm, data = tod  # unravel tod
+        x, y, rhs, v, weight, norm, dd = tod  # unravel tod
 
-    #   log_like += -0.50 * (jget_chis(m, x, y, cur_model.xyz, rhs, v, weight) + norm)
+        log_like += -0.50 * (jget_chis(m, x, y, cur_model.xyz, rhs, v, weight, dd) + norm)
 
-        model_tod = data-bilinear_interp(x, y, cur_model.xyz[0].ravel(), cur_model.xyz[1].ravel(),m)
-        model_rot = jnp.dot(v, model_tod)
-        model_tmp = jnp.hstack([model_rot, jnp.fliplr(model_rot[:, 1:-1])])
-        model_rft = jnp.real(jnp.fft.rfft(model_tmp, axis=1))
+    #   model_tod = data-bilinear_interp(x, y, cur_model.xyz[0].ravel(), cur_model.xyz[1].ravel(),m)
+    #   model_rot = jnp.dot(v, model_tod)
+    #   model_tmp = jnp.hstack([model_rot, jnp.fliplr(model_rot[:, 1:-1])])
+    #   model_rft = jnp.real(jnp.fft.rfft(model_tmp, axis=1))
 
-        log_like += -0.50*jnp.sum(weight*model_rft**2)
+    #   log_like += -0.50*jnp.sum(weight*model_rft**2)
     return log_like
 
 
@@ -175,16 +176,21 @@ def make_tod_stuff(
             np.log(tod.noise.mywt[tod.noise.mywt != 0.00]) - np.log(2.00 * np.pi)
         )
         
+        v  = jnp.array(tod.noise.v)
+        wt = jnp.array(tod.noise.mywt)
+        
+        dd = jnp.sum(get_mfilt(tod.info["dat_calib"],v,wt)*tod.info["dat_calib"])
+
         tods.append(
             [  # jnp.array(di),
                 # jnp.array(dj),
-                (jnp.array(tod.info["dx"]) - x0) * rad_to_arcsec,
+                (jnp.array(tod.info["dx"]) - x0) * rad_to_arcsec * jnp.cos(y0),
                 (jnp.array(tod.info["dy"]) - y0) * rad_to_arcsec,
                 jnp.array(jnp.flipud(mapset.maps[0].map.copy())),
-                jnp.array(tod.noise.v),
-                jnp.array(tod.noise.mywt),
+                v,
+                wt,
                 norm,
-                jnp.array(tod.info["dat_calib"]),
+                dd
             ]
         )
     return tods
