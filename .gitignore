@@ -29,3 +29,5 @@ gpu_minkasi_jax.ipynb
 sim_fitter.ipynb
 pks/
 .DS_STORE
+*.pdf
+*.pkl

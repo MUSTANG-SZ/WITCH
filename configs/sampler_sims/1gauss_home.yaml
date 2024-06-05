@@ -1,13 +1,13 @@
 cluster:
-  name: "MS0735"
+  name: "RXJ1347"
   Te: 5.0
   freq: 90e9
 paths:
-  tods: "/mnt/welch/MUSTANG/M2-TODs/RXJ1347/"
+  tods: "/Users/ldimasco/Documents/Projects/hackasi/test/input"
   glob: "Signal_TOD*.fits"
   ndo: False
   odo: False
-  outroot: "/home/jack/Reductions"
+  outroot: "/Users/ldimasco/Documents/Projects/hackasi/test/output"
 coords:
   z: .216
   r_map: "5.5*60*da"

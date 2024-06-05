@@ -68,7 +68,7 @@ def get_chis(m, dx, dy, xyz, rhs, v, weight, dd=None):
         The chi2 of the model m to the data.
     """
     model = bilinear_interp(dx, dy, xyz[0].ravel(), xyz[1].ravel(), m)
-
+    
     # model = model.at[:,0].set((jnp.sqrt(0.5)*model)[:,0]) #This doesn't actually do anything
     # model = model.at[:,-1].set((jnp.sqrt(0.5)*model)[:,-1])
     model_rot = jnp.dot(v, model)
@@ -180,11 +180,11 @@ def make_tod_stuff(
                 # jnp.array(dj),
                 (jnp.array(tod.info["dx"]) - x0) * rad_to_arcsec,
                 (jnp.array(tod.info["dy"]) - y0) * rad_to_arcsec,
-                jnp.array(mapset.maps[0].map),
+                jnp.array(jnp.flipud(mapset.maps[0].map.copy())),
                 jnp.array(tod.noise.v),
                 jnp.array(tod.noise.mywt),
                 norm,
-                tod.info["dat_calib"],
+                jnp.array(tod.info["dat_calib"]),
             ]
         )
     return tods
