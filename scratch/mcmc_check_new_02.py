@@ -121,7 +121,7 @@ elif False: # rhs likelihood
 else:
     @jax.jit
     def getlike(theta,tods):
-        return sample(model,theta,tods)
+        return loglike(model,theta,tods)
 
 
 def getprob(theta):
@@ -143,9 +143,9 @@ for step in range(steps):
     pinit = params[None,:]*(1.00+0.01*np.random.rand(nwalk,ndims))
 
     sampler = emcee.EnsembleSampler(nwalk,ndims,getpost,args=(tods,))
-    sampler.run_mcmc(pinit,2000,skip_initial_state_check=True,progress=True)
+    sampler.run_mcmc(pinit,400,skip_initial_state_check=True,progress=True)
 
-    samples = sampler.get_chain(discard=1000,thin=10,flat=True)
+    samples = sampler.get_chain(discard=200,thin=10,flat=True)
 
     for p in range(samples.shape[1]):
         print(corner.quantile(samples[:,p],[0.16,0.50,0.84]))

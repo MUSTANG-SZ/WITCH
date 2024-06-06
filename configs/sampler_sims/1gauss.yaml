@@ -10,11 +10,16 @@ model:
         dx_g:
           value: 100.25
           to_fit: True
+          prior: 'uniform(loc=-200,scale=400)'
         dy_g:
           value: 25.30
           to_fit: True 
+          prior: 'uniform(loc=-200,scale=400)'
         sigma:
           value: 10
+          to_fit: True
+          prior: 'uniform(loc=0,scale=100)'
         amp_g:
           value: 0.01
           to_fit: True 
+          prior: 'uniform(loc=0.00,scale=1.00)'
