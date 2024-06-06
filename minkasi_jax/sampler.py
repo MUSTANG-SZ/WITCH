@@ -13,7 +13,7 @@ def parhelper(theta,fixed_pars,fix_pars_idx):
 
 
 class sample:
-    def __init__(self,model,todvec,skymap,nwalk=100,nstep=1000,nburn=500):
+    def __init__(self,model,todvec,skymap,nwalk=100,nstep=1000,nburn=500,pinit=None):
         
         params = np.array(model.pars)
         priors = model.priors
@@ -44,7 +44,11 @@ class sample:
         self.sampler = emcee.EnsembleSampler(nwalk,ndims,logpost)
 
         print(f'* Running burn-in stage [{nburn} steps]')
-        state = np.array([pp.rvs(size=nwalk) for pp in priors]).T
+
+        if pinit is not None:
+            state = pinit[None,:]*(1.00+0.01*np.random.rand(nwalk,ndims))
+        else:
+            state = np.array([pp.rvs(size=nwalk) for pp in priors]).T
         state = self.sampler.run_mcmc(state,nburn,progress=True)
 
         print(f'* Running sampling stage [{nstep} steps]')
@@ -54,5 +58,4 @@ class sample:
         model.cur_round += 1
 
     def get_chain(self,thin=1,flat=False):
-        samples = self.sampler.get_chain(flat=flat,thin=thin)
-        return samples
+        return self.sampler.get_chain(flat=flat,thin=thin)

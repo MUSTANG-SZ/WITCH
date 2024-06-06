@@ -58,12 +58,12 @@ xyz = [(gridwx[0,:][...,None,None]-np.rad2deg(model.x0))*60*60*np.cos(model.y0),
 model.xyz = xyz
 
 # Deal with bowling and simming in TODs and setup noise
-noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
-noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
+noise_class  = eval(str(cfg["minkasi"]["noise"]["class"]))
+noise_args   = eval(str(cfg["minkasi"]["noise"]["args"]))
 noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
 bowl_str = process_tods(cfg,todvec,skymap,noise_class,noise_args,noise_kwargs,model)
 
-plan = sample(model,todvec,skymap,nwalk=3*len(params),nburn=1000,nstep=2000)
+plan = sample(model,todvec,skymap,nwalk=3*len(params),nburn=1000,nstep=2000,pinit=params)
 samples = plan.get_chain(thin=10,flat=True)
 
 for p in range(samples.shape[1]):
