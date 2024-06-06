@@ -11,7 +11,7 @@ import minkasi
 from minkasi_jax.fitter import make_parser, load_tods, process_tods, load_config
 from minkasi_jax.containers import Model
 
-from minkasi_jax.sampler import sample
+import minkasi_jax.sampler as sampler
 
 np.random.seed(6958476)
 
@@ -63,10 +63,10 @@ noise_args   = eval(str(cfg["minkasi"]["noise"]["args"]))
 noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
 bowl_str = process_tods(cfg,todvec,skymap,noise_class,noise_args,noise_kwargs,model)
 
-steps = 2
+steps = 4
 for step in range(steps):
-    sampler = sample(model,todvec,skymap,nwalk=3*len(params),nburn=200,nstep=400,pinit=params)
-    samples = sampler.get_chain(thin=10,flat=True)
+    results = sampler.sample(model,todvec,skymap,nwalk=3*len(params),nburn=200,nstep=400,pinit=params)
+    samples = results.get_chain(thin=10,flat=True)
 
     for p in range(samples.shape[1]):
         print(corner.quantile(samples[:,p],[0.16,0.50,0.84]))
@@ -86,4 +86,6 @@ for step in range(steps):
             
         fig = corner.corner(samples,labels=model.par_names,truths=params,quantiles=[0.16,0.50,0.84],show_titles=True,title_fmt='.2e')
         plt.show(); plt.close()
+    else:
+        sampler.update_noise(model,todvec,skymap,samples,noise_class,*noise_args,**noise_kwargs)
         
