@@ -13,7 +13,7 @@ def parhelper(theta,fixed_pars,fix_pars_idx):
     return _theta
 
 
-def sample(model,todvec,skymap,nwalk=100,nstep=1000,nburn=500,pinit=None): 
+def sample(model,todvec,skymap,nwalk=100,nstep=1000,nburn=500,usepval=True): 
     params = np.array(model.pars)
     priors = model.priors
 
@@ -45,8 +45,8 @@ def sample(model,todvec,skymap,nwalk=100,nstep=1000,nburn=500,pinit=None):
 
     print(f'* Running burn-in stage [{nburn} steps]')
 
-    if pinit is not None:
-        state = pinit[None,:]*(1.00+0.01*np.random.rand(nwalk,ndims))
+    if usepval:
+        state = params[model.to_fit][None,:]*(1.00+0.01*np.random.rand(nwalk,ndims))
     else:
         state = np.array([pp.rvs(size=nwalk) for pp in priors]).T
     state = sampler.run_mcmc(state,nburn,progress=True)

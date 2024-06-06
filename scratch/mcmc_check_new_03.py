@@ -65,7 +65,7 @@ bowl_str = process_tods(cfg,todvec,skymap,noise_class,noise_args,noise_kwargs,mo
 
 steps = 4
 for step in range(steps):
-    results = sampler.sample(model,todvec,skymap,nwalk=3*len(params),nburn=200,nstep=400,pinit=params)
+    results = sampler.sample(model,todvec,skymap,nwalk=3*len(params),nburn=200,nstep=400)
     samples = results.get_chain(thin=10,flat=True)
 
     for p in range(samples.shape[1]):
