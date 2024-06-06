@@ -11,8 +11,8 @@ import minkasi.tods.core as todcore
 import numpy as np
 from minkasi.maps.mapset import Mapset
 
-from minkasi_jax.core import model
-from minkasi_jax.utils import make_grid
+from .core import model
+from .utils import make_grid
 
 
 @jax.jit

@@ -18,10 +18,8 @@ from minkasi.tods import Tod
 from numpy.typing import NDArray
 from typing_extensions import Self
 
-from minkasi_jax import utils as mju  # pyright: ignore [reportUnusedImport]
-
 from . import core
-from . import utils as mju
+from . import utils as wu
 from .structure import STRUCT_N_PAR
 
 
@@ -176,8 +174,8 @@ class Model:
 
             pred: The model with the specified substructure.
         """
-        dx = (tod.info["dx"] - self.x0) * mju.rad_to_arcsec
-        dy = (tod.info["dy"] - self.y0) * mju.rad_to_arcsec
+        dx = (tod.info["dx"] - self.x0) * wu.rad_to_arcsec
+        dy = (tod.info["dy"] - self.y0) * wu.rad_to_arcsec
         argnums = tuple(np.where(self.to_fit)[0] + core.ARGNUM_SHIFT_TOD)
 
         pred, grad = core.model_tod_grad(
@@ -222,7 +220,7 @@ class Model:
     @classmethod
     def from_cfg(cls, cfg: dict) -> Self:
         """
-        Create an instance of model from a minkasi_jax config.
+        Create an instance of model from a witch config.
 
         Arguments:
 
@@ -244,14 +242,14 @@ class Model:
         x0 = eval(str(cfg["coords"]["x0"]))
         y0 = eval(str(cfg["coords"]["y0"]))
 
-        xyz_host = mju.make_grid(r_map, dr, dr, dz)
+        xyz_host = wu.make_grid(r_map, dr, dr, dz)
         xyz = jax.device_put(xyz_host, device)
         xyz[0].block_until_ready()
         xyz[1].block_until_ready()
         xyz[2].block_until_ready()
 
         # Make beam
-        beam = mju.beam_double_gauss(
+        beam = wu.beam_double_gauss(
             dr,
             eval(str(cfg["beam"]["fwhm1"])),
             eval(str(cfg["beam"]["amp1"])),

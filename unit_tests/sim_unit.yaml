@@ -12,7 +12,7 @@ sim: True # If True use TODs to make noise and add a simulated cluster
 model:
   # Unit conversion to apply at the end
   # Will be evaled
-  unit_conversion: "float(mju.get_da(constants['z'])*mju.y2K_RJ(constants['freq'], constants['Te'])*mju.XMpc/mju.me)"
+  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   # Structure to include in the model
   structures:
     # Name of the first structure
