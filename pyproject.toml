@@ -3,11 +3,12 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name="minkasi_jax"
+name="witch"
 version="3.2.0"
 authors= [
 {name ="Jack Orlowski-Scherer"},
 {name ="Saianeesh Keshav Haridas"},
+{name ="Luca Di Mascolo"},
 ]
 description = "Fast modeling of galaxy clusters using JAX"
 readme = "README.md"
@@ -20,12 +21,20 @@ dependencies = ["numpy", "astropy", "jax", "jaxlib", "dill"]
 [project.optional-dependencies]
 fitter = ["pyyaml", "minkasi"]
 profile = ["tensorflow", "gitpython"]
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocstrings[python]",
+    "mkdocs-gen-files",
+    "mkdocs-literate-nav",
+    "mkdocs-homepage-copier",
+]
 
 [project.scripts]
-mj_fitter = "minkasi_jax:fitter"
+witcher = "witch:fitter"
 
 [tool.setuptools]
-packages=["minkasi_jax"]
+packages=["witch"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"

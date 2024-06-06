@@ -14,11 +14,10 @@ import minkasi
 import numpy as np
 import yaml
 
-import minkasi_jax.presets_by_source as pbs
-
 from . import core
 from . import mapmaking as mm
-from . import utils as mju
+from . import presets_by_source as pbs
+from . import utils as wu
 from .containers import Model
 
 
@@ -141,8 +140,8 @@ def process_tods(
                 *model.n_struct,
                 model.dz,
                 model.beam,
-                (tod.info["dx"] - model.x0) * mju.rad_to_arcsec,
-                (tod.info["dy"] - model.y0) * mju.rad_to_arcsec,
+                (tod.info["dx"] - model.x0) * wu.rad_to_arcsec,
+                (tod.info["dy"] - model.y0) * wu.rad_to_arcsec,
                 *model.pars,
             )
             tod.info["dat_calib"] += np.array(pred)
@@ -322,8 +321,8 @@ def main():
                     *model.n_struct,
                     model.dz,
                     model.beam,
-                    (tod.info["dx"] - model.x0) * mju.rad_to_arcsec,
-                    (tod.info["dy"] - model.y0) * mju.rad_to_arcsec,
+                    (tod.info["dx"] - model.x0) * wu.rad_to_arcsec,
+                    (tod.info["dy"] - model.y0) * wu.rad_to_arcsec,
                     *params,
                 )
 
@@ -346,8 +345,8 @@ def main():
             *model.n_struct,
             model.dz,
             model.beam,
-            (tod.info["dx"] - model.x0) * mju.rad_to_arcsec,
-            (tod.info["dy"] - model.y0) * mju.rad_to_arcsec,
+            (tod.info["dx"] - model.x0) * wu.rad_to_arcsec,
+            (tod.info["dy"] - model.y0) * wu.rad_to_arcsec,
             *params,
         )
         if cfg["sub"]:
