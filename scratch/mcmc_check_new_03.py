@@ -63,23 +63,27 @@ noise_args   = eval(str(cfg["minkasi"]["noise"]["args"]))
 noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
 bowl_str = process_tods(cfg,todvec,skymap,noise_class,noise_args,noise_kwargs,model)
 
-plan = sample(model,todvec,skymap,nwalk=3*len(params),nburn=1000,nstep=2000,pinit=params)
-samples = plan.get_chain(thin=10,flat=True)
+steps = 2
+for step in range(steps):
+    sampler = sample(model,todvec,skymap,nwalk=3*len(params),nburn=200,nstep=400,pinit=params)
+    samples = sampler.get_chain(thin=10,flat=True)
 
-for p in range(samples.shape[1]):
-    print(corner.quantile(samples[:,p],[0.16,0.50,0.84]))
+    for p in range(samples.shape[1]):
+        print(corner.quantile(samples[:,p],[0.16,0.50,0.84]))
 
-edges = [corner.quantile(samples[:,i],[0.16,0.50,0.84]) for i in range(samples.shape[1])]
-edges = [[edges[i][1]-5.00*(edges[i][1]-edges[i][0]),
-          edges[i][1]+5.00*(edges[i][2]-edges[i][1])] for i in range(samples.shape[1])]
+    if step==steps-1 or steps==1:
+        edges = [corner.quantile(samples[:,i],[0.16,0.50,0.84]) for i in range(samples.shape[1])]
+        edges = [[edges[i][1]-5.00*(edges[i][1]-edges[i][0]),
+                edges[i][1]+5.00*(edges[i][2]-edges[i][1])] for i in range(samples.shape[1])]
 
-for i in range(samples.shape[1]):
-    if edges[i][0]<model.priors[i].support()[0]: edges[i][0] = model.priors[i].support()[0]
-    if edges[i][1]>model.priors[i].support()[1]: edges[i][1] = model.priors[i].support()[1]
+        for i in range(samples.shape[1]):
+            if edges[i][0]<model.priors[i].support()[0]: edges[i][0] = model.priors[i].support()[0]
+            if edges[i][1]>model.priors[i].support()[1]: edges[i][1] = model.priors[i].support()[1]
 
-    if edges[i][0]==edges[i][1]: 
-        edges[i][0] = edges[i][0]-0.10*edges[i][0]
-        edges[i][1] = edges[i][1]+0.10*edges[i][1]
-    
-fig = corner.corner(samples,labels=model.par_names,truths=params,quantiles=[0.16,0.50,0.84],show_titles=True,title_fmt='.2e')
-plt.show(); plt.close()
+            if edges[i][0]==edges[i][1]: 
+                edges[i][0] = edges[i][0]-0.10*edges[i][0]
+                edges[i][1] = edges[i][1]+0.10*edges[i][1]
+            
+        fig = corner.corner(samples,labels=model.par_names,truths=params,quantiles=[0.16,0.50,0.84],show_titles=True,title_fmt='.2e')
+        plt.show(); plt.close()
+        
