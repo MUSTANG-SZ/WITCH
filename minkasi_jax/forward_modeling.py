@@ -23,7 +23,7 @@ def get_mfilt(m_tod,v,weight):
     m_tmp = jnp.hstack([m_rot,jnp.fliplr(m_rot[:,1:-1])])
     m_rft = jnp.real(jnp.fft.rfft(m_tmp,axis=1))
 
-    m_ift = jnp.fft.irfft(weight*m_rft,axis=1,norm='forward')[:,:d_tod.shape[1]]
+    m_ift = jnp.fft.irfft(weight*m_rft,axis=1,norm='forward')[:,:m_tod.shape[1]]
     m_irt = jnp.dot(v.T,m_ift)
     m_irt = m_irt.at[:, 0].multiply(0.50)
     m_irt = m_irt.at[:,-1].multiply(0.50)
