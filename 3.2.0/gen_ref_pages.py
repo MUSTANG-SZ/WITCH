@@ -6,13 +6,13 @@ import mkdocs_gen_files
 
 nav = mkdocs_gen_files.Nav()
 
-for path in sorted(Path("megham").rglob("*.py")):  #
-    module_path = path.relative_to("megham").with_suffix("")  #
-    doc_path = path.relative_to("megham").with_suffix(".md")  #
+for path in sorted(Path("witch").rglob("*.py")):  #
+    module_path = path.relative_to("witch").with_suffix("")  #
+    doc_path = path.relative_to("witch").with_suffix(".md")  #
     full_doc_path = Path("reference", doc_path)  #
 
     parts = list(module_path.parts)
-    parts = ["megham"] + parts
+    parts = ["witch"] + parts
 
     if parts[-1] == "__init__":  #
         continue
