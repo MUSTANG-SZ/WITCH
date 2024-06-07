@@ -31,7 +31,7 @@ docs = [
 ]
 
 [project.scripts]
-witcher = "witch:fitter"
+witcher = "witch.fitter:main"
 
 [tool.setuptools]
 packages=["witch"]
