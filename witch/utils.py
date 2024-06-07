@@ -271,7 +271,11 @@ def make_grid(r_map, dx, dy=None, dz=None, x0=0, y0=0):
         dz = dx
 
     # Make grid with resolution dr and size r_map
-    x = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dx))/jnp.cos(y0/rad_to_arcsec) + x0
+    x = (
+        jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dx))
+        / jnp.cos(y0 / rad_to_arcsec)
+        + x0
+    )
     y = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dy)) + y0
     z = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dz))
 
@@ -375,7 +379,9 @@ def transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz):
     # Get origin
     x0, y0 = xyz[3], xyz[4]
     # Shift origin
-    x = (xyz[0] - (x0 + dx/jnp.cos(y0/rad_to_arcsec)))*jnp.cos((y0 + dy)/rad_to_arcsec)
+    x = (xyz[0] - (x0 + dx / jnp.cos(y0 / rad_to_arcsec))) * jnp.cos(
+        (y0 + dy) / rad_to_arcsec
+    )
     y = xyz[1] - (y0 + dy)
     z = xyz[2] - dz
 

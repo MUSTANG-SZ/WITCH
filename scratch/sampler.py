@@ -1,37 +1,32 @@
+import argparse as argp
+import glob
 import os
+import pickle as pk
+import shutil
 import sys
 import time
-import glob
-import shutil
-import argparse as argp
 from functools import partial
-import yaml
-import numpy as np
 
-import minkasi.tods.io as io
+import emcee
+import minkasi.maps.skymap as skymap
 import minkasi.parallel as parallel
 import minkasi.tods.core as tods
+import minkasi.tods.io as io
 import minkasi.tods.processing as tod_processing
-import minkasi.maps.skymap as skymap
-
-
-from astropy.coordinates import Angle
-from astropy import units as u
-
 import minkasi_jax.presets_by_source as pbs
-from minkasi_jax.utils import *
+import numpy as np
+import yaml
+from astropy import units as u
+from astropy.coordinates import Angle
+from matplotlib import pyplot as plt
 from minkasi_jax import helper
 from minkasi_jax.core import model
 from minkasi_jax.forward_modeling import construct_sampler, make_tod_stuff
-import emcee
+from minkasi_jax.utils import *
 
-import pickle as pk
-
-from matplotlib import pyplot as plt
-
-with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735_noSub.yaml', "r") as file:
+with open("/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735_noSub.yaml", "r") as file:
     cfg = yaml.safe_load(file)
-#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
+# with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
 fit = True
 
@@ -53,20 +48,22 @@ bad_tod, addtag = pbs.get_bad_tods(
 tod_names = io.cut_blacklist(tod_names, bad_tod)
 tod_names.sort()
 tod_names = tod_names[parallel.myrank :: parallel.nproc]
-print('tod #: ', len(tod_names))
+print("tod #: ", len(tod_names))
 parallel.barrier()  # Is this needed?
 
 todvec = tods.TodVec()
 n_tod = 2
 for i, fname in enumerate(tod_names):
-    if i >= n_tod: break
+    if i >= n_tod:
+        break
     dat = io.read_tod_from_fits(fname)
     tod_processing.truncate_tod(dat)
 
-    
     # figure out a guess at common mode and (assumed) linear detector drifts/offset
     # drifts/offsets are removed, which is important for mode finding.  CM is *not* removed.
-    dd, pred2, cm = tod_processing.fit_cm_plus_poly(dat["dat_calib"], cm_ord=3, full_out=True)
+    dd, pred2, cm = tod_processing.fit_cm_plus_poly(
+        dat["dat_calib"], cm_ord=3, full_out=True
+    )
     dat["dat_calib"] = dd
     dat["pred2"] = pred2
     dat["cm"] = cm
@@ -137,32 +134,30 @@ noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
 noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
 noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
 
-#TODO: Implement tsBowl here
+# TODO: Implement tsBowl here
 if "bowling" in cfg:
     sub_poly = cfg["bowling"]["sub_poly"]
 
-sim = False #This script is for simming, the option to turn off is here only for debugging
-#TODO: Write this to use minkasi_jax.core.model
+sim = False  # This script is for simming, the option to turn off is here only for debugging
+# TODO: Write this to use minkasi_jax.core.model
 for i, tod in enumerate(todvec.tods):
-
     ipix = skymap.get_pix(tod)
     tod.info["ipix"] = ipix
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
 tods = make_tod_stuff(todvec)
 
-test_params = params[:9] #for speed only considering single isobeta model
+test_params = params[:9]  # for speed only considering single isobeta model
 test_params2 = test_params + 1e-4 * np.random.randn(20, len(test_params))
 
 nwalkers, ndim = test_params2.shape
 
-model_params = [1,0,0,0,0,0,0]
+model_params = [1, 0, 0, 0, 0, 0, 0]
 
 my_sampler = construct_sampler(model_params, xyz, beam)
 
 sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, my_sampler, args = (tods,) #comma needed to not unroll tods
+    nwalkers, ndim, my_sampler, args=(tods,)  # comma needed to not unroll tods
 )
 
-sampler.run_mcmc(test_params2, 50, skip_initial_state_check = True, progress=True)
-
+sampler.run_mcmc(test_params2, 50, skip_initial_state_check=True, progress=True)
