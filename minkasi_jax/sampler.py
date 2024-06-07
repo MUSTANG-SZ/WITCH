@@ -46,7 +46,10 @@ def sample(model,todvec,skymap,nwalk=100,nstep=1000,nburn=500,usepval=True):
     print(f'* Running burn-in stage [{nburn} steps]')
 
     if usepval:
-        state = params[model.to_fit][None,:]*(1.00+0.01*np.random.rand(nwalk,ndims))
+        state = np.empty((nwalk,ndims))
+        for pi, pp in enumerate(params[model.to_fit]):
+            ss = 0.01*np.random.rand(nwalk)
+            state[:,pi] = pp+ss if pp==0.00 else pp*(1.00+ss)
     else:
         state = np.array([pp.rvs(size=nwalk) for pp in priors]).T
     state = sampler.run_mcmc(state,nburn,progress=True)

@@ -38,8 +38,7 @@ todvec = load_tods(cfg)
 # todvec.lims() is MPI-aware and will return global limits, not just
 # the ones from private TODs
 lims = todvec.lims()
-pixsize = np.deg2rad(1.00
-                     /3600)
+pixsize = np.deg2rad(1.00/3600)
 skymap = minkasi.maps.SkyMap(lims, pixsize)
 
 # Define the model and get stuff setup for minkasi
@@ -63,7 +62,7 @@ noise_args   = eval(str(cfg["minkasi"]["noise"]["args"]))
 noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
 bowl_str = process_tods(cfg,todvec,skymap,noise_class,noise_args,noise_kwargs,model)
 
-steps = 4
+steps = eval(str(cfg["n_rounds"]))
 for step in range(steps):
     results = sampler.sample(model,todvec,skymap,nwalk=3*len(params),nburn=200,nstep=400)
     samples = results.get_chain(thin=10,flat=True)

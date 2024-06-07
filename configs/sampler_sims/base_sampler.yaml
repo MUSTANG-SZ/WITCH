@@ -1,6 +1,6 @@
 fit: True # If True fit the cluster, overridden by command line
 sub: True # If True the cluster before mapmaking, overridden by command line
-n_rounds: 4 # How many rounds of fitting to try
+n_rounds: 2 # How many rounds of fitting to try
 
 # Constants for use in the model and grid construction
 # Can be used as a dict ie: constants['z']
@@ -14,7 +14,7 @@ paths:
   # Location of TOD files
   # If an absolute path then that is used directly
   # If a relative path taken relative to MJ_TODROOT
-  tods: "/Users/ldimasco/Documents/Projects/hackasi/test/input"
+  tods: "/Users/ldimasco/Documents/Projects/hackasi/test/input/RXJ1347"
   glob: "Signal_TOD*.fits" # Pattern to search for TODs with
   ndo: False # ?
   odo: False # ?
@@ -64,4 +64,4 @@ minkasi:
   dograd: False # If True then use gradient priors when mapmaking
     #ntods: 1
 
-wnoise: True
+wnoise: False
