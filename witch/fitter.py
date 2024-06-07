@@ -135,13 +135,14 @@ def process_tods(
                 tod.info["dat_calib"] *= (-1) ** (
                     (minkasi.myrank + minkasi.nproc * i) % 2
                 )
+
             pred = core.model_tod(
                 model.xyz,
                 *model.n_struct,
                 model.dz,
                 model.beam,
-                (tod.info["dx"] - model.x0) * wu.rad_to_arcsec,
-                (tod.info["dy"] - model.y0) * wu.rad_to_arcsec,
+                tod.info["dx"] * wu.rad_to_arcsec,
+                tod.info["dy"]* wu.rad_to_arcsec,
                 *model.pars,
             )
             tod.info["dat_calib"] += np.array(pred)
@@ -321,8 +322,8 @@ def main():
                     *model.n_struct,
                     model.dz,
                     model.beam,
-                    (tod.info["dx"] - model.x0) * wu.rad_to_arcsec,
-                    (tod.info["dy"] - model.y0) * wu.rad_to_arcsec,
+                    tod.info["dx"]*wu.rad_to_arcsec,
+                    tod.info["dy"]*wu.rad_to_arcsec,
                     *params,
                 )
 
@@ -345,8 +346,8 @@ def main():
             *model.n_struct,
             model.dz,
             model.beam,
-            (tod.info["dx"] - model.x0) * wu.rad_to_arcsec,
-            (tod.info["dy"] - model.y0) * wu.rad_to_arcsec,
+            tod.info["dx"]* wu.rad_to_arcsec,
+            tod.info["dy"] * wu.rad_to_arcsec,
             *params,
         )
         if cfg["sub"]:

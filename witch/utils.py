@@ -236,7 +236,7 @@ def tod_hi_pass(tod, N_filt):
 
 # Model building tools
 # -----------------------------------------------------------
-def make_grid(r_map, dx, dy=None, dz=None):
+def make_grid(r_map, dx, dy=None, dz=None, x0=0, y0=0):
     """
     Make coordinate grids to build models in.
     All grids are sparse and are int(2*r_map / dr) in each dimension.
@@ -253,6 +253,10 @@ def make_grid(r_map, dx, dy=None, dz=None):
         dz: Grid resolution in z, should be in same units as r_map.
             If None then dz is set to dx.
 
+        x0: Origin of grid in RA, assumed to be in same units as r_map.
+
+        y0: Origin of grid in Dec, assumed to be in same units as r_map.
+
     Returns:
 
         x: Grid of x coordinates in same units as r_map.
@@ -267,11 +271,11 @@ def make_grid(r_map, dx, dy=None, dz=None):
         dz = dx
 
     # Make grid with resolution dr and size r_map
-    x = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dx))
-    y = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dy))
+    x = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dx))/jnp.cos(y0/rad_to_arcsec) + x0
+    y = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dy)) + y0
     z = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dz))
 
-    return jnp.meshgrid(x, y, z, sparse=True, indexing="ij")
+    return tuple(jnp.meshgrid(x, y, z, sparse=True, indexing="ij") + [x0, y0])
 
 
 def make_grid_from_skymap(skymap, z_map, dz, x0=None, y0=None):
@@ -368,9 +372,11 @@ def transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz):
 
         xyz: Transformed coordinate grid
     """
+    # Get origin
+    x0, y0 = xyz[3], xyz[4]
     # Shift origin
-    x = xyz[0] - dx
-    y = xyz[1] - dy
+    x = (xyz[0] - (x0 + dx/jnp.cos(y0/rad_to_arcsec)))*jnp.cos((y0 + dy)/rad_to_arcsec)
+    y = xyz[1] - (y0 + dy)
     z = xyz[2] - dz
 
     # Rotate
