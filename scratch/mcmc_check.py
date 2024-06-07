@@ -1,41 +1,37 @@
+import argparse as argp
+import functools
+import glob
 import os
+import pickle as pk
+import shutil
 import sys
 import time
-import glob
-import shutil
-import argparse as argp
 from functools import partial
-import yaml
-import numpy as np
 
-import minkasi.tods.io as io
+import emcee
 import minkasi.parallel as parallel
 import minkasi.tods.core as mtods
+import minkasi.tods.io as io
 import minkasi.tods.processing as tod_processing
-from minkasi.maps.skymap import SkyMap
+import minkasi_jax.presets_by_source as pbs
+import numpy as np
+import yaml
+from astropy import units as u
+from astropy.coordinates import Angle
+from matplotlib import pyplot as plt
 from minkasi.fitting import models
 from minkasi.mapmaking import noise
-
-from astropy.coordinates import Angle
-from astropy import units as u
-
-import minkasi_jax.presets_by_source as pbs
-from minkasi_jax.utils import *
+from minkasi.maps.skymap import SkyMap
 from minkasi_jax.core import helper
 from minkasi_jax.core import model as mink_model
 from minkasi_jax.forward_modeling import make_tod_stuff, sample
 from minkasi_jax.forward_modeling import sampler as my_sampler
-import emcee
-import functools
+from minkasi_jax.utils import *
 
-import pickle as pk
+# %load_ext autoreload
+# %autoreload 2
 
-from matplotlib import pyplot as plt
-
-#%load_ext autoreload
-#%autoreload 2
-
-'''
+"""
 def log_prior(theta):
     dx, dy, dz, r1, r2, r3, theta_1, beta_1, amp_1 = theta
     if np.abs(dx) < 20 and np.abs(dy) < 20 and np.abs(dz) <20 and 0 < r1 < 1 and 0 < r2 < 1 and 0 < r3 < 1 and 0 < theta_1 < 2*np.pi and 0 < beta_1 < 2 and 0 < amp_1 < 1e6:
@@ -48,26 +44,37 @@ def log_probability(theta, tods):
         return -np.inf
     return lp + my_sampler(theta, tods)
 
-'''
+"""
+
+
 def log_prior(theta, da):
     dx, dy, sigma, amp_1 = theta
-    if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*da < sigma < 30*da and -10 < amp_1 < 10: 
+    if (
+        np.abs(dx) < 20
+        and np.abs(dy) < 20
+        and 1e-2 * da < sigma < 30 * da
+        and -10 < amp_1 < 10
+    ):
         return 0.0
     return -np.inf
 
+
 def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids, da):
-    lp = log_prior(theta, da)    
+    lp = log_prior(theta, da)
     if not np.isfinite(lp):
         return -np.inf
     return lp + my_sampler(theta, tods, jsample, fixed_params, fixed_pars_ids)
 
-#with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
+
+# with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/sampler_sims/1gauss.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
-#with open('/home/jack/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
+# with open('/home/jack/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
-with open('/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml', "r") as file:
+with open(
+    "/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml", "r"
+) as file:
     cfg = yaml.safe_load(file)
-#fit = True
+# fit = True
 
 # Setup coordindate stuff
 z = eval(str(cfg["coords"]["z"]))
@@ -87,24 +94,33 @@ bad_tod, addtag = pbs.get_bad_tods(
 tod_names = io.cut_blacklist(tod_names, bad_tod)
 tod_names.sort()
 tod_names = tod_names[parallel.myrank :: parallel.nproc]
-print('tod #: ', len(tod_names))
+print("tod #: ", len(tod_names))
 parallel.barrier()  # Is this needed?
 
 todvec = mtods.TodVec()
 n_tod = 10
 for i, fname in enumerate(tod_names):
-    if fname == "/scratch/r/rbond/jorlo/MS0735/TS_EaCMS0f0_51_5_Oct_2021/Signal_TOD-AGBT21A_123_03-s20.fits": continue
-    if i >= n_tod: break
+    if (
+        fname
+        == "/scratch/r/rbond/jorlo/MS0735/TS_EaCMS0f0_51_5_Oct_2021/Signal_TOD-AGBT21A_123_03-s20.fits"
+    ):
+        continue
+    if i >= n_tod:
+        break
     dat = io.read_tod_from_fits(fname)
 
     tod_processing.truncate_tod(dat)
-    tod_processing.downsample_tod(dat)   #sometimes we have faster sampled data than we need.
-                                  #this fixes that.  You don't need to, though.
-    tod_processing.truncate_tod(dat)  
-    
+    tod_processing.downsample_tod(
+        dat
+    )  # sometimes we have faster sampled data than we need.
+    # this fixes that.  You don't need to, though.
+    tod_processing.truncate_tod(dat)
+
     # figure out a guess at common mode and (assumed) linear detector drifts/offset
     # drifts/offsets are removed, which is important for mode finding.  CM is *not* removed.
-    dd, pred2, cm = tod_processing.fit_cm_plus_poly(dat["dat_calib"], cm_ord=3, full_out=True)
+    dd, pred2, cm = tod_processing.fit_cm_plus_poly(
+        dat["dat_calib"], cm_ord=3, full_out=True
+    )
     dat["dat_calib"] = dd
     dat["pred2"] = pred2
     dat["cm"] = cm
@@ -125,11 +141,11 @@ for i, fname in enumerate(tod_names):
 
 lims = todvec.lims()
 pixsize = 2.0 / 3600 * np.pi / 180
-skymap = SkyMap(lims, pixsize, square=True, multiple = 2)
+skymap = SkyMap(lims, pixsize, square=True, multiple=2)
 print("skymap, xyz: ", skymap.map.shape, xyz[0].shape)
-#dr = pixsize*da * (3600*180/np.pi)
-#r_map = skymap.map.shape[1]*dr/2
-#xyz = make_grid(r_map, dr)
+# dr = pixsize*da * (3600*180/np.pi)
+# r_map = skymap.map.shape[1]*dr/2
+# xyz = make_grid(r_map, dr)
 
 Te = eval(str(cfg["cluster"]["Te"]))
 freq = eval(str(cfg["cluster"]["freq"]))
@@ -207,10 +223,10 @@ noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
 noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
 noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
 
-sim = True #This script is for simming, the option to turn off is here only for debugging
-dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
+sim = True  # This script is for simming, the option to turn off is here only for debugging
+dx = float(y2K_RJ(freq, Te) * dr * XMpc / me)
 
-#TODO: Write this to use minkasi_jax.core.model
+# TODO: Write this to use minkasi_jax.core.model
 for i, tod in enumerate(todvec.tods):
     print(tod.info["fname"])
     ipix = skymap.get_pix(tod)
@@ -218,9 +234,9 @@ for i, tod in enumerate(todvec.tods):
 
     if sim:
         tod.info["dat_calib"] *= (-1) ** ((parallel.myrank + parallel.nproc * i) % 2)
-        #tod.info["dat_calib"] = 0
+        # tod.info["dat_calib"] = 0
         start = 0
-        model = 0 
+        model = 0
         for n, fun in zip(npars, funs):
             model += fun(params[start : (start + n)], tod)[1]
             start += n
@@ -230,61 +246,61 @@ for i, tod in enumerate(todvec.tods):
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
 
-
-    
-
 tods = make_tod_stuff(todvec, skymap)
 
-#test_params = params[:13] #for speed only considering single isobeta model
+# test_params = params[:13] #for speed only considering single isobeta model
 
 truths = params
 
-model_params = [0,0,1,0,0,0,0,0]
+model_params = [0, 0, 1, 0, 0, 0, 0, 0]
 
 fixed_pars_ids = []
 fixed_params = params[fixed_pars_ids]
-params = params[[0,1,2,3]]
-params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
-params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
+params = params[[0, 1, 2, 3]]
+params2 = params + 1e-4 * np.random.randn(2 * len(params), len(params))
+params2[:, 2] = np.abs(params2[:, 2])  # Force sigma positive
 
-print(params2[:,2])
-#jit partial-d sample function
+print(params2[:, 2])
+# jit partial-d sample function
 cur_sample = functools.partial(sample, model_params, xyz, beam)
 jsample = jax.jit(cur_sample)
 
 nwalkers, ndim = params2.shape
 
 jsample(params, tods)
-#my_sampler = construct_sampler(model_params, xyz, beam)
-
-
+# my_sampler = construct_sampler(model_params, xyz, beam)
 
 
 sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability, args = (tods, jsample, fixed_params, fixed_pars_ids, da) #comma needed to not unroll tods
+    nwalkers,
+    ndim,
+    log_probability,
+    args=(
+        tods,
+        jsample,
+        fixed_params,
+        fixed_pars_ids,
+        da,
+    ),  # comma needed to not unroll tods
 )
 
-sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
+sampler.run_mcmc(params2, 10000, skip_initial_state_check=True, progress=True)
 
 
 flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 
 import pickle as pk
 
-odir = '/scratch/r/rbond/jorlo/forward-modeling/'
+odir = "/scratch/r/rbond/jorlo/forward-modeling/"
 
-with open(odir+'mcmc_samples.pk', 'wb') as f:
+with open(odir + "mcmc_samples.pk", "wb") as f:
     pk.dump(flat_samples, f)
 
 truths = params
 
 import corner
 
-fig = corner.corner(
-    flat_samples, labels=labels, truths=truths
-);
+fig = corner.corner(flat_samples, labels=labels, truths=truths)
 
-plt.savefig(odir+'1gauss_corner.pdf')
-plt.savefig(odir+'1gauss_corner.png')
-
-
+plt.savefig(odir + "1gauss_corner.pdf")
+plt.savefig(odir + "1gauss_corner.png")

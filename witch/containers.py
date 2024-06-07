@@ -172,8 +172,8 @@ class Model:
 
             pred: The model with the specified substructure.
         """
-        dx = tod.info["dx"]*wu.rad_to_arcsec
-        dy = tod.info["dy"]*wu.rad_to_arcsec
+        dx = tod.info["dx"] * wu.rad_to_arcsec
+        dy = tod.info["dy"] * wu.rad_to_arcsec
         argnums = tuple(np.where(self.to_fit)[0] + core.ARGNUM_SHIFT_TOD)
 
         pred, grad = core.model_tod_grad(
@@ -240,7 +240,9 @@ class Model:
         x0 = eval(str(cfg["coords"]["x0"]))
         y0 = eval(str(cfg["coords"]["y0"]))
 
-        xyz_host = wu.make_grid(r_map, dr, dr, dz, x0*wu.rad_to_arcsec, y0*wu.rad_to_arcsec)
+        xyz_host = wu.make_grid(
+            r_map, dr, dr, dz, x0 * wu.rad_to_arcsec, y0 * wu.rad_to_arcsec
+        )
         xyz = jax.device_put(xyz_host, device)
         xyz[0].block_until_ready()
         xyz[1].block_until_ready()
