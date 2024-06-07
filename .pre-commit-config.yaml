@@ -21,3 +21,8 @@ repos:
   rev: 23.9.1 
   hooks:
     - id: black
+
+ci:
+  autofix_commit_message: "ci: auto fixes"
+  autofix_prs: True
+  autoupdate_commit_msg: "ci: pre-commit autoupdate"
