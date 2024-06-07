@@ -15,7 +15,19 @@ from minkasi_jax.core import model
 from minkasi_jax.utils import make_grid
 
 from .utils import bilinear_interp, rad_to_arcsec
+    
+@jax.jit
+def apply_noise(m_tod,v,weight):
+    m_rot = jnp.dot(v,m_tod)
 
+    m_tmp = jnp.hstack([m_rot,jnp.fliplr(m_rot[:,1:-1])])
+    m_rft = jnp.real(jnp.fft.rfft(m_tmp,axis=1))
+
+    m_ift = jnp.fft.irfft(weight*m_rft,axis=1,norm='forward')[:,:m_tod.shape[1]]
+    m_irt = jnp.dot(v.T,m_ift)
+    m_irt = m_irt.at[:, 0].multiply(0.50)
+    m_irt = m_irt.at[:,-1].multiply(0.50)
+    return m_irt
 
 @jax.jit
 def get_chis(m, dx, dy, xyz, rhs, v, weight, dd=None):
@@ -67,42 +79,15 @@ def get_chis(m, dx, dy, xyz, rhs, v, weight, dd=None):
     chi2 : np.floating
         The chi2 of the model m to the data.
     """
-    model = bilinear_interp(dx, dy, xyz[0].ravel(), xyz[1].ravel(), m)
 
-    # model = model.at[:,0].set((jnp.sqrt(0.5)*model)[:,0]) #This doesn't actually do anything
-    # model = model.at[:,-1].set((jnp.sqrt(0.5)*model)[:,-1])
-    model_rot = jnp.dot(v, model)
-    tmp = jnp.hstack(
-        [model_rot, jnp.fliplr(model_rot[:, 1:-1])]
-    )  # mirror pred so we can do dct of first kind
-    model_rft = jnp.real(jnp.fft.rfft(tmp, axis=1))
-    nn = model_rft.shape[1]
-
-    chisq = (
-        jnp.sum(weight[:, :nn] * model_rft**2)
-        - 2 * jnp.dot(rhs.ravel(), m.ravel()) / 2
-    )  # Man IDK about this factor of 2
-
+    m_tod = bilinear_interp(dx,dy,xyz[0].ravel(),xyz[1].ravel(),m)
+    m_irt = apply_noise(m_tod,v,weight)
+    
+    chisq =  -2.00*jnp.sum(rhs*m)+jnp.sum(m_irt*m_tod)
+    if dd is not None: chisq += dd
     return chisq
 
-
-def sampler(theta, tods, jsample, fixed_pars, fix_pars_ids):
-    _theta = np.zeros(len(theta) + len(fixed_pars))
-
-    par_idx = 0
-    fix_idx = 0
-    for i in range(len(_theta)):
-        if i in fix_pars_ids:
-            _theta[i] = fixed_pars[fix_idx]
-            fix_idx += 1
-        else:
-            _theta[i] = theta[par_idx]
-            par_idx += 1
-
-    return jsample(_theta, tods)
-
-
-def sample(cur_model, theta, tods):  # , model_params, xyz, beam):
+def loglike(cur_model, theta, tods):  # , model_params, xyz, beam):
     """
     Generate a model realization and compute the chis of that model to data.
 
@@ -126,28 +111,21 @@ def sample(cur_model, theta, tods):  # , model_params, xyz, beam):
     log_like = 0
 
     m = model(
-        cur_model.xyz,
+         cur_model.xyz,
         *cur_model.n_struct,
-        cur_model.dz, 
-        cur_model.beam,
+         cur_model.dz, 
+         cur_model.beam,
         *theta,
     )
 
     for i, tod in enumerate(tods):
-        x, y, rhs, v, weight, norm = tod  # unravel tod
-
-        log_like += -0.50 * (jget_chis(m, x, y, cur_model.xyz, rhs, v, weight) + norm)
-
+        x, y, rhs, v, weight, norm, dd = tod  # unravel tod
+        log_like += -0.50 * (get_chis(m, x, y, cur_model.xyz, rhs, v, weight, dd) + norm)
 
     return log_like
 
 
-jget_chis = jax.jit(get_chis)
-
-
-def make_tod_stuff(
-    todvec, skymap, lims=None, pixsize=2.0 / 3600 * np.pi / 180, x0=0.0, y0=0.0
-):
+def make_tod_stuff(todvec, skymap, lims=None, pixsize=2.0 / 3600 * np.pi / 180, x0=0.0, y0=0.0):
     tods = []
     if lims == None:
         lims = todvec.lims()
@@ -161,24 +139,20 @@ def make_tod_stuff(
         mapset.add_map(refmap)
         temp_todvec.make_rhs(mapset)
 
-        # todgrid = refmap.wcs.wcs_world2pix(np.array([np.rad2deg(tod.info['dx'].flatten()),
-        #                                            np.rad2deg(tod.info['dy'].flatten())]).T,1)
-        # di = todgrid[:,0].reshape(tod.get_data_dims()).flatten()
-        # dj = todgrid[:,1].reshape(tod.get_data_dims()).flatten()
-        # un wrap stuff cause jit doesn't like having tod objects
         norm = -np.sum(
             np.log(tod.noise.mywt[tod.noise.mywt != 0.00]) - np.log(2.00 * np.pi)
         )
+        
+        v  = jnp.array(tod.noise.v)
+        wt = jnp.array(tod.noise.mywt)
+        
+        dd = jnp.sum(apply_noise(tod.info["dat_calib"],v,wt)*tod.info["dat_calib"])
 
         tods.append(
-            [  # jnp.array(di),
-                # jnp.array(dj),
-                (jnp.array(tod.info["dx"]) - x0) * rad_to_arcsec,
-                (jnp.array(tod.info["dy"]) - y0) * rad_to_arcsec,
-                jnp.array(mapset.maps[0].map),
-                jnp.array(tod.noise.v),
-                jnp.array(tod.noise.mywt),
-                norm,
+            [(jnp.array(tod.info["dx"]) - x0) * rad_to_arcsec * jnp.cos(y0),
+             (jnp.array(tod.info["dy"]) - y0) * rad_to_arcsec,
+              jnp.array(jnp.flipud(mapset.maps[0].map.copy())),
+              v, wt, norm, dd
             ]
         )
     return tods

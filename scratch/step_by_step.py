@@ -42,10 +42,10 @@ from matplotlib import pyplot as plt
 #%load_ext autoreload
 #%autoreload 2
 
-path = "/home/jorlo/dev/minkasi_jax/configs/sampler_sims/"
-with open(path + '/1gauss.yaml', "r") as file:
-    cfg = yaml.safe_load(file)
-#fit = True
+## path = "/home/jorlo/dev/minkasi_jax/configs/sampler_sims/"
+## with open(path + '/1gauss.yaml', "r") as file:
+##     cfg = yaml.safe_load(file)
+## #fit = True
 
 parser = make_parser()
 args = parser.parse_args()
@@ -101,183 +101,184 @@ outdir = get_outdir(cfg, bowl_str, model)
 # Now we fit
 pars_fit = params.copy()
 
-############################################################################
-# Check if I can simply fit mapspace models                                #
-############################################################################
+if False:
+    ############################################################################
+    # Check if I can simply fit mapspace models                                #
+    ############################################################################
 
-vis_model = core.model(
-    model.xyz,
-    *model.n_struct,
-    model.dz,
-    model.beam,
-    *params,
-)
+    vis_model = core.model(
+        model.xyz,
+        *model.n_struct,
+        model.dz,
+        model.beam,
+        *params,
+    )
 
-noise = scipy.stats.norm.rvs(size=vis_model.shape,loc=0.00,scale=1.00E-05) 
-dat_model  = vis_model+noise
+    noise = scipy.stats.norm.rvs(size=vis_model.shape,loc=0.00,scale=1.00E-05) 
+    dat_model  = vis_model+noise
 
-def log_likelihood(theta):
-    cur_model = core.model(model.xyz, *model.n_struct, model.dz, model.beam, *theta) 
-    return -0.5 * jp.sum(((dat_model-cur_model)/1e-5)**2)
+    def log_likelihood(theta):
+        cur_model = core.model(model.xyz, *model.n_struct, model.dz, model.beam, *theta) 
+        return -0.5 * jp.sum(((dat_model-cur_model)/1e-5)**2)
 
-def log_prior(theta):
-     dx, dy, sigma, amp_1 = theta
-    #if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*0.0036 < sigma < 30*0.0036 and -10 < amp_1 < 10:
-     if np.abs(dx) < 20 and np.abs(dy) < 20 and 1 < sigma < 10 and -10 < amp_1 < 10:
-         return 0.0
-     return -np.inf
+    def log_prior(theta):
+        dx, dy, sigma, amp_1 = theta
+        #if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*0.0036 < sigma < 30*0.0036 and -10 < amp_1 < 10:
+        if np.abs(dx) < 20 and np.abs(dy) < 20 and 1 < sigma < 10 and -10 < amp_1 < 10:
+            return 0.0
+        return -np.inf
 
-def log_probability(theta):
-     lp = log_prior(theta)
-     if not np.isfinite(lp):
-         return -np.inf
-     else:
-        ll = log_likelihood(theta)
-        return lp + ll
+    def log_probability(theta):
+        lp = log_prior(theta)
+        if not np.isfinite(lp):
+            return -np.inf
+        else:
+            ll = log_likelihood(theta)
+            return lp + ll
 
-truths = params
+    truths = params
 
-params2 = params + 1e-1*np.random.randn(2*len(params), len(params))
-params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
+    params2 = params + 1e-1*np.random.randn(2*len(params), len(params))
+    params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
 
-nwalkers, ndim = params2.shape
-"""
-sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability
-)
+    nwalkers, ndim = params2.shape
+    """
+    sampler = emcee.EnsembleSampler(
+        nwalkers, ndim, log_probability
+    )
 
-sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
-flat_samples = sampler.get_chain(discard=5000, thin=15, flat=True)
+    sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
+    flat_samples = sampler.get_chain(discard=5000, thin=15, flat=True)
 
-import corner
+    import corner
 
-fig = corner.corner(
-    flat_samples, labels=model.par_names, truths=truths
-)
+    fig = corner.corner(
+        flat_samples, labels=model.par_names, truths=truths
+    )
 
-plt.show(); plt.close()
+    plt.show(); plt.close()
 
-out_model = np.array([core.model(model.xyz,*model.n_struct,model.dz,model.beam,*samp) for samp in flat_samples])
-out_model = np.array([corner.quantile(out,0.50)[0] for out in out_model.reshape(out_model.shape[0],-1).T]).reshape(out_model.shape[1:])
+    out_model = np.array([core.model(model.xyz,*model.n_struct,model.dz,model.beam,*samp) for samp in flat_samples])
+    out_model = np.array([corner.quantile(out,0.50)[0] for out in out_model.reshape(out_model.shape[0],-1).T]).reshape(out_model.shape[1:])
 
-plt.subplot(131); plt.imshow(dat_model); plt.colorbar()
-plt.subplot(132); plt.imshow(out_model); plt.colorbar()
-plt.subplot(133); plt.imshow(dat_model-out_model); plt.colorbar()
-plt.show(); plt.close()
-"""
-###########################################################################
-# Now fit models in TOD space. Start with a square TOD that matches map.   #
-############################################################################
+    plt.subplot(131); plt.imshow(dat_model); plt.colorbar()
+    plt.subplot(132); plt.imshow(out_model); plt.colorbar()
+    plt.subplot(133); plt.imshow(dat_model-out_model); plt.colorbar()
+    plt.show(); plt.close()
+    """
+    ###########################################################################
+    # Now fit models in TOD space. Start with a square TOD that matches map.   #
+    ############################################################################
 
-def log_likelihood_tod(theta, tod):
-     idx, idy, rhs, v, weight, norm = tod
-     cur_model =  core.model(model.xyz, *model.n_struct, model.dz, model.beam, *theta) 
-      
-     return -0.5*(get_chis(cur_model, idx, idy, model.xyz, rhs, v, weight) + norm)
+    def log_likelihood_tod(theta, tod):
+        idx, idy, rhs, v, weight, norm = tod
+        cur_model =  core.model(model.xyz, *model.n_struct, model.dz, model.beam, *theta) 
+        
+        return -0.5*(get_chis(cur_model, idx, idy, model.xyz, rhs, v, weight) + norm)
 
-def log_prior(theta):
-     dx, dy, sigma, amp_1 = theta
-     if np.abs(dx) < 20 and np.abs(dy) < 20 and 1 < sigma < 8 and -10 < amp_1 < 10:
-         return 0.0
-     return -np.inf
+    def log_prior(theta):
+        dx, dy, sigma, amp_1 = theta
+        if np.abs(dx) < 20 and np.abs(dy) < 20 and 1 < sigma < 8 and -10 < amp_1 < 10:
+            return 0.0
+        return -np.inf
 
-def log_probability_tod(theta, data):
-     lp = log_prior(theta)
-     if not np.isfinite(lp):
-         return -np.inf
-     return lp + log_likelihood_tod(theta, data)
-"""
-vis_model = core.model_tod(
-    model.xyz,
-    *model.n_struct,
-    model.dz,
-    model.beam,
-    *params,
-)
+    def log_probability_tod(theta, data):
+        lp = log_prior(theta)
+        if not np.isfinite(lp):
+            return -np.inf
+        return lp + log_likelihood_tod(theta, data)
+    """
+    vis_model = core.model_tod(
+        model.xyz,
+        *model.n_struct,
+        model.dz,
+        model.beam,
+        *params,
+    )
 
-noise = scipy.stats.norm.rvs(size=vis_model.shape,loc=0.00,scale=1.00E-05)
-dat_model  = vis_model+noise 
-"""
+    noise = scipy.stats.norm.rvs(size=vis_model.shape,loc=0.00,scale=1.00E-05)
+    dat_model  = vis_model+noise 
+    """
 
-tods = make_tod_stuff(todvec, skymap, x0=model.x0, y0=model.y0)
+    tods = make_tod_stuff(todvec, skymap, x0=model.x0, y0=model.y0)
 
-x = np.arange(0, len(model.xyz[0][0]), dtype=int)
-y = np.arange(0, len(model.xyz[0][0]), dtype=int)
-X, Y = np.meshgrid(x, y)
-
-
-data_tod = vis_model.at[Y, X].get(mode="fill", fill_value = 0)
-
-params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
-params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
-
-nwalkers, ndim = params2.shape
-
-sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability_tod, args = (tods[0],)
-)
-
-sampler.run_mcmc(params2, 5000, skip_initial_state_check = True, progress=True)
-flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
-
-import corner
-
-fig = corner.corner(
-    flat_samples, labels=labels, truths=truths
-)
-plt.savefig("corner2.png")
-plt.close()
-############################################################################
-# TOD shape TOD                                                            #
-############################################################################
-
-def log_likelihood_tod(theta, idx, idy, data):
-     cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, theta)
-     cur_model = cur_model.at[idy.astype(int), idx.astype(int)].get(mode = "fill", fill_value = 0)
-
-     return -1/2 * np.sum(((data-cur_model)/1e-6)**2)
-
-def log_prior(theta):
-     dx, dy, sigma, amp_1 = theta
-     if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*0.0036 < sigma < 30*0.0036 and -10 < amp_1 < 10:
-         return 0.0
-     return -np.inf
-
-def log_probability_tod(theta, idx, idy, data):
-     lp = log_prior(theta)
-     if not np.isfinite(lp):
-         return -np.inf
-     return lp + log_likelihood_tod(theta, idx, idy, data)
+    x = np.arange(0, len(model.xyz[0][0]), dtype=int)
+    y = np.arange(0, len(model.xyz[0][0]), dtype=int)
+    X, Y = np.meshgrid(x, y)
 
 
-from minkasi_jax.core import model
-import numpy as np
+    data_tod = vis_model.at[Y, X].get(mode="fill", fill_value = 0)
 
-dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
-params[3] = 1e-3
-vis_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
+    params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
+    params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
 
-idx = todvec.tods[0].info["model_idx"]
-idy = todvec.tods[0].info["model_idy"]
-data_tod = vis_model.at[idy, idx].get(mode = "fill", fill_value = 0)
+    nwalkers, ndim = params2.shape
 
-params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
-params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
+    sampler = emcee.EnsembleSampler(
+        nwalkers, ndim, log_probability_tod, args = (tods[0],)
+    )
 
-nwalkers, ndim = params2.shape
+    sampler.run_mcmc(params2, 5000, skip_initial_state_check = True, progress=True)
+    flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 
-sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability_tod, args = (idx, idy, data_tod)
-)
+    import corner
 
-sampler.run_mcmc(params2, 5000, skip_initial_state_check = True, progress=True)
-flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
+    fig = corner.corner(
+        flat_samples, labels=labels, truths=truths
+    )
+    plt.savefig("corner2.png")
+    plt.close()
+    ############################################################################
+    # TOD shape TOD                                                            #
+    ############################################################################
 
-import corner
+    def log_likelihood_tod(theta, idx, idy, data):
+        cur_model =  model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, theta)
+        cur_model = cur_model.at[idy.astype(int), idx.astype(int)].get(mode = "fill", fill_value = 0)
 
-fig = corner.corner(
-    flat_samples, labels=labels, truths=params
-)
+        return -1/2 * np.sum(((data-cur_model)/1e-6)**2)
+
+    def log_prior(theta):
+        dx, dy, sigma, amp_1 = theta
+        if np.abs(dx) < 20 and np.abs(dy) < 20 and 1e-2*0.0036 < sigma < 30*0.0036 and -10 < amp_1 < 10:
+            return 0.0
+        return -np.inf
+
+    def log_probability_tod(theta, idx, idy, data):
+        lp = log_prior(theta)
+        if not np.isfinite(lp):
+            return -np.inf
+        return lp + log_likelihood_tod(theta, idx, idy, data)
+
+
+    from minkasi_jax.core import model
+    import numpy as np
+
+    dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
+    params[3] = 1e-3
+    vis_model = model(xyz, 0, 0, 1, 0, 0, 0, 0, 0, dx, beam, params)
+
+    idx = todvec.tods[0].info["model_idx"]
+    idy = todvec.tods[0].info["model_idy"]
+    data_tod = vis_model.at[idy, idx].get(mode = "fill", fill_value = 0)
+
+    params2 = params + 1e-4*np.random.randn(2*len(params), len(params))
+    params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
+
+    nwalkers, ndim = params2.shape
+
+    sampler = emcee.EnsembleSampler(
+        nwalkers, ndim, log_probability_tod, args = (idx, idy, data_tod)
+    )
+
+    sampler.run_mcmc(params2, 5000, skip_initial_state_check = True, progress=True)
+    flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
+
+    import corner
+
+    fig = corner.corner(
+        flat_samples, labels=labels, truths=params
+    )
 
 
 ############################################################################
@@ -307,7 +308,7 @@ def log_prior(theta):
 lims = todvec.lims()
 pixsize = 2.0 / 3600 * np.pi / 180
 skymap = SkyMap(lims, pixsize, square=True, multiple = 2)
-dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
+# dx = float(y2K_RJ(freq, Te)*dr*XMpc/me)
 params[3] = 1e-3
 
 
@@ -326,8 +327,8 @@ for i, tod in enumerate(todvec.tods):
             start += n
         tod.info["dat_calib"] += np.array(sim_model)
 
-
     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
+    print(tod.noise.mywt.shape); sys.exit(1)
 
 idx = todvec.tods[0].info["model_idx"]
 idy = todvec.tods[0].info["model_idy"]

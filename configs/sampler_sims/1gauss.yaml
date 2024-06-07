@@ -1,6 +1,6 @@
 base: "base_sampler.yaml"
 name: "RXJ1347"
-sim: True
+sim: False
 model:
   unit_conversion: "float(mju.get_da(constants['z'])*mju.y2K_RJ(constants['freq'], constants['Te'])*mju.XMpc/mju.me)"
   structures:
@@ -8,13 +8,18 @@ model:
       structure: "gaussian"
       parameters:
         dx_g:
-          value: 0.0
+          value:  0.00
           to_fit: True
+          prior: 'uniform(loc=-200,scale=400)'
         dy_g:
-          value: 0.0
+          value: 50.00
           to_fit: True 
+          prior: 'uniform(loc=-200,scale=400)'
         sigma:
-          value: 4
+          value: 10
+          to_fit: True
+          prior: 'uniform(loc=0,scale=100)'
         amp_g:
-          value: 0.2
+          value: 0.01
           to_fit: True 
+          prior: 'uniform(loc=0.00,scale=1.00)'

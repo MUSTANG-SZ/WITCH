@@ -7,6 +7,7 @@ import argparse as argp
 from functools import partial
 import yaml
 import numpy as np
+import scipy.stats
 
 import minkasi.tods.io as io
 import minkasi.parallel as parallel
@@ -17,6 +18,7 @@ from minkasi.fitting import models
 from minkasi.mapmaking import noise
 import minkasi
 
+from schwimmbad import MPIPool
 from astropy.coordinates import Angle
 from astropy import units as u
 
@@ -29,45 +31,29 @@ from minkasi_jax.fitter import get_outdir, make_parser, load_tods, process_tods,
 from minkasi_jax.containers import Model
 
 import emcee
-import functools
+import corner
 
-import pickle as pk
+import functools
+import dill
 
 from matplotlib import pyplot as plt
 
-#%load_ext autoreload
-#%autoreload 2
+_priors = [scipy.stats.uniform(loc=-30,scale=60),
+          scipy.stats.uniform(loc=-30,scale=60),
+          scipy.stats.uniform(loc=  1,scale=49),
+          scipy.stats.uniform(loc=-10,scale=20)]
 
-'''
 def log_prior(theta):
-    dx, dy, dz, r1, r2, r3, theta_1, beta_1, amp_1 = theta
-    if np.abs(dx) < 20 and np.abs(dy) < 20 and np.abs(dz) <20 and 0 < r1 < 1 and 0 < r2 < 1 and 0 < r3 < 1 and 0 < theta_1 < 2*np.pi and 0 < beta_1 < 2 and 0 < amp_1 < 1e6:
-        return 0.0
-    return -np.inf
-
-def log_probability(theta, tods):
-    lp = log_prior(theta)
-    if not np.isfinite(lp):
-        return -np.inf
-    return lp + my_sampler(theta, tods)
-
-'''
-def log_prior(theta):
-    dx, dy, sigma, amp_1 = theta
-    if np.abs(dx) < 100 and np.abs(dy) < 100 and 1 < sigma < 20 and -10 < amp_1 < 10000: 
-        return 0.0
-    return -np.inf
+    logprior = 0.00
+    for pi in range(len(theta)):
+        logprior += _priors[pi].logpdf(theta[pi])
+    return logprior
 
 def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids):
     lp = log_prior(theta)    
     if not np.isfinite(lp):
         return -np.inf
     return lp + my_sampler(theta, tods, jsample, fixed_params, fixed_pars_ids)
-
-path = "/Users/ldimasco/Tools/minkasi_jax/configs/sampler_sims/"
-with open(path + '/1gauss.yaml', "r") as file:
-    cfg = yaml.safe_load(file)
-#fit = True
 
 parser = make_parser()
 args = parser.parse_args()
@@ -99,58 +85,47 @@ funs = [model.minkasi_helper]
 params = np.array(model.pars)
 npars = np.array([len(params)])
 prior_vals = model.priors
-priors = [None if prior is None else "flat" for prior in prior_vals]
+
+lims = todvec.lims()
+pixsize = 2.0 / 3600 * np.pi / 180
+skymap = SkyMap(lims, pixsize)
+
+gridmx, gridmy = np.meshgrid(np.arange(skymap.nx),np.arange(skymap.ny))
+gridwx, gridwy = skymap.wcs.all_pix2world(gridmx,gridmy,0)
+gridwx = np.fliplr(gridwx)
+gridwz = np.linspace(-1 * cfg["coords"]["r_map"], cfg["coords"]["r_map"], 2 * int(cfg["coords"]["r_map"] / cfg["coords"]["dr"]), dtype=float)
+
+xyz = [(gridwy[:,0][...,None,None]-np.rad2deg(model.y0))*60*60,
+       (gridwx[0,:][None,...,None]-np.rad2deg(model.x0))*60*60*np.cos(model.y0),
+        gridwz[None,None,...]]
+
+model.xyz = xyz
 
 # Deal with bowling and simming in TODs and setup noise
 noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
 noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
 noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
-bowl_str = process_tods(
-    args, cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
+bowl_str = process_tods(cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
 )
 
-lims = todvec.lims()
-pixsize = 2.0 / 3600 * np.pi / 180
-skymap = SkyMap(lims, pixsize) #, square=True, multiple = 2)
+tods = make_tod_stuff(todvec, skymap, x0=model.x0, y0=model.y0)
 
-gridmx, gridmy = np.meshgrid(np.arange(skymap.nx),np.arange(skymap.ny))
-gridwx, gridwy = skymap.wcs.all_pix2world(gridmx,gridmy,0)
-gridwz = np.linspace(-1 * cfg["coords"]["r_map"], cfg["coords"]["r_map"], 2 * int(cfg["coords"]["r_map"] / cfg["coords"]["dr"]), dtype=float)
-
-xyz = [(gridwy[:,0][...,None,None]-np.rad2deg(model.y0))*60*60,
-       (gridwx[0,:][None,...,None]-np.rad2deg(model.x0))*60*60*np.cos(model.y0),
-        gridwz[None,None,...]]   
-
-model.xyz = xyz
-print("skymap, xyz: ", skymap.map.shape, model.xyz[0].shape)
-
-tods = make_tod_stuff(todvec, skymap)
-
-#test_params = params[:13] #for speed only considering single isobeta model
-
-truths = params
-
-model_params = [0,0,1,0,0,0,0,0]
+## for ti, tod in enumerate(tods):
+##     x, y, rhs, v, weight, norm, data = tod  # unravel tod
+##     x    = np.median(x,axis=0)
+##     y    = np.median(y,axis=0)
+##     data = np.max(data,axis=0)
+##     plt.subplot(121); plt.plot(x[np.argsort(x)],data[np.argsort(x)])
+##     plt.subplot(122); plt.plot(y[np.argsort(y)],data[np.argsort(y)])
+## plt.show(); plt.close()
+## sys.exit(1)
 
 fixed_pars_ids = []
 fixed_params = params[fixed_pars_ids]
 params = params[[0,1,2,3]]
 params2 = params*(1.00 + 1e-1*np.random.randn(5*len(params), len(params)))
-params2[:,2] = np.abs(params2[:,2]) #Force sigma positive
+params2[:,2] = np.abs(params2[:,2])
 
-if False:
-    cur_model = mink_model(model.xyz, *model.n_struct, model.dz, model.beam, *params)
-    cur_model = np.asarray(cur_model).copy()
-
-    cur_model[np.hypot(xyz[0][...,0],xyz[1][...,0])<0.06] = np.nan
-
-    #print(np.where(np.isnan(cur_model)),cur_model.shape)
-    plt.imshow(cur_model)
-    plt.axhline(cur_model.shape[0]//2)
-    plt.axvline(cur_model.shape[1]//2)
-    plt.show(); plt.close(); sys.exit(1)
-
-print(params2[:,2])
 #jit partial-d sample function
 cur_sample = functools.partial(sample, model)
 jsample = jax.jit(cur_sample)
@@ -160,30 +135,24 @@ nwalkers, ndim = params2.shape
 jsample(params, tods)
 #my_sampler = construct_sampler(model_params, xyz, beam)
 
-sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability, args = (tods, jsample, fixed_params, fixed_pars_ids) #comma needed to not unroll tods
-)
+sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probability, args = (tods, jsample, fixed_params, fixed_pars_ids),pool=None)
 
-sampler.run_mcmc(params2, 1000, skip_initial_state_check = True, progress=True)
+sampler.run_mcmc(params2, 10000, skip_initial_state_check = True, progress=True)
 
+flat_samples = sampler.get_chain(discard=1000, thin=15, flat=True)
 
-flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
+for p in range(flat_samples.shape[1]):
+    print(corner.quantile(flat_samples[:,p],[0.16, 0.50, 0.84]))
 
-import pickle as pk
-
-odir = "./" #'/scratch/r/rbond/jorlo/forward-modeling/'
-
-import corner
 truths = params
-fig = corner.corner(
-    flat_samples, labels=model.par_names, truths=truths
-);
 
-plt.savefig(odir+'1gauss_corner.pdf')
-plt.savefig(odir+'1gauss_corner.png')
+edges = [corner.quantile(flat_samples[:,i],[0.16,0.50,0.84]) for i in range(flat_samples.shape[1])]
+edges = [[edges[i][1]-5.00*(edges[i][1]-edges[i][0]),
+          edges[i][1]+5.00*(edges[i][2]-edges[i][1])] for i in range(flat_samples.shape[1])]
 
-with open(odir+'mcmc_samples.pk', 'wb') as f:
-    pk.dump(flat_samples, f)
+fig = corner.corner(flat_samples, labels=model.par_names, truths=truths, range=edges, quantiles=[0.16, 0.50, 0.84], show_titles=True, title_fmt='.2e')
 
+plt.savefig('1gauss_chi_25_off_corner.pdf')
 
-
+with open('1gauss_chi_25_off_samples.pkl', 'wb') as f:
+    dill.dump(flat_samples, f,dill.HIGHEST_PROTOCOL)

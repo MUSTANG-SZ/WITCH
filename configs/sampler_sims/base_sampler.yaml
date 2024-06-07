@@ -1,6 +1,6 @@
 fit: True # If True fit the cluster, overridden by command line
 sub: True # If True the cluster before mapmaking, overridden by command line
-n_rounds: 4 # How many rounds of fitting to try
+n_rounds: 2 # How many rounds of fitting to try
 
 # Constants for use in the model and grid construction
 # Can be used as a dict ie: constants['z']
@@ -14,14 +14,14 @@ paths:
   # Location of TOD files
   # If an absolute path then that is used directly
   # If a relative path taken relative to MJ_TODROOT
-  tods: "RXJ1347"
+  tods: "/Users/ldimasco/Documents/Projects/hackasi/test/input/RXJ1347"
   glob: "Signal_TOD*.fits" # Pattern to search for TODs with
   ndo: False # ?
   odo: False # ?
   # Directory to use as root for outputs
   # If an absolute path then that is used directly
   # If a relative path taken relative to MJ_OUTROOT
-  outroot: ""
+  outroot: "/Users/ldimasco/Documents/Projects/hackasi/test/output"
   subdir: "" # Subdirectory to use
   # Final outdir will be something like: outroot/name/model_name/subdir
 
@@ -31,8 +31,10 @@ coords:
   r_map: 30.0 # Radial size of grid in arcseconds 
   dr: 1.0 # Pixel size of grid in x and y in arcseconds
   dz: 1.0 # Pixel size along the LOS, if not provided dr is used
-  x0: "(206.8776*u.degree).to(u.radian).value" # RA of grid origin in radians
-  y0: "(-11.7528*u.degree).to(u.radian).value" # Dec of grid origin in radian 
+  ## x0: "(206.8776*u.degree).to(u.radian).value" # RA of grid origin in radians
+  ## y0: "(-11.7528*u.degree).to(u.radian).value" # Dec of grid origin in radian 
+  x0: "(206.8665728*u.degree).to(u.radian).value"
+  y0: "(-11.7541268*u.degree).to(u.radian).value"
 
 # Defines the beam 
 # All are passed through eval
@@ -54,9 +56,12 @@ minkasi:
   # Defines the noise model
   noise:
     class: "minkasi.mapmaking.noise.NoiseSmoothedSVD" # Noise class to use
+  # class: "minkasi.mapmaking.noise.NoiseWhite" # Noise class to use
     args: "[]" # Arguments to pass to apply_noise
     kwargs: "{'fwhm':10}" # kwargs to pass to apply_noise
   maxiter: 10 # Maximum fit iterations per round
   npass: 5 # How many passes of mapmaking to run
   dograd: False # If True then use gradient priors when mapmaking
     #ntods: 1
+
+wnoise: False

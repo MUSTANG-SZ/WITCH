@@ -18,6 +18,7 @@ from minkasi.tods import Tod
 from numpy.typing import NDArray
 from typing_extensions import Self
 
+import scipy.stats
 from minkasi_jax import utils as mju  # pyright: ignore [reportUnusedImport]
 
 from . import core
@@ -31,7 +32,8 @@ class Parameter:
     fit: list[bool]
     val: float
     err: float = 0
-    prior: Optional[tuple[float, float]] = None  # Only flat for now
+#   prior: Optional[tuple[float, float]] = None  # Only flat for now
+    prior: Optional[scipy.stats.rv_continuous] = None
 
     @property
     def fit_ever(self) -> bool:
@@ -176,7 +178,7 @@ class Model:
 
             pred: The model with the specified substructure.
         """
-        dx = (tod.info["dx"] - self.x0) * mju.rad_to_arcsec
+        dx = (tod.info["dx"] - self.x0) * mju.rad_to_arcsec * np.cos(self.y0)
         dy = (tod.info["dy"] - self.y0) * mju.rad_to_arcsec
         argnums = tuple(np.where(self.to_fit)[0] + core.ARGNUM_SHIFT_TOD)
 
@@ -277,10 +279,11 @@ class Model:
                         len(fit),
                         n_rounds,
                     )
-                priors = param.get("priors", None)
-                if priors is not None:
-                    priors = eval(str(priors))
-                parameters.append(Parameter(par_name, fit, val, 0.0, priors))
+                prior = param.get("prior", None)
+
+                if prior is not None:
+                    prior = eval('scipy.stats.'+str(prior))
+                parameters.append(Parameter(par_name, fit, val, 0.0, prior))
             structures.append(Structure(name, structure["structure"], parameters))
         name = cfg["model"].get(
             "name", "-".join([structure.name for structure in structures])

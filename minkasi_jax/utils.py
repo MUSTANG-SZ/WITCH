@@ -334,6 +334,8 @@ def make_grid_from_skymap(skymap, z_map, dz, x0=None, y0=None):
     ra -= x0
     dec -= y0
 
+    ra *= np.cos(y0)
+    
     # Sparse indexing to save mem
     x = x.at[:, 0, 0].set(ra)
     y = y.at[0, :, 0].set(dec)
