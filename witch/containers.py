@@ -62,9 +62,7 @@ class Structure:
 class Model:
     name: str
     structures: list[Structure]
-    xyz: jax.Array  # arcseconds
-    x0: float  # rad
-    y0: float  # rad
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float]  # arcseconds
     dz: float  # arcseconds * unknown
     beam: jax.Array
     n_rounds: int
@@ -174,8 +172,8 @@ class Model:
 
             pred: The model with the specified substructure.
         """
-        dx = (tod.info["dx"] - self.x0) * wu.rad_to_arcsec
-        dy = (tod.info["dy"] - self.y0) * wu.rad_to_arcsec
+        dx = tod.info["dx"] * wu.rad_to_arcsec
+        dy = tod.info["dy"] * wu.rad_to_arcsec
         argnums = tuple(np.where(self.to_fit)[0] + core.ARGNUM_SHIFT_TOD)
 
         pred, grad = core.model_tod_grad(
@@ -242,7 +240,9 @@ class Model:
         x0 = eval(str(cfg["coords"]["x0"]))
         y0 = eval(str(cfg["coords"]["y0"]))
 
-        xyz_host = wu.make_grid(r_map, dr, dr, dz)
+        xyz_host = wu.make_grid(
+            r_map, dr, dr, dz, x0 * wu.rad_to_arcsec, y0 * wu.rad_to_arcsec
+        )
         xyz = jax.device_put(xyz_host, device)
         xyz[0].block_until_ready()
         xyz[1].block_until_ready()
@@ -284,4 +284,4 @@ class Model:
             "name", "-".join([structure.name for structure in structures])
         )
 
-        return cls(name, structures, xyz, x0, y0, dz, beam, n_rounds)
+        return cls(name, structures, xyz, dz, beam, n_rounds)

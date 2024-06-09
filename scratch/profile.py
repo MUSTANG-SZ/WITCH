@@ -12,7 +12,6 @@ import jaxlib
 import numpy as np
 import yaml
 from astropy.coordinates import Angle
-
 from minkasi_jax import core
 from minkasi_jax.utils import *
 
