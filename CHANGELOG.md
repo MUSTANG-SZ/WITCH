@@ -1,3 +1,9 @@
+## 3.2.1 (2024-06-09)
+
+### Fix
+
+- handle grid in absolute coords and apply cosdec properly
+
 ## 3.2.0 (2024-06-04)
 
 ### Feat
