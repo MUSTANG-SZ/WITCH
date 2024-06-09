@@ -2,7 +2,6 @@ import numpy
 
 
 def get_src_presets(name):
-
     f3c = name[0:3]
 
     if f3c == "MOO":
@@ -14,7 +13,6 @@ def get_src_presets(name):
 
 
 def get_madcows_def(name):
-
     gpdir = "/home/scratch/cromero/mustang/MUSTANG2/Reductions/" + name + "/Minkasi/"
     fitp = None
     aa = 1.0
@@ -177,7 +175,6 @@ def get_madcows_def(name):
 
 
 def get_m2team_def(name):
-
     outdir = "/home/scratch/cromero/mustang/MUSTANG2/Reductions/" + name + "/Minkasi/"
     npar_src = 4
     if name == "Zw3146":
@@ -231,7 +228,6 @@ def get_m2team_def(name):
 
 
 def get_bad_tods(name, ndo=False, odo=False):
-
     try:
         name = str(name).lower().strip("_")
     except TypeError:
@@ -385,7 +381,6 @@ def get_bad_tods(name, ndo=False, odo=False):
 
 
 def get_edges(maxbins, medbins, widebins, ultrawide, tenc):
-
     if maxbins:
         if tenc:
             edges = numpy.asarray(
