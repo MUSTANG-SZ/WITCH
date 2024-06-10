@@ -136,14 +136,8 @@ def process_tods(
                     (minkasi.myrank + minkasi.nproc * i) % 2
                 )
 
-            pred = core.model_tod(
-                model.xyz,
-                *model.n_struct,
-                model.dz,
-                model.beam,
-                tod.info["dx"] * wu.rad_to_arcsec,
-                tod.info["dy"] * wu.rad_to_arcsec,
-                *model.pars,
+            pred = model.to_tod(
+                tod.info["dx"] * wu.rad_to_arcsec, tod.info["dy"] * wu.rad_to_arcsec
             )
             tod.info["dat_calib"] += np.array(pred)
 
@@ -269,8 +263,6 @@ def main():
     outdir = get_outdir(cfg, bowl_str, model)
 
     # Now we fit
-    pars_fit = params.copy()
-
     if cfg["sim"] and cfg["fit"]:
         params[model.to_fit_ever] *= 1.1  # Don't start at exactly the right value
         model.update(params, model.errs, model.chisq)
@@ -294,7 +286,7 @@ def main():
                 errs,
             ) = minkasi.fitting.fit_timestreams_with_derivs_manyfun(
                 funs,
-                params,
+                model.pars,
                 npars,
                 todvec,
                 to_fit,
@@ -308,7 +300,6 @@ def main():
 
             model.update(pars_fit, errs, chisq)
             print_once(model)
-            params = pars_fit.copy()
 
             if minkasi.myrank == 0:
                 res_path = os.path.join(outdir, f"results_{i}.dill")
@@ -318,14 +309,9 @@ def main():
 
             # Reestimate noise
             for i, tod in enumerate(todvec.tods):
-                pred = core.model_tod(
-                    model.xyz,
-                    *model.n_struct,
-                    model.dz,
-                    model.beam,
+                pred = model.to_tod(
                     tod.info["dx"] * wu.rad_to_arcsec,
                     tod.info["dy"] * wu.rad_to_arcsec,
-                    *params,
                 )
 
                 tod.set_noise(
@@ -342,14 +328,9 @@ def main():
 
     # Compute residual and either set it to the data or use it for noise
     for i, tod in enumerate(todvec.tods):
-        pred = core.model_tod(
-            model.xyz,
-            *model.n_struct,
-            model.dz,
-            model.beam,
+        pred = model.to_tod(
             tod.info["dx"] * wu.rad_to_arcsec,
             tod.info["dy"] * wu.rad_to_arcsec,
-            *params,
         )
         if cfg["sub"]:
             tod.info["dat_calib"] -= np.array(pred)
