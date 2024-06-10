@@ -3,11 +3,13 @@ Data classes for describing models in a structured way
 """
 
 from dataclasses import dataclass, field
+from functools import cached_property
 from importlib import import_module
 from typing import Optional
 
 import dill
 import jax
+import jax.numpy as jnp
 import numpy as np
 from minkasi.tods import Tod
 from numpy.typing import NDArray
@@ -69,7 +71,12 @@ class Model:
         self.structures = [self.structures[i] for i in structure_idx]
         self.original_order = list(np.sort(structure_idx))
 
-    @property
+    def __set_attr__(self, name, value):
+        if name == "cur_round":
+            self.__dict__.pop("model_grad", None)
+        return super().__setattr__(name, value)
+
+    @cached_property
     def n_struct(self) -> list[int]:
         n_struct = [0] * len(core.ORDER)
         for structure in self.structures:
@@ -84,7 +91,7 @@ class Model:
             pars += [parameter.val for parameter in structure.parameters]
         return pars
 
-    @property
+    @cached_property
     def par_names(self) -> list[str]:
         par_names = []
         for structure in self.structures:
@@ -98,7 +105,7 @@ class Model:
             errs += [parameter.err for parameter in structure.parameters]
         return errs
 
-    @property
+    @cached_property
     def priors(self) -> list[Optional[tuple[float, float]]]:
         priors = []
         for structure in self.structures:
@@ -114,12 +121,90 @@ class Model:
             ]
         return to_fit
 
-    @property
+    @cached_property
     def to_fit_ever(self) -> list[bool]:
         to_fit = []
         for structure in self.structures:
             to_fit += [parameter.fit_ever for parameter in structure.parameters]
         return to_fit
+
+    @cached_property
+    def model(self) -> jax.Array:
+        return core.model(
+            self.xyz,
+            tuple(self.n_struct),
+            self.dz,
+            self.beam,
+            *self.pars,
+        )
+
+    def to_tod(self, dx, dy) -> jax.Array:
+        """
+        Project the model into a TOD.
+
+        Arguments:
+
+            dx: The RA TOD in arcseconds.
+
+            dy: The Dec TOD in arcseconds.
+
+        Returns:
+
+            tod: The model as a TOD.
+                 Same shape as dx.
+        """
+        return wu.bilinear_interp(
+            dx, dy, self.xyz[0].ravel(), self.xyz[1].ravel(), self.model
+        )
+
+    @cached_property
+    def model_grad(self) -> tuple[jax.Array, jax.Array]:
+        argnums = tuple(np.where(self.to_fit)[0] + core.ARGNUM_SHIFT)
+        return core.model_grad(
+            self.xyz,
+            tuple(self.n_struct),
+            self.dz,
+            self.beam,
+            argnums,
+            *self.pars,
+        )
+
+    def to_tod_grad(self, dx, dy) -> tuple[jax.Array, jax.Array]:
+        """
+        Project the model and gradient into a TOD.
+
+        Arguments:
+
+            dx: The RA TOD in arcseconds.
+
+            dy: The Dec TOD in arcseconds.
+
+        Returns:
+
+            tod: The model as a TOD.
+                 Same shape as dx.
+
+            grad_tod: The gradient a TOD.
+                      Has shape (npar,) + dx.shape
+        """
+        model, grad = self.model_grad
+        tod = wu.bilinear_interp(
+            dx, dy, self.xyz[0].ravel(), self.xyz[1].ravel(), model
+        )
+        grad_tod = jnp.array(
+            [
+                (
+                    wu.bilinear_interp(
+                        dx, dy, self.xyz[0].ravel(), self.xyz[1].ravel(), _grad
+                    )
+                    if _fit
+                    else jnp.zeros_like(tod)
+                )
+                for _grad, _fit in zip(grad, self.to_fit)
+            ]
+        )
+
+        return tod, grad_tod
 
     def __repr__(self) -> str:
         rep = self.name + ":\n"
@@ -143,6 +228,9 @@ class Model:
         return rep
 
     def update(self, vals, errs, chisq):
+        if not np.array_equal(self.pars, vals):
+            self.__dict__.pop("model", None)
+            self.__dict__.pop("model_grad", None)
         n = 0
         for struct in self.structures:
             for par in struct.parameters:
@@ -170,25 +258,15 @@ class Model:
 
             pred: The model with the specified substructure.
         """
+        self.update(params, self.errs, self.chisq)
         dx = tod.info["dx"] * wu.rad_to_arcsec
         dy = tod.info["dy"] * wu.rad_to_arcsec
-        argnums = tuple(np.where(self.to_fit)[0] + core.ARGNUM_SHIFT_TOD)
 
-        pred, grad = core.model_tod_grad(
-            self.xyz,
-            *self.n_struct,
-            self.dz,
-            self.beam,
-            dx,
-            dy,
-            argnums,
-            *params,
-        )
+        pred_tod, grad_tod = self.to_tod_grad(dx, dy)
+        pred_tod = jax.device_get(pred_tod)
+        grad_tod = jax.device_get(grad_tod)
 
-        pred = jax.device_get(pred)
-        grad = jax.device_get(grad)
-
-        return grad, pred
+        return grad_tod, pred_tod
 
     def save(self, path: str):
         """

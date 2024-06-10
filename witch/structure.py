@@ -484,3 +484,14 @@ STRUCT_N_PAR = {
     "gnfw": N_PAR_GNFW,
     "isobeta": N_PAR_ISOBETA,
 }
+STRUCT_STAGE = {
+    "a10": 0,
+    "exponential": 1,
+    "powerlaw": 1,
+    "powerlaw_cos": 1,
+    "uniform": 1,
+    "egaussian": 0,
+    "gaussian": 2,
+    "gnfw": 0,
+    "isobeta": 0,
+}
