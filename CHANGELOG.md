@@ -1,3 +1,13 @@
+## 3.3.0 (2024-06-10)
+
+### Feat
+
+- let users specify imports in config file
+
+### Fix
+
+- better printing and error messages
+
 ## 3.2.1 (2024-06-09)
 
 ### Fix
