@@ -262,6 +262,24 @@ def main():
     # Get output
     outdir = get_outdir(cfg, bowl_str, model)
 
+    # Make signal maps
+    if cfg.get("sig_map", cfg.get("map", True)):
+        print_once("Making signal map")
+        mm.make_maps(
+            todvec,
+            skymap,
+            noise_class,
+            noise_args,
+            noise_kwargs,
+            os.path.join(outdir, "signal"),
+            cfg["minkasi"]["npass"],
+            cfg["minkasi"]["dograd"],
+        )
+    else:
+        print_once(
+            "Not making signal map, this means that your starting noise may be more off"
+        )
+
     # Now we fit
     if cfg["sim"] and cfg["fit"]:
         params[model.to_fit_ever] *= 1.1  # Don't start at exactly the right value
@@ -323,7 +341,7 @@ def main():
             minkasi.barrier()
 
     # If we arenn't mapmaking then we can stop here
-    if not cfg["map"]:
+    if not cfg.get("res_map", cfg.get("map", True)):
         return
 
     # Compute residual and either set it to the data or use it for noise
@@ -340,46 +358,15 @@ def main():
                 noise_class, tod.info["dat_calib"] - pred, *noise_args, **noise_kwargs
             )
 
-    # Make maps
-    npass = cfg["minkasi"]["npass"]
-    dograd = cfg["minkasi"]["dograd"]
-
-    print_once("starting hits and naive")
-    naive, hits = mm.make_naive(todvec, skymap, outdir)
-    print_once("finished hits and naive")
-
-    # Take 1 over hits map
-    ihits = hits.copy()
-    ihits.invert()
-
-    # Save weights and noise maps
-    _ = mm.make_weights(todvec, skymap, outdir)
-
-    # Setup the mapset
-    # For now just include the naive map so we can use it as the initial guess.
-    mapset = minkasi.maps.Mapset()
-    mapset.add_map(naive)
-
-    # run PCG to solve for a first guess
-    iters = [5, 25, 100]
-    mapset = mm.solve_map(todvec, mapset, ihits, None, 26, iters, outdir, "initial")
-
-    # Now we iteratively solve and reestimate the noise
-    for niter in range(npass):
-        maxiter = 26 + 25 * (niter + 1)
-        mm.reestimate_noise_from_map(
-            todvec, mapset, noise_class, noise_args, noise_kwargs
-        )
-
-        # Make a gradient based prior
-        if dograd:
-            prior, mapset = mm.get_grad_prior(todvec, mapset, hits.copy(), thresh=1.8)
-        else:
-            prior = None
-
-        # Solve
-        mapset = mm.solve_map(
-            todvec, mapset, ihits, prior, maxiter, iters, outdir, f"niter_{niter+1}"
-        )
-
-    minkasi.barrier()
+    # Make residual maps
+    print_once("Making signal map")
+    mm.make_maps(
+        todvec,
+        skymap,
+        noise_class,
+        noise_args,
+        noise_kwargs,
+        os.path.join(outdir, "residual"),
+        cfg["minkasi"]["npass"],
+        cfg["minkasi"]["dograd"],
+    )
