@@ -230,3 +230,43 @@ def solve_map(
         )  # and write out the map as a FITS file
 
     return mapset
+
+
+def make_maps(
+    todvec, skymap, noise_class, noise_args, noise_kwargs, outdir, npass, dograd
+):
+    naive, hits = make_naive(todvec, skymap, outdir)
+
+    # Take 1 over hits map
+    ihits = hits.copy()
+    ihits.invert()
+
+    # Save weights and noise maps
+    _ = make_weights(todvec, skymap, outdir)
+
+    # Setup the mapset
+    # For now just include the naive map so we can use it as the initial guess.
+    mapset = minkasi.maps.Mapset()
+    mapset.add_map(naive)
+
+    # run PCG to solve for a first guess
+    iters = [5, 25, 100]
+    mapset = solve_map(todvec, mapset, ihits, None, 26, iters, outdir, "initial")
+
+    # Now we iteratively solve and reestimate the noise
+    for niter in range(npass):
+        maxiter = 26 + 25 * (niter + 1)
+        reestimate_noise_from_map(todvec, mapset, noise_class, noise_args, noise_kwargs)
+
+        # Make a gradient based prior
+        if dograd:
+            prior, mapset = get_grad_prior(todvec, mapset, hits.copy(), thresh=1.8)
+        else:
+            prior = None
+
+        # Solve
+        mapset = solve_map(
+            todvec, mapset, ihits, prior, maxiter, iters, outdir, f"niter_{niter+1}"
+        )
+
+    minkasi.barrier()
