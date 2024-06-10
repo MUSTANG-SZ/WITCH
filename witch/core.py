@@ -33,7 +33,7 @@ from .structure import (
     gnfw,
     isobeta,
 )
-from .utils import bilinear_interp, fft_conv
+from .utils import fft_conv
 
 ORDER = (
     "isobeta",
@@ -217,61 +217,6 @@ def model(
     return ip
 
 
-def model_tod(
-    xyz,
-    n_isobeta,
-    n_gnfw,
-    n_a10,
-    n_gaussian,
-    n_egaussian,
-    n_uniform,
-    n_exponential,
-    n_powerlaw,
-    n_powerlaw_cos,
-    dz,
-    beam,
-    dx,
-    dy,
-    *params,
-):
-    """
-    A wrapper around model that unwraps it into a TOD.
-    Only the additional arguments are described here, see model for the others.
-    Note that the additional arguments are passed **before** the *params argument.
-
-    Arguments:
-
-        dx: RA TOD in units of pixels.
-            Should have Dec stretch applied.
-
-        dy: Dec TOD in units of pixels.
-
-    Returns:
-
-        model: The model with the specified substructure.
-               Has the same shape as idz.
-    """
-    ip = model(
-        xyz,
-        n_isobeta,
-        n_gnfw,
-        n_a10,
-        n_gaussian,
-        n_egaussian,
-        n_uniform,
-        n_exponential,
-        n_powerlaw,
-        n_powerlaw_cos,
-        dz,
-        beam,
-        *params,
-    )
-
-    # Assuming xyz is sparse and ij indexed here
-    model_out = bilinear_interp(dx, dy, xyz[0].ravel(), xyz[1].ravel(), ip)
-    return model_out
-
-
 def model_grad(
     xyz,
     n_isobeta,
@@ -342,105 +287,17 @@ def model_grad(
     return pred, grad_padded
 
 
-def model_tod_grad(
-    xyz,
-    n_isobeta,
-    n_gnfw,
-    n_a10,
-    n_gaussian,
-    n_egaussian,
-    n_uniform,
-    n_exponential,
-    n_powerlaw,
-    n_powerlaw_cos,
-    dz,
-    beam,
-    dx,
-    dy,
-    argnums,
-    *params,
-):
-    """
-    A wrapper around model_tod that also returns the gradients of the model.
-    Only the additional arguments are described here, see model for the others.
-    Note that the additional arguments are passed **before** the *params argument.
-
-    Arguments:
-
-        dx: RA TOD in units of pixels.
-            Should have Dec stretch applied.
-
-        dy: Dec TOD in the same units as xyz.
-
-        argnums: The arguments to evaluate the gradient at
-
-    Returns:
-
-        model: The model with the specified substructure.
-
-        grad: The gradient of the model with respect to the model parameters.
-    """
-    pred = model_tod(
-        xyz,
-        n_isobeta,
-        n_gnfw,
-        n_a10,
-        n_gaussian,
-        n_egaussian,
-        n_uniform,
-        n_exponential,
-        n_powerlaw,
-        n_powerlaw_cos,
-        dz,
-        beam,
-        dx,
-        dy,
-        *params,
-    )
-
-    grad = jax.jacfwd(model_tod, argnums=argnums)(
-        xyz,
-        n_isobeta,
-        n_gnfw,
-        n_a10,
-        n_gaussian,
-        n_egaussian,
-        n_uniform,
-        n_exponential,
-        n_powerlaw,
-        n_powerlaw_cos,
-        dz,
-        beam,
-        dx,
-        dy,
-        *params,
-    )
-    grad_padded = jnp.zeros((len(params),) + pred.shape)
-    grad_padded = grad_padded.at[jnp.array(argnums) - ARGNUM_SHIFT_TOD].set(
-        jnp.array(grad)
-    )
-
-    return pred, grad_padded
-
-
 # Do some signature inspection to avoid hard coding
 model_sig = inspect.signature(model)
 model_grad_sig = inspect.signature(model_grad)
-model_tod_sig = inspect.signature(model_tod)
-model_tod_grad_sig = inspect.signature(model_tod_grad)
 
 # Get argnum shifts, -1 is for param
 ARGNUM_SHIFT = len(model_sig.parameters) - 1
-ARGNUM_SHIFT_TOD = len(model_tod_sig.parameters) - 1
 
 # Figure out static argnums
 model_static = _get_static(model_sig)
 model_grad_static = _get_static(model_grad_sig)
-model_tod_static = _get_static(model_tod_sig)
-model_tod_grad_static = _get_static(model_tod_grad_sig)
 
 # Now JIT
 model = jax.jit(model, static_argnums=model_static)
 model_grad = jax.jit(model_grad, static_argnums=model_grad_static)
-model_tod = jax.jit(model_tod, static_argnums=model_tod_static)
-model_tod_grad = jax.jit(model_tod_grad, static_argnums=model_tod_grad_static)
