@@ -14,37 +14,19 @@ else:
 
 import numpy as np
 
-from .structure import (
-    N_PAR_A10,
-    N_PAR_EGAUSSIAN,
-    N_PAR_EXPONENTIAL,
-    N_PAR_GAUSSIAN,
-    N_PAR_GNFW,
-    N_PAR_ISOBETA,
-    N_PAR_POWERLAW,
-    N_PAR_UNIFORM,
-    a10,
-    add_exponential,
-    add_powerlaw,
-    add_powerlaw_cos,
-    add_uniform,
-    egaussian,
-    gaussian,
-    gnfw,
-    isobeta,
-)
+from .structure import STRUCT_FUNCS, STRUCT_N_PAR, STRUCT_STAGE
 from .utils import fft_conv
 
 ORDER = (
     "isobeta",
     "gnfw",
     "a10",
-    "gaussian",
     "egaussian",
     "uniform",
     "exponential",
     "powerlaw",
     "powerlaw_cos",
+    "gaussian",
 )
 
 jax.config.update("jax_enable_x64", True)
@@ -59,17 +41,29 @@ def _get_static(signature, prefix_list=["n_", "argnums"]):
     return tuple(np.where(static_msk)[0])
 
 
+def _check_order():
+    or_uniq, or_cts = np.unique(ORDER, return_counts=True)
+    if len(or_uniq) != len(ORDER):
+        raise ValueError(f"Non-unique entries found in ORDER: {or_uniq[or_cts > 1]}")
+    for name, struct_dict in zip(
+        ["STRUCT_FUNCS", "STRUCT_N_PAR", "STRUCT_STAGE"],
+        [STRUCT_FUNCS, STRUCT_N_PAR, STRUCT_STAGE],
+    ):
+        keys = list(struct_dict.keys())
+        or_missing = np.setdiff1d(keys, ORDER, True)
+        if len(or_missing):
+            raise ValueError(f"ORDER missing entries: {or_missing}")
+        sd_missing = np.setdiff1d(ORDER, keys, True)
+        if len(sd_missing):
+            raise ValueError(f"{name} missing entries: {sd_missing}")
+    stages = [STRUCT_STAGE[struct] for struct in ORDER]
+    if not np.array_equal(stages, np.sort(stages)):
+        raise ValueError("ORDER seems to have elements with stages out of order")
+
+
 def model(
     xyz,
-    n_isobeta,
-    n_gnfw,
-    n_a10,
-    n_gaussian,
-    n_egaussian,
-    n_uniform,
-    n_exponential,
-    n_powerlaw,
-    n_powerlaw_cos,
+    n_structs,
     dz,
     beam,
     *params,
@@ -81,23 +75,8 @@ def model(
 
         xyz: Coordinate grid to compute profile on.
 
-        n_isobeta: Number of isobeta profiles to add.
-
-        n_gnfw: Number of gnfw profiles to add.
-
-        n_a10: Number of Arnaud2010 profiles to add.
-
-        n_gaussian: Number of gaussians to add.
-
-        n_egaussian: Number of eliptical gaussians to add.
-
-        n_uniform: Number of uniform ellipsoids to add.
-
-        n_exponential: Number of exponential ellipsoids to add.
-
-        n_powerlaw: Number of power law ellipsoids to add.
-
-        n_powerlaw_cos: Number of radial power law ellipsoids with angulas cos term to add.
+        n_struct: Number of each structure to use.
+                  Should be in the same order as `order`.
 
         dz: Factor to scale by while integrating.
             Since it is a global factor it can contain unit conversions.
@@ -113,87 +92,37 @@ def model(
     """
     params = jnp.array(params)
     params = jnp.ravel(params)  # Fixes strange bug with params having dim (1,n)
-    isobetas = jnp.zeros((1, 1), dtype=float)
-    gnfws = jnp.zeros((1, 1), dtype=float)
-    a10s = jnp.zeros((1, 1), dtype=float)
-    gaussians = jnp.zeros((1, 1), dtype=float)
-    egaussians = jnp.zeros((1, 1), dtype=float)
-    uniforms = jnp.zeros((1, 1), dtype=float)
-    exponentials = jnp.zeros((1, 1), dtype=float)
-    powerlaws = jnp.zeros((1, 1), dtype=float)
-    powerlaw_coses = jnp.zeros((1, 1), dtype=float)
-
-    start = 0
-    if n_isobeta:
-        delta = n_isobeta * N_PAR_ISOBETA
-        isobetas = params[start : start + delta].reshape((n_isobeta, N_PAR_ISOBETA))
-        start += delta
-    if n_gnfw:
-        delta = n_gnfw * N_PAR_GNFW
-        gnfws = params[start : start + delta].reshape((n_gnfw, N_PAR_GNFW))
-        start += delta
-    if n_a10:
-        delta = n_a10 * N_PAR_A10
-        a10s = params[start : start + delta].reshape((n_a10, N_PAR_A10))
-        start += delta
-    if n_gaussian:
-        delta = n_gaussian * N_PAR_GAUSSIAN
-        gaussians = params[start : start + delta].reshape((n_gaussian, N_PAR_GAUSSIAN))
-        start += delta
-    if n_egaussian:
-        delta = n_egaussian * N_PAR_EGAUSSIAN
-        egaussians = params[start : start + delta].reshape(
-            (n_egaussian, N_PAR_EGAUSSIAN)
-        )
-        start += delta
-    if n_uniform:
-        delta = n_uniform * N_PAR_UNIFORM
-        uniforms = params[start : start + delta].reshape((n_uniform, N_PAR_UNIFORM))
-        start += delta
-    if n_exponential:
-        delta = n_exponential * N_PAR_EXPONENTIAL
-        exponentials = params[start : start + delta].reshape(
-            (n_exponential, N_PAR_EXPONENTIAL)
-        )
-        start += delta
-    if n_powerlaw:
-        delta = n_powerlaw * N_PAR_POWERLAW
-        powerlaws = params[start : start + delta].reshape((n_powerlaw, N_PAR_POWERLAW))
-        start += delta
-    if n_powerlaw_cos:
-        delta = n_powerlaw_cos * N_PAR_POWERLAW
-        powerlaw_coses = params[start : start + delta].reshape(
-            (n_powerlaw_cos, N_PAR_POWERLAW)
-        )
-        start += delta
 
     pressure = jnp.zeros((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
-    for i in range(n_isobeta):
-        pressure = jnp.add(pressure, isobeta(*isobetas[i], xyz))
+    start = 0
 
-    for i in range(n_gnfw):
-        pressure = jnp.add(pressure, gnfw(*gnfws[i], xyz))
+    # Stage 0, add to the 3d grid
+    for n_struct, struct in zip(n_structs, ORDER):
+        if STRUCT_STAGE[struct] != 0:
+            continue
+        if not n_struct:
+            continue
+        delta = n_struct * STRUCT_N_PAR[struct]
+        struct_pars = params[start : start + delta].reshape(
+            (n_struct, STRUCT_N_PAR[struct])
+        )
+        start += delta
+        for i in range(n_struct):
+            pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*struct_pars[i], xyz))
 
-    for i in range(n_a10):
-        pressure = jnp.add(pressure, a10(*a10s[i], xyz))
-
-    for i in range(n_gaussian):
-        pressure = jnp.add(pressure, gaussian(*gaussians[i], xyz))
-
-    for i in range(n_egaussian):
-        pressure = jnp.add(pressure, egaussian(*egaussians[i], xyz))
-
-    for i in range(n_uniform):
-        pressure = add_uniform(pressure, xyz, *uniforms[i])
-
-    for i in range(n_exponential):
-        pressure = add_exponential(pressure, xyz, *exponentials[i])
-
-    for i in range(n_powerlaw):
-        pressure = add_powerlaw(pressure, xyz, *powerlaws[i])
-
-    for i in range(n_powerlaw_cos):
-        pressure = add_powerlaw_cos(pressure, xyz, *powerlaw_coses[i])
+    # Stage 1, modify the 3d grid
+    for n_struct, struct in zip(n_structs, ORDER):
+        if STRUCT_STAGE[struct] != 1:
+            continue
+        if not n_struct:
+            continue
+        delta = n_struct * STRUCT_N_PAR[struct]
+        struct_pars = params[start : start + delta].reshape(
+            (n_struct, STRUCT_N_PAR[struct])
+        )
+        start += delta
+        for i in range(n_struct):
+            pressure = STRUCT_FUNCS[struct](pressure, xyz, *struct_pars[i])
 
     # Integrate along line of site
     ip = trapz(pressure, dx=dz, axis=-1)
@@ -211,23 +140,26 @@ def model(
 
     ip = fft_conv(ip, beam)
 
-    for i in range(n_gaussian):
-        ip = jnp.add(ip, gaussian(*gaussians[i], xyz))
+    # Stage 2, add to the integrated profile
+    for n_struct, struct in zip(n_structs, ORDER):
+        if STRUCT_STAGE[struct] != 2:
+            continue
+        if not n_struct:
+            continue
+        delta = n_struct * STRUCT_N_PAR[struct]
+        struct_pars = params[start : start + delta].reshape(
+            (n_struct, STRUCT_N_PAR[struct])
+        )
+        start += delta
+        for i in range(n_struct):
+            ip = jnp.add(ip, STRUCT_FUNCS[struct](*struct_pars[i], xyz))
 
     return ip
 
 
 def model_grad(
     xyz,
-    n_isobeta,
-    n_gnfw,
-    n_a10,
-    n_gaussian,
-    n_egaussian,
-    n_uniform,
-    n_exponential,
-    n_powerlaw,
-    n_powerlaw_cos,
+    n_structs,
     dz,
     beam,
     argnums,
@@ -242,8 +174,6 @@ def model_grad(
 
         argnums: The arguments to evaluate the gradient at
 
-        params: 1D array of model parameters.
-
     Returns:
 
         model: The model with the specified substructure.
@@ -252,15 +182,7 @@ def model_grad(
     """
     pred = model(
         xyz,
-        n_isobeta,
-        n_gnfw,
-        n_a10,
-        n_gaussian,
-        n_egaussian,
-        n_uniform,
-        n_exponential,
-        n_powerlaw,
-        n_powerlaw_cos,
+        n_structs,
         dz,
         beam,
         *params,
@@ -268,15 +190,7 @@ def model_grad(
 
     grad = jax.jacfwd(model, argnums=argnums)(
         xyz,
-        n_isobeta,
-        n_gnfw,
-        n_a10,
-        n_gaussian,
-        n_egaussian,
-        n_uniform,
-        n_exponential,
-        n_powerlaw,
-        n_powerlaw_cos,
+        n_structs,
         dz,
         beam,
         *params,
@@ -286,6 +200,9 @@ def model_grad(
 
     return pred, grad_padded
 
+
+# Check that ORDER is ok...
+_check_order()
 
 # Do some signature inspection to avoid hard coding
 model_sig = inspect.signature(model)

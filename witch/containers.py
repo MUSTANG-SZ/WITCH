@@ -132,7 +132,7 @@ class Model:
     def model(self) -> jax.Array:
         return core.model(
             self.xyz,
-            *self.n_struct,
+            tuple(self.n_struct),
             self.dz,
             self.beam,
             *self.pars,
@@ -162,7 +162,7 @@ class Model:
         argnums = tuple(np.where(self.to_fit)[0] + core.ARGNUM_SHIFT)
         return core.model_grad(
             self.xyz,
-            *self.n_struct,
+            tuple(self.n_struct),
             self.dz,
             self.beam,
             argnums,
