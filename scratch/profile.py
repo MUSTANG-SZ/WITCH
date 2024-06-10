@@ -111,7 +111,7 @@ if not args.no_meta:
     with open(meta_path, "w") as file:
         print(meta, file=file)
 
-with open(args.config, "r") as file:
+with open(args.config) as file:
     cfg = yaml.safe_load(file)
 
 # Get device

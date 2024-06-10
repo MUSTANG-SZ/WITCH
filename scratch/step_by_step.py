@@ -30,9 +30,7 @@ from minkasi_jax.utils import *
 # %load_ext autoreload
 # %autoreload 2
 
-with open(
-    "/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml", "r"
-) as file:
+with open("/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml") as file:
     cfg = yaml.safe_load(file)
 # fit = True
 
