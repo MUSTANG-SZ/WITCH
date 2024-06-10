@@ -271,12 +271,13 @@ def main():
     # Now we fit
     pars_fit = params.copy()
 
-    print_once("Starting pars: \n")
-    for par, label in zip(params, model.par_names):
-        print_once(label, ": {:.2e}".format(par))
-
     if cfg["sim"] and cfg["fit"]:
-        params[model.to_fit] *= 1.1  # Don't start at exactly the right value
+        params[model.to_fit_ever] *= 1.1  # Don't start at exactly the right value
+        model.update(params, model.errs, model.chisq)
+    
+    message = str(model).split("\n")
+    message[1] = "Starting pars:"
+    print_once("\n".join(message))
 
     if cfg["fit"]:
         for i in range(model.n_rounds):
