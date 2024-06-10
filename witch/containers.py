@@ -3,17 +3,12 @@ Data classes for describing models in a structured way
 """
 
 from dataclasses import dataclass, field
+from importlib import import_module
 from typing import Optional
 
 import dill
 import jax
 import numpy as np
-
-# For eval statements
-# TODO: Make this dynamic?
-from astropy import units as u  # type: ignore [reportUnusedImport]
-from astropy.coordinates import Angle  # pyright: ignore [reportUnusedImport]
-from jax.typing import ArrayLike
 from minkasi.tods import Tod
 from numpy.typing import NDArray
 from typing_extensions import Self
@@ -46,15 +41,11 @@ class Structure:
         self.structure = self.structure.lower()
         # Check that this is a valid structure
         if self.structure not in STRUCT_N_PAR.keys():
-            raise ValueError("%s has invalid structure: %s", self.name, self.structure)
+            raise ValueError(f"{self.name} has invalid structure: {self.structure}")
         # Check that we have the correct number of params
         if len(self.parameters) != STRUCT_N_PAR[self.structure]:
             raise ValueError(
-                "%s has incorrect number of parameters, expected %d for %s but was given %d",
-                self.name,
-                STRUCT_N_PAR[self.structure],
-                self.structure,
-                len(self.parameters),
+                f"{self.name} has incorrect number of parameters, expected {STRUCT_N_PAR[self.structure]} for {self.structure} but was given {len(self.parameters)}"
             )
 
 
@@ -99,6 +90,13 @@ class Model:
         for structure in self.structures:
             par_names += [parameter.name for parameter in structure.parameters]
         return par_names
+
+    @property
+    def errs(self) -> list[float]:
+        errs = []
+        for structure in self.structures:
+            errs += [parameter.err for parameter in structure.parameters]
+        return errs
 
     @property
     def priors(self) -> list[Optional[tuple[float, float]]]:
@@ -224,6 +222,17 @@ class Model:
 
             cfg: Config loaded into a dict.
         """
+        # Do imports
+        for module, name in cfg.get("imports", {}).items():
+            mod = import_module(module)
+            if isinstance(name, str):
+                locals()[name] = mod
+            elif isinstance(name, list):
+                for n in name:
+                    locals()[n] = getattr(mod, n)
+            else:
+                raise TypeError("Expect import name to be a string or a list")
+
         # Load constants
         constants = {
             name: eval(str(const)) for name, const in cfg.get("constants", {}).items()
@@ -271,9 +280,7 @@ class Model:
                     fit = [fit] * n_rounds
                 if len(fit) != n_rounds:
                     raise ValueError(
-                        "to_fit has %d entries but we only have %d rounds",
-                        len(fit),
-                        n_rounds,
+                        f"to_fit has {len(fit)} entries but we only have {n_rounds} rounds"
                     )
                 priors = param.get("priors", None)
                 if priors is not None:
