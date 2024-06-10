@@ -4,16 +4,12 @@ Data classes for describing models in a structured way
 
 from dataclasses import dataclass, field
 from typing import Optional
+from importlib import import_module
 
 import dill
 import jax
 import numpy as np
 
-# For eval statements
-# TODO: Make this dynamic?
-from astropy import units as u  # type: ignore [reportUnusedImport]
-from astropy.coordinates import Angle  # pyright: ignore [reportUnusedImport]
-from jax.typing import ArrayLike
 from minkasi.tods import Tod
 from numpy.typing import NDArray
 from typing_extensions import Self
@@ -224,6 +220,17 @@ class Model:
 
             cfg: Config loaded into a dict.
         """
+        # Do imports
+        for module, name in cfg.get("imports", {}).items():
+            mod = import_module(module)
+            if isinstance(name, str):
+                locals()[name] = mod 
+            elif isinstance(name, list):
+                for n in name:
+                    locals()[n] = getattr(mod, n)
+            else:
+                raise TypeError("Expect import name to be a string or a list")
+
         # Load constants
         constants = {
             name: eval(str(const)) for name, const in cfg.get("constants", {}).items()
