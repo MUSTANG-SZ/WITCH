@@ -3,13 +3,12 @@ Data classes for describing models in a structured way
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
 from importlib import import_module
+from typing import Optional
 
 import dill
 import jax
 import numpy as np
-
 from minkasi.tods import Tod
 from numpy.typing import NDArray
 from typing_extensions import Self
@@ -45,7 +44,9 @@ class Structure:
             raise ValueError(f"{self.name} has invalid structure: {self.structure}")
         # Check that we have the correct number of params
         if len(self.parameters) != STRUCT_N_PAR[self.structure]:
-            raise ValueError( f"{self.name} has incorrect number of parameters, expected {STRUCT_N_PAR[self.structure]} for {self.structure} but was given {len(self.parameters)}")
+            raise ValueError(
+                f"{self.name} has incorrect number of parameters, expected {STRUCT_N_PAR[self.structure]} for {self.structure} but was given {len(self.parameters)}"
+            )
 
 
 @dataclass
@@ -95,7 +96,7 @@ class Model:
         errs = []
         for structure in self.structures:
             errs += [parameter.err for parameter in structure.parameters]
-        return errs 
+        return errs
 
     @property
     def priors(self) -> list[Optional[tuple[float, float]]]:
@@ -225,7 +226,7 @@ class Model:
         for module, name in cfg.get("imports", {}).items():
             mod = import_module(module)
             if isinstance(name, str):
-                locals()[name] = mod 
+                locals()[name] = mod
             elif isinstance(name, list):
                 for n in name:
                     locals()[n] = getattr(mod, n)
@@ -278,7 +279,9 @@ class Model:
                 if isinstance(fit, bool):
                     fit = [fit] * n_rounds
                 if len(fit) != n_rounds:
-                    raise ValueError( f"to_fit has {len(fit)} entries but we only have {n_rounds} rounds")
+                    raise ValueError(
+                        f"to_fit has {len(fit)} entries but we only have {n_rounds} rounds"
+                    )
                 priors = param.get("priors", None)
                 if priors is not None:
                     priors = eval(str(priors))

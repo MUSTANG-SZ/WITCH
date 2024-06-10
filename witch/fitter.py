@@ -274,7 +274,7 @@ def main():
     if cfg["sim"] and cfg["fit"]:
         params[model.to_fit_ever] *= 1.1  # Don't start at exactly the right value
         model.update(params, model.errs, model.chisq)
-    
+
     message = str(model).split("\n")
     message[1] = "Starting pars:"
     print_once("\n".join(message))
