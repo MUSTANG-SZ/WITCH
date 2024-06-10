@@ -59,3 +59,7 @@ minkasi:
   maxiter: 10 # Maximum fit iterations per round
   npass: 5 # How many passes of mapmaking to run
   dograd: False # If True then use gradient priors when mapmaking
+
+imports:
+  astropy.units: u
+  astropy.coordinates: [Angle]
