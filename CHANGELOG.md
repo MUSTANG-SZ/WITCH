@@ -1,3 +1,15 @@
+## 4.0.0 (2024-06-10)
+
+### Feat
+
+- solve for signal map before fitting
+- cache model computation
+
+### Refactor
+
+- model function now calls structure functions dynamically, introduces the concepts of structure stages
+- removed depracted tod functions
+
 ## 3.3.0 (2024-06-10)
 
 ### Feat
