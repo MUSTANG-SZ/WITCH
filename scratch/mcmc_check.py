@@ -70,9 +70,7 @@ def log_probability(theta, tods, jsample, fixed_params, fixed_pars_ids, da):
 #    cfg = yaml.safe_load(file)
 # with open('/home/jack/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)
-with open(
-    "/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml", "r"
-) as file:
+with open("/home/jack/dev/minkasi_jax/configs/sampler_sims/1gauss_home.yaml") as file:
     cfg = yaml.safe_load(file)
 # fit = True
 

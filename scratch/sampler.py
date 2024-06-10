@@ -24,7 +24,7 @@ from minkasi_jax.core import model
 from minkasi_jax.forward_modeling import construct_sampler, make_tod_stuff
 from minkasi_jax.utils import *
 
-with open("/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735_noSub.yaml", "r") as file:
+with open("/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735_noSub.yaml") as file:
     cfg = yaml.safe_load(file)
 # with open('/home/r/rbond/jorlo/dev/minkasi_jax/configs/ms0735/ms0735.yaml', "r") as file:
 #    cfg = yaml.safe_load(file)

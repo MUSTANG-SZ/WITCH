@@ -210,7 +210,7 @@ def load_config(start_cfg, cfg_path):
     We only want to take things from base that are not in the original config
     so we merge the original into the newly loaded one.
     """
-    with open(cfg_path, "r") as file:
+    with open(cfg_path) as file:
         new_cfg = yaml.safe_load(file)
     cfg = deep_merge(new_cfg, start_cfg)
     if "base" in new_cfg:
