@@ -12,7 +12,6 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import scipy.stats
-
 from minkasi.tods import Tod
 from numpy.typing import NDArray
 from typing_extensions import Self
@@ -364,10 +363,12 @@ class Model:
                     )
                 priors = param.get("priors", None)
                 if priors is not None:
-                    if isinstance(priors,list):
-                        priors = scipy.stats.uniform(loc=priors[0],scale=priors[1]-priors[0])
+                    if isinstance(priors, list):
+                        priors = scipy.stats.uniform(
+                            loc=priors[0], scale=priors[1] - priors[0]
+                        )
                     else:
-                        priors = eval('scipy.stats.'+str(priors))
+                        priors = eval("scipy.stats." + str(priors))
                 parameters.append(Parameter(par_name, fit, val, 0.0, priors))
             structures.append(Structure(name, structure["structure"], parameters))
         name = cfg["model"].get(

@@ -14,18 +14,20 @@ from minkasi.maps.mapset import Mapset
 from .core import model
 from .utils import bilinear_interp, rad_to_arcsec
 
+
 @jax.jit
-def apply_noise(m_tod,v,weight):
-    m_rot = jnp.dot(v,m_tod)
+def apply_noise(m_tod, v, weight):
+    m_rot = jnp.dot(v, m_tod)
 
-    m_tmp = jnp.hstack([m_rot,jnp.fliplr(m_rot[:,1:-1])])
-    m_rft = jnp.real(jnp.fft.rfft(m_tmp,axis=1))
+    m_tmp = jnp.hstack([m_rot, jnp.fliplr(m_rot[:, 1:-1])])
+    m_rft = jnp.real(jnp.fft.rfft(m_tmp, axis=1))
 
-    m_ift = jnp.fft.irfft(weight*m_rft,axis=1,norm='forward')[:,:m_tod.shape[1]]
-    m_irt = jnp.dot(v.T,m_ift)
+    m_ift = jnp.fft.irfft(weight * m_rft, axis=1, norm="forward")[:, : m_tod.shape[1]]
+    m_irt = jnp.dot(v.T, m_ift)
     m_irt = m_irt.at[:, 0].multiply(0.50)
-    m_irt = m_irt.at[:,-1].multiply(0.50)
+    m_irt = m_irt.at[:, -1].multiply(0.50)
     return m_irt
+
 
 @jax.jit
 def get_chis(m, dx, dy, xyz, rhs, v, weight, dd=None):
@@ -78,13 +80,14 @@ def get_chis(m, dx, dy, xyz, rhs, v, weight, dd=None):
         The chi2 of the model m to the data.
     """
 
-    m_tod = bilinear_interp(dx,dy,xyz[0].ravel(),xyz[1].ravel(),m)
-    m_irt = apply_noise(m_tod,v,weight)
-    
+    m_tod = bilinear_interp(dx, dy, xyz[0].ravel(), xyz[1].ravel(), m)
+    m_irt = apply_noise(m_tod, v, weight)
+
     chisq = 0.00 if dd is None else dd
-    chisq = chisq-2.00*jnp.sum(rhs*m)+jnp.sum(m_irt*m_tod)
+    chisq = chisq - 2.00 * jnp.sum(rhs * m) + jnp.sum(m_irt * m_tod)
 
     return chisq
+
 
 def loglike(cur_model, theta, tods):  # , model_params, xyz, beam):
     """
@@ -108,20 +111,23 @@ def loglike(cur_model, theta, tods):  # , model_params, xyz, beam):
 
     """
     log_like = 0
-    
+
     m = model(
-         cur_model.xyz,
-         tuple(cur_model.n_struct),
-         cur_model.dz, 
-         cur_model.beam,
+        cur_model.xyz,
+        tuple(cur_model.n_struct),
+        cur_model.dz,
+        cur_model.beam,
         *theta,
     )
 
     for i, tod in enumerate(tods):
         x, y, rhs, v, weight, norm, dd = tod  # unravel tod
-        log_like += -0.50 * (get_chis(m, x, y, cur_model.xyz, rhs, v, weight, dd) + norm)
+        log_like += -0.50 * (
+            get_chis(m, x, y, cur_model.xyz, rhs, v, weight, dd) + norm
+        )
 
     return log_like
+
 
 def make_tod_stuff(todvec, skymap, lims=None, pixsize=2.0 / 3600 * np.pi / 180):
     tods = []
@@ -141,16 +147,20 @@ def make_tod_stuff(todvec, skymap, lims=None, pixsize=2.0 / 3600 * np.pi / 180):
             np.log(tod.noise.mywt[tod.noise.mywt != 0.00]) - np.log(2.00 * np.pi)
         )
 
-        v  = jnp.array(tod.noise.v)
+        v = jnp.array(tod.noise.v)
         wt = jnp.array(tod.noise.mywt)
-        
-        dd = jnp.sum(apply_noise(tod.info["dat_calib"],v,wt)*tod.info["dat_calib"])
+
+        dd = jnp.sum(apply_noise(tod.info["dat_calib"], v, wt) * tod.info["dat_calib"])
 
         tods.append(
-            [jnp.array(tod.info["dx"]),
-             jnp.array(tod.info["dy"]),
-             jnp.array(jnp.flipud(mapset.maps[0].map.copy())),
-             v, wt, norm, dd
+            [
+                jnp.array(tod.info["dx"]),
+                jnp.array(tod.info["dy"]),
+                jnp.array(jnp.flipud(mapset.maps[0].map.copy())),
+                v,
+                wt,
+                norm,
+                dd,
             ]
         )
 
