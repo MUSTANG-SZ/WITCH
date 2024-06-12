@@ -137,6 +137,78 @@ def a10(dx, dy, dz, theta, P0, c500, m500, gamma, alpha, beta, z, xyz):
 
 
 @jax.jit
+def ea10(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z, xyz):
+    """
+    Eliptical gNFW pressure profile in 3d based on Arnaud2010.
+    r_ell is computed in the usual way for an a10 profile, then the axes are
+    scaled according to r_1, r_2, r_3, with a normalization applied.
+    This function does not include smoothing or declination stretch
+    which should be applied at the end.
+
+    Arguments:
+
+        dx: RA of cluster center relative to grid origin
+
+        dy: Dec of cluster center relative to grid origin
+
+        dz: Line of sight offset of cluster center relative to grid origin
+
+        r_1: X-axis scaling. Units are arbitrary, only radio of r_1/r_2, r_1/r_3, r_2/r_3 matters
+
+        r_2: Y-axis scaling.
+
+        r_3: Z-axis scaling.
+
+        theta: Angle to rotate in xy-plane
+
+        P0: Amplitude of the pressure profile
+
+        c500: Concentration parameter at a density contrast of 500
+
+        m500: Mass at a density contrast of 500
+
+        gamma: The central slope
+
+        alpha: The intermediate slope
+
+        beta: The outer slope
+
+        z: Redshift of cluster
+
+        xyz: Coordinte grid to calculate model on
+
+    Returns:
+
+        model: The gnfw model
+    """
+    nz = get_nz(z)
+    hz = get_hz(z)
+    da = get_da(z)  # TODO pass these arguments rather than recompute them everytime???
+
+    r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
+    r_ell = r500 / da
+    r_norm = jnp.sqrt(r_1**2 + r_2**2 + r_3**2)
+
+    r_1 *= r_ell / r_norm
+    r_2 *= r_ell / r_norm
+    r_3 *= r_ell / r_norm
+
+    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+
+    r = c500 * jnp.sqrt(x**2 + y**2 + z**2)
+    denominator = (r**gamma) * (1 + r**alpha) ** ((beta - gamma) / alpha)
+
+    P500 = (
+        1.65e-03
+        * (m500 / (3.00e14 / h70)) ** (2.00 / 3.00 + ap)
+        * hz ** (8.00 / 3.00)
+        * h70**2
+    )
+
+    return P500 * P0 / denominator
+
+
+@jax.jit
 def isobeta(dx, dy, dz, r_1, r_2, r_3, theta, beta, amp, xyz):
     """
     Elliptical isobeta pressure profile in 3d.
@@ -455,6 +527,7 @@ def add_powerlaw_cos(
 N_PAR_ISOBETA = len(inspect.signature(isobeta).parameters) - 1
 N_PAR_GNFW = len(inspect.signature(gnfw).parameters) - 1
 N_PAR_A10 = len(inspect.signature(a10).parameters) - 1
+N_PAR_EA10 = len(inspect.signature(ea10).parameters) - 1
 N_PAR_GAUSSIAN = len(inspect.signature(gaussian).parameters) - 1
 N_PAR_EGAUSSIAN = len(inspect.signature(egaussian).parameters) - 1
 N_PAR_UNIFORM = len(inspect.signature(add_uniform).parameters) - 2
@@ -464,6 +537,7 @@ N_PAR_POWERLAW = len(inspect.signature(add_powerlaw).parameters) - 2
 # Make a convenience mapping
 STRUCT_FUNCS = {
     "a10": a10,
+    "ea10": ea10,
     "exponential": add_exponential,
     "powerlaw": add_powerlaw,
     "powerlaw_cos": add_powerlaw_cos,
@@ -475,6 +549,7 @@ STRUCT_FUNCS = {
 }
 STRUCT_N_PAR = {
     "a10": N_PAR_A10,
+    "ea10": N_PAR_EA10,
     "exponential": N_PAR_EXPONENTIAL,
     "powerlaw": N_PAR_POWERLAW,
     "powerlaw_cos": N_PAR_POWERLAW,
@@ -486,6 +561,7 @@ STRUCT_N_PAR = {
 }
 STRUCT_STAGE = {
     "a10": 0,
+    "ea10": 0,
     "exponential": 1,
     "powerlaw": 1,
     "powerlaw_cos": 1,
