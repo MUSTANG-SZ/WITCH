@@ -16,7 +16,7 @@ import yaml
 
 from . import core
 from . import mapmaking as mm
-from . import presets_by_source as pbs
+from minkasi.tools import presets_by_source as pbs
 from . import utils as wu
 from .containers import Model
 
