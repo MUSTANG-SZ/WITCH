@@ -1,6 +1,6 @@
 """
 Master fitting and map making script.
-Docs will exist someday...
+You typically want to run the `witcher` command instead of this.
 """
 
 import argparse as argp
@@ -14,6 +14,7 @@ import minkasi
 import numpy as np
 import yaml
 from minkasi.tools import presets_by_source as pbs
+from typing_extensions import Any, Unpack
 
 from . import core
 from . import mapmaking as mm
@@ -21,21 +22,22 @@ from . import utils as wu
 from .containers import Model
 
 
-def print_once(*args):
+def print_once(*args: Unpack[tuple[Any, ...]]):
     """
     Helper function to print only once when running with MPI.
     Only the rank 0 process will print.
 
-    Arguments:
-
-        *args: Arguments to pass to print.
+    Parameters
+    ----------
+    *args : Unpack[tuple[Any, ...]]
+        Arguments to pass to print.
     """
     if minkasi.myrank == 0:
         print(*args)
         sys.stdout.flush()
 
 
-def make_parser() -> argp.ArgumentParser:
+def _make_parser() -> argp.ArgumentParser:
     # Parse arguments
     parser = argp.ArgumentParser(
         description="Fit cluster profiles using mikasi and minkasi_jax"
@@ -216,7 +218,7 @@ def load_config(start_cfg, cfg_path):
 
 
 def main():
-    parser = make_parser()
+    parser = _make_parser()
     args = parser.parse_args()
 
     # TODO: Serialize cfg to a data class (pydantic?)

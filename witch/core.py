@@ -1,11 +1,12 @@
 """
-Core module for generating models aed their gradients.
+Core module for generating models and their gradients.
 """
 
 import inspect
 
 import jax
 import jax.numpy as jnp
+from typing_extensions import Unpack
 
 if hasattr(jnp, "trapz"):
     trapz = jnp.trapz
@@ -63,35 +64,37 @@ def _check_order():
 
 
 def model(
-    xyz,
-    n_structs,
-    dz,
-    beam,
-    *params,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    n_structs: tuple[int, ...],
+    dz: float,
+    beam: jax.Array,
+    *pars: Unpack[tuple[float, ...]],
 ):
     """
     Generically create models with substructure.
 
-    Arguments:
+    Parameters
+    ----------
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Grid to compute model on.
+        See `containers.Model.xyz` for details.
+    n_struct : tuple[int, ...]
+        Number of each structure to use.
+        Should be in the same order as `order`.
+    dz : float
+        Factor to scale by while integrating.
+        Should at least include the pixel size along the LOS.
+    beam : jax.Array
+        Beam to convolve by, should be a 2d array.
+    *pars : Unpack[tuple[float,...]]
+        1D container of model parameters.
 
-        xyz: Coordinate grid to compute profile on.
-
-        n_struct: Number of each structure to use.
-                  Should be in the same order as `order`.
-
-        dz: Factor to scale by while integrating.
-            Since it is a global factor it can contain unit conversions.
-            Historically equal to y2K_RJ * dr * da * XMpc / me.
-
-        beam: Beam to convolve by, should be a 2d array.
-
-        params: 1D array of model parameters.
-
-    Returns:
-
-        model: The model with the specified substructure evaluated on the grid.
+    Returns
+    -------
+    model : jax.Array
+        The model with the specified substructure evaluated on the grid.
     """
-    params = jnp.array(params)
+    params = jnp.array(pars)
     params = jnp.ravel(params)  # Fixes strange bug with params having dim (1,n)
 
     pressure = jnp.zeros((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
@@ -159,34 +162,37 @@ def model(
 
 
 def model_grad(
-    xyz,
-    n_structs,
-    dz,
-    beam,
-    argnums,
-    *params,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    n_structs: tuple[int, ...],
+    dz: float,
+    beam: jax.Array,
+    argnums: tuple[int, ...],
+    *pars: Unpack[tuple[float, ...]],
 ):
     """
     A wrapper around model that also returns the gradients of the model.
-    Only the additional arguments are described here, see model for the others.
+    Only the additional arguments are described here, see `model` for the others.
     Note that the additional arguments are passed **before** the *params argument.
 
-    Arguments:
+    Parameters
+    ----------
+    argnums : tuple[int,...]
+        The indices of the arguments to evaluate the gradient at.
 
-        argnums: The arguments to evaluate the gradient at
-
-    Returns:
-
-        model: The model with the specified substructure.
-
-        grad: The gradient of the model with respect to the model parameters.
+    Returns
+    -------
+    model : jax.Array
+        The model with the specified substructure evaluated on the grid.
+    grad : jax.Array
+        The gradient of the model with respect to the model parameters.
+        Has shape `(len(pars),) + model.shape)`.
     """
     pred = model(
         xyz,
         n_structs,
         dz,
         beam,
-        *params,
+        *pars,
     )
 
     grad = jax.jacfwd(model, argnums=argnums)(
@@ -194,9 +200,9 @@ def model_grad(
         n_structs,
         dz,
         beam,
-        *params,
+        *pars,
     )
-    grad_padded = jnp.zeros((len(params),) + pred.shape)
+    grad_padded = jnp.zeros((len(pars),) + pred.shape)
     grad_padded = grad_padded.at[jnp.array(argnums) - ARGNUM_SHIFT].set(jnp.array(grad))
 
     return pred, grad_padded
