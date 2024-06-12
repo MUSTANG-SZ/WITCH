@@ -5,14 +5,14 @@ base: "MOOJ1142_base.yaml"
 
 # Cluster name
 # Used both for the output path as well as to load presets
-name: "EA10"
+name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
 # Define the model
 model:
   # Unit conversion to apply at the end
   # Will be evaled
-  unit_conversion: "float(mju.get_da(constants['z'])*mju.y2K_RJ(constants['freq'], constants['Te'])*mju.XMpc/mju.me)"
+  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   # Structure to include in the model
   structures:
     # Name of the first structure

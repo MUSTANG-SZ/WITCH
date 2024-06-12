@@ -241,6 +241,7 @@ def main():
     # the ones from private TODs
     lims = todvec.lims()
     pixsize = 2.0 / 3600 * np.pi / 180
+    print(lims)
     skymap = minkasi.maps.SkyMap(lims, pixsize)
 
     # Define the model and get stuff setup for minkasi

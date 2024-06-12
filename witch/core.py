@@ -21,6 +21,7 @@ ORDER = (
     "isobeta",
     "gnfw",
     "a10",
+    "ea10",
     "egaussian",
     "uniform",
     "exponential",
