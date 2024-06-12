@@ -1,0 +1,75 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "MOOJ1142_base.yaml"
+
+# Cluster name
+# Used both for the output path as well as to load presets
+name: "EA10"
+sim: False # If True use TODs to make noise and add a simulated cluster
+
+# Define the model
+model:
+  # Unit conversion to apply at the end
+  # Will be evaled
+  unit_conversion: "float(mju.get_da(constants['z'])*mju.y2K_RJ(constants['freq'], constants['Te'])*mju.XMpc/mju.me)"
+  # Structure to include in the model
+  structures:
+    # Name of the first structure
+    ea10:
+      structure: "ea10" # What type of structure it is
+
+      parameters:
+        dx_1: # Name of the first parameter
+          value: 0.0 # Value to use/start at, will be evaled
+          to_fit: True
+          priors: [-9.0, 9.0]
+        dy_1:
+          value: 0.0
+          to_fit: True
+          priors: [-9.0, 9.0]
+        dz_1:
+          value: 0.0
+        r_1:
+          value: 12
+          to_fit: True
+          priors: [7.0, 15.0]
+        r_2:
+          value: 7
+        r_3:
+          value: 9.5
+        theta:
+          value: 90.
+          to_fit: True
+          priors: [80., 100.]
+        P0:
+          value: 8.403
+        c500:
+          value: 1.177
+        m500:
+          value: "8.4e14"
+          to_fit: True
+        gamma:
+          value: .3081
+        alpha:
+          value: 1.551
+        beta:
+          value: 5.4905
+        z:
+          value: 1.19
+    ps_gauss:
+      structure: "gaussian"
+      parameters:
+        dx_g:
+          value: 19.0
+          to_fit: True
+          priors: [10.0, 28.0]
+        dy_g:
+          value: -4.0
+          to_fit: True
+          priors: [-13.0, 5.0]
+        sigma:
+          value: 4
+        amp_g:
+          value: 0.01
+          to_fit: True
