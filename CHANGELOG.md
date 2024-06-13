@@ -1,3 +1,10 @@
+## 4.1.1 (2024-06-13)
+
+### Fix
+
+- gradient priors are a ts model so they only need to be in the mapset
+- make sure parameter value is float
+
 ## 4.1.0 (2024-06-12)
 
 ### Feat
