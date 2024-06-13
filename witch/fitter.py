@@ -13,10 +13,10 @@ from copy import deepcopy
 import minkasi
 import numpy as np
 import yaml
+from minkasi.tools import presets_by_source as pbs
 
 from . import core
 from . import mapmaking as mm
-from minkasi.tools import presets_by_source as pbs
 from . import utils as wu
 from .containers import Model
 
