@@ -138,8 +138,6 @@ def get_grad_prior(
 
     Returns:
 
-        prior: A prior to pass to run_pcg_wprior.
-
         new_mapset: A mapset with the original map and a cleared prior map.
     """
     gradmap.map[:] = minkasi.mapmaking.noise.get_grad_mask_2d(
@@ -161,7 +159,7 @@ def get_grad_prior(
     pp.clear()
     new_mapset.add_map(pp)
 
-    return prior, new_mapset
+    return new_mapset
 
 
 def solve_map(
@@ -260,13 +258,10 @@ def make_maps(
 
         # Make a gradient based prior
         if dograd:
-            prior, mapset = get_grad_prior(todvec, mapset, hits.copy(), thresh=1.8)
-        else:
-            prior = None
-
+            mapset = get_grad_prior(todvec, mapset, hits.copy(), thresh=1.8)
         # Solve
         mapset = solve_map(
-            todvec, mapset, ihits, prior, maxiter, iters, outdir, f"niter_{niter+1}"
+            todvec, mapset, ihits, None, maxiter, iters, outdir, f"niter_{niter+1}"
         )
 
     minkasi.barrier()
