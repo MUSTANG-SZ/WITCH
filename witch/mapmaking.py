@@ -2,6 +2,7 @@
 Functions that wrap useful minkasi recipes
 """
 
+import contextlib
 import os
 from typing import Optional
 
@@ -211,16 +212,18 @@ def solve_map(
     precon.maps[0].map[:] = ihits.map[:]
 
     # run PCG to solve
-    mapset = minkasi.mapmaking.run_pcg_wprior(
-        rhs,
-        x0,
-        todvec,
-        prior,
-        precon,
-        maxiter=maxiters,
-        outroot=os.path.join(outdir, desc_str),
-        save_iters=save_iters,
-    )
+    # Supressing print here, probably want a verbosity setting on the minkasi side...
+    with open(os.devnull, "w") as f, contextlib.redirect_stdout(f):
+        mapset = minkasi.mapmaking.run_pcg_wprior(
+            rhs,
+            x0,
+            todvec,
+            prior,
+            precon,
+            maxiter=maxiters,
+            outroot=os.path.join(outdir, desc_str),
+            save_iters=save_iters,
+        )
 
     if minkasi.myrank == 0:
         mapset.maps[0].write(

@@ -359,7 +359,7 @@ def main():
             )
 
     # Make residual maps
-    print_once("Making signal map")
+    print_once("Making residual map")
     mm.make_maps(
         todvec,
         skymap,
