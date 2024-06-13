@@ -28,6 +28,10 @@ class Parameter:
     err: float = 0
     prior: Optional[tuple[float, float]] = None  # Only flat for now
 
+    def __post_init__(self):
+        # If this isn't a float autograd breaks
+        self.val = float(self.val)
+
     @property
     def fit_ever(self) -> bool:
         return bool(np.any(self.fit))
