@@ -1,0 +1,4 @@
+module load NiaEnv/2019b python/3.7.9
+~/source aplpy/bin/activate
+
+
