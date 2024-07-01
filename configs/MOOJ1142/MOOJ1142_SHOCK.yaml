@@ -6,7 +6,7 @@ base: "MOOJ1142_base.yaml"
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "MOOJ1142"
-sim: False # If True use TODs to make noise and add a simulated cluster
+sim: True # If True use TODs to make noise and add a simulated cluster
 
 # Define the model
 model:
@@ -18,7 +18,6 @@ model:
     # Name of the first structure
     ea10:
       structure: "ea10" # What type of structure it is
-
       parameters:
         dx_1: # Name of the first parameter
           value: 0.0 # Value to use/start at, will be evaled
@@ -51,14 +50,51 @@ model:
           to_fit: True
         gamma:
           value: .3081
-          to_fit: True
-          priors: [0.1, 0.5]
+          to_fit: False
         alpha:
           value: 1.551
         beta:
           value: 5.4905
         z:
           value: 1.19
+    shock:
+      structure: "powerlaw_cos"
+      parameters:
+        dx_2:
+          value: 0.0
+          to_fit: True
+          priors: [-9.0, 9.0]
+        dy_2:
+          value: 0.0
+          to_fit: True
+          priors: [-9.0, 9.0] 
+        dz_2:
+          value: 0.0
+          to_fit: False
+        sh_r_1:
+          value: 80.0
+          to_fit: False
+        sh_r_2:
+          value: 45.0
+          to_fit: False
+        sh_r_3:
+          value: 60.0
+          to_fit: False
+        theta_sh:
+          value: 0.0
+          to_fit: False
+        amp_sh:
+          value: 10.0
+          to_fit: True
+        phi0:
+          value: 0.0
+          to_fit: False
+        kr:
+          value: 0.0
+          to_fit: False
+        omega:
+          value: 6.283185307
+          to_fit: False
     ps_gauss:
       structure: "gaussian"
       parameters:
