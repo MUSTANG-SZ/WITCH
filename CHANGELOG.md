@@ -1,3 +1,9 @@
+## 4.2.0 (2024-06-17)
+
+### Feat
+
+- adding aplpy plotting notebook
+
 ## 4.1.2 (2024-06-14)
 
 ### Fix
