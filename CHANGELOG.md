@@ -1,3 +1,9 @@
+## 4.3.0 (2024-07-01)
+
+### Feat
+
+- plotting models is now ez
+
 ## 4.2.0 (2024-06-17)
 
 ### Feat
