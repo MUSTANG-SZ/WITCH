@@ -8,6 +8,7 @@ from typing import Optional
 
 import minkasi
 import numpy as np
+from typing_extensions import Unpack
 
 
 def make_naive(
@@ -16,17 +17,19 @@ def make_naive(
     """
     Make a naive map where we just bin common mode subtracted TODs.
 
-    Arguments:
+    Parameters
+    ----------
+    todvec : minkasi.tods.TodVec
+        The TODs to mapmake.
+    skymap : minkasi.maps.MapType
+        Map to use as footprint for outputs.
 
-        todvec: The TODs to mapmake.
-
-        skymap: Map to use as footprint for outputs.
-
-    Returns:
-
-        naive: The navie map.
-
-        hits: The hit count map.
+    Returns
+    -------
+    naive : minkasi.maps.MapType
+        The naive map.
+    hits : minkasi.maps.MapType
+        The hit count map.
         We use this as a preconditioner which helps small-scale convergence quite a bit.
     """
     hits = minkasi.mapmaking.make_hits(todvec, skymap)
@@ -54,18 +57,20 @@ def make_weights(
     """
     Make weights and noise map.
 
-    Arguments:
+    Parameters
+    ----------
+    todvec : minkasi.tods.TodVec
+        The TODs to mapmake.
+    skymap : minkasi.maps.MapType
+        Map to use as footprint for outputs.
 
-        todvec: The TODs to mapmake.
-
-        skymap: Map to use as footprint for outputs.
-
-    Returns:
-
-        weightmap: The weights map.
-
-        noisemap: The noise map.
-                  This is just 1/sqrt(weights).
+    Returns
+    -------
+    weightmap : minkasi.maps.MapType
+        The weights map.
+    noisemap : minkasi.maps.MapType
+        The noise map.
+        This is just 1/sqrt(weights).
     """
     weightmap = minkasi.mapmaking.make_hits(todvec, skymap, do_weights=True)
     mask = weightmap.map > 0
@@ -84,23 +89,24 @@ def reestimate_noise_from_map(
     todvec: minkasi.tods.TodVec,
     mapset: minkasi.maps.Mapset,
     noise_class: minkasi.mapmaking.NoiseModelType,
-    noise_args: list,
+    noise_args: tuple,
     noise_kwargs: dict,
 ):
     """
     Use the current guess at the map to reestimate the noise:
 
-    Arguments:
-
-        todvec: The TODs to reestimate noise for.
-
-        mapset: Mapset containing the current map solution.
-
-        noise_class: Which noise model to use.
-
-        noise_args: Additional arguments to pass to set_noise.
-
-        noise_kwargs: Additional keyword argmuents to pass to set_noise.
+    Parameters
+    ----------
+    todvec : minkasi.tods.TodVec
+        The TODs to reestimate noise for.
+    mapset : minkasi.maps.Mapset
+        Mapset containing the current map solution.
+    noise_class : minkasi.mapmaking.NoiseModelType
+        Which noise model to use.
+    noise_args : tuple
+        Additional arguments to pass to `minkasi.tods.Tod.set_noise`.
+    noise_kwargs : dict
+        Additional keyword arguments to pass to `minkasi.tods.Tod.set_noise`.
     """
     for tod in todvec.tods:
         mat = 0 * tod.info["dat_calib"]
@@ -118,28 +124,30 @@ def get_grad_prior(
     todvec: minkasi.tods.TodVec,
     mapset: minkasi.maps.Mapset,
     gradmap: minkasi.maps.MapType,
-    *args,
+    *args: Unpack[tuple],
     **kwargs,
-) -> tuple[minkasi.mapmaking.pcg.HasPrior, minkasi.maps.Mapset]:
+) -> minkasi.maps.Mapset:
     """
-    Make a gradient based prior. This helps avoid errors due to sharp features.
+    Make a gradient based prior from a map.
+    This helps avoid errors due to sharp features.
 
-    Arguments:
-
-        todvec: The TODs what we are mapmaking.
-
-        mapset: The mapset to compute priors with.
-                We assume that the first element is the map we care about.
-
-        gradmap: Containter to use as the gradient map.
-
-        *args: Additional arguments to pass to get_grad_mask_2d.
-
-        **kwargs: Kewword arguments to pass to get_grad_mask_2d.
-
-    Returns:
-
-        new_mapset: A mapset with the original map and a cleared prior map.
+    Parameters
+    ----------
+    todvec : minkasi.tods.TodVec
+        The TODs what we are mapmaking.
+    mapset : minkasi.maps.Mapset
+        The mapset to compute priors with.
+        We assume that the first element is the map we care about.
+    gradmap : minkasi.maps.MapType
+        Containter to use as the gradient map.
+    *args : Unpack[tuple]
+        Additional arguments to pass to get_grad_mask_2d.
+    **kwargs
+        Keyword arguments to pass to get_grad_mask_2d.
+    Returns
+    -------
+    new_mapset : minkasi.maps.Mapset
+        A mapset with the original map and a cleared prior map.
     """
     gradmap.map[:] = minkasi.mapmaking.noise.get_grad_mask_2d(
         mapset.maps[0], todvec, *args, **kwargs
@@ -176,27 +184,29 @@ def solve_map(
     """
     Solve for map with PCG.
 
-    Arguments:
+    Parameters
+    ----------
+    todvec : minkasi.tods.TodVec
+        The TODs what we are mapmaking.
+    x0 : minkasi.maps.Mapset
+        The initial guess mapset.
+    ihits : minkasi.maps.MapType
+        The inverse hits map.
+    prior : Optional[minkasi.mapmaking.pgc.HasPrior]
+        Prior to use when mapmaking, set to None to not use.
+    maxiters : int
+        Maximum PCG iters to use.
+    save_iters : list[int]
+        Which iterations to save the map at.
+    outdir : str
+        The output directory
+    desc_str : str
+        String used to determine outroot.
 
-        todvec: The TODs what we are mapmaking.
-
-        x0: The initial guess mapset.
-
-        ihits: The inverse hits map.
-
-        prior: Prior to use when mapmaking, set to None to not use.
-
-        maxiters: Maximum PCG iters to use.
-
-        save_iters: Which iterations to save the map at.
-
-        outdir: The output directory
-
-        desc_str: String used to deterime outroot.
-
-    Returns:
-
-        mapset: The mapset with the solved map.
+    Returns
+    -------
+    mapset : minkasi.maps.Mapset
+        The mapset with the solved map.
     """
     # make A^T N^1 d.  TODs need to understand what to do with maps
     # but maps don't necessarily need to understand what to do with TODs,
@@ -234,8 +244,39 @@ def solve_map(
 
 
 def make_maps(
-    todvec, skymap, noise_class, noise_args, noise_kwargs, outdir, npass, dograd
+    todvec: minkasi.tods.TodVec,
+    skymap: minkasi.maps.MapType,
+    noise_class: minkasi.mapmaking.noise.NoiseModelType,
+    noise_args: tuple,
+    noise_kwargs: dict,
+    outdir: str,
+    npass: int,
+    dograd: bool,
 ):
+    """
+    Make a minkasi map with multple passes and noise reestimation.
+    Unless you are an expert this will usually be all you need.
+
+    Parameters
+    ----------
+    todvec : minkasi.tods.TodVec
+        The tods to mapmake.
+    skymap : minkasi.maps.MapType
+        Map to use as a template.
+        The contents don't matter only the shape and WCS info.
+    noise_class : minkasi.mapmaking.noise.NoiseModelType
+        The noise model to use on the TODs.
+    noise_args : tuple
+        Arguments to pass to `minkasi.tods.Tod.set_noise`.
+    noise_kwargs : dict
+        Keyword arguments to pass to `minkasi.tods.Tod.set_noise`.
+    outdir : str
+        The output directory.
+    npass : int
+        The number of times to mapmake and then reestimate the noise.
+    dograd : bool
+        If True make a map based prior to avoid biases from sharp features.
+    """
     naive, hits = make_naive(todvec, skymap, outdir)
 
     # Take 1 over hits map
