@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.27">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.28">
     
     
       
@@ -562,7 +562,7 @@
 <a id="witch.core"></a>
     <div class="doc doc-contents first">
 
-      <p>Core module for generating models aed their gradients.</p>
+      <p>Core module for generating models and their gradients.</p>
 
 
 
@@ -591,23 +591,117 @@
     <div class="doc doc-contents ">
 
       <p>Generically create models with substructure.</p>
-<p>Arguments:</p>
-<pre><code>xyz: Coordinate grid to compute profile on.
 
-n_struct: Number of each structure to use.
-          Should be in the same order as `order`.
 
-dz: Factor to scale by while integrating.
-    Since it is a global factor it can contain unit conversions.
-    Historically equal to y2K_RJ * dr * da * XMpc / me.
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>xyz</code></td>
+            <td>
+                  <code>tuple[<span title="jax.Array">Array</span>, <span title="jax.Array">Array</span>, <span title="jax.Array">Array</span>, float, float]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Grid to compute model on.
+See <code>containers.Model.xyz</code> for details.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>n_struct</code></td>
+            <td>
+                  <code>tuple[int, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of each structure to use.
+Should be in the same order as <code>order</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>dz</code></td>
+            <td>
+                  <code>float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Factor to scale by while integrating.
+Should at least include the pixel size along the LOS.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>beam</code></td>
+            <td>
+                  <code><span title="jax.Array">Array</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Beam to convolve by, should be a 2d array.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>*pars</code></td>
+            <td>
+                  <code><span title="typing_extensions.Unpack">Unpack</span>[tuple[float, ...]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>1D container of model parameters.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-beam: Beam to convolve by, should be a 2d array.
 
-params: 1D array of model parameters.
-</code></pre>
-<p>Returns:</p>
-<pre><code>model: The model with the specified substructure evaluated on the grid.
-</code></pre>
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>model</code></td>            <td>
+                  <code><span title="jax.Array">Array</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The model with the specified substructure evaluated on the grid.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
     </div>
 
 </div>
@@ -629,16 +723,71 @@ params: 1D array of model parameters.
     <div class="doc doc-contents ">
 
       <p>A wrapper around model that also returns the gradients of the model.
-Only the additional arguments are described here, see model for the others.
+Only the additional arguments are described here, see <code>model</code> for the others.
 Note that the additional arguments are passed <strong>before</strong> the *params argument.</p>
-<p>Arguments:</p>
-<pre><code>argnums: The arguments to evaluate the gradient at
-</code></pre>
-<p>Returns:</p>
-<pre><code>model: The model with the specified substructure.
 
-grad: The gradient of the model with respect to the model parameters.
-</code></pre>
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>argnums</code></td>
+            <td>
+                  <code>tuple[int, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The indices of the arguments to evaluate the gradient at.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>model</code></td>            <td>
+                  <code><span title="jax.Array">Array</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The model with the specified substructure evaluated on the grid.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+<td><code>grad</code></td>            <td>
+                  <code><span title="jax.Array">Array</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The gradient of the model with respect to the model parameters.
+Has shape <code>(len(pars),) + model.shape)</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
     </div>
 
 </div>
@@ -701,7 +850,7 @@ grad: The gradient of the model with respect to the model parameters.
     <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.ad660dcc.min.js"></script>
+      <script src="../../assets/javascripts/bundle.fe8b6f2b.min.js"></script>
       
         <script src="../../javascripts/mathjax.js"></script>
       
