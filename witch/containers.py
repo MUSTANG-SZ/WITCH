@@ -448,8 +448,8 @@ class Model:
         You should never need to touch this yourself, just pass it to
         `minkasi.fitting.fit_timestreams_with_derivs_manyfun`.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         params : NDArray[np.floating]
             Array of model parameters.
             Should be in the same order as `pars`
