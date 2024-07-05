@@ -1898,8 +1898,8 @@ Used when fitting.</p>
 <span class="sd">        You should never need to touch this yourself, just pass it to</span>
 <span class="sd">        `minkasi.fitting.fit_timestreams_with_derivs_manyfun`.</span>
 
-<span class="sd">        Parameter</span>
-<span class="sd">        ---------</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
 <span class="sd">        params : NDArray[np.floating]</span>
 <span class="sd">            Array of model parameters.</span>
 <span class="sd">            Should be in the same order as `pars`</span>
@@ -2856,15 +2856,50 @@ You should never need to touch this yourself, just pass it to
 <code>minkasi.fitting.fit_timestreams_with_derivs_manyfun</code>.</p>
 
 
-<details class="parameter" open>
-  <summary>Parameter</summary>
-  <p>params : NDArray[np.floating]
-    Array of model parameters.
-    Should be in the same order as <code>pars</code>
-tod : Tod
-    A minkasi tod instance.
-    'dx' and 'dy' must be in tod.info and be in radians.</p>
-</details>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>params</code></td>
+            <td>
+                  <code><span title="numpy.typing.NDArray">NDArray</span>[<span title="numpy.floating">floating</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Array of model parameters.
+Should be in the same order as <code>pars</code></p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>tod</code></td>
+            <td>
+                  <code><span title="minkasi.tods.Tod">Tod</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A minkasi tod instance.
+'dx' and 'dy' must be in tod.info and be in radians.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     <p><span class="doc-section-title">Returns:</span></p>
     <table>
@@ -2940,8 +2975,8 @@ tod : Tod
 <span class="sd">    You should never need to touch this yourself, just pass it to</span>
 <span class="sd">    `minkasi.fitting.fit_timestreams_with_derivs_manyfun`.</span>
 
-<span class="sd">    Parameter</span>
-<span class="sd">    ---------</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
 <span class="sd">    params : NDArray[np.floating]</span>
 <span class="sd">        Array of model parameters.</span>
 <span class="sd">        Should be in the same order as `pars`</span>
