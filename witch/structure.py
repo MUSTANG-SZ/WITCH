@@ -515,7 +515,7 @@ def add_powerlaw_cos(
     r = jnp.sqrt(x**2 + y**2 + z**2)
     phi = (jnp.arctan2(y, x) - phi0) % (2 * jnp.pi)
 
-    powerlaw = amp * (1 - jnp.float_power(1 + r, -1.0 * k_r)) * jnp.cos(omega * phi)
+    powerlaw = amp * jnp.abs(jnp.cos(omega * phi)) * jnp.float_power(r, k_r)
     new_pressure = jnp.where(r > 1, pressure, (1 + powerlaw) * pressure)
     return new_pressure
 
