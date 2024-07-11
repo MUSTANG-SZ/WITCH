@@ -1,3 +1,10 @@
+## 5.1.0 (2024-07-11)
+
+### Feat
+
+- add example of 2nd stage plotting
+- changing cos powerlaw to simpler powerlaw
+
 ## 5.0.0 (2024-07-09)
 
 ### Refactor
