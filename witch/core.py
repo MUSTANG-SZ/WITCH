@@ -62,6 +62,89 @@ def _check_order():
         raise ValueError("ORDER seems to have elements with stages out of order")
 
 
+def stage2_model(
+    xyz,
+    n_structs,
+    dz,
+    beam,
+    *params,
+):
+    """
+    Only returns the second stage of the model. Used for visualizing shocks, etc.
+    that can otherwise be hard to see in a model plot
+
+    Arguments:
+
+        xyz: Coordinate grid to compute profile on.
+
+        n_struct: Number of each structure to use.
+                  Should be in the same order as `order`.
+
+        dz: Factor to scale by while integrating.
+            Since it is a global factor it can contain unit conversions.
+            Historically equal to y2K_RJ * dr * da * XMpc / me.
+
+        beam: Beam to convolve by, should be a 2d array.
+
+        params: 1D array of model parameters.
+
+    Returns:
+
+        model: The model with the specified substructure evaluated on the grid.
+    """
+    params = jnp.array(params)
+    params = jnp.ravel(params)  # Fixes strange bug with params having dim (1,n)
+
+    pressure = jnp.ones((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
+    start = 0
+
+    # Stage 0, track delta but don't add anything
+    for n_struct, struct in zip(n_structs, ORDER):
+        if STRUCT_STAGE[struct] != 0:
+            continue
+        if not n_struct:
+            continue
+        delta = n_struct * STRUCT_N_PAR[struct]
+        struct_pars = params[start : start + delta].reshape(
+            (n_struct, STRUCT_N_PAR[struct])
+        )
+        start += delta
+
+    # Stage 1, modify the 3d grid
+    for n_struct, struct in zip(n_structs, ORDER):
+        if STRUCT_STAGE[struct] != 1:
+            continue
+        if not n_struct:
+            continue
+
+        delta = n_struct * STRUCT_N_PAR[struct]
+        struct_pars = params[start : start + delta].reshape(
+            (n_struct, STRUCT_N_PAR[struct])
+        )
+
+        start += delta
+        for i in range(n_struct):
+            pressure = STRUCT_FUNCS[struct](pressure, xyz, *struct_pars[i])
+
+    # Integrate along line of site
+    ip = trapz(pressure, dx=dz, axis=-1)
+
+    bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
+        (ip.shape[1] - beam.shape[1]) / 2
+    )
+    beam = jnp.pad(
+        beam,
+        (
+            (bound0, ip.shape[0] - beam.shape[0] - bound0),
+            (bound1, ip.shape[1] - beam.shape[1] - bound1),
+        ),
+    )
+
+    ip = fft_conv(ip, beam)
+
+    return ip
+
+
 def model(
     xyz,
     n_structs,
