@@ -6,7 +6,7 @@ base: "MOOJ1142_base.yaml"
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "MOOJ1142"
-sim: True # If True use TODs to make noise and add a simulated cluster
+sim: False # If True use TODs to make noise and add a simulated cluster
 
 # Define the model
 model:
@@ -38,9 +38,9 @@ model:
         r_3:
           value: 9.5
         theta:
-          value: 90.
+          value: eval("np.deg2rad(-10)")
           to_fit: True
-          priors: [80., 100.]
+          priors: [-0.35, 0.0]
         P0:
           value: 8.403
         c500:
@@ -50,7 +50,7 @@ model:
           to_fit: True
         gamma:
           value: .3081
-          to_fit: False
+          to_fit: False 
         alpha:
           value: 1.551
         beta:
@@ -81,19 +81,20 @@ model:
           value: 60.0
           to_fit: False
         theta_sh:
-          value: 0.0
+          value: eval("np.deg2rad(-10.0)")
           to_fit: False
         amp_sh:
-          value: 10.0
+          value: 1.0
           to_fit: True
         phi0:
-          value: 0.0
+          value: eval("np.deg2rad(-10.0)")
           to_fit: False
         kr:
-          value: 0.0
-          to_fit: False
+          value: 1. 
+          to_fit: True
+          priors: [-5., 5.] 
         omega:
-          value: 6.283185307
+          value: eval("3.1415/3") 
           to_fit: False
     ps_gauss:
       structure: "gaussian"
@@ -101,7 +102,7 @@ model:
         dx_g:
           value: 19.0
           to_fit: True
-          priors: [10.0, 28.0]
+          priors: [1.0, 30.0]
         dy_g:
           value: -4.0
           to_fit: True
@@ -109,5 +110,5 @@ model:
         sigma:
           value: 4.0
         amp_g:
-          value: 0.01
+          value: 0.001
           to_fit: True
