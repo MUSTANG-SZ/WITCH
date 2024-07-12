@@ -242,12 +242,11 @@ def main():
     # todvec.lims() is MPI-aware and will return global limits, not just
     # the ones from private TODs
     lims = todvec.lims()
-    pixsize = 2.0 / 3600 * np.pi / 180
-    print(lims)
+    pixsize = cfg.get("pix_size", 2.0 / wu.rad_to_arcsec)
     skymap = minkasi.maps.SkyMap(lims, pixsize)
 
     # Define the model and get stuff setup for minkasi
-    model = Model.from_cfg(cfg)
+    model = Model.from_cfg(cfg, pix_size=pixsize, lims=lims)
     funs = [model.minkasi_helper]
     params = np.array(model.pars)
     npars = np.array([len(params)])
