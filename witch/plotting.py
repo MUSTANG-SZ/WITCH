@@ -18,6 +18,7 @@ import os
 
 import dill as pk
 
+
 def plot_cluster(
     name,
     fits_path,
@@ -69,22 +70,26 @@ def plot_cluster(
     """
     fits_path = os.path.abspath(fits_path)
     root = os.path.split(os.path.split(fits_path)[0])[0]
-    res_path = root + "/" + str(sorted([file for file in os.listdir(root) if ".dill" in file])[-1])
+    res_path = (
+        root
+        + "/"
+        + str(sorted([file for file in os.listdir(root) if ".dill" in file])[-1])
+    )
 
     with open(res_path, "rb") as f:
-          results = pk.load(f)
+        results = pk.load(f)
     pix_size = results.pix_size * rad_to_arcsec
 
     cfg_path = root + "/" + "config.yaml"
-    cfg = load_config({}, cfg_path) 
+    cfg = load_config({}, cfg_path)
 
     smooth = max(
         1, int(smooth / pix_size)
     )  # FITSfigure smoothing is in pixels, so convert arcsec to pixels
 
-    kernel = Gaussian2DKernel(x_stddev=smooth*5)
+    kernel = Gaussian2DKernel(x_stddev=smooth * 5)
 
-    fig = plt.figure(figsize = figsize)
+    fig = plt.figure(figsize=figsize)
     img = aplpy.FITSFigure(
         fits_path,
         hdu=hdu,
@@ -97,31 +102,37 @@ def plot_cluster(
 
     ## make and register a divergent blue-orange colormap:
     cmap = "mymap"
-    try: 
-        cm.get_cmap(cmap) #Stops these anoying messages if you've already registered mymap
+    try:
+        cm.get_cmap(
+            cmap
+        )  # Stops these anoying messages if you've already registered mymap
 
     except:
         bottom = cm.get_cmap("Oranges", 128)
         top = cm.get_cmap("Blues_r", 128)
-        newcolors = np.vstack((top(np.linspace(0, 1, 128)), bottom(np.linspace(0, 1, 128))))
+        newcolors = np.vstack(
+            (top(np.linspace(0, 1, 128)), bottom(np.linspace(0, 1, 128)))
+        )
         cm.register_cmap(cmap, cmap=ListedColormap(newcolors))
 
     if bound is None:
         nx, ny = img._data.shape
         lims = int(radius * 60 / pix_size)
-        xmin = int(nx/2-lims); xmax = int(nx/2+lims)
-        ymin = int(ny/2-lims); ymax = int(ny/2+lims)
-        bound = np.amax(np.abs(img._data[xmin:xmax, ymin:ymax])) 
+        xmin = int(nx / 2 - lims)
+        xmax = int(nx / 2 + lims)
+        ymin = int(ny / 2 - lims)
+        ymax = int(ny / 2 + lims)
+        bound = np.amax(np.abs(img._data[xmin:xmax, ymin:ymax]))
         order = int(np.floor(np.log10(bound)))
-        bound = np.round(bound, -1 * order)/2
-        
-    img.show_colorscale(
-        cmap=cmap, stretch="linear", vmin=-bound, vmax=bound, smooth=3
-    )
+        bound = np.round(bound, -1 * order) / 2
+
+    img.show_colorscale(cmap=cmap, stretch="linear", vmin=-bound, vmax=bound, smooth=3)
 
     ra = eval(cfg["coords"]["x0"])
     dec = eval(cfg["coords"]["y0"])
-    ra, dec = np.rad2deg([ra, dec]) #TODO: Currently center on config center, which is fine but should probably be fit center
+    ra, dec = np.rad2deg(
+        [ra, dec]
+    )  # TODO: Currently center on config center, which is fine but should probably be fit center
 
     img.recenter(ra, dec, radius=radius / 60.0)
     img.ax.tick_params(axis="both", which="both", direction="in")
@@ -163,7 +174,7 @@ def plot_cluster(
 
     if ncontours:
         matplotlib.rcParams["lines.linewidth"] = 0.5
-        clevels = np.linspace(-bound, bound, ncontours) 
+        clevels = np.linspace(-bound, bound, ncontours)
         img.show_contour(
             fits_path,
             colors="gray",
@@ -172,8 +183,8 @@ def plot_cluster(
             convention="calabretta",
             smooth=3,
         )
-   
-    if plot_r: #TODO: Allow passing of r500 values, make this a subfunction
+
+    if plot_r:  # TODO: Allow passing of r500 values, make this a subfunction
         if "a10" in cfg["model"]["structures"].keys():
             mod_type = "a10"
         elif "ea10" in cfg["model"]["structures"].keys():
@@ -182,14 +193,13 @@ def plot_cluster(
             raise ModelError("For R500, must have structure type A10 or EA10")
 
         for i in range(len(results.structures)):
-            if str(results.structures[i].name) == mod_type: 
+            if str(results.structures[i].name) == mod_type:
                 break
 
-        for parameter in results.structures[i].parameters: 
+        for parameter in results.structures[i].parameters:
             if str(parameter.name.lower()) == "m500":
                 m500 = parameter.val
-                break    
-
+                break
 
         z = float(cfg["constants"]["z"])
         nz = get_nz(z)
@@ -198,7 +208,11 @@ def plot_cluster(
         da = get_da(z)
         r500 /= da
         if plot_r == "rs":
-            r500 /= float(cfg["model"]["structures"][mod_type]["parameters"]["c500"]["value"]) #Convert to rs
-        img.show_circles(ra, dec, radius = r500 / 3600, coords_frame  ='world', color='green')
+            r500 /= float(
+                cfg["model"]["structures"][mod_type]["parameters"]["c500"]["value"]
+            )  # Convert to rs
+        img.show_circles(
+            ra, dec, radius=r500 / 3600, coords_frame="world", color="green"
+        )
 
     return img
