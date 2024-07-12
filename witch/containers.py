@@ -137,6 +137,10 @@ class Model:
         The beam to convolve the model with.
     n_rounds : int
         How many rounds of fitting to perform.
+    pix_size : float | None
+        Pix size of corresponding map
+    lims : list[float, float, float, float] | None
+        List of ra_min, ra_max, dec_min, dec_max for map model was fit to
     cur_round : int, default: 0
         Which round of fitting we are currently in,
         rounds are 0 indexed.
@@ -153,6 +157,8 @@ class Model:
     dz: float  # arcseconds * unknown
     beam: jax.Array
     n_rounds: int
+    pix_size: Optional[float] = None
+    lims: Optional[list[float, float, float, float]] = None
     cur_round: int = 0
     chisq: float = np.inf
     original_order: list[int] = field(init=False)
@@ -507,7 +513,12 @@ class Model:
             return dill.load(f)
 
     @classmethod
-    def from_cfg(cls, cfg: dict) -> Self:
+    def from_cfg(
+        cls,
+        cfg: dict,
+        pix_size: Optional[float] = None,
+        lims: Optional[list[float, float, float, float]] = None,
+    ) -> Self:
         """
         Create an instance of model from a witcher config.
 
@@ -515,6 +526,10 @@ class Model:
         ----------
         cfg : dict
             The config loaded into a dict.
+        pix_size : float | None
+            Pix size of corresponding map
+        lims : list[float, float, float, float] | None
+            List of ra_min, ra_max, dec_min, dec_max for map model was fit to
 
         Returns
         -------
@@ -590,4 +605,4 @@ class Model:
             "name", "-".join([structure.name for structure in structures])
         )
 
-        return cls(name, structures, xyz, dz, beam, n_rounds)
+        return cls(name, structures, xyz, dz, beam, n_rounds, pix_size, lims)
