@@ -47,7 +47,7 @@ def make_naive(
     if minkasi.myrank == 0:
         naive.write(os.path.join(outdir, "naive.fits"))
         hits.write(os.path.join(outdir, "hits.fits"))
-
+    naive.clear()
     return naive, hits
 
 
