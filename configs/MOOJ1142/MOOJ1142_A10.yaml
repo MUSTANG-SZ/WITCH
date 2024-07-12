@@ -1,102 +1,65 @@
-cluster:
-  name: "MOO1142"
-  Te: 5.0
-  freq: 90e9
-paths:
-  tods: "/scratch/r/rbond/jorlo/M2-TODs/MOOJ1142"
-  glob: "Signal_TOD*.fits"
-  ndo: False
-  odo: False
-  outroot: "/scratch/r/rbond/jorlo/Reductions" 
-coords:
-  z: 1.19 
-  r_map: "3.0*60"
-  dr: "1."
-  x0: 3.06642436 
-  y0: 0.26972541 
-  conv_factor: "(180 * 3600) / np.pi"
-beam:
-  fwhm1: "9.735"
-  amp1: 0.9808
-  fwhm2: "32.627"
-  amp2: 0.0192
-bowling:
-  sub_poly: False
-  method: "pred2"
-  degree: 2
-minkasi:
-  noise:
-    class: "minkasi.NoiseSmoothedSVD"
-    args: "[]"
-    kwargs: "{'fwhm':10}"
-  maxiter: 50
-  npass: 5
-  dograd: False
-models:
-  a10:
-    func: "partial(helper, xyz=xyz, dx=float(da*y2K_RJ(freq, Te)*dr[-1]*XMpc/me), beam=beam, argnums=np.where(_to_fit)[0], n_a10=1, n_gaussian = 2)"
-    parameters:
-      dx_1:
-        value: 0.0
-        to_fit: True
-        priors:
-          type: "flat"
-          value: "np.array([-9.0, 9.0])"
-      dy_1:
-        value: 0.0
-        to_fit: True
-        priors:
-          type: "flat"
-          value: "np.array([-9.0, 9.0])"
-      dz_1:
-        value: 0.0
-        to_fit: False
-      theta:
-        value: 0.0
-        to_fit: False
-      P0:
-        value: 8.403
-        to_fit: False
-      c500:
-        value: 1.177
-        to_fit: False
-      m500:
-        value: "5.4e14"
-        to_fit: True
-      gamma:
-        value: .3081
-        to_fit: False
-      alpha:
-        value: 1.051
-        to_fit: False
-      beta:
-        value: 5.4905
-        to_fit: False
-      z: 
-        value: 1.19
-        to_fit: False
-      dx_g1:
-        value: 19.0 
-        to_fit: False 
-      dy_g1:
-        value: 4.3 
-        to_fit: False 
-      sigma_g1:
-        value: 4.0 
-        to_fit: False
-      amp_g1:
-        value: 0.0009485246831922859 
-        to_fit: True 
-      dx_g2:
-        value: 19.0 
-        to_fit: False 
-      dy_g2:
-        value: 4.3 
-        to_fit: False 
-      sigma_g2:
-        value: 4.0 
-        to_fit: False
-      amp_2:
-        value: 0.0009485246831922859 
-        to_fit: True 
-  
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "MOOJ1142_base.yaml"
+
+# Cluster name
+# Used both for the output path as well as to load presets
+name: "MOOJ1142"
+sim: False # If True use TODs to make noise and add a simulated cluster
+
+# Define the model
+model:
+  # Unit conversion to apply at the end
+  # Will be evaled
+  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+  # Structure to include in the model
+  structures:
+    # Name of the first structure
+    ea10:
+      structure: "a10" # What type of structure it is
+
+      parameters:
+        dx_1: # Name of the first parameter
+          value: 0.0 # Value to use/start at, will be evaled
+          to_fit: True
+          priors: [-9.0, 9.0]
+        dy_1:
+          value: 0.0
+          to_fit: True
+          priors: [-9.0, 9.0]
+        dz_1:
+          value: 0.0
+        theta:
+          value: 0. 
+        P0:
+          value: 3.202
+        c500:
+          value: 1.083
+        m500:
+          value: "8.4e14"
+          to_fit: True
+        gamma:
+          value: 0.3798 
+        alpha:
+          value: 1.4063
+        beta:
+          value: 5.4905
+        z:
+          value: 1.19
+    ps_gauss:
+      structure: "gaussian"
+      parameters:
+        dx_g:
+          value: 19.0
+          to_fit: True
+          priors: [10.0, 28.0]
+        dy_g:
+          value: -4.0
+          to_fit: True
+          priors: [-13.0, 5.0]
+        sigma:
+          value: 4.0
+        amp_g:
+          value: 0.01
+          to_fit: True
