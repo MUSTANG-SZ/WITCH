@@ -1,22 +1,19 @@
+import os
+
 import aplpy
+import astropy.units as u
+import dill as pk
 import matplotlib
-import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+import numpy as np
+from astropy import wcs
+from astropy.convolution import Gaussian2DKernel, convolve
+from astropy.io import fits
 from matplotlib.colors import ListedColormap
 
 from .fitter import load_config
 from .utils import get_da, get_nz, rad_to_arcsec
-
-from astropy.io import fits
-from astropy import wcs
-import astropy.units as u
-from astropy.convolution import convolve, Gaussian2DKernel
-
-import numpy as np
-
-import os
-
-import dill as pk
 
 
 def plot_cluster(
@@ -167,7 +164,7 @@ def plot_cluster(
     img.colorbar.set_width(0.12)
 
     if units == "snr":
-        cbar_label = "$\sigma$"
+        cbar_label = r"$\sigma$"
     else:
         cbar_label = str(units)
     img.colorbar.set_axis_label_text(cbar_label)

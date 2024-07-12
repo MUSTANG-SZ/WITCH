@@ -263,7 +263,7 @@ def main():
 
     # Get output
     if "base" in cfg.keys():
-        del cfg["base"] #We've collated to the cfg files so no need to keep the base
+        del cfg["base"]  # We've collated to the cfg files so no need to keep the base
     outdir = get_outdir(cfg, bowl_str, model)
 
     # Make signal maps
