@@ -1,3 +1,20 @@
+## 5.2.0 (2024-07-12)
+
+### Feat
+
+- switching to plot_cluster. Need to clean this workbook up more
+- adding lims and pix_size to model
+- base plotting function
+
+### Fix
+
+- adding markdown
+- clear naive map after each iter
+- updating a10 pars
+- formating
+- r500 now uses fit value
+- output cfg no longer has base dependency
+
 ## 5.1.0 (2024-07-11)
 
 ### Feat
