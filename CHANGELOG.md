@@ -1,3 +1,13 @@
+## 5.3.0 (2024-07-15)
+
+### Feat
+
+- adding cylindrical beta profile
+
+### Fix
+
+- applied black formating
+
 ## 5.2.0 (2024-07-12)
 
 ### Feat
