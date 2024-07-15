@@ -253,7 +253,7 @@ def isobeta(dx, dy, dz, r_1, r_2, r_3, theta, beta, amp, xyz):
 @jax.jit
 def cylindrical_beta(dx, dy, dz, L, theta, P0, r_c, beta, xyz):
     """
-    
+
     This function does not include smoothing or declination stretch
     which should be applied at the end.
 
@@ -265,7 +265,7 @@ def cylindrical_beta(dx, dy, dz, L, theta, P0, r_c, beta, xyz):
 
         dz: Line of sight offset of cluster center relative to grid origin
 
-   
+
 
 
 
