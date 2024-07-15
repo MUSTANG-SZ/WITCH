@@ -251,6 +251,59 @@ def isobeta(dx, dy, dz, r_1, r_2, r_3, theta, beta, amp, xyz):
 
 
 @jax.jit
+def cylindrical_beta(dx, dy, dz, L, theta, P0, r_c, beta, xyz):
+    """
+    
+    This function does not include smoothing or declination stretch
+    which should be applied at the end.
+
+    Arguments:
+
+        dx: RA of cluster center relative to grid origin
+
+        dy: Dec of cluster center relative to grid origin
+
+        dz: Line of sight offset of cluster center relative to grid origin
+
+   
+
+
+
+
+
+        theta: Angle to rotate in xy-plane
+
+        P0: Amplitude of the pressure profile
+
+
+
+
+
+
+
+
+
+        beta: The outer slope
+
+
+
+        xyz: Coordinte grid to calculate model on
+
+    Returns:
+
+        model: The gnfw model
+    """
+
+    x, y, z = transform_grid(dx, dy, dz, 1.0, 1.0, 1.0, theta, xyz)
+    r = jnp.sqrt(y**2 + z**2)
+    powerlaw = P0 / (1.0 + (r / r_c) ** 2) ** (3.0 / 2.0 * beta)
+
+    pressure = jnp.where(jnp.abs(x) >= L / 2.0, 0, powerlaw)
+
+    return pressure
+
+
+@jax.jit
 def egaussian(dx, dy, dz, r_1, r_2, r_3, theta, sigma, amp, xyz):
     """
     Elliptical gaussian profile in 3d.
@@ -528,6 +581,7 @@ N_PAR_ISOBETA = len(inspect.signature(isobeta).parameters) - 1
 N_PAR_GNFW = len(inspect.signature(gnfw).parameters) - 1
 N_PAR_A10 = len(inspect.signature(a10).parameters) - 1
 N_PAR_EA10 = len(inspect.signature(ea10).parameters) - 1
+N_PAR_CYLINDRICAL = len(inspect.signature(cylindrical_beta).parameters) - 1
 N_PAR_GAUSSIAN = len(inspect.signature(gaussian).parameters) - 1
 N_PAR_EGAUSSIAN = len(inspect.signature(egaussian).parameters) - 1
 N_PAR_UNIFORM = len(inspect.signature(add_uniform).parameters) - 2
@@ -538,6 +592,7 @@ N_PAR_POWERLAW = len(inspect.signature(add_powerlaw).parameters) - 2
 STRUCT_FUNCS = {
     "a10": a10,
     "ea10": ea10,
+    "cylindrical": cylindrical_beta,
     "exponential": add_exponential,
     "powerlaw": add_powerlaw,
     "powerlaw_cos": add_powerlaw_cos,
@@ -550,6 +605,7 @@ STRUCT_FUNCS = {
 STRUCT_N_PAR = {
     "a10": N_PAR_A10,
     "ea10": N_PAR_EA10,
+    "cylindrical": N_PAR_CYLINDRICAL,
     "exponential": N_PAR_EXPONENTIAL,
     "powerlaw": N_PAR_POWERLAW,
     "powerlaw_cos": N_PAR_POWERLAW,
@@ -562,6 +618,7 @@ STRUCT_N_PAR = {
 STRUCT_STAGE = {
     "a10": 0,
     "ea10": 0,
+    "cylindrical": 0,
     "exponential": 1,
     "powerlaw": 1,
     "powerlaw_cos": 1,
