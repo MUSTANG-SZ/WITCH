@@ -286,7 +286,7 @@ def main():
 
     # Now we fit
     if cfg["sim"] and cfg["fit"]:
-        #Remove structs we deliberately want to leave out of model
+        # Remove structs we deliberately want to leave out of model
         for struct_name in cfg["model"]["structures"]:
             if cfg["model"]["structures"][struct_name].get("to_remove", False):
                 model.remove_struct(struct_name)
