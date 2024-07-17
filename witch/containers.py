@@ -480,6 +480,34 @@ class Model:
 
         return grad_tod, pred_tod
 
+    def remove_struct(
+        self,
+        struct_name: str,
+    ) -> Self:
+        """
+        Remove structure by name.
+
+        Parameters
+        ----------
+        struct_name : str
+            Name of struct to be removed.
+        """
+        n = None
+        for i, structure in enumerate(self.structures):
+            if str(structure.name) == str(struct_name):
+                n = i
+        if type(n) == int:
+            self.structures.pop(n)
+        else:
+            raise ValueError("Error: {} not in structure names".format(struct_name))
+
+        self.__dict__.pop("to_fit_ever")
+        self.__dict__.pop("n_struct")
+        self.__dict__.pop("priors")
+        self.__dict__.pop("par_names")
+        self.__dict__.pop("model")
+        self.__post_init__()
+
     def save(self, path: str):
         """
         Serialize the model to a file with dill.
