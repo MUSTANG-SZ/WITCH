@@ -1,3 +1,13 @@
+## 5.4.0 (2024-07-17)
+
+### Feat
+
+- ability to turn off structure when sim fitting
+
+### Fix
+
+- formating
+
 ## 5.3.0 (2024-07-15)
 
 ### Feat
