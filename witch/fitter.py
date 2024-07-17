@@ -286,6 +286,14 @@ def main():
 
     # Now we fit
     if cfg["sim"] and cfg["fit"]:
+        # Remove structs we deliberately want to leave out of model
+        for struct_name in cfg["model"]["structures"]:
+            if cfg["model"]["structures"][struct_name].get("to_remove", False):
+                model.remove_struct(struct_name)
+        params = np.array(model.pars)
+        npars = np.array([len(params)])
+        prior_vals = model.priors
+        priors = [None if prior is None else "flat" for prior in prior_vals]
         params[model.to_fit_ever] *= 1.1  # Don't start at exactly the right value
         model.update(params, model.errs, model.chisq)
 
