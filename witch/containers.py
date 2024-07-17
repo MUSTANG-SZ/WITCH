@@ -481,9 +481,9 @@ class Model:
         return grad_tod, pred_tod
 
     def remove_struct(
-            self,
-            struct_name: str,
-        ) -> Self:
+        self,
+        struct_name: str,
+    ) -> Self:
         """
         Remove structure by name.
 
@@ -505,7 +505,7 @@ class Model:
         self.__dict__.pop("n_struct")
         self.__dict__.pop("priors")
         self.__dict__.pop("par_names")
-        self.__dict__.pop("model") 
+        self.__dict__.pop("model")
         self.__post_init__()
 
     def save(self, path: str):
