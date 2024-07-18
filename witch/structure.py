@@ -187,7 +187,7 @@ def ea10(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z
 
     r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
     r_ell = r500 / da
-    r_norm = jnp.sqrt(r_1**2 + r_2**2 + r_3**2)
+    r_norm = (r_1 * r_2 * r_3) ** (1 / 3)
 
     r_1 *= r_ell / r_norm
     r_2 *= r_ell / r_norm
