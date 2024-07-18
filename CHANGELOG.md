@@ -1,3 +1,10 @@
+## 5.5.0 (2024-07-18)
+
+### Feat
+
+- files for checking r500 concordance
+- r500_elip now corresponds to r500_sph
+
 ## 5.4.0 (2024-07-17)
 
 ### Feat
