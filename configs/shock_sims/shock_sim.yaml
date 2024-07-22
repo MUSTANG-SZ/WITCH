@@ -74,7 +74,7 @@ model:
           value: 0 
           to_fit: False
         amp_sh:
-          value: 1.0
+          value: 0.2
           to_fit: True
 
 

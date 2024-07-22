@@ -38,7 +38,7 @@ model:
         c500:
           value: 1.177
         m500:
-          value: "8.4e14"
+          value: "916284609128836.4"
           to_fit: True
         gamma:
           value: .3081
