@@ -1,3 +1,9 @@
+## 5.6.0 (2024-07-23)
+
+### Feat
+
+- adding act fitting and non-witch formating
+
 ## 5.5.0 (2024-07-18)
 
 ### Feat
