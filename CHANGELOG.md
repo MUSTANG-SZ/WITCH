@@ -1,3 +1,9 @@
+## 5.6.1 (2024-07-23)
+
+### Fix
+
+- missed a config_path reference
+
 ## 5.6.0 (2024-07-23)
 
 ### Feat
