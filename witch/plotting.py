@@ -48,9 +48,9 @@ def plot_cluster(
     pix_size : None | float, default: None
         Pixel size. If None, then will be computed from results file.
     ra : None | float, default: None
-        RA of center of plot, in radians. If none, will be taken from config
+        RA of center of plot, in degrees. If none, will be taken from config
     dec : None | float, dfault: None
-        Dec of center of plot, in radians. If none, will be taken from config
+        Dec of center of plot, in degrees. If none, will be taken from config
     units : str, default: mJy
         String to be used as units. If snr, then it will autoformat to sigma
     bound : None | float, default: None
@@ -81,13 +81,12 @@ def plot_cluster(
     if root is None:
         root = os.path.split(os.path.split(fits_path)[0])[0]
 
-    res_path = (
-        root
-        + "/"
-        + str(sorted([file for file in os.listdir(root) if ".dill" in file])[-1])
-    )
-
     if pix_size is None:
+        res_path = (
+            root
+            + "/"
+            + str(sorted([file for file in os.listdir(root) if ".dill" in file])[-1])
+        ) 
         with open(res_path, "rb") as f:
             results = pk.load(f)
         pix_size = results.pix_size * rad_to_arcsec
@@ -263,9 +262,9 @@ def plot_cluster_act(
     cfg_path : None | str, default: None
         Path to WITCH config file corresponding to same cluster
     ra : None | float, default: None
-        RA of center of plot, in radians. If none, will be taken from config
+        RA of center of plot, in degrees. If none, will be taken from config
     dec : None | float, dfault: None
-        Dec of center of plot, in radians. If none, will be taken from config
+        Dec of center of plot, in degrees. If none, will be taken from config
     units : str, default: mJy
         String to be used as units. If snr, then it will autoformat to sigma
     bound : None | float, default: None
