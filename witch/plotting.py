@@ -86,7 +86,7 @@ def plot_cluster(
             root
             + "/"
             + str(sorted([file for file in os.listdir(root) if ".dill" in file])[-1])
-        ) 
+        )
         with open(res_path, "rb") as f:
             results = pk.load(f)
         pix_size = results.pix_size * rad_to_arcsec
