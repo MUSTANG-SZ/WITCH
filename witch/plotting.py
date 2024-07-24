@@ -124,23 +124,24 @@ def plot_cluster(
             img._data /= 1.28
             img._data *= 1e6
             cbar_label = r"$uK_{CMB}$"
+        elif units == "uK_RJ":
+            img._data *= 1e6
+            cbar_label = r"$uK_{RJ}"
         else:
             cbar_label = str(units)
+
 
     ## make and register a divergent blue-orange colormap:
     cmap = "mymap"
     try:
-        cm.get_cmap(
+        matplotlib.colormaps.get_cmap(
             cmap
         )  # Stops these anoying messages if you've already registered mymap
 
     except:
-        bottom = cm.get_cmap("Oranges", 128)
-        top = cm.get_cmap("Blues_r", 128)
-        newcolors = np.vstack(
-            (top(np.linspace(0, 1, 128)), bottom(np.linspace(0, 1, 128)))
-        )
-        cm.register_cmap(cmap, cmap=ListedColormap(newcolors))
+        mymap = matplotlib.colors.LinearSegmentedColormap.from_list(cmap, ["Blue", "White", "Red"]) 
+        matplotlib.colormaps.register(cmap=mymap)
+
 
     if bound is None:
         nx, ny = img._data.shape
