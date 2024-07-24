@@ -130,7 +130,6 @@ def plot_cluster(
         else:
             cbar_label = str(units)
 
-
     ## make and register a divergent blue-orange colormap:
     cmap = "mymap"
     try:
@@ -139,9 +138,10 @@ def plot_cluster(
         )  # Stops these anoying messages if you've already registered mymap
 
     except:
-        mymap = matplotlib.colors.LinearSegmentedColormap.from_list(cmap, ["Blue", "White", "Red"]) 
+        mymap = matplotlib.colors.LinearSegmentedColormap.from_list(
+            cmap, ["Blue", "White", "Red"]
+        )
         matplotlib.colormaps.register(cmap=mymap)
-
 
     if bound is None:
         nx, ny = img._data.shape
