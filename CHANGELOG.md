@@ -1,3 +1,9 @@
+## 5.6.2 (2024-07-24)
+
+### Fix
+
+- updating colormap to matplotlib 3.9.0
+
 ## 5.6.1 (2024-07-23)
 
 ### Fix
