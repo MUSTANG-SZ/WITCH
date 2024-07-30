@@ -139,7 +139,7 @@ class Model:
         How many rounds of fitting to perform.
     pix_size : float | None
         Pix size of corresponding map
-    lims : list[float, float, float, float] | None
+    lims : tuple[float, float, float, float] | None
         List of ra_min, ra_max, dec_min, dec_max for map model was fit to
     cur_round : int, default: 0
         Which round of fitting we are currently in,
@@ -158,7 +158,7 @@ class Model:
     beam: jax.Array
     n_rounds: int
     pix_size: Optional[float] = None
-    lims: Optional[list[float, float, float, float]] = None
+    lims: Optional[tuple[float, float, float, float]] = None
     cur_round: int = 0
     chisq: float = np.inf
     original_order: list[int] = field(init=False)
@@ -470,7 +470,7 @@ class Model:
         pred : NDArray[np.floating]
             The model with the specified substructure.
         """
-        self.update(params, self.errs, self.chisq)
+        self.update(list(params), self.errs, self.chisq)
         dx = tod.info["dx"] * wu.rad_to_arcsec
         dy = tod.info["dy"] * wu.rad_to_arcsec
 
@@ -480,10 +480,7 @@ class Model:
 
         return grad_tod, pred_tod
 
-    def remove_struct(
-        self,
-        struct_name: str,
-    ) -> Self:
+    def remove_struct(self, struct_name: str):
         """
         Remove structure by name.
 
@@ -545,7 +542,7 @@ class Model:
         cls,
         cfg: dict,
         pix_size: Optional[float] = None,
-        lims: Optional[list[float, float, float, float]] = None,
+        lims: Optional[tuple[float, float, float, float]] = None,
     ) -> Self:
         """
         Create an instance of model from a witcher config.
@@ -556,7 +553,7 @@ class Model:
             The config loaded into a dict.
         pix_size : float | None
             Pix size of corresponding map
-        lims : list[float, float, float, float] | None
+        lims : tuple[float, float, float, float] | None
             List of ra_min, ra_max, dec_min, dec_max for map model was fit to
 
         Returns

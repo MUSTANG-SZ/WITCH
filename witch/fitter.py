@@ -246,7 +246,7 @@ def main():
     skymap = minkasi.maps.SkyMap(lims, pixsize)
 
     # Define the model and get stuff setup for minkasi
-    model = Model.from_cfg(cfg, pix_size=pixsize, lims=lims)
+    model = Model.from_cfg(cfg, pix_size=pixsize, lims=tuple(lims))
     funs = [model.minkasi_helper]
     params = np.array(model.pars)
     npars = np.array([len(params)])
@@ -351,6 +351,20 @@ def main():
                     **noise_kwargs,
                 )
             minkasi.barrier()
+        # Save final pars
+        final = {"model": cfg["model"]}
+        for i, (struct_name, structure) in zip(
+            model.original_order, cfg["model"]["structures"].items()
+        ):
+            model_struct = model.structures[i]
+            for par, par_name in zip(
+                model_struct.parameters, structure["parameters"].keys()
+            ):
+                final["model"]["structures"][struct_name]["parameters"][par_name][
+                    "value"
+                ] = float(par.val)
+        with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
+            yaml.dump(final, file)
 
     # If we arenn't mapmaking then we can stop here
     if not cfg.get("res_map", cfg.get("map", True)):
