@@ -1,3 +1,13 @@
+## 5.7.0 (2024-07-30)
+
+### Feat
+
+- save final fit pars in a seperate yaml
+
+### Fix
+
+- small typing issues
+
 ## 5.6.2 (2024-07-24)
 
 ### Fix
