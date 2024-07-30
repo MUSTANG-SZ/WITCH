@@ -246,7 +246,7 @@ def main():
     skymap = minkasi.maps.SkyMap(lims, pixsize)
 
     # Define the model and get stuff setup for minkasi
-    model = Model.from_cfg(cfg, pix_size=pixsize, lims=lims)
+    model = Model.from_cfg(cfg, pix_size=pixsize, lims=tuple(lims))
     funs = [model.minkasi_helper]
     params = np.array(model.pars)
     npars = np.array([len(params)])
