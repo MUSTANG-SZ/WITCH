@@ -65,36 +65,39 @@ def _check_order():
 
 
 def stage2_model(
-    xyz,
-    n_structs,
-    dz,
-    beam,
-    *params,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    n_structs: tuple[int, ...],
+    dz: float,
+    beam: jax.Array,
+    *pars: Unpack[tuple[float, ...]],
 ):
     """
     Only returns the second stage of the model. Used for visualizing shocks, etc.
     that can otherwise be hard to see in a model plot
 
-    Arguments:
+    Parameters
+    ----------
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Grid to compute model on.
+        See `containers.Model.xyz` for details.
+    n_struct : tuple[int, ...]
+        Number of each structure to use.
+        Should be in the same order as `order`.
+    dz : float
+        Factor to scale by while integrating.
+        Should at least include the pixel size along the LOS.
+    beam : jax.Array
+        Beam to convolve by, should be a 2d array.
+    *pars : Unpack[tuple[float,...]]
+        1D container of model parameters.
 
-        xyz: Coordinate grid to compute profile on.
-
-        n_struct: Number of each structure to use.
-                  Should be in the same order as `order`.
-
-        dz: Factor to scale by while integrating.
-            Since it is a global factor it can contain unit conversions.
-            Historically equal to y2K_RJ * dr * da * XMpc / me.
-
-        beam: Beam to convolve by, should be a 2d array.
-
-        params: 1D array of model parameters.
-
-    Returns:
-
-        model: The model with the specified substructure evaluated on the grid.
+    Returns
+    -------
+    model : jax.Array
+        The model with the specified substructure evaluated on the grid.
+        No stage 3 structures are included.
     """
-    params = jnp.array(params)
+    params = jnp.array(pars)
     params = jnp.ravel(params)  # Fixes strange bug with params having dim (1,n)
 
     pressure = jnp.ones((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
