@@ -1064,7 +1064,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    gNFW pressure profile in 3d based on [Arnaud2010](https://ui.adsabs.harvard.edu/abs/2010A%26A...517A..92A/).</span>
 <span class="sd">    Compared to the function gnfw, this function fixes r1/r2/r3 to r500.</span>
 <span class="sd">    This function does not include smoothing or declination stretch</span>
@@ -1149,7 +1149,8 @@ See <code>containers.Model.xyz</code> for details.</p>
 
       <p>Add ellipsoid with exponential structure to 3d pressure profile.</p>
 <p>After transforming the grid the region where <span class="arithmatex">\(\sqrt{x^2 + y^2 + z^2} \leq 1\)</span>
-will be multiplied by a factor of <span class="arithmatex">\(1 + amp\exp{x_k(x-x_0) + y_k(y-y_0) + z_k(z-z_0)}\)</span>.</p>
+will be multiplied by a factor of <span class="arithmatex">\(1 + P_{0} e^{x_k(x-x_0) + y_k(y-y_0) + z_k(z-z_0)}\)</span>
+where <span class="arithmatex">\(P_{0}\)</span> is <code>amp</code>.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1427,7 +1428,8 @@ Note that this is in transformed coordinates so z0=1 is at zs + sr_3.</p>
 
             <details class="quote">
               <summary>Source code in <code>witch/structure.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">631</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">630</span>
+<span class="normal">631</span>
 <span class="normal">632</span>
 <span class="normal">633</span>
 <span class="normal">634</span>
@@ -1534,7 +1536,8 @@ Note that this is in transformed coordinates so z0=1 is at zs + sr_3.</p>
 <span class="sd">    Add ellipsoid with exponential structure to 3d pressure profile.</span>
 
 <span class="sd">    After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$</span>
-<span class="sd">    will be multiplied by a factor of $1 + amp\exp{x_k(x-x_0) + y_k(y-y_0) + z_k(z-z_0)}$.</span>
+<span class="sd">    will be multiplied by a factor of $1 + P_{0} e^{x_k(x-x_0) + y_k(y-y_0) + z_k(z-z_0)}$</span>
+<span class="sd">    where $P_{0}$ is `amp`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1615,8 +1618,8 @@ Note that this is in transformed coordinates so z0=1 is at zs + sr_3.</p>
 
       <p>Add ellipsoid with power law structure to 3d pressure profile.</p>
 <p>After transforming the grid the region where <span class="arithmatex">\(\sqrt{x^2 + y^2 + z^2} \leq 1\)</span>
-will be multiplied by a factor of <span class="arithmatex">\(1 + amp(1 - {1 + r}^{-k_r})(1 - {1 + \phi}^{-k_{\phi}})\)</span>.
-Where <span class="arithmatex">\(r\)</span> and <span class="arithmatex">\(\phi\)</span> are the usual polar coordinates.</p>
+will be multiplied by a factor of <span class="arithmatex">\(1 + P_{0}(1 - {1 + r}^{-k_r})(1 - {1 + \phi}^{-k_{\phi}})\)</span>.
+Where <span class="arithmatex">\(r\)</span> and <span class="arithmatex">\(\phi\)</span> are the usual polar coordinates and <span class="arithmatex">\(P_{0}\)</span> is <code>amp</code>.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1945,8 +1948,8 @@ Passed to <code>utils.transform_grid</code>.</p>
 <span class="sd">    Add ellipsoid with power law structure to 3d pressure profile.</span>
 
 <span class="sd">    After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$</span>
-<span class="sd">    will be multiplied by a factor of $1 + amp(1 - {1 + r}^{-k_r})(1 - {1 + \phi}^{-k_{\phi}})$.</span>
-<span class="sd">    Where $r$ and $\phi$ are the usual polar coordinates.</span>
+<span class="sd">    will be multiplied by a factor of $1 + P_{0}(1 - {1 + r}^{-k_r})(1 - {1 + \phi}^{-k_{\phi}})$.</span>
+<span class="sd">    Where $r$ and $\phi$ are the usual polar coordinates and $P_{0}$ is `amp`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2021,9 +2024,8 @@ Passed to <code>utils.transform_grid</code>.</p>
 
       <p>Add ellipsoid with radial power law and angular cosine dependant structure to 3d pressure profile.</p>
 <p>After transforming the grid the region where <span class="arithmatex">\(\sqrt{x^2 + y^2 + z^2} \leq 1\)</span>
-will be multiplied by a factor of <span class="arithmatex">\(1 + amp ({1 + r}^{-k_r}) \left| cos(\omega\phi) 
-ight|\)</span>.
-Where <span class="arithmatex">\(r\)</span> and <span class="arithmatex">\(\phi\)</span> are the usual polar coordinates.</p>
+will be multiplied by a factor of <span class="arithmatex">\(1 + P_{0} ({1 + r}^{-k_r}) \left| cos(\omega\\phi) \right|\)</span>.
+Where <span class="arithmatex">\(r\)</span> and <span class="arithmatex">\(\phi\)</span> are the usual polar coordinates and <span class="arithmatex">\(P_{0}\)</span> is <code>amp</code>.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2344,12 +2346,12 @@ Passed to <code>utils.transform_grid</code>.</p>
     <span class="n">k_r</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">omega</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Add ellipsoid with radial power law and angular cosine dependant structure to 3d pressure profile.</span>
 
-<span class="sd">    After transforming the grid the region where $\\sqrt{x^2 + y^2 + z^2} \\leq 1$</span>
-<span class="sd">    will be multiplied by a factor of $1 + amp ({1 + r}^{-k_r}) \\left| cos(\\omega\\phi) \right|$.</span>
-<span class="sd">    Where $r$ and $\\phi$ are the usual polar coordinates.</span>
+<span class="sd">    After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$</span>
+<span class="sd">    will be multiplied by a factor of $1 + P_{0} ({1 + r}^{-k_r}) \left| cos(\omega\\phi) \right|$.</span>
+<span class="sd">    Where $r$ and $\phi$ are the usual polar coordinates and $P_{0}$ is `amp`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2420,7 +2422,7 @@ Passed to <code>utils.transform_grid</code>.</p>
 
       <p>Add ellipsoid with uniform structure to 3d pressure profile.</p>
 <p>After transforming the grid the region where <span class="arithmatex">\(\sqrt{x^2 + y^2 + z^2} \leq 1\)</span>
-will be multiplied by a factor of <span class="arithmatex">\(1 + amp\)</span>.</p>
+will be multiplied by a factor of <span class="arithmatex">\(1 + P_{0}\)</span> where <span class="arithmatex">\(P_{0}\)</span> is <code>amp</code>.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2611,7 +2613,8 @@ Passed to <code>utils.transform_grid</code>.</p>
 
             <details class="quote">
               <summary>Source code in <code>witch/structure.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">567</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">566</span>
+<span class="normal">567</span>
 <span class="normal">568</span>
 <span class="normal">569</span>
 <span class="normal">570</span>
@@ -2671,8 +2674,7 @@ Passed to <code>utils.transform_grid</code>.</p>
 <span class="normal">624</span>
 <span class="normal">625</span>
 <span class="normal">626</span>
-<span class="normal">627</span>
-<span class="normal">628</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
+<span class="normal">627</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
 <span class="k">def</span> <span class="nf">add_uniform</span><span class="p">(</span>
     <span class="n">pressure</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
@@ -2689,7 +2691,7 @@ Passed to <code>utils.transform_grid</code>.</p>
 <span class="sd">    Add ellipsoid with uniform structure to 3d pressure profile.</span>
 
 <span class="sd">    After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$</span>
-<span class="sd">    will be multiplied by a factor of $1 + amp$.</span>
+<span class="sd">    will be multiplied by a factor of $1 + P_{0}$ where $P_{0}$ is `amp`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2755,8 +2757,7 @@ Passed to <code>utils.transform_grid</code>.</p>
 which should be applied at the end.</p>
 <p>Once the grid is transformed the profile is computed as:</p>
 <div class="arithmatex">\[
-P_{0}\left( 1 + rac{y^2 + z^2}{{r_c}^2} 
-ight)^{-1.5eta}
+P_{0}\left( 1 + \frac{y^2 + z^2}{{r_c}^2} \right)^{-1.5\beta}
 \]</div>
 
 
@@ -2825,8 +2826,7 @@ Passed to <code>utils.transform_grid</code>.</p>
               <div class="doc-md-description">
                 <p>Length of the cylinder.
 Aligned with the x-axis.
-Note that we consider anything where <span class="arithmatex">\(\left| x 
-ight| \leq L\)</span>
+Note that we consider anything where <span class="arithmatex">\(\left| x \right| \\leq L\)</span>
 to be in the profile, so the actual length is <span class="arithmatex">\(2L\)</span>.</p>
               </div>
             </td>
@@ -2997,8 +2997,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="normal">438</span>
 <span class="normal">439</span>
 <span class="normal">440</span>
-<span class="normal">441</span>
-<span class="normal">442</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
+<span class="normal">441</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
 <span class="k">def</span> <span class="nf">cylindrical_beta</span><span class="p">(</span>
     <span class="n">dx</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">dy</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
@@ -3010,7 +3009,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 
 <span class="sd">    This function does not include smoothing or declination stretch</span>
 <span class="sd">    which should be applied at the end.</span>
@@ -3018,7 +3017,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    Once the grid is transformed the profile is computed as:</span>
 
 <span class="sd">    $$</span>
-<span class="sd">    P_{0}\\left( 1 + \frac{y^2 + z^2}{{r_c}^2} \right)^{-1.5\beta}</span>
+<span class="sd">    P_{0}\left( 1 + \frac{y^2 + z^2}{{r_c}^2} \right)^{-1.5\beta}</span>
 <span class="sd">    $$</span>
 
 <span class="sd">    Parameters</span>
@@ -3035,7 +3034,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    L : float</span>
 <span class="sd">        Length of the cylinder.</span>
 <span class="sd">        Aligned with the x-axis.</span>
-<span class="sd">        Note that we consider anything where $\\left| x \right| \\leq L$</span>
+<span class="sd">        Note that we consider anything where $\left| x \right| \\leq L$</span>
 <span class="sd">        to be in the profile, so the actual length is $2L$.</span>
 <span class="sd">    theta : float</span>
 <span class="sd">        Angle to rotate in xy-plane.</span>
@@ -3055,7 +3054,6 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    model : jax.Array</span>
 <span class="sd">        The cylindrical beta model evaluated on the grid.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">transform_grid</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">xyz</span><span class="p">)</span>
     <span class="n">r</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="n">powerlaw</span> <span class="o">=</span> <span class="n">P0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="p">(</span><span class="n">r</span> <span class="o">/</span> <span class="n">r_c</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mf">3.0</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">beta</span><span class="p">)</span>
@@ -3462,7 +3460,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Eliptical gNFW pressure profile in 3d based on Arnaud2010.</span>
 <span class="sd">    r_ell is computed in the usual way for an a10 profile, then the axes are</span>
 <span class="sd">    scaled according to r_1, r_2, r_3, with a normalization applied.</span>
@@ -3565,7 +3563,7 @@ This function does not include smoothing or declination stretch
 which should be applied at the end.</p>
 <p>Once the grid is transformed the profile is computed as:</p>
 <div class="arithmatex">\[
-P_{0} \exp{-rac{x^2 + y^2 + z^2}{2\sigma^2}}
+P_{0} e^{-\frac{x^2 + y^2 + z^2}{2\sigma^2}}
 \]</div>
 <p>where <span class="arithmatex">\(P_{0}\)</span> is <code>amp</code>.</p>
 
@@ -3757,7 +3755,8 @@ See <code>containers.Model.xyz</code> for details.</p>
 
             <details class="quote">
               <summary>Source code in <code>witch/structure.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">445</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">444</span>
+<span class="normal">445</span>
 <span class="normal">446</span>
 <span class="normal">447</span>
 <span class="normal">448</span>
@@ -3823,8 +3822,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="normal">508</span>
 <span class="normal">509</span>
 <span class="normal">510</span>
-<span class="normal">511</span>
-<span class="normal">512</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
+<span class="normal">511</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
 <span class="k">def</span> <span class="nf">egaussian</span><span class="p">(</span>
     <span class="n">dx</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">dy</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
@@ -3837,7 +3835,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">amp</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Elliptical gaussian profile in 3d.</span>
 <span class="sd">    This function does not include smoothing or declination stretch</span>
 <span class="sd">    which should be applied at the end.</span>
@@ -3845,7 +3843,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    Once the grid is transformed the profile is computed as:</span>
 
 <span class="sd">    $$</span>
-<span class="sd">    P_{0} \\exp{-\frac{x^2 + y^2 + z^2}{2\\sigma^2}}</span>
+<span class="sd">    P_{0} e^{-\frac{x^2 + y^2 + z^2}{2\sigma^2}}</span>
 <span class="sd">    $$</span>
 
 <span class="sd">    where $P_{0}$ is `amp`.</span>
@@ -3916,7 +3914,7 @@ awkward and can probably be removed/worked around. Function exists
 to match existing guassian interfaces.</p>
 <p>Once the grid is transformed the profile is computed as:</p>
 <div class="arithmatex">\[
-P_{0} \exp{-rac{x^2 + y^2}{2\sigma^2}}
+P_{0} e^{-\frac{x^2 + y^2}{2\sigma^2}}
 \]</div>
 <p>where <span class="arithmatex">\(P_{0}\)</span> is <code>amp</code>.</p>
 
@@ -4034,7 +4032,8 @@ See <code>containers.Model.xyz</code> for details.</p>
 
             <details class="quote">
               <summary>Source code in <code>witch/structure.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">515</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">514</span>
+<span class="normal">515</span>
 <span class="normal">516</span>
 <span class="normal">517</span>
 <span class="normal">518</span>
@@ -4082,8 +4081,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="normal">560</span>
 <span class="normal">561</span>
 <span class="normal">562</span>
-<span class="normal">563</span>
-<span class="normal">564</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
+<span class="normal">563</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
 <span class="k">def</span> <span class="nf">gaussian</span><span class="p">(</span>
     <span class="n">dx</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">dy</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
@@ -4091,7 +4089,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">amp</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Standard gaussian profile in 2d.</span>
 <span class="sd">    This function does not include smoothing or declination stretch</span>
 <span class="sd">    which should be applied at the end. The transform_grid call is</span>
@@ -4101,7 +4099,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    Once the grid is transformed the profile is computed as:</span>
 
 <span class="sd">    $$</span>
-<span class="sd">    P_{0} \\exp{-\frac{x^2 + y^2}{2\\sigma^2}}</span>
+<span class="sd">    P_{0} e^{-\frac{x^2 + y^2}{2\sigma^2}}</span>
 <span class="sd">    $$</span>
 
 <span class="sd">    where $P_{0}$ is `amp`.</span>
@@ -4156,16 +4154,14 @@ which should be applied at the end.
 TODO: Add units to add parameters!</p>
 <p>Once the grid is transformed the profile is computed as:</p>
 <div class="arithmatex">\[
-rac{P_{500} * P_{0}}{{\left( r^{\gamma}\left( 1 + r^{lpha} 
-ight) 
-ight)}^{rac{eta - \gamma}{lpha}}}
+\dfrac{P_{500} * P_{0}}{{\left( r^{\gamma}\left( 1 + r^{\alpha} \right) \right)}^{\dfrac{\beta - \gamma}{\alpha}}}
 \]</div>
 <p>where:</p>
 <div class="arithmatex">\[
-r = c_{500} \sqrt{x^2 + y^2 + z^2} {rac{3m_{500}}{2000 \pi n_z}}^{-rac{1}{3}}
+r = c_{500} \sqrt{x^2 + y^2 + z^2} {\frac{3m_{500}}{2000 \pi n_z}}^{-\frac{1}{3}}
 \]</div>
 <div class="arithmatex">\[
-P_{500} = 1.65      imes 10^{-3} {rac{m_{500}*h_{70}}{3    imes 10^{14}}}^{rac{2}{3} + ap}{h_z}^{rac{8}{3}}{h_{70}}^2
+P_{500} = 1.65 \times 10^{-3} {\frac{m_{500}*h_{70}}{3 \times 10^{14}}}^{\frac{2}{3} + ap}{h_z}^{\frac{8}{3}}{h_{70}}^2
 \]</div>
 <p><span class="arithmatex">\(n_z\)</span> is the critical density at the cluster redshift and <span class="arithmatex">\(h_z\)</span> is the Hubble constant at the cluster redshift.</p>
 
@@ -4550,7 +4546,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Elliptical gNFW pressure profile in 3d.</span>
 <span class="sd">    This function does not include smoothing or declination stretch</span>
 <span class="sd">    which should be applied at the end.</span>
@@ -4559,13 +4555,13 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    Once the grid is transformed the profile is computed as:</span>
 
 <span class="sd">    $$</span>
-<span class="sd">    \frac{P_{500} * P_{0}}{{\\left( r^{\\gamma}\\left( 1 + r^{\alpha} \right) \right)}^{\frac{\beta - \\gamma}{\alpha}}}</span>
+<span class="sd">    \dfrac{P_{500} * P_{0}}{{\left( r^{\gamma}\left( 1 + r^{\alpha} \right) \right)}^{\dfrac{\beta - \gamma}{\alpha}}}</span>
 <span class="sd">    $$</span>
 
 <span class="sd">    where:</span>
 
 <span class="sd">    $$</span>
-<span class="sd">    r = c_{500} \\sqrt{x^2 + y^2 + z^2} {\frac{3m_{500}}{2000 \\pi n_z}}^{-\frac{1}{3}}</span>
+<span class="sd">    r = c_{500} \sqrt{x^2 + y^2 + z^2} {\frac{3m_{500}}{2000 \pi n_z}}^{-\frac{1}{3}}</span>
 <span class="sd">    $$</span>
 
 <span class="sd">    $$</span>
@@ -4660,10 +4656,9 @@ This function does not include smoothing or declination stretch
 which should be applied at the end.</p>
 <p>Once the grid is transformed the profile is computed as:</p>
 <div class="arithmatex">\[
-P_{0}\left( 1 + x**2 + y**2 + z**2 
-ight)^{-1.5eta}
+P_{0}\left( 1 + x**2 + y**2 + z**2 \right)^{-1.5\beta}
 \]</div>
-<p>where P_{0} is <code>amp</code>.</p>
+<p>where <span class="arithmatex">\(P_{0}\)</span> is <code>amp</code>.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -4934,7 +4929,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">amp</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Elliptical isobeta pressure profile in 3d.</span>
 <span class="sd">    This function does not include smoothing or declination stretch</span>
 <span class="sd">    which should be applied at the end.</span>
@@ -4942,10 +4937,10 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    Once the grid is transformed the profile is computed as:</span>
 
 <span class="sd">    $$</span>
-<span class="sd">    P_{0}\\left( 1 + x**2 + y**2 + z**2 \right)^{-1.5\beta}</span>
+<span class="sd">    P_{0}\left( 1 + x**2 + y**2 + z**2 \right)^{-1.5\beta}</span>
 <span class="sd">    $$</span>
 
-<span class="sd">    where P_{0} is `amp`.</span>
+<span class="sd">    where $P_{0}$ is `amp`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
