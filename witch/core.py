@@ -80,7 +80,7 @@ def stage2_model(
     xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
         Grid to compute model on.
         See `containers.Model.xyz` for details.
-    n_struct : tuple[int, ...]
+    n_structs : tuple[int, ...]
         Number of each structure to use.
         Should be in the same order as `order`.
     dz : float
@@ -165,7 +165,7 @@ def model(
     xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
         Grid to compute model on.
         See `containers.Model.xyz` for details.
-    n_struct : tuple[int, ...]
+    n_structs : tuple[int, ...]
         Number of each structure to use.
         Should be in the same order as `order`.
     dz : float
