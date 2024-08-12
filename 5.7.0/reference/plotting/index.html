@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.30">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.31">
     
     
       
@@ -585,54 +585,274 @@
 
     <div class="doc doc-contents ">
 
-      <p>Function for doing core plotting. TODO: This function could probably use an args/kwargs, but there are an enourmous number of keyword args within so that might be difficult.</p>
+      <p>Function for doing core plotting.
+TODO: This function could probably use an args/kwargs, but there are an enourmous number of keyword args within so that might be difficult.</p>
 
 
-<details class="parameters:" open>
-  <summary>Parameters:</summary>
-  <p>Name : str
-    Name of the cluster
-fits_path : str
-    Path to the fits file to be plotted.
-root : None | str, default: None
-    Path to the output root. If none, then it will assume WITCH output formating.
-pix_size : None | float, default: None
-    Pixel size. If None, then will be computed from results file.
-ra : None | float, default: None
-    RA of center of plot, in degrees. If none, will be taken from config
-dec : None | float, dfault: None
-    Dec of center of plot, in degrees. If none, will be taken from config
-units : str, default: mJy
-    String to be used as units. If snr, then it will autoformat to sigma
-bound : None | float, default: None
-    Bounds for the colormap. If none, reasonable bounds will be computed.
-radius : float, default: 2.0
-    Radius, in arcmin, of figure
-plot_r : bool | str, default: True
-    If true, plot r500. If a str, plot a related critical radius
-figsize : tuple[float, float], default: (5,5)
-    Width and height of plot in inches.
-ncontours : int, default = 0
-    Number of countours to be plotted
-hdu : int, default: 0
-    Fits hdu corresponding to the image to be plotted
-downsample : int, default: 1
-    Factor by which to downsample the image.
-smooth : float, default: 9.0
-    Scale, in arcminutes, at which to smooth the image.
-convention : str, default: calabretta
-    Determines interpretation of abigious fits headers. See aplpy.FITSFigure documentation</p>
-</details>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>name</code></td>
+            <td>
+                  <code>str</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Name of the cluster</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>fits_path</code></td>
+            <td>
+                  <code>str</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to the fits file to be plotted.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>root</code></td>
+            <td>
+                  <code>None | str</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to the output root. If none, then it will assume WITCH output formating.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>pix_size</code></td>
+            <td>
+                  <code>None | float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Pixel size. If None, then will be computed from results file.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>ra</code></td>
+            <td>
+                  <code>None | float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>RA of center of plot, in degrees. If none, will be taken from config</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>dec</code></td>
+            <td>
+                  <code>None | float, dfault: None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Dec of center of plot, in degrees. If none, will be taken from config</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>units</code></td>
+            <td>
+                  <code>str</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>String to be used as units. If snr, then it will autoformat to sigma</p>
+              </div>
+            </td>
+            <td>
+                  <code>mJy</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>bound</code></td>
+            <td>
+                  <code>None | float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Bounds for the colormap. If none, reasonable bounds will be computed.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>radius</code></td>
+            <td>
+                  <code>float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Radius, in arcmin, of figure</p>
+              </div>
+            </td>
+            <td>
+                  <code>2.0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>plot_r</code></td>
+            <td>
+                  <code>bool | str</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If true, plot r500. If a str, plot a related critical radius</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>figsize</code></td>
+            <td>
+                  <code>tuple[float, float]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Width and height of plot in inches.</p>
+              </div>
+            </td>
+            <td>
+                  <code>(5,5)</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>ncontours</code></td>
+            <td>
+                  <code>int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of countours to be plotted</p>
+              </div>
+            </td>
+            <td>
+                  <code>= 0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>hdu</code></td>
+            <td>
+                  <code>int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Fits hdu corresponding to the image to be plotted</p>
+              </div>
+            </td>
+            <td>
+                  <code>0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>downsample</code></td>
+            <td>
+                  <code>int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Factor by which to downsample the image.</p>
+              </div>
+            </td>
+            <td>
+                  <code>1</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>smooth</code></td>
+            <td>
+                  <code>float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Scale, in arcminutes, at which to smooth the image.</p>
+              </div>
+            </td>
+            <td>
+                  <code>9.0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>convention</code></td>
+            <td>
+                  <code>str</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Determines interpretation of abigious fits headers. See aplpy.FITSFigure documentation</p>
+              </div>
+            </td>
+            <td>
+                  <code>calabretta</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-<details class="returns:" open>
-  <summary>Returns:</summary>
-  <p>img: aplpy.FITSFigure
-    FITSFigure plot of the cluster</p>
-</details>
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>img</code></td>            <td>
+                  <code><span title="aplpy.FITSFigure">FITSFigure</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>FITSFigure plot of the cluster</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
             <details class="quote">
               <summary>Source code in <code>witch/plotting.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 19</span>
-<span class="normal"> 20</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 20</span>
 <span class="normal"> 21</span>
 <span class="normal"> 22</span>
 <span class="normal"> 23</span>
@@ -846,30 +1066,33 @@ convention : str, default: calabretta
 <span class="normal">231</span>
 <span class="normal">232</span>
 <span class="normal">233</span>
-<span class="normal">234</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">plot_cluster</span><span class="p">(</span>
-    <span class="n">name</span><span class="p">,</span>
-    <span class="n">fits_path</span><span class="p">,</span>
-    <span class="n">root</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">pix_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">ra</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">dec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">units</span><span class="o">=</span><span class="s2">&quot;mJy&quot;</span><span class="p">,</span>
-    <span class="n">bound</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">radius</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
-    <span class="n">plot_r</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
-    <span class="n">ncontours</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-    <span class="n">hdu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-    <span class="n">downsample</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-    <span class="n">smooth</span><span class="o">=</span><span class="mf">9.0</span><span class="p">,</span>
-    <span class="n">convention</span><span class="o">=</span><span class="s2">&quot;calabretta&quot;</span><span class="p">,</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">plot_cluster</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">fits_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">root</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">pix_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">ra</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">dec</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">units</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;mJy&quot;</span><span class="p">,</span>
+    <span class="n">bound</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span>
+    <span class="n">plot_r</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+    <span class="n">ncontours</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">hdu</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">downsample</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">smooth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">9.0</span><span class="p">,</span>
+    <span class="n">convention</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;calabretta&quot;</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Function for doing core plotting. TODO: This function could probably use an args/kwargs, but there are an enourmous number of keyword args within so that might be difficult.</span>
+<span class="sd">    Function for doing core plotting.</span>
+<span class="sd">    TODO: This function could probably use an args/kwargs, but there are an enourmous number of keyword args within so that might be difficult.</span>
 
-<span class="sd">    Parameters:</span>
-<span class="sd">    -----------</span>
-<span class="sd">    Name : str</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    name : str</span>
 <span class="sd">        Name of the cluster</span>
 <span class="sd">    fits_path : str</span>
 <span class="sd">        Path to the fits file to be plotted.</span>
@@ -902,8 +1125,8 @@ convention : str, default: calabretta
 <span class="sd">    convention : str, default: calabretta</span>
 <span class="sd">        Determines interpretation of abigious fits headers. See aplpy.FITSFigure documentation</span>
 
-<span class="sd">    Returns:</span>
-<span class="sd">    --------</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
 <span class="sd">    img: aplpy.FITSFigure</span>
 <span class="sd">        FITSFigure plot of the cluster</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1079,53 +1302,260 @@ convention : str, default: calabretta
 
     <div class="doc doc-contents ">
 
-      <p>Function for doing core plotting. TODO: This function could probably use an args/kwargs, but there are an enourmous number of keyword args within so that might be difficult.</p>
+      <p>Function for doing core plotting.
+TODO: This function could probably use an args/kwargs, but there are an enourmous number of keyword args within so that might be difficult.</p>
 
 
-<details class="parameters:" open>
-  <summary>Parameters:</summary>
-  <p>Name : str
-    Name of the cluster
-fits_path : str
-    Path to the fits file to be plotted.
-cfg_path : None | str, default: None
-    Path to WITCH config file corresponding to same cluster
-ra : None | float, default: None
-    RA of center of plot, in degrees. If none, will be taken from config
-dec : None | float, dfault: None
-    Dec of center of plot, in degrees. If none, will be taken from config
-units : str, default: mJy
-    String to be used as units. If snr, then it will autoformat to sigma
-bound : None | float, default: None
-    Bounds for the colormap. If none, reasonable bounds will be computed.
-radius : float, default: 2.0
-    Radius, in arcmin, of figure
-plot_r : bool | str, default: True
-    If true, plot r500. If a str, plot a related critical radius
-figsize : tuple[float, float], default: (5,5)
-    Width and height of plot in inches.
-ncontours : int, default = 0
-    Number of countours to be plotted
-hdu : int, default: 0
-    Fits hdu corresponding to the image to be plotted
-downsample : int, default: 1
-    Factor by which to downsample the image.
-smooth : float, default: 9.0
-    Scale, in arcminutes, at which to smooth the image.
-convention : str, default: calabretta
-    Determines interpretation of abigious fits headers. See aplpy.FITSFigure documentation</p>
-</details>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>Name</code></td>
+            <td>
+                  <code>str</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Name of the cluster</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>fits_path</code></td>
+            <td>
+                  <code>str</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to the fits file to be plotted.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>cfg_path</code></td>
+            <td>
+                  <code>None | str</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to WITCH config file corresponding to same cluster</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>ra</code></td>
+            <td>
+                  <code>None | float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>RA of center of plot, in degrees. If none, will be taken from config</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>dec</code></td>
+            <td>
+                  <code>None | float, dfault: None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Dec of center of plot, in degrees. If none, will be taken from config</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>units</code></td>
+            <td>
+                  <code>str</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>String to be used as units. If snr, then it will autoformat to sigma</p>
+              </div>
+            </td>
+            <td>
+                  <code>mJy</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>bound</code></td>
+            <td>
+                  <code>None | float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Bounds for the colormap. If none, reasonable bounds will be computed.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>radius</code></td>
+            <td>
+                  <code>float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Radius, in arcmin, of figure</p>
+              </div>
+            </td>
+            <td>
+                  <code>2.0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>plot_r</code></td>
+            <td>
+                  <code>bool | str</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If true, plot r500. If a str, plot a related critical radius</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>figsize</code></td>
+            <td>
+                  <code>tuple[float, float]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Width and height of plot in inches.</p>
+              </div>
+            </td>
+            <td>
+                  <code>(5,5)</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>ncontours</code></td>
+            <td>
+                  <code>int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of countours to be plotted</p>
+              </div>
+            </td>
+            <td>
+                  <code>= 0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>hdu</code></td>
+            <td>
+                  <code>int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Fits hdu corresponding to the image to be plotted</p>
+              </div>
+            </td>
+            <td>
+                  <code>0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>downsample</code></td>
+            <td>
+                  <code>int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Factor by which to downsample the image.</p>
+              </div>
+            </td>
+            <td>
+                  <code>1</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>smooth</code></td>
+            <td>
+                  <code>float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Scale, in arcminutes, at which to smooth the image.</p>
+              </div>
+            </td>
+            <td>
+                  <code>60.0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>convention</code></td>
+            <td>
+                  <code>str</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Determines interpretation of abigious fits headers. See aplpy.FITSFigure documentation</p>
+              </div>
+            </td>
+            <td>
+                  <code>calabretta</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-<details class="returns:" open>
-  <summary>Returns:</summary>
-  <p>img: aplpy.FITSFigure
-    FITSFigure plot of the cluster</p>
-</details>
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>img</code></td>            <td>
+                  <code><span title="aplpy.FITSFigure">FITSFigure</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>FITSFigure plot of the cluster</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
             <details class="quote">
               <summary>Source code in <code>witch/plotting.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">237</span>
-<span class="normal">238</span>
-<span class="normal">239</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">239</span>
 <span class="normal">240</span>
 <span class="normal">241</span>
 <span class="normal">242</span>
@@ -1326,28 +1756,32 @@ convention : str, default: calabretta
 <span class="normal">437</span>
 <span class="normal">438</span>
 <span class="normal">439</span>
-<span class="normal">440</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">plot_cluster_act</span><span class="p">(</span>
-    <span class="n">name</span><span class="p">,</span>
-    <span class="n">fits_path</span><span class="p">,</span>
-    <span class="n">cfg_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">ra</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">dec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">units</span><span class="o">=</span><span class="s2">&quot;mJy&quot;</span><span class="p">,</span>
-    <span class="n">bound</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">radius</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
-    <span class="n">plot_r</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
-    <span class="n">ncontours</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-    <span class="n">hdu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-    <span class="n">downsample</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-    <span class="n">smooth</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span>
-    <span class="n">convention</span><span class="o">=</span><span class="s2">&quot;calabretta&quot;</span><span class="p">,</span>
+<span class="normal">440</span>
+<span class="normal">441</span>
+<span class="normal">442</span>
+<span class="normal">443</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">plot_cluster_act</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">fits_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">cfg_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">ra</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">dec</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">units</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;mJy&quot;</span><span class="p">,</span>
+    <span class="n">bound</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span>
+    <span class="n">plot_r</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+    <span class="n">ncontours</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">hdu</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">downsample</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">smooth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">60.0</span><span class="p">,</span>
+    <span class="n">convention</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;calabretta&quot;</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Function for doing core plotting. TODO: This function could probably use an args/kwargs, but there are an enourmous number of keyword args within so that might be difficult.</span>
+<span class="sd">    Function for doing core plotting.</span>
+<span class="sd">    TODO: This function could probably use an args/kwargs, but there are an enourmous number of keyword args within so that might be difficult.</span>
 
-<span class="sd">    Parameters:</span>
-<span class="sd">    -----------</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
 <span class="sd">    Name : str</span>
 <span class="sd">        Name of the cluster</span>
 <span class="sd">    fits_path : str</span>
@@ -1374,13 +1808,13 @@ convention : str, default: calabretta
 <span class="sd">        Fits hdu corresponding to the image to be plotted</span>
 <span class="sd">    downsample : int, default: 1</span>
 <span class="sd">        Factor by which to downsample the image.</span>
-<span class="sd">    smooth : float, default: 9.0</span>
+<span class="sd">    smooth : float, default: 60.0</span>
 <span class="sd">        Scale, in arcminutes, at which to smooth the image.</span>
 <span class="sd">    convention : str, default: calabretta</span>
 <span class="sd">        Determines interpretation of abigious fits headers. See aplpy.FITSFigure documentation</span>
 
-<span class="sd">    Returns:</span>
-<span class="sd">    --------</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
 <span class="sd">    img: aplpy.FITSFigure</span>
 <span class="sd">        FITSFigure plot of the cluster</span>
 <span class="sd">    &quot;&quot;&quot;</span>

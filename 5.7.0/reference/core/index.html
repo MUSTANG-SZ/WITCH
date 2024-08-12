@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.30">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.31">
     
     
       
@@ -816,7 +816,7 @@ Has shape <code>(len(pars),) + model.shape)</code>.</p>
 
 
 <h2 id="witch.core.stage2_model" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">stage2_model</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">n_structs</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="n">beam</span><span class="p">,</span> <span class="o">*</span><span class="n">params</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">stage2_model</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">n_structs</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="n">beam</span><span class="p">,</span> <span class="o">*</span><span class="n">pars</span><span class="p">)</span></code>
 
 </h2>
 
@@ -825,23 +825,118 @@ Has shape <code>(len(pars),) + model.shape)</code>.</p>
 
       <p>Only returns the second stage of the model. Used for visualizing shocks, etc.
 that can otherwise be hard to see in a model plot</p>
-<p>Arguments:</p>
-<pre><code>xyz: Coordinate grid to compute profile on.
 
-n_struct: Number of each structure to use.
-          Should be in the same order as `order`.
 
-dz: Factor to scale by while integrating.
-    Since it is a global factor it can contain unit conversions.
-    Historically equal to y2K_RJ * dr * da * XMpc / me.
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>xyz</code></td>
+            <td>
+                  <code>tuple[<span title="jax.Array">Array</span>, <span title="jax.Array">Array</span>, <span title="jax.Array">Array</span>, float, float]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Grid to compute model on.
+See <code>containers.Model.xyz</code> for details.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>n_struct</code></td>
+            <td>
+                  <code>tuple[int, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of each structure to use.
+Should be in the same order as <code>order</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>dz</code></td>
+            <td>
+                  <code>float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Factor to scale by while integrating.
+Should at least include the pixel size along the LOS.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>beam</code></td>
+            <td>
+                  <code><span title="jax.Array">Array</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Beam to convolve by, should be a 2d array.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>*pars</code></td>
+            <td>
+                  <code><span title="typing_extensions.Unpack">Unpack</span>[tuple[float, ...]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>1D container of model parameters.</p>
+              </div>
+            </td>
+            <td>
+                  <code>()</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-beam: Beam to convolve by, should be a 2d array.
 
-params: 1D array of model parameters.
-</code></pre>
-<p>Returns:</p>
-<pre><code>model: The model with the specified substructure evaluated on the grid.
-</code></pre>
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>model</code></td>            <td>
+                  <code><span title="jax.Array">Array</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The model with the specified substructure evaluated on the grid.
+No stage 3 structures are included.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
             <details class="quote">
               <summary>Source code in <code>witch/core.py</code></summary>
@@ -925,37 +1020,43 @@ params: 1D array of model parameters.
 <span class="normal">144</span>
 <span class="normal">145</span>
 <span class="normal">146</span>
-<span class="normal">147</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">stage2_model</span><span class="p">(</span>
-    <span class="n">xyz</span><span class="p">,</span>
-    <span class="n">n_structs</span><span class="p">,</span>
-    <span class="n">dz</span><span class="p">,</span>
-    <span class="n">beam</span><span class="p">,</span>
-    <span class="o">*</span><span class="n">params</span><span class="p">,</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">stage2_model</span><span class="p">(</span>
+    <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">n_structs</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+    <span class="n">dz</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">beam</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span>
+    <span class="o">*</span><span class="n">pars</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]],</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Only returns the second stage of the model. Used for visualizing shocks, etc.</span>
 <span class="sd">    that can otherwise be hard to see in a model plot</span>
 
-<span class="sd">    Arguments:</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]</span>
+<span class="sd">        Grid to compute model on.</span>
+<span class="sd">        See `containers.Model.xyz` for details.</span>
+<span class="sd">    n_struct : tuple[int, ...]</span>
+<span class="sd">        Number of each structure to use.</span>
+<span class="sd">        Should be in the same order as `order`.</span>
+<span class="sd">    dz : float</span>
+<span class="sd">        Factor to scale by while integrating.</span>
+<span class="sd">        Should at least include the pixel size along the LOS.</span>
+<span class="sd">    beam : jax.Array</span>
+<span class="sd">        Beam to convolve by, should be a 2d array.</span>
+<span class="sd">    *pars : Unpack[tuple[float,...]]</span>
+<span class="sd">        1D container of model parameters.</span>
 
-<span class="sd">        xyz: Coordinate grid to compute profile on.</span>
-
-<span class="sd">        n_struct: Number of each structure to use.</span>
-<span class="sd">                  Should be in the same order as `order`.</span>
-
-<span class="sd">        dz: Factor to scale by while integrating.</span>
-<span class="sd">            Since it is a global factor it can contain unit conversions.</span>
-<span class="sd">            Historically equal to y2K_RJ * dr * da * XMpc / me.</span>
-
-<span class="sd">        beam: Beam to convolve by, should be a 2d array.</span>
-
-<span class="sd">        params: 1D array of model parameters.</span>
-
-<span class="sd">    Returns:</span>
-
-<span class="sd">        model: The model with the specified substructure evaluated on the grid.</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    model : jax.Array</span>
+<span class="sd">        The model with the specified substructure evaluated on the grid.</span>
+<span class="sd">        No stage 3 structures are included.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">params</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span>
     <span class="n">params</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>  <span class="c1"># Fixes strange bug with params having dim (1,n)</span>
 
     <span class="n">pressure</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">xyz</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">xyz</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">xyz</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
