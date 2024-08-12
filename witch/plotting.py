@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import aplpy
 import astropy.units as u
@@ -17,29 +18,30 @@ from .utils import get_da, get_nz, rad_to_arcsec
 
 
 def plot_cluster(
-    name,
-    fits_path,
-    root=None,
-    pix_size=None,
-    ra=None,
-    dec=None,
-    units="mJy",
-    bound=None,
-    radius=2.0,
-    plot_r=True,
-    figsize=(5, 5),
-    ncontours=0,
-    hdu=0,
-    downsample=1,
-    smooth=9.0,
-    convention="calabretta",
+    name: str,
+    fits_path: str,
+    root: Optional[str] = None,
+    pix_size: Optional[float] = None,
+    ra: Optional[float] = None,
+    dec: Optional[float] = None,
+    units: str = "mJy",
+    bound: Optional[float] = None,
+    radius: float = 2.0,
+    plot_r: bool | str = True,
+    figsize: tuple[float, float] = (5, 5),
+    ncontours: int = 0,
+    hdu: int = 0,
+    downsample: int = 1,
+    smooth: float = 9.0,
+    convention: str = "calabretta",
 ):
     """
-    Function for doing core plotting. TODO: This function could probably use an args/kwargs, but there are an enourmous number of keyword args within so that might be difficult.
+    Function for doing core plotting.
+    TODO: This function could probably use an args/kwargs, but there are an enourmous number of keyword args within so that might be difficult.
 
-    Parameters:
-    -----------
-    Name : str
+    Parameters
+    ----------
+    name : str
         Name of the cluster
     fits_path : str
         Path to the fits file to be plotted.
@@ -72,8 +74,8 @@ def plot_cluster(
     convention : str, default: calabretta
         Determines interpretation of abigious fits headers. See aplpy.FITSFigure documentation
 
-    Returns:
-    --------
+    Returns
+    -------
     img: aplpy.FITSFigure
         FITSFigure plot of the cluster
     """
@@ -235,27 +237,28 @@ def plot_cluster(
 
 
 def plot_cluster_act(
-    name,
-    fits_path,
-    cfg_path=None,
-    ra=None,
-    dec=None,
-    units="mJy",
-    bound=None,
-    radius=2.0,
-    plot_r=True,
-    figsize=(5, 5),
-    ncontours=0,
-    hdu=0,
-    downsample=1,
-    smooth=60.0,
-    convention="calabretta",
+    name: str,
+    fits_path: str,
+    cfg_path: Optional[str] = None,
+    ra: Optional[float] = None,
+    dec: Optional[float] = None,
+    units: str = "mJy",
+    bound: Optional[float] = None,
+    radius: float = 2.0,
+    plot_r: bool | str = True,
+    figsize: tuple[float, float] = (5, 5),
+    ncontours: int = 0,
+    hdu: int = 0,
+    downsample: int = 1,
+    smooth: float = 60.0,
+    convention: str = "calabretta",
 ):
     """
-    Function for doing core plotting. TODO: This function could probably use an args/kwargs, but there are an enourmous number of keyword args within so that might be difficult.
+    Function for doing core plotting.
+    TODO: This function could probably use an args/kwargs, but there are an enourmous number of keyword args within so that might be difficult.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     Name : str
         Name of the cluster
     fits_path : str
@@ -282,13 +285,13 @@ def plot_cluster_act(
         Fits hdu corresponding to the image to be plotted
     downsample : int, default: 1
         Factor by which to downsample the image.
-    smooth : float, default: 9.0
+    smooth : float, default: 60.0
         Scale, in arcminutes, at which to smooth the image.
     convention : str, default: calabretta
         Determines interpretation of abigious fits headers. See aplpy.FITSFigure documentation
 
-    Returns:
-    --------
+    Returns
+    -------
     img: aplpy.FITSFigure
         FITSFigure plot of the cluster
     """

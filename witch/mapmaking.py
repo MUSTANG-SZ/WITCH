@@ -144,6 +144,7 @@ def get_grad_prior(
         Additional arguments to pass to get_grad_mask_2d.
     **kwargs
         Keyword arguments to pass to get_grad_mask_2d.
+
     Returns
     -------
     new_mapset : minkasi.maps.Mapset
