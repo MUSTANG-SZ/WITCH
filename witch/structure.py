@@ -13,47 +13,92 @@ from .utils import ap, get_da, get_hz, get_nz, h70, transform_grid
 
 
 @jax.jit
-def gnfw(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z, xyz):
+def gnfw(
+    dx: float,
+    dy: float,
+    dz: float,
+    r_1: float,
+    r_2: float,
+    r_3: float,
+    theta: float,
+    P0: float,
+    c500: float,
+    m500: float,
+    gamma: float,
+    alpha: float,
+    beta: float,
+    z: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
     """
     Elliptical gNFW pressure profile in 3d.
     This function does not include smoothing or declination stretch
     which should be applied at the end.
+    TODO: Add units to add parameters!
 
-    Arguments:
+    Once the grid is transformed the profile is computed as:
 
-        dx: RA of cluster center relative to grid origin
+    $$
+    \frac{P_{500} * P_{0}}{{\\left( r^{\\gamma}\\left( 1 + r^{\alpha} \right) \right)}^{\frac{\beta - \\gamma}{\alpha}}}
+    $$
 
-        dy: Dec of cluster center relative to grid origin
+    where:
 
-        dz: Line of sight offset of cluster center relative to grid origin
+    $$
+    r = c_{500} \\sqrt{x^2 + y^2 + z^2} {\frac{3m_{500}}{2000 \\pi n_z}}^{-\frac{1}{3}}
+    $$
 
-        r_1: Amount to scale along x-axis
+    $$
+    P_{500} = 1.65 \times 10^{-3} {\frac{m_{500}*h_{70}}{3 \times 10^{14}}}^{\frac{2}{3} + ap}{h_z}^{\frac{8}{3}}{h_{70}}^2
+    $$
 
-        r_2: Amount to scale along y-axis
+    $n_z$ is the critical density at the cluster redshift and $h_z$ is the Hubble constant at the cluster redshift.
 
-        r_3: Amount to scale along z-axis
+    Parameters
+    ----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    r_1 : float
+        Amount to scale along x-axis.
+        Passed to `utils.transform_grid`.
+    r_2 : float
+        Amount to scale along y-axis.
+        Passed to `utils.transform_grid`.
+    r_3 : float
+        Amount to scale along z-axis.
+        Passed to `utils.transform_grid`.
+    theta : float
+        Angle to rotate in xy-plane.
+        Passed to `utils.transform_grid`.
+    P0 : float
+        Amplitude of the pressure profile.
+    c500 : float
+        Concentration parameter at a density contrast of 500.
+    m500 : float
+        Mass at a density contrast of 500.
+    gamma : float
+        The central slope.
+    alpha : float
+        The intermediate slope.
+    beta : float
+        The outer slope.
+    z : float
+        Redshift of cluster.
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
 
-        theta: Angle to rotate in xy-plane
-
-        P0: Amplitude of the pressure profile
-
-        c500: Concentration parameter at a density contrast of 500
-
-        m500: Mass at a density contrast of 500
-
-        gamma: The central slope
-
-        alpha: The intermediate slope
-
-        beta: The outer slope
-
-        z: Redshift of cluster
-
-        xyz: Coordinte grid to calculate model on
-
-    Returns:
-
-        model: The gnfw model
+    Returns
+    -------
+    model : jax.Array
+        The gnfw model evaluated on the grid.
     """
     nz = get_nz(z)
     hz = get_hz(z)
@@ -76,42 +121,64 @@ def gnfw(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z
 
 
 @jax.jit
-def a10(dx, dy, dz, theta, P0, c500, m500, gamma, alpha, beta, z, xyz):
+def a10(
+    dx: float,
+    dy: float,
+    dz: float,
+    theta: float,
+    P0: float,
+    c500: float,
+    m500: float,
+    gamma: float,
+    alpha: float,
+    beta: float,
+    z: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
     """
-    gNFW pressure profile in 3d based on Arnaud2010.
+    gNFW pressure profile in 3d based on [Arnaud2010](https://ui.adsabs.harvard.edu/abs/2010A%26A...517A..92A/).
     Compared to the function gnfw, this function fixes r1/r2/r3 to r500.
     This function does not include smoothing or declination stretch
     which should be applied at the end.
 
-    Arguments:
+    See the docstring for `gnfw` for more details.
 
-        dx: RA of cluster center relative to grid origin
+    Parameters
+    ----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    theta : float
+        Angle to rotate in xy-plane.
+        Passed to `utils.transform_grid`.
+    P0 : float
+        Amplitude of the pressure profile
+    c500 : float
+        Concentration parameter at a density contrast of 500
+    m500 : float
+        Mass at a density contrast of 500
+    gamma : float
+        The central slope
+    alpha : float
+        The intermediate slope
+    beta : float
+        The outer slope
+    z : float
+        Redshift of cluster
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
 
-        dy: Dec of cluster center relative to grid origin
-
-        dz: Line of sight offset of cluster center relative to grid origin
-
-        theta: Angle to rotate in xy-plane
-
-        P0: Amplitude of the pressure profile
-
-        c500: Concentration parameter at a density contrast of 500
-
-        m500: Mass at a density contrast of 500
-
-        gamma: The central slope
-
-        alpha: The intermediate slope
-
-        beta: The outer slope
-
-        z: Redshift of cluster
-
-        xyz: Coordinte grid to calculate model on
-
-    Returns:
-
-        model: The gnfw model
+    Returns
+    -------
+    model : jax.Array
+        The gnfw model evaluated on the grid.
     """
 
     nz = get_nz(z)
@@ -137,7 +204,23 @@ def a10(dx, dy, dz, theta, P0, c500, m500, gamma, alpha, beta, z, xyz):
 
 
 @jax.jit
-def ea10(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z, xyz):
+def ea10(
+    dx: float,
+    dy: float,
+    dz: float,
+    r_1: float,
+    r_2: float,
+    r_3: float,
+    theta: float,
+    P0: float,
+    c500: float,
+    m500: float,
+    gamma: float,
+    alpha: float,
+    beta: float,
+    z: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
     """
     Eliptical gNFW pressure profile in 3d based on Arnaud2010.
     r_ell is computed in the usual way for an a10 profile, then the axes are
@@ -145,41 +228,54 @@ def ea10(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z
     This function does not include smoothing or declination stretch
     which should be applied at the end.
 
-    Arguments:
+    See the docstring for `gnfw` for more details.
 
-        dx: RA of cluster center relative to grid origin
+    Parameters
+    ----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    r_1 : float
+        Amount to scale along x-axis.
+        Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
+        Passed to `utils.transform_grid`.
+    r_2 : float
+        Amount to scale along y-axis.
+        Passed to `utils.transform_grid`.
+    r_3 : float
+        Amount to scale along z-axis.
+        Passed to `utils.transform_grid`.
+    theta : float
+        Angle to rotate in xy-plane.
+        Passed to `utils.transform_grid`.
+    P0 : float
+        Amplitude of the pressure profile
+    c500 : float
+        Concentration parameter at a density contrast of 500
+    m500 : float
+        Mass at a density contrast of 500
+    gamma : float
+        The central slope
+    alpha : float
+        The intermediate slope
+    beta : float
+        The outer slope
+    z : float
+        Redshift of cluster
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
 
-        dy: Dec of cluster center relative to grid origin
-
-        dz: Line of sight offset of cluster center relative to grid origin
-
-        r_1: X-axis scaling. Units are arbitrary, only radio of r_1/r_2, r_1/r_3, r_2/r_3 matters
-
-        r_2: Y-axis scaling.
-
-        r_3: Z-axis scaling.
-
-        theta: Angle to rotate in xy-plane
-
-        P0: Amplitude of the pressure profile
-
-        c500: Concentration parameter at a density contrast of 500
-
-        m500: Mass at a density contrast of 500
-
-        gamma: The central slope
-
-        alpha: The intermediate slope
-
-        beta: The outer slope
-
-        z: Redshift of cluster
-
-        xyz: Coordinte grid to calculate model on
-
-    Returns:
-
-        model: The gnfw model
+    Returns
+    -------
+    model : jax.Array
+        The gnfw model evaluated on the grid.
     """
     nz = get_nz(z)
     hz = get_hz(z)
@@ -209,37 +305,66 @@ def ea10(dx, dy, dz, r_1, r_2, r_3, theta, P0, c500, m500, gamma, alpha, beta, z
 
 
 @jax.jit
-def isobeta(dx, dy, dz, r_1, r_2, r_3, theta, beta, amp, xyz):
+def isobeta(
+    dx: float,
+    dy: float,
+    dz: float,
+    r_1: float,
+    r_2: float,
+    r_3: float,
+    theta: float,
+    beta: float,
+    amp: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
     """
     Elliptical isobeta pressure profile in 3d.
     This function does not include smoothing or declination stretch
     which should be applied at the end.
 
-    Arguments:
+    Once the grid is transformed the profile is computed as:
 
-        dx: RA of cluster center relative to grid origin
+    $$
+    P_{0}\\left( 1 + x**2 + y**2 + z**2 \right)^{-1.5\beta}
+    $$
 
-        dy: Dec of cluster center relative to grid origin
+    where P_{0} is `amp`.
 
-        dz: Line of sight offset of cluster center relative to grid origin
+    Parameters
+    ----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    r_1 : float
+        Amount to scale along x-axis.
+        Passed to `utils.transform_grid`.
+    r_2 : float
+        Amount to scale along y-axis.
+        Passed to `utils.transform_grid`.
+    r_3 : float
+        Amount to scale along z-axis.
+        Passed to `utils.transform_grid`.
+    theta : float
+        Angle to rotate in xy-plane.
+        Passed to `utils.transform_grid`.
+    beta : float
+        Beta value of isobeta model.
+    amp : float
+        Amplitude of isobeta model.
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
 
-        r_1: Amount to scale along x-axis
-
-        r_2: Amount to scale along y-axis
-
-        r_3: Amount to scale along z-axis
-
-        theta: Angle to rotate in xy-plane
-
-        beta: Beta value of isobeta model
-
-        amp: Amplitude of isobeta model
-
-        xyz: Coordinte grid to calculate model on
-
-    Returns:
-
-        model: The isobeta model
+    Returns
+    -------
+    model : Array
+        The jax.isobeta model evaluated on the grid.
     """
     x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
@@ -251,47 +376,61 @@ def isobeta(dx, dy, dz, r_1, r_2, r_3, theta, beta, amp, xyz):
 
 
 @jax.jit
-def cylindrical_beta(dx, dy, dz, L, theta, P0, r_c, beta, xyz):
+def cylindrical_beta(
+    dx: float,
+    dy: float,
+    dz: float,
+    L: float,
+    theta: float,
+    P0: float,
+    r_c: float,
+    beta: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
     """
 
     This function does not include smoothing or declination stretch
     which should be applied at the end.
 
-    Arguments:
+    Once the grid is transformed the profile is computed as:
 
-        dx: RA of cluster center relative to grid origin
+    $$
+    P_{0}\\left( 1 + \frac{y^2 + z^2}{{r_c}^2} \right)^{-1.5\beta}
+    $$
 
-        dy: Dec of cluster center relative to grid origin
+    Parameters
+    ----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    L : float
+        Length of the cylinder.
+        Aligned with the x-axis.
+        Note that we consider anything where $\\left| x \right| \\leq L$
+        to be in the profile, so the actual length is $2L$.
+    theta : float
+        Angle to rotate in xy-plane.
+        Passed to `utils.transform_grid`.
+    P0 : float
+        Amplitude of the pressure profile.
+    r_c : float
+        The critical radius of the cylindrical profile.
+    beta : float
+        Beta value of isobeta model.
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
 
-        dz: Line of sight offset of cluster center relative to grid origin
-
-
-
-
-
-
-
-        theta: Angle to rotate in xy-plane
-
-        P0: Amplitude of the pressure profile
-
-
-
-
-
-
-
-
-
-        beta: The outer slope
-
-
-
-        xyz: Coordinte grid to calculate model on
-
-    Returns:
-
-        model: The gnfw model
+    Returns
+    -------
+    model : jax.Array
+        The cylindrical beta model evaluated on the grid.
     """
 
     x, y, z = transform_grid(dx, dy, dz, 1.0, 1.0, 1.0, theta, xyz)
@@ -304,37 +443,66 @@ def cylindrical_beta(dx, dy, dz, L, theta, P0, r_c, beta, xyz):
 
 
 @jax.jit
-def egaussian(dx, dy, dz, r_1, r_2, r_3, theta, sigma, amp, xyz):
+def egaussian(
+    dx: float,
+    dy: float,
+    dz: float,
+    r_1: float,
+    r_2: float,
+    r_3: float,
+    theta: float,
+    sigma: float,
+    amp: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
     """
     Elliptical gaussian profile in 3d.
     This function does not include smoothing or declination stretch
     which should be applied at the end.
 
-    Arguments:
+    Once the grid is transformed the profile is computed as:
 
-        dx: RA of gaussian center relative to grid origin
+    $$
+    P_{0} \\exp{-\frac{x^2 + y^2 + z^2}{2\\sigma^2}}
+    $$
 
-        dy: Dec of gaussian center relative to grid origin
+    where $P_{0}$ is `amp`.
 
-        dz: Line of sight offset of gaussian center relative to grid origin
+    Parameters
+    ----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    r_1 : float
+        Amount to scale along x-axis.
+        Passed to `utils.transform_grid`.
+    r_2 : float
+        Amount to scale along y-axis.
+        Passed to `utils.transform_grid`.
+    r_3 : float
+        Amount to scale along z-axis.
+        Passed to `utils.transform_grid`.
+    theta : float
+        Angle to rotate in xy-plane.
+        Passed to `utils.transform_grid`.
+    sigma : float
+        Sigma value of gaussian model.
+    amp : float
+        Amplitude of gaussian model.
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
 
-        r_1: Amount to scale along x-axis
-
-        r_2: Amount to scale along y-axis
-
-        r_3: Amount to scale along z-axis
-
-        theta: Angle to rotate in xy-plane
-
-        sigma: Sigma of the gaussian
-
-        amp: Amplitude of the gaussian
-
-        xyz: Coordinte grid to calculate model on
-
-    Returns:
-
-        model: The gaussian
+    Returns
+    -------
+    model : jax.Array
+        The gaussain model evaluated on the grid.
     """
     x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
@@ -345,31 +513,51 @@ def egaussian(dx, dy, dz, r_1, r_2, r_3, theta, sigma, amp, xyz):
 
 
 @jax.jit
-def gaussian(dx, dy, sigma, amp, xyz):
+def gaussian(
+    dx: float,
+    dy: float,
+    sigma: float,
+    amp: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
     """
-    Standard gaussian profile in 3d.
+    Standard gaussian profile in 2d.
     This function does not include smoothing or declination stretch
     which should be applied at the end. The transform_grid call is
     awkward and can probably be removed/worked around. Function exists
     to match existing guassian interfaces.
 
-    Arguments:
+    Once the grid is transformed the profile is computed as:
 
-        dx: RA of gaussian center relative to grid origin
+    $$
+    P_{0} \\exp{-\frac{x^2 + y^2}{2\\sigma^2}}
+    $$
 
-        dy: Dec of gaussian center relative to grid origin
+    where $P_{0}$ is `amp`.
 
-        sigma: The effective, beam-convolved half-width of the point source.
+    Parameters
+    ----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    sigma : float
+        Sigma value of gaussian model.
+    amp : float
+        Amplitude of gaussian model.
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        We only care about x and y here.
+        See `containers.Model.xyz` for details.
 
-        amp: Amplitude of the gaussian
-
-        xyz: Coordinte grid to calculate model on
-
-    Returns:
-
-        model: The gaussian
+    Returns
+    -------
+    model : jax.Array
+        The gaussian model evaluated on only the 2d xy grid.
     """
-    x, y, z = transform_grid(dx, dy, 0, 1, 1, 1, 0, xyz)
+    x, y, _ = transform_grid(dx, dy, 0, 1, 1, 1, 0, xyz)
     rr = x[..., 0] ** 2 + y[..., 0] ** 2
     power = -1 * rr / (2 * sigma**2)
 
@@ -377,35 +565,60 @@ def gaussian(dx, dy, sigma, amp, xyz):
 
 
 @jax.jit
-def add_uniform(pressure, xyz, dx, dy, dz, r_1, r_2, r_3, theta, amp):
-    """
+def add_uniform(
+    pressure: jax.Array,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    dx: float,
+    dy: float,
+    dz: float,
+    r_1: float,
+    r_2: float,
+    r_3: float,
+    theta: float,
+    amp: float,
+) -> jax.Array:
+    r"""
     Add ellipsoid with uniform structure to 3d pressure profile.
 
-    Arguments:
+    After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$
+    will be multiplied by a factor of $1 + amp$.
 
-        pressure: The pressure profile
+    Parameters
+    ----------
+    pressure : jax.Array
+        The pressure profile to modify with this ellipsoid.
+        Should be evaluated on the same grid as `xyz`.
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    r_1 : float
+        Amount to scale along x-axis.
+        Passed to `utils.transform_grid`.
+    r_2 : float
+        Amount to scale along y-axis.
+        Passed to `utils.transform_grid`.
+    r_3 : float
+        Amount to scale along z-axis.
+        Passed to `utils.transform_grid`.
+    theta : float
+        Angle to rotate in xy-plane.
+        Passed to `utils.transform_grid`.
+    amp : float
+        Factor by which pressure is enhanced within the ellipsoid.
 
-        xyz: Coordinate grids, see make_grid for details
-
-        dx: RA of ellipsoid center relative to grid origin
-
-        dy: Dec of ellipsoid center relative to grid origin
-
-        dz: Line of sight offset of ellipsoid center relative to grid origin
-
-        r_1: Amount to scale ellipsoid along x-axis
-
-        r_2: Amount to scale ellipsoid along y-axis
-
-        r_3: Amount to scale ellipsoid along z-axis
-
-        theta: Angle to rotate ellipsoid in xy-plane
-
-        amp: Factor by which pressure is enhanced at peak of exponential
-
-    Returns:
-
-        new_pressure: Pressure profile with ellipsoid added
+    Returns
+    -------
+    new_pressure : Array
+        Pressure profile with ellipsoid added.
     """
     x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
@@ -417,51 +630,80 @@ def add_uniform(pressure, xyz, dx, dy, dz, r_1, r_2, r_3, theta, amp):
 
 @jax.jit
 def add_exponential(
-    pressure, xyz, dx, dy, dz, r_1, r_2, r_3, theta, amp, xk, x0, yk, y0, zk, z0
-):
-    """
+    pressure: jax.Array,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    dx: float,
+    dy: float,
+    dz: float,
+    r_1: float,
+    r_2: float,
+    r_3: float,
+    theta: float,
+    amp: float,
+    xk: float,
+    x0: float,
+    yk: float,
+    y0: float,
+    zk: float,
+    z0: float,
+) -> jax.Array:
+    r"""
     Add ellipsoid with exponential structure to 3d pressure profile.
 
-    Arguments:
+    After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$
+    will be multiplied by a factor of $1 + amp\exp{x_k(x-x_0) + y_k(y-y_0) + z_k(z-z_0)}$.
 
-        pressure: The pressure profile
+    Parameters
+    ----------
+    pressure : jax.Array
+        The pressure profile to modify with this ellipsoid.
+        Should be evaluated on the same grid as `xyz`.
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    r_1 : float
+        Amount to scale along x-axis.
+        Passed to `utils.transform_grid`.
+    r_2 : float
+        Amount to scale along y-axis.
+        Passed to `utils.transform_grid`.
+    r_3 : float
+        Amount to scale along z-axis.
+        Passed to `utils.transform_grid`.
+    theta : float
+        Angle to rotate in xy-plane.
+        Passed to `utils.transform_grid`.
+    amp : float
+        Factor by which pressure is enhanced at the peak of ellipsoid.
+    xk : float
+        Power of exponential in RA direction
+    x0 : float
+        RA offset of exponential.
+        Note that this is in transformed coordinates so x0=1 is at xs + sr_1.
+    yk : float
+        Power of exponential in Dec direction
+    y0 : float
+        Dec offset of exponential.
+        Note that this is in transformed coordinates so y0=1 is at ys + sr_2.
+    zk : float
+        Power of exponential along the line of sight
+    z0 : float
+        Line of sight offset of exponential.
+        Note that this is in transformed coordinates so z0=1 is at zs + sr_3.
 
-        xyz: Coordinate grids, see make_grid for details
-
-        dx: RA of ellipsoid center relative to grid origin
-
-        dy: Dec of ellipsoid center relative to grid origin
-
-        dz: Line of sight offset of ellipsoid center relative to grid origin
-
-        r_1: Amount to scale ellipsoid along x-axis
-
-        r_2: Amount to scale ellipsoid along y-axis
-
-        r_3: Amount to scale ellipsoid along z-axis
-
-        theta: Angle to rotate ellipsoid in xy-plane
-
-        amp: Factor by which pressure is enhanced at peak of exponential
-
-        xk: Power of exponential in RA direction
-
-        x0: RA offset of exponential.
-            Note that this is in transformed coordinates so x0=1 is at xs + sr_1.
-
-        yk: Power of exponential in Dec direction
-
-        y0: Dec offset of exponential.
-            Note that this is in transformed coordinates so y0=1 is at ys + sr_2.
-
-        zk: Power of exponential along the line of sight
-
-        z0: Line of sight offset of exponential.
-            Note that this is in transformed coordinates so z0=1 is at zs + sr_3.
-
-    Returns:
-
-        new_pressure: Pressure profile with ellipsoid added
+    Returns
+    -------
+    new_pressure : Array
+        Pressure profile with ellipsoid added.
     """
     x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
@@ -475,42 +717,69 @@ def add_exponential(
 
 @jax.jit
 def add_powerlaw(
-    pressure, xyz, dx, dy, dz, r_1, r_2, r_3, theta, amp, phi0, k_r, k_phi
-):
-    """
+    pressure: jax.Array,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    dx: float,
+    dy: float,
+    dz: float,
+    r_1: float,
+    r_2: float,
+    r_3: float,
+    theta: float,
+    amp: float,
+    phi0: float,
+    k_r: float,
+    k_phi: float,
+) -> jax.Array:
+    r"""
     Add ellipsoid with power law structure to 3d pressure profile.
 
-    Arguments:
+    After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$
+    will be multiplied by a factor of $1 + amp(1 - {1 + r}^{-k_r})(1 - {1 + \phi}^{-k_{\phi}})$.
+    Where $r$ and $\phi$ are the usual polar coordinates.
 
-        pressure: The pressure profile
+    Parameters
+    ----------
+    pressure : jax.Array
+        The pressure profile to modify with this ellipsoid.
+        Should be evaluated on the same grid as `xyz`.
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    r_1 : float
+        Amount to scale along x-axis.
+        Passed to `utils.transform_grid`.
+    r_2 : float
+        Amount to scale along y-axis.
+        Passed to `utils.transform_grid`.
+    r_3 : float
+        Amount to scale along z-axis.
+        Passed to `utils.transform_grid`.
+    theta : float
+        Angle to rotate in xy-plane.
+        Passed to `utils.transform_grid`.
+    amp : float
+        Factor by which pressure is enhanced within the ellipsoid.
+    phi0 : float
+        Polar angle of nose of power law.
+    k_r : float
+        Slope of power law in radial direction.
+    k_phi : float
+        Slope of power law in polar direction.
 
-        xyz: Coordinate grids, see make_grid for details
-
-        dx: RA of ellipsoid center relative to grid origin
-
-        dy: Dec of ellipsoid center relative to grid origin
-
-        dz: Line of sight offset of ellipsoid center relative to grid origin
-
-        r_1: Amount to scale ellipsoid along x-axis
-
-        r_2: Amount to scale ellipsoid along y-axis
-
-        r_3: Amount to scale ellipsoid along z-axis
-
-        theta: Angle to rotate ellipsoid in xy-plane
-
-        amp: Factor by which pressure is enhanced at peak of power law
-
-        phi0: Polar angle of nose of power law
-
-        k_r: Slope of power law in radial dirction
-
-        k_phi: Slope of power law in polar direction
-
-    Returns:
-
-        new_pressure: Pressure profile with ellipsoid added
+    Returns
+    -------
+    new_pressure : Array
+        Pressure profile with ellipsoid added.
     """
     x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
     r = jnp.sqrt(x**2 + y**2 + z**2)
@@ -527,42 +796,69 @@ def add_powerlaw(
 
 @jax.jit
 def add_powerlaw_cos(
-    pressure, xyz, dx, dy, dz, r_1, r_2, r_3, theta, amp, phi0, k_r, omega
-):
+    pressure: jax.Array,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    dx: float,
+    dy: float,
+    dz: float,
+    r_1: float,
+    r_2: float,
+    r_3: float,
+    theta: float,
+    amp: float,
+    phi0: float,
+    k_r: float,
+    omega: float,
+) -> jax.Array:
     """
-    Add ellipsoid with radial power law and angular cos dependant structure to 3d pressure profile.
+    Add ellipsoid with radial power law and angular cosine dependant structure to 3d pressure profile.
 
-    Arguments:
+    After transforming the grid the region where $\\sqrt{x^2 + y^2 + z^2} \\leq 1$
+    will be multiplied by a factor of $1 + amp ({1 + r}^{-k_r}) \\left| cos(\\omega\\phi) \right|$.
+    Where $r$ and $\\phi$ are the usual polar coordinates.
 
-        pressure: The pressure profile
+    Parameters
+    ----------
+    pressure : jax.Array
+        The pressure profile to modify with this ellipsoid.
+        Should be evaluated on the same grid as `xyz`.
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `utils.transform_grid`.
+    r_1 : float
+        Amount to scale along x-axis.
+        Passed to `utils.transform_grid`.
+    r_2 : float
+        Amount to scale along y-axis.
+        Passed to `utils.transform_grid`.
+    r_3 : float
+        Amount to scale along z-axis.
+        Passed to `utils.transform_grid`.
+    theta : float
+        Angle to rotate in xy-plane.
+        Passed to `utils.transform_grid`.
+    amp : float
+        Factor by which pressure is enhanced within the ellipsoid.
+    phi0 : float
+        Polar angle of nose of power law.
+    k_r : float
+        Slope of power law in radial direction.
+    omega : float
+        Angular freqency of the cosine term.
 
-        xyz: Coordinate grids, see make_grid for details
-
-        dx: RA of ellipsoid center relative to grid origin
-
-        dy: Dec of ellipsoid center relative to grid origin
-
-        dz: Line of sight offset of ellipsoid center relative to grid origin
-
-        r_1: Amount to scale ellipsoid along x-axis
-
-        r_2: Amount to scale ellipsoid along y-axis
-
-        r_3: Amount to scale ellipsoid along z-axis
-
-        theta: Angle to rotate ellipsoid in xy-plane
-
-        amp: Factor by which pressure is enhanced at peak of power law
-
-        phi0: Polar angle of nose of power law
-
-        k_r: Slope of power law in radial dirction
-
-        omega: Angular freqency if cos term
-
-    Returns:
-
-        new_pressure: Pressure profile with ellipsoid added
+    Returns
+    -------
+    new_pressure : Array
+        Pressure profile with ellipsoid added.
     """
     x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
     r = jnp.sqrt(x**2 + y**2 + z**2)
