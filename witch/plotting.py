@@ -42,7 +42,7 @@ def plot_cluster(
     Parameters
     ----------
     name : str
-        Name of the cluster
+        name of the cluster
     fits_path : str
         Path to the fits file to be plotted.
     root : None | str, default: None
@@ -259,7 +259,7 @@ def plot_cluster_act(
 
     Parameters
     ----------
-    Name : str
+    name : str
         Name of the cluster
     fits_path : str
         Path to the fits file to be plotted.
