@@ -814,7 +814,7 @@ def add_powerlaw_cos(
     Add ellipsoid with radial power law and angular cosine dependant structure to 3d pressure profile.
 
     After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$
-    will be multiplied by a factor of $1 + P_{0} ({1 + r}^{-k_r}) \left| cos(\omega\\phi) \right|$.
+    will be multiplied by a factor of $1 + P_{0} ({1 + r}^{-k_r}) \left| cos(\omega\phi) \right|$.
     Where $r$ and $\phi$ are the usual polar coordinates and $P_{0}$ is `amp`.
 
     Parameters
