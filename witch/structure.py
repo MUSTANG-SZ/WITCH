@@ -30,7 +30,7 @@ def gnfw(
     z: float,
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
 ) -> jax.Array:
-    """
+    r"""
     Elliptical gNFW pressure profile in 3d.
     This function does not include smoothing or declination stretch
     which should be applied at the end.
@@ -39,13 +39,13 @@ def gnfw(
     Once the grid is transformed the profile is computed as:
 
     $$
-    \frac{P_{500} * P_{0}}{{\\left( r^{\\gamma}\\left( 1 + r^{\alpha} \right) \right)}^{\frac{\beta - \\gamma}{\alpha}}}
+    \dfrac{P_{500} * P_{0}}{{\left( r^{\gamma}\left( 1 + r^{\alpha} \right) \right)}^{\dfrac{\beta - \gamma}{\alpha}}}
     $$
 
     where:
 
     $$
-    r = c_{500} \\sqrt{x^2 + y^2 + z^2} {\frac{3m_{500}}{2000 \\pi n_z}}^{-\frac{1}{3}}
+    r = c_{500} \sqrt{x^2 + y^2 + z^2} {\frac{3m_{500}}{2000 \pi n_z}}^{-\frac{1}{3}}
     $$
 
     $$
@@ -135,7 +135,7 @@ def a10(
     z: float,
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
 ) -> jax.Array:
-    """
+    r"""
     gNFW pressure profile in 3d based on [Arnaud2010](https://ui.adsabs.harvard.edu/abs/2010A%26A...517A..92A/).
     Compared to the function gnfw, this function fixes r1/r2/r3 to r500.
     This function does not include smoothing or declination stretch
@@ -221,7 +221,7 @@ def ea10(
     z: float,
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
 ) -> jax.Array:
-    """
+    r"""
     Eliptical gNFW pressure profile in 3d based on Arnaud2010.
     r_ell is computed in the usual way for an a10 profile, then the axes are
     scaled according to r_1, r_2, r_3, with a normalization applied.
@@ -317,7 +317,7 @@ def isobeta(
     amp: float,
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
 ) -> jax.Array:
-    """
+    r"""
     Elliptical isobeta pressure profile in 3d.
     This function does not include smoothing or declination stretch
     which should be applied at the end.
@@ -325,10 +325,10 @@ def isobeta(
     Once the grid is transformed the profile is computed as:
 
     $$
-    P_{0}\\left( 1 + x**2 + y**2 + z**2 \right)^{-1.5\beta}
+    P_{0}\left( 1 + x**2 + y**2 + z**2 \right)^{-1.5\beta}
     $$
 
-    where P_{0} is `amp`.
+    where $P_{0}$ is `amp`.
 
     Parameters
     ----------
@@ -387,7 +387,7 @@ def cylindrical_beta(
     beta: float,
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
 ) -> jax.Array:
-    """
+    r"""
 
     This function does not include smoothing or declination stretch
     which should be applied at the end.
@@ -395,7 +395,7 @@ def cylindrical_beta(
     Once the grid is transformed the profile is computed as:
 
     $$
-    P_{0}\\left( 1 + \frac{y^2 + z^2}{{r_c}^2} \right)^{-1.5\beta}
+    P_{0}\left( 1 + \frac{y^2 + z^2}{{r_c}^2} \right)^{-1.5\beta}
     $$
 
     Parameters
@@ -412,7 +412,7 @@ def cylindrical_beta(
     L : float
         Length of the cylinder.
         Aligned with the x-axis.
-        Note that we consider anything where $\\left| x \right| \\leq L$
+        Note that we consider anything where $\left| x \right| \\leq L$
         to be in the profile, so the actual length is $2L$.
     theta : float
         Angle to rotate in xy-plane.
@@ -432,7 +432,6 @@ def cylindrical_beta(
     model : jax.Array
         The cylindrical beta model evaluated on the grid.
     """
-
     x, y, z = transform_grid(dx, dy, dz, 1.0, 1.0, 1.0, theta, xyz)
     r = jnp.sqrt(y**2 + z**2)
     powerlaw = P0 / (1.0 + (r / r_c) ** 2) ** (3.0 / 2.0 * beta)
@@ -455,7 +454,7 @@ def egaussian(
     amp: float,
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
 ) -> jax.Array:
-    """
+    r"""
     Elliptical gaussian profile in 3d.
     This function does not include smoothing or declination stretch
     which should be applied at the end.
@@ -463,7 +462,7 @@ def egaussian(
     Once the grid is transformed the profile is computed as:
 
     $$
-    P_{0} \\exp{-\frac{x^2 + y^2 + z^2}{2\\sigma^2}}
+    P_{0} e^{-\frac{x^2 + y^2 + z^2}{2\sigma^2}}
     $$
 
     where $P_{0}$ is `amp`.
@@ -520,7 +519,7 @@ def gaussian(
     amp: float,
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
 ) -> jax.Array:
-    """
+    r"""
     Standard gaussian profile in 2d.
     This function does not include smoothing or declination stretch
     which should be applied at the end. The transform_grid call is
@@ -530,7 +529,7 @@ def gaussian(
     Once the grid is transformed the profile is computed as:
 
     $$
-    P_{0} \\exp{-\frac{x^2 + y^2}{2\\sigma^2}}
+    P_{0} e^{-\frac{x^2 + y^2}{2\sigma^2}}
     $$
 
     where $P_{0}$ is `amp`.
@@ -581,7 +580,7 @@ def add_uniform(
     Add ellipsoid with uniform structure to 3d pressure profile.
 
     After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$
-    will be multiplied by a factor of $1 + amp$.
+    will be multiplied by a factor of $1 + P_{0}$ where $P_{0}$ is `amp`.
 
     Parameters
     ----------
@@ -651,7 +650,8 @@ def add_exponential(
     Add ellipsoid with exponential structure to 3d pressure profile.
 
     After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$
-    will be multiplied by a factor of $1 + amp\exp{x_k(x-x_0) + y_k(y-y_0) + z_k(z-z_0)}$.
+    will be multiplied by a factor of $1 + P_{0} e^{x_k(x-x_0) + y_k(y-y_0) + z_k(z-z_0)}$
+    where $P_{0}$ is `amp`.
 
     Parameters
     ----------
@@ -735,8 +735,8 @@ def add_powerlaw(
     Add ellipsoid with power law structure to 3d pressure profile.
 
     After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$
-    will be multiplied by a factor of $1 + amp(1 - {1 + r}^{-k_r})(1 - {1 + \phi}^{-k_{\phi}})$.
-    Where $r$ and $\phi$ are the usual polar coordinates.
+    will be multiplied by a factor of $1 + P_{0}(1 - {1 + r}^{-k_r})(1 - {1 + \phi}^{-k_{\phi}})$.
+    Where $r$ and $\phi$ are the usual polar coordinates and $P_{0}$ is `amp`.
 
     Parameters
     ----------
@@ -810,12 +810,12 @@ def add_powerlaw_cos(
     k_r: float,
     omega: float,
 ) -> jax.Array:
-    """
+    r"""
     Add ellipsoid with radial power law and angular cosine dependant structure to 3d pressure profile.
 
-    After transforming the grid the region where $\\sqrt{x^2 + y^2 + z^2} \\leq 1$
-    will be multiplied by a factor of $1 + amp ({1 + r}^{-k_r}) \\left| cos(\\omega\\phi) \right|$.
-    Where $r$ and $\\phi$ are the usual polar coordinates.
+    After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$
+    will be multiplied by a factor of $1 + P_{0} ({1 + r}^{-k_r}) \left| cos(\omega\\phi) \right|$.
+    Where $r$ and $\phi$ are the usual polar coordinates and $P_{0}$ is `amp`.
 
     Parameters
     ----------
