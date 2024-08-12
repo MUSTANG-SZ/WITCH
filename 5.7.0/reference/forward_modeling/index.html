@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.30">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.31">
     
     
       
@@ -588,19 +588,23 @@
     <div class="doc doc-contents ">
 
       <p>A faster, but more importantly much less memory intensive, way to get chis.
-The idea is chi^2 = (d-Am)^T N^-1 (d-Am). Previously we would calculate the residuals d-Am
-and calculate directly. However d-Am has shape [ndet, nsamp], which is very big. m has shape
-[nx, ny], much smaller. A, the pointing reconstruction, can be encapsulated into a few pars.
+The idea is <span class="arithmatex">\({\chi}^{2} = (d-Am)^T N^{-1} (d-Am)\)</span>. Previously we would calculate the residuals <span class="arithmatex">\(d-Am\)</span>
+and calculate directly. However <span class="arithmatex">\(d-Am\)</span> has shape [ndet, nsamp], which is very big. <span class="arithmatex">\(m\)</span> has shape
+[nx, ny], much smaller. <span class="arithmatex">\(A\)</span>, the pointing reconstruction, can be encapsulated into a few pars.
 Therefore if we can do everthing in map shape, we save a lot on the ammount of stuff we
-need to put on the GPU. We can expand chi^2 as</p>
-<p>d^T N^-1 d -2d^T N^-1 A m + m^T A^T N^-1 A m = dd - 2*dot(m, rhs) + mm</p>
-<p>the first term only has to do with the data. If we care about the absolute value of chi2,
+need to put on the GPU. We can expand <span class="arithmatex">\({\chi}^{2}\)</span> as</p>
+<div class="arithmatex">\[
+d^T N^{-1} d -2d^T N^{-1} A m + m^T A^T N^{-1} A m = dd - 2(m \cdot rhs) + mm
+\]</div>
+<p>the first term only has to do with the data. If we care about the absolute value of <span class="arithmatex">\({\chi}^2\)</span>,
 which we do at the end, then we can include it in calculation. For MCMC however, we only
 care about the relative delta chi2 between models. So we can drop that term. For the other
 terms</p>
-<p>mm = m^T A^T N^-1 A m</p>
+<div class="arithmatex">\[
+mm = m^T A^T N^{-1} A m
+\]</div>
 <p>This term is essentially what we've been doing before, except that m is now in map shape,
-whereas before m was in tod shape so we essentially had Am. So we need to do Am, but this is
+whereas before m was in tod shape so we essentially had <span class="arithmatex">\(Am\)</span>. So we need to do <span class="arithmatex">\(Am\)</span>, but this is
 in general fast and Jon has a very fast way of doing it. Finally rhs need only be computed
 once, and while it is an additional thing to put on the gpu it is small, map shape.</p>
 
@@ -791,27 +795,35 @@ of fit.</p>
 <span class="normal">79</span>
 <span class="normal">80</span>
 <span class="normal">81</span>
-<span class="normal">82</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
 <span class="k">def</span> <span class="nf">get_chis</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">idy</span><span class="p">,</span> <span class="n">rhs</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">dd</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A faster, but more importantly much less memory intensive, way to get chis.</span>
-<span class="sd">    The idea is chi^2 = (d-Am)^T N^-1 (d-Am). Previously we would calculate the residuals d-Am</span>
-<span class="sd">    and calculate directly. However d-Am has shape [ndet, nsamp], which is very big. m has shape</span>
-<span class="sd">    [nx, ny], much smaller. A, the pointing reconstruction, can be encapsulated into a few pars.</span>
+<span class="sd">    The idea is ${\chi}^{2} = (d-Am)^T N^{-1} (d-Am)$. Previously we would calculate the residuals $d-Am$</span>
+<span class="sd">    and calculate directly. However $d-Am$ has shape [ndet, nsamp], which is very big. $m$ has shape</span>
+<span class="sd">    [nx, ny], much smaller. $A$, the pointing reconstruction, can be encapsulated into a few pars.</span>
 <span class="sd">    Therefore if we can do everthing in map shape, we save a lot on the ammount of stuff we</span>
-<span class="sd">    need to put on the GPU. We can expand chi^2 as</span>
+<span class="sd">    need to put on the GPU. We can expand ${\chi}^{2}$ as</span>
 
-<span class="sd">    d^T N^-1 d -2d^T N^-1 A m + m^T A^T N^-1 A m = dd - 2*dot(m, rhs) + mm</span>
+<span class="sd">    $$</span>
+<span class="sd">    d^T N^{-1} d -2d^T N^{-1} A m + m^T A^T N^{-1} A m = dd - 2(m \cdot rhs) + mm</span>
+<span class="sd">    $$</span>
 
-<span class="sd">    the first term only has to do with the data. If we care about the absolute value of chi2,</span>
+<span class="sd">    the first term only has to do with the data. If we care about the absolute value of ${\chi}^2$,</span>
 <span class="sd">    which we do at the end, then we can include it in calculation. For MCMC however, we only</span>
 <span class="sd">    care about the relative delta chi2 between models. So we can drop that term. For the other</span>
 <span class="sd">    terms</span>
 
-<span class="sd">    mm = m^T A^T N^-1 A m</span>
+<span class="sd">    $$</span>
+<span class="sd">    mm = m^T A^T N^{-1} A m</span>
+<span class="sd">    $$</span>
 
 <span class="sd">    This term is essentially what we&#39;ve been doing before, except that m is now in map shape,</span>
-<span class="sd">    whereas before m was in tod shape so we essentially had Am. So we need to do Am, but this is</span>
+<span class="sd">    whereas before m was in tod shape so we essentially had $Am$. So we need to do $Am$, but this is</span>
 <span class="sd">    in general fast and Jon has a very fast way of doing it. Finally rhs need only be computed</span>
 <span class="sd">    once, and while it is an additional thing to put on the gpu it is small, map shape.</span>
 
@@ -891,11 +903,7 @@ beam: Beam to smooth by
 
             <details class="quote">
               <summary>Source code in <code>witch/forward_modeling.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">101</span>
-<span class="normal">102</span>
-<span class="normal">103</span>
-<span class="normal">104</span>
-<span class="normal">105</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">105</span>
 <span class="normal">106</span>
 <span class="normal">107</span>
 <span class="normal">108</span>
@@ -935,7 +943,11 @@ beam: Beam to smooth by
 <span class="normal">142</span>
 <span class="normal">143</span>
 <span class="normal">144</span>
-<span class="normal">145</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="n">model_params</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="n">beam</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">tods</span><span class="p">):</span>  <span class="c1"># , model_params, xyz, beam):</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="n">model_params</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="n">beam</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">tods</span><span class="p">):</span>  <span class="c1"># , model_params, xyz, beam):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Generate a model realization and compute the chis of that model to data.</span>
 
