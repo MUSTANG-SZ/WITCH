@@ -1,3 +1,9 @@
+## 5.8.0 (2024-08-14)
+
+### Feat
+
+- allow no model in config
+
 ## 5.7.0 (2024-07-30)
 
 ### Feat
