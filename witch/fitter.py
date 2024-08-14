@@ -16,7 +16,6 @@ import yaml
 from minkasi.tools import presets_by_source as pbs
 from typing_extensions import Any, Unpack
 
-from . import core
 from . import mapmaking as mm
 from . import utils as wu
 from .containers import Model
@@ -112,6 +111,8 @@ def process_tods(
     method = bowling.get("method", "pred2")
     degree = bowling.get("degree", 2)
     sim = cfg.get("sim", False)
+    if model is None and sim:
+        raise ValueError("model cannot be None when simming!")
     for i, tod in enumerate(todvec.tods):
         ipix = skymap.get_pix(tod)
         tod.info["ipix"] = ipix
@@ -150,30 +151,34 @@ def process_tods(
 
 
 def get_outdir(cfg, bowl_str, model):
-    name = model.name + ("_ns" * (not cfg["sub"]))
     outroot = cfg["paths"]["outroot"]
     if not os.path.isabs(outroot):
         outroot = os.path.join(
             os.environ.get("MJ_OUTROOT", os.environ["HOME"]), outroot
         )
+
+    name = ""
+    if model is not None:
+        name = model.name + ("_ns" * (not cfg["sub"]))
     outdir = os.path.join(outroot, cfg["name"], name)
     if "subdir" in cfg["paths"]:
         outdir = os.path.join(outdir, cfg["paths"]["subdir"])
-    if cfg["fit"]:
-        outdir = os.path.join(
-            outdir,
-            "-".join(
-                [
-                    name
-                    for name, to_fit in zip(model.par_names, model.to_fit_ever)
-                    if to_fit
-                ]
-            ),
-        )
-    else:
-        outdir = os.path.join(outdir, "not_fit")
+    if model is not None:
+        if cfg["fit"]:
+            outdir = os.path.join(
+                outdir,
+                "-".join(
+                    [
+                        name
+                        for name, to_fit in zip(model.par_names, model.to_fit_ever)
+                        if to_fit
+                    ]
+                ),
+            )
+        else:
+            outdir = os.path.join(outdir, "not_fit")
     outdir += bowl_str
-    if cfg["sim"]:
+    if cfg["sim"] and model is not None:
         outdir += "-sim"
 
     print_once("Outputs can be found in", outdir)
@@ -246,12 +251,14 @@ def main():
     skymap = minkasi.maps.SkyMap(lims, pixsize)
 
     # Define the model and get stuff setup for minkasi
-    model = Model.from_cfg(cfg, pix_size=pixsize, lims=tuple(lims))
-    funs = [model.minkasi_helper]
-    params = np.array(model.pars)
-    npars = np.array([len(params)])
-    prior_vals = model.priors
-    priors = [None if prior is None else "flat" for prior in prior_vals]
+    if "model" in cfg:
+        model = Model.from_cfg(cfg, pix_size=pixsize, lims=tuple(lims))
+    else:
+        model = None
+        print_once("No model defined, setting fit, sim, and sub to False")
+        cfg["fit"] = False
+        cfg["sim"] = False
+        cfg["sub"] = False
 
     # Deal with bowling and simming in TODs and setup noise
     noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
@@ -285,23 +292,30 @@ def main():
         )
 
     # Now we fit
-    if cfg["sim"] and cfg["fit"]:
-        # Remove structs we deliberately want to leave out of model
-        for struct_name in cfg["model"]["structures"]:
-            if cfg["model"]["structures"][struct_name].get("to_remove", False):
-                model.remove_struct(struct_name)
+    if cfg["fit"]:
+        if model is None:
+            raise ValueError("Can't fit without a model defined!")
+        funs = [model.minkasi_helper]
         params = np.array(model.pars)
         npars = np.array([len(params)])
         prior_vals = model.priors
         priors = [None if prior is None else "flat" for prior in prior_vals]
-        params[model.to_fit_ever] *= 1.1  # Don't start at exactly the right value
-        model.update(params, model.errs, model.chisq)
 
-    message = str(model).split("\n")
-    message[1] = "Starting pars:"
-    print_once("\n".join(message))
+        if cfg["sim"]:
+            # Remove structs we deliberately want to leave out of model
+            for struct_name in cfg["model"]["structures"]:
+                if cfg["model"]["structures"][struct_name].get("to_remove", False):
+                    model.remove_struct(struct_name)
+            params = np.array(model.pars)
+            npars = np.array([len(params)])
+            prior_vals = model.priors
+            priors = [None if prior is None else "flat" for prior in prior_vals]
+            params[model.to_fit_ever] *= 1.1  # Don't start at exactly the right value
+            model.update(list(params), model.errs, model.chisq)
 
-    if cfg["fit"]:
+        message = str(model).split("\n")
+        message[1] = "Starting pars:"
+        print_once("\n".join(message))
         for i in range(model.n_rounds):
             model.cur_round = i
             to_fit = np.array(model.to_fit)
@@ -367,10 +381,12 @@ def main():
             yaml.dump(final, file)
 
     # If we arenn't mapmaking then we can stop here
-    if not cfg.get("res_map", cfg.get("map", True)):
+    if cfg["sub"] is False or not cfg.get("res_map", cfg.get("map", True)):
         return
 
     # Compute residual and either set it to the data or use it for noise
+    if model is None:
+        raise ValueError("Somehow trying to make a residual map with no model defined!")
     for i, tod in enumerate(todvec.tods):
         pred = model.to_tod(
             tod.info["dx"] * wu.rad_to_arcsec,
