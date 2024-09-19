@@ -4,6 +4,7 @@ and adding generic structure common to multiple models.
 """
 
 from functools import partial
+from typing import Optional
 
 import jax
 import jax.numpy as jnp
@@ -11,9 +12,16 @@ import numpy as np
 from astropy import constants as const
 from astropy import units as u
 from astropy.cosmology import Planck15 as cosmo
+from jax.typing import ArrayLike
+from numpy.typing import NDArray
 
+Grid = tuple[jax.Array, jax.Array, jax.Array, float, float]
 jax.config.update("jax_enable_x64", True)
-# jax.config.update("jax_platform_name", "gpu")
+
+# TODO: Move generically useful math stuff to a new library for reuse
+# TODO: Refactor unit conversion functions
+# TODO: Move units stuff to its own file?
+
 # Constants
 # --------------------------------------------------------
 
@@ -50,19 +58,21 @@ daline = jnp.array(daline.value)
 # Unit conversions
 # --------------------------------------------------------
 @partial(jax.jit, static_argnums=(0, 1))
-def y2K_CMB(freq, Te):
+def y2K_CMB(freq: float, Te: float) -> float:
     """
     Convert from compton y to K_CMB.
 
-    Arguments:
+    Parameters
+    ----------
+    freq : float
+        The observing frequency in Hz.
+    Te : float
+        Electron temperature
 
-        freq: The observing frequency in Hz.
-
-        Te: Electron temperature
-
-    Returns:
-
-        y2K_CMB: Conversion factor from compton y to K_CMB.
+    Returns
+    -------
+    y2K_CMB : float
+        Conversion factor from compton y to K_CMB.
     """
     x = freq * h / kb / Tcmb
     xt = x / jnp.tanh(0.5 * x)
@@ -104,102 +114,114 @@ def y2K_CMB(freq, Te):
 
 
 @partial(jax.jit, static_argnums=(0,))
-def K_CMB2K_RJ(freq):
+def K_CMB2K_RJ(freq: float) -> float:
     """
     Convert from K_CMB to K_RJ.
 
-    Arguments:
+    Parameters
+    ----------
+    freq : float
+        The observing frequency in Hz.
 
-        freq: The observing frequency in Hz.
-
-    Returns:
-
-        K_CMB2K_RJ: Conversion factor from K_CMB to K_RJ.
+    Returns
+    -------
+    K_CMB2K_RJ : float
+        Conversion factor from K_CMB to K_RJ.
     """
     x = freq * h / kb / Tcmb
     return jnp.exp(x) * x * x / jnp.expm1(x) ** 2
 
 
 @partial(jax.jit, static_argnums=(0, 1))
-def y2K_RJ(freq, Te):
+def y2K_RJ(freq: float, Te: float) -> float:
     """
     Convert from compton y to K_RJ.
 
-    Arguments:
+    Parameters
+    ----------
+    freq : float
+        The observing frequency in Hz.
+    Te : float
+        Electron temperature
 
-        freq: The observing frequency in Hz.
-
-        Te: Electron temperature
-
-    Returns:
-
-        y2K_RJ: Conversion factor from compton y to K_RJ.
+    Returns
+    -------
+    y2K_RJ : float
+        Conversion factor from compton y to K_RJ.
     """
     factor = y2K_CMB(freq, Te)
     return factor * K_CMB2K_RJ(freq)
 
 
-def get_da(z):
+def get_da(z: float) -> float:
     """
     Get factor to convert from arcseconds to MPc.
 
-    Arguments:
+    Parameters
+    ----------
+    z : float
+        The redshift at which to compute the factor.
 
-        z: The redshift at which to compute the factor.
-
-    Returns:
-
-        da: Conversion factor from arcseconds to MPc
+    Returns
+    -------
+    da : float
+        Conversion factor from arcseconds to MPc.
     """
-    return jnp.interp(z, dzline, daline)
+    return float(jnp.interp(z, dzline, daline))
 
 
-def get_nz(z):
+def get_nz(z: float) -> float:
     """
-    Get n(z).
+    Get the critical density at a given redshift.
 
-    Arguments:
+    Parameters
+    ----------
+    z : float
+        The redshift at which to compute the critical density.
 
-        z: The redshift at which to compute the factor.
-
-    Returns:
-
-        nz: n at the given z.
+    Returns
+    -------
+    nz : float
+        Critical density at the given z.
     """
-    return jnp.interp(z, dzline, nzline)
+    return float(jnp.interp(z, dzline, nzline))
 
 
-def get_hz(z):
+def get_hz(z: float) -> float:
     """
-    Get h(z).
+    Get the dimensionless hubble constant, h, at a given redshift.
 
-    Arguments:
+    Parameters
+    ----------
+    z : float
+        The redshift at which to compute h.
 
-        z: The redshift at which to compute the factor.
-
-    Returns:
-
-        hz: h at the given z.
+    Returns
+    -------
+    hz : float
+        h at the given z.
     """
-    return jnp.interp(z, dzline, hzline)
+    return float(jnp.interp(z, dzline, hzline))
 
 
 # FFT Operations
 # -----------------------------------------------------------
 @jax.jit
-def fft_conv(image, kernel):
+def fft_conv(image: ArrayLike, kernel: ArrayLike) -> jax.Array:
     """
-    Perform a convolution using FFTs for speed.
+    Perform a convolution using FFTs for speed with jax.
 
-    Arguments:
+    Parameters
+    ----------
+    image : ArrayLike
+        Data to be convolved.
+    kernel : ArrayLike
+        Convolution kernel.
 
-        image: Data to be convolved
-
-        kernel: Convolution kernel
-
-    Returns:
-
-        convolved_map: Image convolved with kernel.
+    Returns
+    -------
+    convolved_map : jax.Array
+        Image convolved with kernel.
     """
     Fmap = jnp.fft.fft2(jnp.fft.fftshift(image))
     Fkernel = jnp.fft.fft2(jnp.fft.fftshift(kernel))
@@ -209,23 +231,24 @@ def fft_conv(image, kernel):
 
 
 @partial(jax.jit, static_argnums=(1,))
-def tod_hi_pass(tod, N_filt):
+def tod_hi_pass(tod: jax.Array, N_filt: int) -> jax.Array:
     """
     High pass a tod with a tophat
 
-    Arguments:
+    Parameters
+    ----------
+    tod : jax.Array
+        TOD to high pass.
+    N_filt : int
+        N_filt of tophat.
 
-        tod: TOD to high pass
-
-        N_filt: N_filt of tophat
-
-
-    Returns:
-
-        tod_filtered: Filtered TOD
+    Returns
+    -------
+    tod_filtered : jax.Array
+        High pass filtered TOD
     """
     mask = jnp.ones(tod.shape)
-    mask = jax.ops.index_update(mask, jax.ops.index[..., :N_filt], 0.0)
+    mask = mask.at[..., :N_filt].set(0.0)
 
     ## apply the filter in fourier space
     Ftod = jnp.fft.fft(tod)
@@ -236,34 +259,50 @@ def tod_hi_pass(tod, N_filt):
 
 # Model building tools
 # -----------------------------------------------------------
-def make_grid(r_map, dx, dy=None, dz=None, x0=0, y0=0):
+def make_grid(
+    r_map: float,
+    dx: float,
+    dy: Optional[float] = None,
+    dz: Optional[float] = None,
+    x0: float = 0,
+    y0: float = 0,
+) -> Grid:
     """
     Make coordinate grids to build models in.
-    All grids are sparse and are int(2*r_map / dr) in each dimension.
+    All grids are sparse and are `int(2*r_map / dr)` in each the non-sparse dimension.
 
-    Arguments:
+    Parameters
+    ----------
+    r_map : float
+        Size of grid radially.
+    dx : float
+        Grid resolution in x, should be in same units as r_map.
+    dy : Optional[float], default: None
+        Grid resolution in y, should be in same units as r_map.
+        If None then dy is set to dx.
+    dz : Optional[float], default: None
+        Grid resolution in z, should be in same units as r_map.
+        If None then dz is set to dx.
+    x0 : float, default: 0
+        Origin of grid in RA, assumed to be in same units as r_map.
+    y0 : float, default: 0
+        Origin of grid in Dec, assumed to be in same units as r_map.
 
-        r_map: Size of grid radially.
-
-        dx: Grid resolution in x, should be in same units as r_map.
-
-        dy: Grid resolution in y, should be in same units as r_map.
-            If None then dy is set to dx.
-
-        dz: Grid resolution in z, should be in same units as r_map.
-            If None then dz is set to dx.
-
-        x0: Origin of grid in RA, assumed to be in same units as r_map.
-
-        y0: Origin of grid in Dec, assumed to be in same units as r_map.
-
-    Returns:
-
-        x: Grid of x coordinates in same units as r_map.
-
-        y: Grid of y coordinates in same units as r_map
-
-        z: Grid of z coordinates in same units as r_map
+    Returns
+    -------
+    x : jax.Array
+        Grid of x coordinates in same units as r_map.
+        Has shape (`int(2*r_map / dr), 1, 1).
+    y : jax.Array
+        Grid of y coordinates in same units as r_map.
+        Has shape (1, `int(2*r_map / dr), 1).
+    z : jax.Array
+        Grid of z coordinates in same units as r_map.
+        Has shape (1, 1, `int(2*r_map / dr)`).
+    x0 : float
+        Origin of grid in RA, in same units as r_map.
+    y0 : float
+        Origin of grid in Dec, in same units as r_map.
     """
     if dy is None:
         dy = dx
@@ -278,32 +317,53 @@ def make_grid(r_map, dx, dy=None, dz=None, x0=0, y0=0):
     )
     y = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dy)) + y0
     z = jnp.linspace(-1 * r_map, r_map, 2 * int(r_map / dz))
+    x, y, z = jnp.meshgrid(x, y, z, sparse=True, indexing="ij")
 
-    return tuple(jnp.meshgrid(x, y, z, sparse=True, indexing="ij") + [x0, y0])
+    return (x, y, z, x0, y0)
 
 
-def make_grid_from_skymap(skymap, z_map, dz, x0=None, y0=None):
+# TODO: make this not tied to minkasi, make_grid_from_wcs?
+def make_grid_from_skymap(
+    skymap,
+    z_map: float,
+    dz: float,
+    x0: Optional[float] = None,
+    y0: Optional[float] = None,
+) -> Grid:
     """
-    Make coordinate grids to build models in.
-    All grids are sparse and are int(2*r_map / dr) in each dimension.
+    Make coordinate grids to build models in from a minkasi skymap.
+    All grids are sparse and match the input map and xy and have size `int(2*z_map/dz)` in z.
+    Unlike `make_grid` here we assume things are radians.
 
-    Arguments:
+    Parameters
+    ----------
+    skymap : minkasi.maps.Skymap
+        The map to base the grid off of.
+    z_map : float
+        Size of grid along LOS, in radians.
+    dz : float
+        Grid resolution along LOS, in radians.
+    x0 : Optional[float], default: None
+        Map x center in radians.
+        If None, grid center is used.
+    y0 : Optional[float], default: None
+        Map y center in radians. If None, grid center is used.
 
-        z_map: Size of grid along LOS, in radians.
-
-        dz: Grid resolution along LOS, in radians.
-
-        x0: Map x center in radians. If None, grid center is used.
-
-        y0: Map y center in radians. If None, grid center is used.
-
-    Returns:
-
-        x: Grid of x coordinates in radians.
-
-        y: Grid of y coordinates in radians.
-
-        z: Grid of z coordinates in radians.
+    Returns
+    -------
+    x : jax.Array
+        Grid of x coordinates in radians.
+        Has shape (`skymap.nx`, 1, 1).
+    y : jax.Array
+        Grid of y coordinates in radians.
+        Has shape (1, `skymap.ny`, 1).
+    z : jax.Array
+        Grid of z coordinates in same units as radians.
+        Has shape (1, 1, `int(2*z_map / dz)`).
+    x0 : float
+        Origin of grid in RA, in radians.
+    y0 : float
+        Origin of grid in Dec, in radians.
     """
     # make grid
     _x = jnp.arange(skymap.nx, dtype=float)
@@ -339,6 +399,9 @@ def make_grid_from_skymap(skymap, z_map, dz, x0=None, y0=None):
     if not y0:
         y0 = (skymap.lims[3] + skymap.lims[2]) / 2
 
+    if x0 is None or y0 is None:
+        raise TypeError("Origin still None")
+
     ra -= x0
     dec -= y0
 
@@ -346,35 +409,47 @@ def make_grid_from_skymap(skymap, z_map, dz, x0=None, y0=None):
     x = x.at[:, 0, 0].set(ra)
     y = y.at[0, :, 0].set(dec)
 
-    return x, y, z
+    return x, y, z, float(x0), float(y0)
 
 
 @jax.jit
-def transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz):
+def transform_grid(
+    dx: float,
+    dy: float,
+    dz: float,
+    r_1: float,
+    r_2: float,
+    r_3: float,
+    theta: float,
+    xyz: Grid,
+):
     """
     Shift, rotate, and apply ellipticity to coordinate grid.
+    Note that the `Grid` type is an alias for `tuple[jax.Array, jax.Array, jax.Array, float, float]`.
 
-    Arguments:
+    Parameters
+    ----------
+    dx : float
+        Amount to move grid origin in x
+    dy : float
+        Amount to move grid origin in y
+    dz : float
+        Amount to move grid origin in z
+    r_1 : float
+        Amount to scale along x-axis
+    r_2 : float
+        Amount to scale along y-axis
+    r_3 : float
+        Amount to scale along z-axis
+    theta : float
+        Angle to rotate in xy-plane in radians
+    xyz : Grid
+        Coordinte grid to transform
 
-        dx: RA of cluster center relative to grid origin
-
-        dy: Dec of cluster center relative to grid origin
-
-        dz: Line of sight offset of cluster center relative to grid origin
-
-        r_1: Amount to scale along x-axis
-
-        r_2: Amount to scale along y-axis
-
-        r_3: Amount to scale along z-axis
-
-        theta: Angle to rotate in xy-plane
-
-        xyz: Coordinte grid to transform
-
-    Returns:
-
-        xyz: Transformed coordinate grid
+    Returns
+    -------
+    trasnformed : Grid
+        Transformed coordinate grid.
     """
     # Get origin
     x0, y0 = xyz[3], xyz[4]
@@ -394,34 +469,39 @@ def transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz):
     y = yy / r_2
     z = z / r_3
 
-    return x, y, z
+    return x, y, z, x0 - dx, y0 - dy
 
 
-def tod_to_index(xi, yi, x0, y0, grid, conv_factor):
+def tod_to_index(
+    xi: NDArray[np.floating],
+    yi: NDArray[np.floating],
+    x0: float,
+    y0: float,
+    grid: Grid,
+    conv_factor: float = 1.0,
+) -> tuple[jax.Array, jax.Array]:
     """
     Convert RA/Dec TODs to index space.
 
-    Arguments:
+    Parameters
+    ----------
+    xi : NDArray[np.floating]
+        RA TOD, usually in radians
+    yi : NDArray[np.floating]
+        Dec TOD, usually in radians
+    grid : Grid
+        The grid to index on.
+    conv_factor : float, default: 1.
+        Conversion factor to put RA and Dec in same units as the grid.
 
-        xi: RA TOD
-
-        yi: Dec TOD
-
-        x0: RA at center of model. Nominally the cluster center.
-
-        y0: Dec at center of model. Nominally the cluster center.
-
-        grid: The grid to index on.
-
-        conv_factor: Conversion factor to put RA and Dec in same units as r_map.
-                     Nominally (da * 180 * 3600) / pi
-
-    Returns:
-
-        idx: The RA TOD in index space
-
-        idy: The Dec TOD in index space.
+    Returns
+    -------
+    idx : jax.Array
+        The RA TOD in index space
+    idy : jax.Array
+        The Dec TOD in index space.
     """
+    x0, y0 = grid[-2:]
     dx = (xi - x0) * jnp.cos(yi)
     dy = yi - y0
 
@@ -443,31 +523,35 @@ def tod_to_index(xi, yi, x0, y0, grid, conv_factor):
 
 
 @jax.jit
-def bilinear_interp(x, y, xp, yp, fp):
+def bilinear_interp(
+    x: jax.Array, y: jax.Array, xp: jax.Array, yp: jax.Array, fp: jax.Array
+) -> jax.Array:
     """
     JAX implementation of bilinear interpolation.
     Out of bounds values are set to 0.
     Using the repeated linear interpolation method here,
     see https://en.wikipedia.org/wiki/Bilinear_interpolation#Repeated_linear_interpolation.
 
-    Arguments:
+    Parameters
+    ----------
+    x : jax.Array
+        X values to return interpolated values at.
+    y : jax.Array
+        Y values to return interpolated values at.
+    xp : jax.Array
+        X values to interpolate with, should be 1D.
+        Assumed to be sorted.
+    yp : jax.Array
+        Y values to interpolate with, should be 1D.
+        Assumed to be sorted.
+    fp : jax.Array
+        Functon values at `(xp, yp)`, should have shape `(len(xp), len(yp))`.
+        Note that if you are using meshgrid, we assume `'ij'` indexing.
 
-        x: X values to return interpolated values at.
-
-        y: Y values to return interpolated values at.
-
-        xp: X values to interpolate with, should be 1D.
-            Assumed to be sorted.
-
-        yp: Y values to interpolate with, should be 1D.
-            Assumed to be sorted.
-
-        fp: Functon values at (xp, yp), should have shape (len(xp), len(yp)).
-            Note that if you are using meshgrid, we assume 'ij' indexing.
-
-    Return:
-
-        f: The interpolated values
+    Returns
+    -------
+    f : jax.Array
+        The interpolated values.
     """
     if len(xp.shape) != 1:
         raise ValueError("xp must be 1D")
@@ -509,24 +593,27 @@ def bilinear_interp(x, y, xp, yp, fp):
     return f
 
 
-def beam_double_gauss(dr, fwhm1=9.735, amp1=0.9808, fwhm2=32.627, amp2=0.0192):
+def beam_double_gauss(
+    dr: float, fwhm1: float, amp1: float, fwhm2: float, amp2: float
+) -> jax.Array:
     """
     Helper function to generate a double gaussian beam.
 
-    Arguments:
+    Parameters
+    ----------
+    dr : float
+        Pixel size.
+    fwhm1 : float
+        Full width half max of the primary gaussian in the same units as `dr`.
+    amp1 : float
+        Amplitude of the primary gaussian.
+    fwhm2 : float
+        Full width half max of the secondairy gaussian in the same units as `dr`.
+    amp2 : float
+        Amplitude of the secondairy gaussian.
 
-        dr: Pixel size.
-
-        fwhm1: Full width half max of the primary gaussian.
-
-        amp1: Amplitude of the primary gaussian.
-
-        fwhm2: Full width half max of the secondairy gaussian.
-
-        amp2: Amplitude of the secondairy gaussian.
-
-    Returns:
-
+    Returns
+    -------
         beam: Double gaussian beam.
     """
     x = jnp.arange(-1.5 * fwhm1 // (dr), 1.5 * fwhm1 // (dr)) * (dr)
