@@ -171,7 +171,7 @@ class Model:
         self.structures = [self.structures[i] for i in structure_idx]
         self.original_order = list(np.sort(structure_idx))
 
-    def __set_attr__(self, name, value):
+    def __setattr__(self, name, value):
         if name == "cur_round":
             self.__dict__.pop("model_grad", None)
             self.__dict__.pop("model", None)
