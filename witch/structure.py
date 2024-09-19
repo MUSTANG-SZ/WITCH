@@ -103,7 +103,7 @@ def gnfw(
     nz = get_nz(z)
     hz = get_hz(z)
 
-    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+    x, y, z, *_ = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
     r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
 
@@ -188,7 +188,7 @@ def a10(
     r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
     r_1, r_2, r_3 = r500 / da, r500 / da, r500 / da
 
-    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+    x, y, z, *_ = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
     r = c500 * jnp.sqrt(x**2 + y**2 + z**2)
     denominator = (r**gamma) * (1 + r**alpha) ** ((beta - gamma) / alpha)
@@ -289,7 +289,7 @@ def ea10(
     r_2 *= r_ell / r_norm
     r_3 *= r_ell / r_norm
 
-    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+    x, y, z, *_ = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
     r = c500 * jnp.sqrt(x**2 + y**2 + z**2)
     denominator = (r**gamma) * (1 + r**alpha) ** ((beta - gamma) / alpha)
@@ -366,7 +366,7 @@ def isobeta(
     model : Array
         The jax.isobeta model evaluated on the grid.
     """
-    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+    x, y, z, *_ = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
     rr = 1 + x**2 + y**2 + z**2
     power = -1.5 * beta
@@ -432,7 +432,7 @@ def cylindrical_beta(
     model : jax.Array
         The cylindrical beta model evaluated on the grid.
     """
-    x, y, z = transform_grid(dx, dy, dz, 1.0, 1.0, 1.0, theta, xyz)
+    x, y, z, *_ = transform_grid(dx, dy, dz, 1.0, 1.0, 1.0, theta, xyz)
     r = jnp.sqrt(y**2 + z**2)
     powerlaw = P0 / (1.0 + (r / r_c) ** 2) ** (3.0 / 2.0 * beta)
 
@@ -503,7 +503,7 @@ def egaussian(
     model : jax.Array
         The gaussain model evaluated on the grid.
     """
-    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+    x, y, z, *_ = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
     rr = x**2 + y**2 + z**2
     power = -1 * rr / (2 * sigma**2)
@@ -556,7 +556,7 @@ def gaussian(
     model : jax.Array
         The gaussian model evaluated on only the 2d xy grid.
     """
-    x, y, _ = transform_grid(dx, dy, 0, 1, 1, 1, 0, xyz)
+    x, y, *_ = transform_grid(dx, dy, 0, 1, 1, 1, 0, xyz)
     rr = x[..., 0] ** 2 + y[..., 0] ** 2
     power = -1 * rr / (2 * sigma**2)
 
@@ -619,7 +619,7 @@ def add_uniform(
     new_pressure : Array
         Pressure profile with ellipsoid added.
     """
-    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+    x, y, z, *_ = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
     new_pressure = jnp.where(
         jnp.sqrt(x**2 + y**2 + z**2) > 1, pressure, (1 + amp) * pressure
@@ -705,7 +705,7 @@ def add_exponential(
     new_pressure : Array
         Pressure profile with ellipsoid added.
     """
-    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+    x, y, z, *_ = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
     exponential = amp * jnp.exp(((x - x0) * xk) + ((y - y0) * yk) + ((z - z0) * zk))
 
@@ -781,7 +781,7 @@ def add_powerlaw(
     new_pressure : Array
         Pressure profile with ellipsoid added.
     """
-    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+    x, y, z, *_ = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
     r = jnp.sqrt(x**2 + y**2 + z**2)
     phi = abs((jnp.arctan2(y, x) - phi0) % (2 * jnp.pi) - jnp.pi) / jnp.pi
 
@@ -860,7 +860,7 @@ def add_powerlaw_cos(
     new_pressure : Array
         Pressure profile with ellipsoid added.
     """
-    x, y, z = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
+    x, y, z, *_ = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
     r = jnp.sqrt(x**2 + y**2 + z**2)
     phi = (jnp.arctan2(y, x) - phi0) % (2 * jnp.pi)
 
