@@ -17,6 +17,7 @@ from numpy.typing import NDArray
 from typing_extensions import Self
 
 from . import core
+from . import grid as wg
 from . import utils as wu
 from .structure import STRUCT_N_PAR
 
@@ -588,8 +589,8 @@ class Model:
         x0 = eval(str(cfg["coords"]["x0"]))
         y0 = eval(str(cfg["coords"]["y0"]))
 
-        xyz_host = wu.make_grid(
-            r_map, dr, dr, dz, x0 * wu.rad_to_arcsec, y0 * wu.rad_to_arcsec
+        xyz_host = wg.make_grid(
+            r_map, dr, dr, dz, x0 * wg.rad_to_arcsec, y0 * wg.rad_to_arcsec
         )
         xyz = jax.device_put(xyz_host, device)
         xyz[0].block_until_ready()
