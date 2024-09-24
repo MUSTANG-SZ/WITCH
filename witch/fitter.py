@@ -10,6 +10,7 @@ import sys
 import time
 from copy import deepcopy
 
+import jax as jax
 import minkasi
 import numpy as np
 import yaml
@@ -59,6 +60,13 @@ def _make_parser() -> argp.ArgumentParser:
         "-wn",
         action="store_true",
         help="Use whitenoise instead of map noise. Only for use with sim",
+    )
+    parser.add_argument(
+        "--cpu",
+        "-cpu",
+        default=False,
+        type=bool,
+        help="If True, then run on CPU. Otherwise and by default run GPU.",
     )
     return parser
 
@@ -225,6 +233,9 @@ def load_config(start_cfg, cfg_path):
 def main():
     parser = _make_parser()
     args = parser.parse_args()
+
+    if args.cpu == True:
+        jax.config.update("jax_platform_name", "cpu")
 
     # TODO: Serialize cfg to a data class (pydantic?)
     cfg = load_config({}, args.config)
