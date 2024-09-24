@@ -10,6 +10,7 @@ import sys
 import time
 from copy import deepcopy
 
+import jax as jax
 import minkasi
 import numpy as np
 import yaml
@@ -20,7 +21,6 @@ from . import mapmaking as mm
 from . import utils as wu
 from .containers import Model
 
-import jax as jax
 
 def print_once(*args: Unpack[tuple[Any, ...]]):
     """
@@ -63,10 +63,10 @@ def _make_parser() -> argp.ArgumentParser:
     )
     parser.add_argument(
         "--cpu",
-        "-cpu", 
+        "-cpu",
         default=False,
         type=bool,
-        help="If True, then run on CPU. Otherwise and by default run GPU."
+        help="If True, then run on CPU. Otherwise and by default run GPU.",
     )
     return parser
 
@@ -235,7 +235,7 @@ def main():
     args = parser.parse_args()
 
     if args.cpu == True:
-        jax.config.update('jax_platform_name', 'cpu')
+        jax.config.update("jax_platform_name", "cpu")
 
     # TODO: Serialize cfg to a data class (pydantic?)
     cfg = load_config({}, args.config)
