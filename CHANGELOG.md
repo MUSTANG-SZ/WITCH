@@ -1,3 +1,9 @@
+## 6.0.0 (2024-09-24)
+
+### Refactor
+
+- many changes to utils:
+
 ## 5.8.1 (2024-09-19)
 
 ### Fix
