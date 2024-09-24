@@ -1,3 +1,9 @@
+## 6.0.1 (2024-09-24)
+
+### Fix
+
+- changing parse args
+
 ## 6.0.0 (2024-09-24)
 
 ### Refactor
