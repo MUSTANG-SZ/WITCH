@@ -9,7 +9,8 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 
-from .utils import ap, get_da, get_hz, get_nz, h70, transform_grid
+from .grid import transform_grid
+from .utils import ap, get_da, get_hz, get_nz, h70
 
 
 @jax.jit
