@@ -889,7 +889,7 @@ N_PAR_POWERLAW = len(inspect.signature(add_powerlaw).parameters) - 2
 STRUCT_FUNCS = {
     "a10": a10,
     "ea10": ea10,
-    "cylindrical": cylindrical_beta,
+    "cylindrical_beta": cylindrical_beta,
     "exponential": add_exponential,
     "powerlaw": add_powerlaw,
     "powerlaw_cos": add_powerlaw_cos,
@@ -902,7 +902,7 @@ STRUCT_FUNCS = {
 STRUCT_N_PAR = {
     "a10": N_PAR_A10,
     "ea10": N_PAR_EA10,
-    "cylindrical": N_PAR_CYLINDRICAL,
+    "cylindrical_beta": N_PAR_CYLINDRICAL,
     "exponential": N_PAR_EXPONENTIAL,
     "powerlaw": N_PAR_POWERLAW,
     "powerlaw_cos": N_PAR_POWERLAW,
@@ -915,7 +915,7 @@ STRUCT_N_PAR = {
 STRUCT_STAGE = {
     "a10": 0,
     "ea10": 0,
-    "cylindrical": 0,
+    "cylindrical_beta": 0,
     "exponential": 1,
     "powerlaw": 1,
     "powerlaw_cos": 1,
