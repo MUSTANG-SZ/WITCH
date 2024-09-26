@@ -1,3 +1,9 @@
+## 6.0.2 (2024-09-26)
+
+### Fix
+
+- making function name and id string agree for cylindrical_beta
+
 ## 6.0.1 (2024-09-24)
 
 ### Fix
