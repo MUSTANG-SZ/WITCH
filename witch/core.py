@@ -23,7 +23,7 @@ ORDER = (
     "gnfw",
     "a10",
     "ea10",
-    "cylindrical",
+    "cylindrical_beta",
     "egaussian",
     "uniform",
     "exponential",
