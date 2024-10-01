@@ -1,3 +1,9 @@
+## 6.0.3 (2024-10-01)
+
+### Fix
+
+- adjust cylindical beta name in ORDER
+
 ## 6.0.2 (2024-09-26)
 
 ### Fix
