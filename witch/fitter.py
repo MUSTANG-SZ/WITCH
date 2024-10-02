@@ -87,7 +87,14 @@ def load_tods(cfg: dict) -> minkasi.tods.TodVec:
     tod_names.sort()
     ntods = cfg["minkasi"].get("ntods", None)
     tod_names = tod_names[:ntods]
+    print(minkasi.nproc, len(tod_names))
+    if minkasi.nproc > len(tod_names):
+        minkasi.nproc = len(tod_names)
+    if minkasi.myrank >= len(tod_names):
+        print(f"More procs than TODs!, exiting process {minkasi.myrank}")
+        sys.exit(0)
     tod_names = tod_names[minkasi.myrank :: minkasi.nproc]
+    print(minkasi.myrank, tod_names)
     minkasi.barrier()  # Is this needed?
 
     todvec = minkasi.tods.TodVec()
@@ -231,6 +238,10 @@ def load_config(start_cfg, cfg_path):
 
 
 def main():
+    # Check if we have MPI
+    if minkasi.comm is None:
+        raise RuntimeError("Running without MPI is not currently supported!")
+
     parser = _make_parser()
     args = parser.parse_args()
 
