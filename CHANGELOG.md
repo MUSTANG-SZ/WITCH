@@ -1,3 +1,9 @@
+## 6.0.4 (2024-10-02)
+
+### Fix
+
+- raise error when we don't have MPI and handle having more procs than TODs
+
 ## 6.0.3 (2024-10-01)
 
 ### Fix
