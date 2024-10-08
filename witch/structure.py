@@ -73,7 +73,7 @@ def gnfw(
         Amount to scale along x-axis.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
         Passed to `grid.transform_grid`.
-        Units: arbitrary  
+        Units: arbitrary
     r_2 : float
         Amount to scale along y-axis.
         Passed to `grid.transform_grid`.
@@ -83,7 +83,7 @@ def gnfw(
     theta : float
         Angle to rotate in xy-plane.
         Passed to `grid.transform_grid`.
-        Units: radians 
+        Units: radians
     P0 : float
         Amplitude of the pressure profile.
         Units: unitless
@@ -387,7 +387,7 @@ def isobeta(
         Amount to scale along x-axis.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
         Passed to `grid.transform_grid`.
-        Units: arbitrary  
+        Units: arbitrary
     r_2 : float
         Amount to scale along y-axis.
         Passed to `grid.transform_grid`.
@@ -405,7 +405,7 @@ def isobeta(
         Units: unitless
     amp : float
         Amplitude of isobeta model.
-        Units: Matches unit conversion implicitly. 
+        Units: Matches unit conversion implicitly.
     xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
         Coordinte grid to calculate model on.
         See `containers.Model.xyz` for details.
@@ -542,7 +542,7 @@ def egaussian(
         Amount to scale along x-axis. The absolute value of these is degenerate with sigma.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
         Passed to `grid.transform_grid`.
-        Units: arbitrary  
+        Units: arbitrary
     r_2 : float
         Amount to scale along y-axis.
         Passed to `grid.transform_grid`.
@@ -677,7 +677,7 @@ def add_uniform(
         Amount to scale along x-axis. The absolute value of these is degenerate with sigma.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
         Passed to `grid.transform_grid`.
-        Units: arbitrary  
+        Units: arbitrary
     r_2 : float
         Amount to scale along y-axis.
         Passed to `grid.transform_grid`.
@@ -757,7 +757,7 @@ def add_exponential(
         Amount to scale along x-axis. The absolute value of these is degenerate with sigma.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
         Passed to `grid.transform_grid`.
-        Units: arbitrary 
+        Units: arbitrary
     r_2 : float
         Amount to scale along y-axis.
         Passed to `grid.transform_grid`.
@@ -949,7 +949,7 @@ def add_powerlaw_cos(
         Amount to scale along x-axis. The absolute value of these is degenerate with sigma.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
         Passed to `grid.transform_grid`.
-        Units: arbitrary  
+        Units: arbitrary
     r_2 : float
         Amount to scale along y-axis.
         Passed to `grid.transform_grid`.
@@ -968,7 +968,7 @@ def add_powerlaw_cos(
     phi0 : float
          Polar angle of nose of power law. This is CCW from the x-axis,
          after the grid rotation. See arctan2 documentation
-         Units: radians 
+         Units: radians
     k_r : float
         Slope of power law in radial direction.
         Units: unitless
