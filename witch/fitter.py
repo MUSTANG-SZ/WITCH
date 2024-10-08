@@ -3,6 +3,8 @@ Master fitting and map making script.
 You typically want to run the `witcher` command instead of this.
 """
 
+import pdb
+
 import argparse as argp
 import glob
 import os
@@ -16,6 +18,7 @@ import numpy as np
 import yaml
 from minkasi.tools import presets_by_source as pbs
 from typing_extensions import Any, Unpack
+from astropy.convolution import Gaussian2DKernel, convolve
 
 from . import mapmaking as mm
 from . import utils as wu
@@ -284,6 +287,58 @@ def main():
         del cfg["base"]  # We've collated to the cfg files so no need to keep the base
     outdir = get_outdir(cfg, bowl_str, model)
 
+    # Make noise maps
+    if cfg.get("noise_map", cfg.get("map", False)):
+        print_once("Making noise map")
+        noise_vec = deepcopy(todvec)
+        for i, tod in enumerate(noise_vec.tods): 
+            tod.info["dat_calib"] = (-1) ** ((minkasi.myrank + minkasi.nproc * i) % 2) * np.ones(tod.info["dat_calib"].shape)
+            #tod.set_noise(noise_class, *noise_args, **noise_kwargs)
+        pdb.set_trace()
+        todlim = int(len(todvec) / 2)
+        noise_map = minkasi.maps.SkyMap(lims, pixsize)
+        naive, hits = mm.make_naive(noise_vec, noise_map, os.path.join(outdir, "noise"))
+
+        # Take 1 over hits map
+        ihits = hits.copy()
+        ihits.invert()
+    
+        # Save weights and noise maps
+        _ = mm.make_weights(noise_vec, noise_map, os.path.join(outdir, "noise"))
+    
+        # Setup the mapset
+        # For now just include the naive map so we can use it as the initial guess.
+        noise_mapset = minkasi.maps.Mapset()
+        noise_mapset.add_map(naive)
+    
+        # run PCG to solve for a first guess
+        iters = [5, 25, 100]
+        noise_mapset = mm.solve_map(noise_vec, noise_mapset, ihits, None, 26, iters, os.path.join(outdir, "noise"), "initial")
+
+
+
+
+        #        noise_mapset = mm.make_maps(
+        #            noise_vec,
+        #            noise_map,
+        #            noise_class,
+        #            noise_args,
+        #            noise_kwargs,
+        #            os.path.join(outdir, "noise"),
+        #            2,
+        #            cfg["minkasi"]["dograd"],
+        #            return_maps = True,
+        #        )
+        #        nmap = noise_mapset.maps[0].map
+        nmap = noise_mapset.maps[0].map
+        kernel = Gaussian2DKernel(int(10 / (pixsize * wu.rad_to_arcsec)))
+        nmap = convolve(nmap, kernel)
+
+        flags = wu.get_radial_mask(nmap, pixsize * wu.rad_to_arcsec, 60.0)
+        print_once(
+            "Noise in central 1 arcmin is {:.2f}uK".format(np.std(nmap[flags]) * 1e6)
+        )
+        pdb.set_trace()
     # Make signal maps
     if cfg.get("sig_map", cfg.get("map", True)):
         print_once("Making signal map")
