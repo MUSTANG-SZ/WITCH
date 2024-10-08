@@ -60,15 +60,15 @@ def gnfw(
     dx : float
         RA of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dy : float
         Dec of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dz : float
         Line of sight offset of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     r_1 : float
         Amount to scale along x-axis.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
@@ -162,15 +162,15 @@ def a10(
     dx : float
         RA of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dy : float
         Dec of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dz : float
         Line of sight offset of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     theta : float
         Angle to rotate in xy-plane.
         Passed to `grid.transform_grid`.
@@ -260,15 +260,15 @@ def ea10(
     dx : float
         RA of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dy : float
         Dec of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dz : float
         Line of sight offset of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     r_1 : float
         Amount to scale along x-axis.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
@@ -374,15 +374,15 @@ def isobeta(
     dx : float
         RA of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dy : float
         Dec of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dz : float
         Line of sight offset of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     r_1 : float
         Amount to scale along x-axis.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
@@ -452,15 +452,15 @@ def cylindrical_beta(
     dx : float
         RA of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dy : float
         Dec of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dz : float
         Line of sight offset of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     L : float
         Length of the cylinder.
         Aligned with the x-axis.
@@ -529,15 +529,15 @@ def egaussian(
     dx : float
         RA of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dy : float
         Dec of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dz : float
         Line of sight offset of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     r_1 : float
         Amount to scale along x-axis. The absolute value of these is degenerate with sigma.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
@@ -557,7 +557,7 @@ def egaussian(
         Units: radians
     sigma : float
         Sigma value of gaussian model.
-        Units: pixels
+        Units: arcsec
     amp : float
         Amplitude of gaussian model.
         Units: Jy
@@ -606,14 +606,14 @@ def gaussian(
     dx : float
         RA of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dy : float
         Dec of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     sigma : float
         Sigma value of gaussian model.
-        Units: pixels
+        Units: arcsec
     amp : float
         Amplitude of gaussian model.
         Units: Jy
@@ -664,15 +664,15 @@ def add_uniform(
     dx : float
         RA of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dy : float
         Dec of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dz : float
         Line of sight offset of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     r_1 : float
         Amount to scale along x-axis. The absolute value of these is degenerate with sigma.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
@@ -744,15 +744,15 @@ def add_exponential(
     dx : float
         RA of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dy : float
         Dec of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dz : float
         Line of sight offset of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     r_1 : float
         Amount to scale along x-axis. The absolute value of these is degenerate with sigma.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
@@ -779,21 +779,21 @@ def add_exponential(
     x0 : float
         RA offset of exponential.
         Note that this is in transformed coordinates so x0=1 is at xs + sr_1.
-        Units: pixels
+        Units: arcsec
     yk : float
         Power of exponential in Dec direction
         Units: unitless
     y0 : float
         Dec offset of exponential.
         Note that this is in transformed coordinates so y0=1 is at ys + sr_2.
-        Units: pixels
+        Units: arcsec
     zk : float
         Power of exponential along the line of sight
         Units: unitless
     z0 : float
         Line of sight offset of exponential.
         Note that this is in transformed coordinates so z0=1 is at zs + sr_3.
-        Units: pixels
+        Units: arcsec
 
     Returns
     -------
@@ -844,15 +844,15 @@ def add_powerlaw(
     dx : float
         RA of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dy : float
         Dec of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dz : float
         Line of sight offset of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     r_1 : float
         Amount to scale along x-axis. The absolute value of these is degenerate with sigma.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
@@ -936,15 +936,15 @@ def add_powerlaw_cos(
     dx : float
         RA of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dy : float
         Dec of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     dz : float
         Line of sight offset of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
-        Units: pixels
+        Units: arcsec
     r_1 : float
         Amount to scale along x-axis. The absolute value of these is degenerate with sigma.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
