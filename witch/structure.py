@@ -59,39 +59,52 @@ def gnfw(
     ----------
     dx : float
         RA of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dy : float
         Dec of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dz : float
         Line of sight offset of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     r_1 : float
         Amount to scale along x-axis.
-        Passed to `utils.transform_grid`.
+        Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
+        Passed to `grid.transform_grid`.
+        Units: arbitrary  
     r_2 : float
         Amount to scale along y-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
     r_3 : float
         Amount to scale along z-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
     theta : float
         Angle to rotate in xy-plane.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: radians 
     P0 : float
         Amplitude of the pressure profile.
+        Units: unitless
     c500 : float
         Concentration parameter at a density contrast of 500.
+        Units: unitless
     m500 : float
         Mass at a density contrast of 500.
+        Units: M_solar
     gamma : float
         The central slope.
+        Units: unitless
     alpha : float
         The intermediate slope.
+        Units: unitless
     beta : float
         The outer slope.
+        Units: unitless
     z : float
         Redshift of cluster.
+        Units: redshift
     xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
         Coordinte grid to calculate model on.
         See `containers.Model.xyz` for details.
@@ -148,30 +161,41 @@ def a10(
     ----------
     dx : float
         RA of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dy : float
         Dec of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dz : float
         Line of sight offset of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     theta : float
         Angle to rotate in xy-plane.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: radians
     P0 : float
         Amplitude of the pressure profile
+        Units: unitless
     c500 : float
         Concentration parameter at a density contrast of 500
+        Units: unitless
     m500 : float
         Mass at a density contrast of 500
+        Units: M_solar
     gamma : float
         The central slope
+        Units: unitless
     alpha : float
         The intermediate slope
+        Units: unitless
     beta : float
         The outer slope
+        Units: unitless
     z : float
         Redshift of cluster
+        Units: redshift
     xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
         Coordinte grid to calculate model on.
         See `containers.Model.xyz` for details.
@@ -235,40 +259,54 @@ def ea10(
     ----------
     dx : float
         RA of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dy : float
         Dec of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dz : float
         Line of sight offset of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     r_1 : float
         Amount to scale along x-axis.
         Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: arbitrary
     r_2 : float
         Amount to scale along y-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: arbitrary
     r_3 : float
         Amount to scale along z-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: arbitrary
     theta : float
         Angle to rotate in xy-plane.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: radians
     P0 : float
         Amplitude of the pressure profile
+        Units: unitless
     c500 : float
         Concentration parameter at a density contrast of 500
+        Units: unitless
     m500 : float
         Mass at a density contrast of 500
+        Units: M_solar
     gamma : float
         The central slope
+        Units: unitless
     alpha : float
         The intermediate slope
+        Units: unitless
     beta : float
         The outer slope
+        Units: unitless
     z : float
         Redshift of cluster
+        Units: redshift
     xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
         Coordinte grid to calculate model on.
         See `containers.Model.xyz` for details.
@@ -335,29 +373,39 @@ def isobeta(
     ----------
     dx : float
         RA of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dy : float
         Dec of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dz : float
         Line of sight offset of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     r_1 : float
         Amount to scale along x-axis.
-        Passed to `utils.transform_grid`.
+        Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
+        Passed to `grid.transform_grid`.
+        Units: arbitrary  
     r_2 : float
         Amount to scale along y-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: arbitrary
     r_3 : float
         Amount to scale along z-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: arbitrary
     theta : float
         Angle to rotate in xy-plane.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: radians
     beta : float
         Beta value of isobeta model.
+        Units: unitless
     amp : float
         Amplitude of isobeta model.
+        Units: Matches unit conversion implicitly. 
     xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
         Coordinte grid to calculate model on.
         See `containers.Model.xyz` for details.
@@ -403,27 +451,35 @@ def cylindrical_beta(
     ----------
     dx : float
         RA of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dy : float
         Dec of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dz : float
         Line of sight offset of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     L : float
         Length of the cylinder.
         Aligned with the x-axis.
         Note that we consider anything where $\left| x \right| \\leq L$
         to be in the profile, so the actual length is $2L$.
+        Units: arcsec
     theta : float
         Angle to rotate in xy-plane.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: radians
     P0 : float
         Amplitude of the pressure profile.
+        Units: unitless
     r_c : float
         The critical radius of the cylindrical profile.
+        Units: arcsec
     beta : float
         Beta value of isobeta model.
+        Units: unitless
     xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
         Coordinte grid to calculate model on.
         See `containers.Model.xyz` for details.
@@ -472,29 +528,39 @@ def egaussian(
     ----------
     dx : float
         RA of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dy : float
         Dec of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dz : float
         Line of sight offset of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     r_1 : float
-        Amount to scale along x-axis.
-        Passed to `utils.transform_grid`.
+        Amount to scale along x-axis. The absolute value of these is degenerate with sigma.
+        Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
+        Passed to `grid.transform_grid`.
+        Units: arbitrary  
     r_2 : float
         Amount to scale along y-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: arbitrary
     r_3 : float
         Amount to scale along z-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: arbitrary
     theta : float
         Angle to rotate in xy-plane.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: radians
     sigma : float
         Sigma value of gaussian model.
+        Units: pixels
     amp : float
         Amplitude of gaussian model.
+        Units: Jy
     xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
         Coordinte grid to calculate model on.
         See `containers.Model.xyz` for details.
@@ -539,14 +605,18 @@ def gaussian(
     ----------
     dx : float
         RA of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dy : float
         Dec of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     sigma : float
         Sigma value of gaussian model.
+        Units: pixels
     amp : float
         Amplitude of gaussian model.
+        Units: Jy
     xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
         Coordinte grid to calculate model on.
         We only care about x and y here.
@@ -593,27 +663,36 @@ def add_uniform(
         See `containers.Model.xyz` for details.
     dx : float
         RA of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dy : float
         Dec of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dz : float
         Line of sight offset of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     r_1 : float
-        Amount to scale along x-axis.
-        Passed to `utils.transform_grid`.
+        Amount to scale along x-axis. The absolute value of these is degenerate with sigma.
+        Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
+        Passed to `grid.transform_grid`.
+        Units: arbitrary  
     r_2 : float
         Amount to scale along y-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: arbitrary
     r_3 : float
         Amount to scale along z-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: arbitrary
     theta : float
         Angle to rotate in xy-plane.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: radians
     amp : float
         Factor by which pressure is enhanced within the ellipsoid.
+        Units: unitless
 
     Returns
     -------
@@ -664,42 +743,57 @@ def add_exponential(
         See `containers.Model.xyz` for details.
     dx : float
         RA of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dy : float
         Dec of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dz : float
         Line of sight offset of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     r_1 : float
-        Amount to scale along x-axis.
-        Passed to `utils.transform_grid`.
+        Amount to scale along x-axis. The absolute value of these is degenerate with sigma.
+        Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
+        Passed to `grid.transform_grid`.
+        Units: arbitrary 
     r_2 : float
         Amount to scale along y-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: arbitrary
     r_3 : float
         Amount to scale along z-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: arbitrary
     theta : float
         Angle to rotate in xy-plane.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: radians
     amp : float
         Factor by which pressure is enhanced at the peak of ellipsoid.
+        Units: unitless
     xk : float
         Power of exponential in RA direction
+        Units: unitless
     x0 : float
         RA offset of exponential.
         Note that this is in transformed coordinates so x0=1 is at xs + sr_1.
+        Units: pixels
     yk : float
         Power of exponential in Dec direction
+        Units: unitless
     y0 : float
         Dec offset of exponential.
         Note that this is in transformed coordinates so y0=1 is at ys + sr_2.
+        Units: pixels
     zk : float
         Power of exponential along the line of sight
+        Units: unitless
     z0 : float
         Line of sight offset of exponential.
         Note that this is in transformed coordinates so z0=1 is at zs + sr_3.
+        Units: pixels
 
     Returns
     -------
@@ -749,33 +843,46 @@ def add_powerlaw(
         See `containers.Model.xyz` for details.
     dx : float
         RA of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dy : float
         Dec of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dz : float
         Line of sight offset of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     r_1 : float
-        Amount to scale along x-axis.
-        Passed to `utils.transform_grid`.
+        Amount to scale along x-axis. The absolute value of these is degenerate with sigma.
+        Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
+        Passed to `grid.transform_grid`.
+        Units: arbitrary
     r_2 : float
         Amount to scale along y-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: arbitrary
     r_3 : float
         Amount to scale along z-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: arbitrary
     theta : float
         Angle to rotate in xy-plane.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: radians
     amp : float
         Factor by which pressure is enhanced within the ellipsoid.
+        Units: unitless
     phi0 : float
-        Polar angle of nose of power law.
+        Polar angle of nose of power law. This is CCW from the x-axis,
+        after the grid rotation. See arctan2 documentation
+        Units: radians
     k_r : float
         Slope of power law in radial direction.
+        Units: unitless
     k_phi : float
         Slope of power law in polar direction.
+        Units: unitless
 
     Returns
     -------
@@ -828,33 +935,46 @@ def add_powerlaw_cos(
         See `containers.Model.xyz` for details.
     dx : float
         RA of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dy : float
         Dec of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     dz : float
         Line of sight offset of cluster center relative to grid origin.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: pixels
     r_1 : float
-        Amount to scale along x-axis.
-        Passed to `utils.transform_grid`.
+        Amount to scale along x-axis. The absolute value of these is degenerate with sigma.
+        Units are arbitrary, only ratio of r_1/r_2, r_1/r_3, r_2/r_3 matters
+        Passed to `grid.transform_grid`.
+        Units: arbitrary  
     r_2 : float
         Amount to scale along y-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: unitless
     r_3 : float
         Amount to scale along z-axis.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: unitless
     theta : float
         Angle to rotate in xy-plane.
-        Passed to `utils.transform_grid`.
+        Passed to `grid.transform_grid`.
+        Units: radians
     amp : float
         Factor by which pressure is enhanced within the ellipsoid.
+        Units: unitless
     phi0 : float
-        Polar angle of nose of power law.
+         Polar angle of nose of power law. This is CCW from the x-axis,
+         after the grid rotation. See arctan2 documentation
+         Units: radians 
     k_r : float
         Slope of power law in radial direction.
+        Units: unitless
     omega : float
         Angular freqency of the cosine term.
+        Units: unitless
 
     Returns
     -------
