@@ -1,3 +1,13 @@
+## 6.1.0 (2024-10-08)
+
+### Feat
+
+- add units to doc strings
+
+### Fix
+
+- applying black
+
 ## 6.0.4 (2024-10-02)
 
 ### Fix
