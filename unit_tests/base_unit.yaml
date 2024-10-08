@@ -27,6 +27,19 @@ paths:
 
 # Defines the grid
 # All are passed through eval
+# A word on the grid: the grid is the set of points
+# at which the model is evaluated. This is not the same as
+# the map. The model called anywhere outside the grid will 
+# evaluate to 0, so make sure the grid covers the model
+# where there is significant power. Smaller grids have the
+# advantage of better performance. dr sets the x/y gird
+# size and should not be smaller than 1/2 the pixel size
+# to avoid sub-pixel interpolation errors. dz is the 
+# LoS spacing and only needs to be set small enough
+# to avoid excess uncertainty in the numerical integration.
+# x0/y0 should be set to the center of the cluster (or
+# other feature of interest) and defines the grid center.
+# All pixel space references will be made wrt this point.
 coords:
   r_map: "3.0*60" # Radial size of grid in arcseconds 
   dr: "1.0" # Pixel size of grid in x and y in arcseconds
