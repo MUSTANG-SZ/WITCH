@@ -1,3 +1,9 @@
+## 6.1.1 (2024-10-08)
+
+### Fix
+
+- correcting units pixel to arcsec
+
 ## 6.1.0 (2024-10-08)
 
 ### Feat
