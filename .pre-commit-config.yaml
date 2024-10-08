@@ -4,12 +4,12 @@ repos:
   hooks:
     - id: pyupgrade
 - repo: https://github.com/commitizen-tools/commitizen
-  rev: v3.29.0
+  rev: v3.29.1
   hooks:
     - id: commitizen
     - id: commitizen-branch
       stages:
-        - push
+        - Nonepre-pushNone
 - repo: https://github.com/pycqa/isort
   rev: 5.13.2
   hooks:
