@@ -43,12 +43,6 @@ beam:
   fwhm2: "32.627" # FWHM in arcseconds of the second gaussian
   amp2: 0.0192 # Amplitude of the second gaussian
 
-# Settings for subtracting off a bowl before fitting
-bowling:
-  sub_poly: False # If true fit and subtract a polynomial bowl
-  method: "pred2" # Which common mode to subtract before bowl fitting
-  degree: 5 # Degree of the polynomial to fit to the bowl
-
 # Settings to pass to minkasi for mapmaking and fitting
 minkasi:
   # Defines the noise model
