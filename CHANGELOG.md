@@ -1,3 +1,16 @@
+## 6.2.0 (2024-10-09)
+
+### Feat
+
+- removing bowling from configs
+- added noise estimation. Also started removing bowling
+- get_radial_mask util
+- return maps from make_maps
+
+### Fix
+
+- bug where it always made noise
+
 ## 6.1.1 (2024-10-08)
 
 ### Fix

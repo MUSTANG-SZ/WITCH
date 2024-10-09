@@ -9,7 +9,7 @@ repos:
     - id: commitizen
     - id: commitizen-branch
       stages:
-        - Nonepre-pushNone
+        - pre-push
 - repo: https://github.com/pycqa/isort
   rev: 5.13.2
   hooks:
