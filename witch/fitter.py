@@ -90,14 +90,12 @@ def load_tods(cfg: dict) -> minkasi.tods.TodVec:
     tod_names.sort()
     ntods = cfg["minkasi"].get("ntods", None)
     tod_names = tod_names[:ntods]
-    print(minkasi.nproc, len(tod_names))
     if minkasi.nproc > len(tod_names):
         minkasi.nproc = len(tod_names)
     if minkasi.myrank >= len(tod_names):
         print(f"More procs than TODs!, exiting process {minkasi.myrank}")
         sys.exit(0)
     tod_names = tod_names[minkasi.myrank :: minkasi.nproc]
-    print(minkasi.myrank, tod_names)
     minkasi.barrier()  # Is this needed?
 
     todvec = minkasi.tods.TodVec()
@@ -147,7 +145,6 @@ def process_tods(
                 tod.info["dx"] * wu.rad_to_arcsec, tod.info["dy"] * wu.rad_to_arcsec
             )
             tod.info["dat_calib"] += np.array(pred)
-
         tod.set_noise(noise_class, *noise_args, **noise_kwargs)
 
 
