@@ -3,6 +3,8 @@ Master fitting and map making script.
 You typically want to run the `witcher` command instead of this.
 """
 
+import pdb
+
 import argparse as argp
 import glob
 import os
@@ -16,6 +18,7 @@ import numpy as np
 import yaml
 from minkasi.tools import presets_by_source as pbs
 from typing_extensions import Any, Unpack
+from astropy.convolution import Gaussian2DKernel, convolve
 
 from . import mapmaking as mm
 from . import utils as wu
@@ -121,26 +124,12 @@ def load_tods(cfg: dict) -> minkasi.tods.TodVec:
 def process_tods(
     cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
 ) -> str:
-    bowling = cfg.get("bowling", {})
-    sub_poly = bowling.get("sub_poly", False)
-    method = bowling.get("method", "pred2")
-    degree = bowling.get("degree", 2)
     sim = cfg.get("sim", False)
     if model is None and sim:
         raise ValueError("model cannot be None when simming!")
     for i, tod in enumerate(todvec.tods):
         ipix = skymap.get_pix(tod)
         tod.info["ipix"] = ipix
-
-        if sub_poly:
-            tod.set_apix()
-            for j in range(tod.info["dat_calib"].shape[0]):
-                x, y = (
-                    tod.info["apix"][j],
-                    tod.info["dat_calib"][j] - tod.info[method][j],
-                )
-                res = np.polynomial.polynomial.polyfit(x, y, degree)
-                tod.info["dat_calib"][j] -= np.polynomial.polynomial.polyval(x, res)
 
         if sim:
             if cfg["wnoise"]:
@@ -160,12 +149,9 @@ def process_tods(
             tod.info["dat_calib"] += np.array(pred)
 
         tod.set_noise(noise_class, *noise_args, **noise_kwargs)
-    if sub_poly:
-        return f"-{method}_{degree}"
-    return ""
 
 
-def get_outdir(cfg, bowl_str, model):
+def get_outdir(cfg, model):
     outroot = cfg["paths"]["outroot"]
     if not os.path.isabs(outroot):
         outroot = os.path.join(
@@ -192,7 +178,6 @@ def get_outdir(cfg, bowl_str, model):
             )
         else:
             outdir = os.path.join(outdir, "not_fit")
-    outdir += bowl_str
     if cfg["sim"] and model is not None:
         outdir += "-sim"
 
@@ -286,14 +271,50 @@ def main():
     noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
     noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
     noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
-    bowl_str = process_tods(
-        cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
-    )
 
     # Get output
     if "base" in cfg.keys():
         del cfg["base"]  # We've collated to the cfg files so no need to keep the base
-    outdir = get_outdir(cfg, bowl_str, model)
+    outdir = get_outdir(cfg, model)
+
+    # Make Noisemaps
+    if cfg.get("noise_map", False):
+        print_once("Making noise map")
+        noise_vec = deepcopy(todvec)
+        noise_skymap = minkasi.maps.SkyMap(lims, pixsize)
+        for i, tod in enumerate(noise_vec.tods):
+            ipix = noise_skymap.get_pix(tod)
+            tod.info["ipix"] = ipix
+            tod.info["dat_calib"] *= (-1) ** ((minkasi.myrank + minkasi.nproc * i) % 2)
+            tod.set_noise(
+                noise_class,
+                tod.info["dat_calib"],
+                *noise_args,
+                **noise_kwargs,
+            )
+        minkasi.barrier()
+        noise_mapset = mm.make_maps(
+            noise_vec,
+            noise_skymap,
+            noise_class,
+            noise_args,
+            noise_kwargs,
+            os.path.join(outdir, "noise"),
+            0,
+            cfg["minkasi"]["dograd"],
+            return_maps=True,
+        )
+
+        nmap = noise_mapset.maps[0].map
+        kernel = Gaussian2DKernel(int(10 / (pixsize * wu.rad_to_arcsec)))
+        nmap = convolve(nmap, kernel)
+
+        flags = wu.get_radial_mask(nmap, pixsize * wu.rad_to_arcsec, 60.0)
+        print_once(
+            "Noise in central 1 arcmin is {:.2f}uK".format(np.std(nmap[flags]) * 1e6)
+        )
+
+    process_tods(cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model)
 
     # Make signal maps
     if cfg.get("sig_map", cfg.get("map", True)):
