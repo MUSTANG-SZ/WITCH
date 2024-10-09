@@ -1,3 +1,9 @@
+## 6.2.1 (2024-10-09)
+
+### Fix
+
+- removing debug print statements
+
 ## 6.2.0 (2024-10-09)
 
 ### Feat
