@@ -267,7 +267,7 @@ def main():
     outdir = get_outdir(cfg, model)
 
     # Make Noisemaps
-    if cfg.get("noise_map", cfg.get("map", False)):
+    if cfg.get("noise_map", False):
         print_once("Making noise map")
         noise_vec = deepcopy(todvec)
         noise_skymap = minkasi.maps.SkyMap(lims, pixsize)
