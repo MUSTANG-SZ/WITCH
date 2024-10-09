@@ -117,26 +117,12 @@ def load_tods(cfg: dict) -> minkasi.tods.TodVec:
 def process_tods(
     cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
 ) -> str:
-    bowling = cfg.get("bowling", {})
-    sub_poly = bowling.get("sub_poly", False)
-    method = bowling.get("method", "pred2")
-    degree = bowling.get("degree", 2)
     sim = cfg.get("sim", False)
     if model is None and sim:
         raise ValueError("model cannot be None when simming!")
     for i, tod in enumerate(todvec.tods):
         ipix = skymap.get_pix(tod)
         tod.info["ipix"] = ipix
-
-        if sub_poly:
-            tod.set_apix()
-            for j in range(tod.info["dat_calib"].shape[0]):
-                x, y = (
-                    tod.info["apix"][j],
-                    tod.info["dat_calib"][j] - tod.info[method][j],
-                )
-                res = np.polynomial.polynomial.polyfit(x, y, degree)
-                tod.info["dat_calib"][j] -= np.polynomial.polynomial.polyval(x, res)
 
         if sim:
             if cfg["wnoise"]:
@@ -156,12 +142,9 @@ def process_tods(
             tod.info["dat_calib"] += np.array(pred)
 
         tod.set_noise(noise_class, *noise_args, **noise_kwargs)
-    if sub_poly:
-        return f"-{method}_{degree}"
-    return ""
 
 
-def get_outdir(cfg, bowl_str, model):
+def get_outdir(cfg, model):
     outroot = cfg["paths"]["outroot"]
     if not os.path.isabs(outroot):
         outroot = os.path.join(
@@ -188,7 +171,6 @@ def get_outdir(cfg, bowl_str, model):
             )
         else:
             outdir = os.path.join(outdir, "not_fit")
-    outdir += bowl_str
     if cfg["sim"] and model is not None:
         outdir += "-sim"
 
@@ -278,58 +260,40 @@ def main():
     noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
     noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
     noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
-    bowl_str = process_tods(
-        cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
-    )
 
     # Get output
     if "base" in cfg.keys():
         del cfg["base"]  # We've collated to the cfg files so no need to keep the base
-    outdir = get_outdir(cfg, bowl_str, model)
+    outdir = get_outdir(cfg, model)
 
-    # Make noise maps
+    # Make Noisemaps
     if cfg.get("noise_map", cfg.get("map", False)):
         print_once("Making noise map")
         noise_vec = deepcopy(todvec)
-        for i, tod in enumerate(noise_vec.tods): 
-            tod.info["dat_calib"] = (-1) ** ((minkasi.myrank + minkasi.nproc * i) % 2) * np.ones(tod.info["dat_calib"].shape)
-            #tod.set_noise(noise_class, *noise_args, **noise_kwargs)
-        pdb.set_trace()
-        todlim = int(len(todvec) / 2)
-        noise_map = minkasi.maps.SkyMap(lims, pixsize)
-        naive, hits = mm.make_naive(noise_vec, noise_map, os.path.join(outdir, "noise"))
+        noise_skymap = minkasi.maps.SkyMap(lims, pixsize)
+        for i, tod in enumerate(noise_vec.tods):
+            ipix = noise_skymap.get_pix(tod)
+            tod.info["ipix"] = ipix
+            tod.info["dat_calib"] *= (-1) ** ((minkasi.myrank + minkasi.nproc * i) % 2)
+            tod.set_noise(
+                noise_class,
+                tod.info["dat_calib"],
+                *noise_args,
+                **noise_kwargs,
+            )
+        minkasi.barrier()
+        noise_mapset = mm.make_maps(
+            noise_vec,
+            noise_skymap,
+            noise_class,
+            noise_args,
+            noise_kwargs,
+            os.path.join(outdir, "noise"),
+            0,
+            cfg["minkasi"]["dograd"],
+            return_maps=True,
+        )
 
-        # Take 1 over hits map
-        ihits = hits.copy()
-        ihits.invert()
-    
-        # Save weights and noise maps
-        _ = mm.make_weights(noise_vec, noise_map, os.path.join(outdir, "noise"))
-    
-        # Setup the mapset
-        # For now just include the naive map so we can use it as the initial guess.
-        noise_mapset = minkasi.maps.Mapset()
-        noise_mapset.add_map(naive)
-    
-        # run PCG to solve for a first guess
-        iters = [5, 25, 100]
-        noise_mapset = mm.solve_map(noise_vec, noise_mapset, ihits, None, 26, iters, os.path.join(outdir, "noise"), "initial")
-
-
-
-
-        #        noise_mapset = mm.make_maps(
-        #            noise_vec,
-        #            noise_map,
-        #            noise_class,
-        #            noise_args,
-        #            noise_kwargs,
-        #            os.path.join(outdir, "noise"),
-        #            2,
-        #            cfg["minkasi"]["dograd"],
-        #            return_maps = True,
-        #        )
-        #        nmap = noise_mapset.maps[0].map
         nmap = noise_mapset.maps[0].map
         kernel = Gaussian2DKernel(int(10 / (pixsize * wu.rad_to_arcsec)))
         nmap = convolve(nmap, kernel)
@@ -338,7 +302,9 @@ def main():
         print_once(
             "Noise in central 1 arcmin is {:.2f}uK".format(np.std(nmap[flags]) * 1e6)
         )
-        pdb.set_trace()
+
+    process_tods(cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model)
+
     # Make signal maps
     if cfg.get("sig_map", cfg.get("map", True)):
         print_once("Making signal map")
