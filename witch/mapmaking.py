@@ -253,6 +253,7 @@ def make_maps(
     outdir: str,
     npass: int,
     dograd: bool,
+    return_maps: bool = False,
 ):
     """
     Make a minkasi map with multple passes and noise reestimation.
@@ -277,6 +278,8 @@ def make_maps(
         The number of times to mapmake and then reestimate the noise.
     dograd : bool
         If True make a map based prior to avoid biases from sharp features.
+    return_maps : bool
+        If True, return the mapset. Default; False
     """
     naive, hits = make_naive(todvec, skymap, outdir)
 
@@ -310,3 +313,6 @@ def make_maps(
         )
 
     minkasi.barrier()
+
+    if return_maps:
+        return mapset
