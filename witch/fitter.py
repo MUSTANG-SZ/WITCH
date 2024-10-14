@@ -3,11 +3,10 @@ Master fitting and map making script.
 You typically want to run the `witcher` command instead of this.
 """
 
-import pdb
-
 import argparse as argp
 import glob
 import os
+import pdb
 import sys
 import time
 from copy import deepcopy
@@ -16,13 +15,13 @@ import jax as jax
 import minkasi
 import numpy as np
 import yaml
+from astropy.convolution import Gaussian2DKernel, convolve
 from minkasi.tools import presets_by_source as pbs
 from typing_extensions import Any, Unpack
-from astropy.convolution import Gaussian2DKernel, convolve
 
+from . import grid
 from . import mapmaking as mm
 from . import utils as wu
-from . import grid
 from .containers import Model
 
 
@@ -479,7 +478,12 @@ def main():
             cfg["minkasi"]["npass"],
             cfg["minkasi"]["dograd"],
         )
-        model.xyz = grid.make_grid_from_wcs(model_skymap.wcs, model_skymap.map.shape[0], model_skymap.map.shape[1], 0.00116355, 0.00000969)
+        model.xyz = grid.make_grid_from_wcs(
+            model_skymap.wcs,
+            model_skymap.map.shape[0],
+            model_skymap.map.shape[1],
+            0.00116355,
+            0.00000969,
+        )
         model_skymap.map = model.model
         model_skymap.write(os.path.join(outdir, "model/truth.fits"))
-    
