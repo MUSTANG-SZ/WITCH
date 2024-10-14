@@ -22,6 +22,7 @@ from astropy.convolution import Gaussian2DKernel, convolve
 
 from . import mapmaking as mm
 from . import utils as wu
+from . import grid
 from .containers import Model
 
 
@@ -452,3 +453,33 @@ def main():
         cfg["minkasi"]["npass"],
         cfg["minkasi"]["dograd"],
     )
+
+    if cfg.get("model_map", False):
+        print_once("Making model map")
+        model_todvec = deepcopy(todvec)
+        model_skymap = minkasi.maps.SkyMap(lims, pixsize)
+        model_cfg = deepcopy(cfg)
+        model_cfg["sim"] = True
+        process_tods(
+            cfg,
+            model_todvec,
+            model_skymap,
+            noise_class,
+            noise_args,
+            noise_kwargs,
+            model,
+        )
+        mm.make_maps(
+            model_todvec,
+            model_skymap,
+            noise_class,
+            noise_args,
+            noise_kwargs,
+            os.path.join(outdir, "model"),
+            cfg["minkasi"]["npass"],
+            cfg["minkasi"]["dograd"],
+        )
+        model.xyz = grid.make_grid_from_wcs(model_skymap.wcs, model_skymap.map.shape[0], model_skymap.map.shape[1], 0.00116355, 0.00000969)
+        model_skymap.map = model.model
+        model_skymap.write(os.path.join(outdir, "model/truth.fits"))
+    
