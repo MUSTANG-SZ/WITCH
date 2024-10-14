@@ -1,5 +1,7 @@
 base: "base_unit.yaml"
 name: "RXJ1347"
+noise_map: True
+model_map: True
 model:
   unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   structures:
