@@ -173,7 +173,7 @@ class Model:
         self.original_order = list(np.sort(structure_idx))
 
     def __setattr__(self, name, value):
-        if name == "cur_round":
+        if name == "cur_round" or name == "xyz":
             self.__dict__.pop("model_grad", None)
             self.__dict__.pop("model", None)
         return super().__setattr__(name, value)

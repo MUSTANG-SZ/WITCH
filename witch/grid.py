@@ -161,12 +161,12 @@ def make_grid_from_wcs(
     if x0 is None or y0 is None:
         raise TypeError("Origin still None")
 
-    ra -= x0
-    dec -= y0
-
     # Sparse indexing to save mem
-    x = x.at[:, 0, 0].set(ra)
-    y = y.at[0, :, 0].set(dec)
+    x = x.at[:, 0, 0].set(ra * rad_to_arcsec)
+    y = y.at[0, :, 0].set(dec * rad_to_arcsec)
+    z = z * rad_to_arcsec
+    x0 *= rad_to_arcsec
+    y0 *= rad_to_arcsec
 
     return x, y, z, float(x0), float(y0)
 
