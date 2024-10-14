@@ -3,11 +3,10 @@ Master fitting and map making script.
 You typically want to run the `witcher` command instead of this.
 """
 
-import pdb
-
 import argparse as argp
 import glob
 import os
+import pdb
 import sys
 import time
 from copy import deepcopy
@@ -16,9 +15,9 @@ import jax as jax
 import minkasi
 import numpy as np
 import yaml
+from astropy.convolution import Gaussian2DKernel, convolve
 from minkasi.tools import presets_by_source as pbs
 from typing_extensions import Any, Unpack
-from astropy.convolution import Gaussian2DKernel, convolve
 
 from . import mapmaking as mm
 from . import utils as wu
