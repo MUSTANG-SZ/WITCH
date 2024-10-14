@@ -350,11 +350,12 @@ def beam_double_gauss(
     )
     return beam / jnp.sum(beam)
 
+
 def get_radial_mask(data, pix_size, radius):
-    x0, y0 = int(data.shape[0]/2), int(data.shape[1]/2) #TODO: subpixel alignment
+    x0, y0 = int(data.shape[0] / 2), int(data.shape[1] / 2)  # TODO: subpixel alignment
     X, Y = np.arange(data.shape[0]), np.arange(data.shape[1])
     XX, YY = np.meshgrid(Y, X)
-    
-    dist = np.sqrt((XX-x0)**2 + (YY - y0)**2) * pix_size
+
+    dist = np.sqrt((XX - x0) ** 2 + (YY - y0) ** 2) * pix_size
 
     return dist < radius
