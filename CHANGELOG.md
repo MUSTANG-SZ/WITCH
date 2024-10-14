@@ -1,3 +1,15 @@
+## 6.3.0 (2024-10-14)
+
+### Feat
+
+- add model map
+- recompute model when xyz is updated
+- add model plotting to fitter
+
+### Fix
+
+- update grid_from_wcs to match make_grid
+
 ## 6.2.1 (2024-10-09)
 
 ### Fix
