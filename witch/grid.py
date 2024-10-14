@@ -129,7 +129,7 @@ def make_grid_from_wcs(
     # make grid
     _x = jnp.arange(nx, dtype=float)
     _y = jnp.arange(ny, dtype=float)
-    _z = jnp.linspace(-1 * z_map, z_map, 2 * int(z_map / dz), dtype=float)
+    _z = jnp.linspace(-1 * z_map, z_map, 2 * int(z_map / dz), dtype=float) 
     x, y, z = jnp.meshgrid(_x, _y, _z, sparse=True, indexing="ij")
 
     # Pad so we don't need to broadcast
@@ -159,14 +159,14 @@ def make_grid_from_wcs(
         y0 = (np.max(dec) + np.min(dec)) / 2
 
     if x0 is None or y0 is None:
-        raise TypeError("Origin still None")
-
-    ra -= x0
-    dec -= y0
+        raise TypeError("Origin still None") 
 
     # Sparse indexing to save mem
-    x = x.at[:, 0, 0].set(ra)
-    y = y.at[0, :, 0].set(dec)
+    x = x.at[:, 0, 0].set(ra * rad_to_arcsec)
+    y = y.at[0, :, 0].set(dec * rad_to_arcsec)
+    z = z * rad_to_arcsec
+    x0 *= rad_to_arcsec
+    y0 *= rad_to_arcsec
 
     return x, y, z, float(x0), float(y0)
 
