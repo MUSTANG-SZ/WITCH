@@ -2,7 +2,7 @@
 # If an absolute path is given then it is used
 # Otherwise it is assumed to me reative to the directory of this file
 base: "base_unit.yaml"
-
+model_map: True
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "SIM"
@@ -17,7 +17,7 @@ model:
   structures:
     # Name of the first structure
     cyl:
-      structure: "cylindrical" # What type of structure it is
+      structure: "cylindrical_beta" # What type of structure it is
       # Parameters for the structure
       parameters:
         dx_1: # Name of the first parameter
@@ -29,12 +29,12 @@ model:
         L:
           value: 100 
         theta:
-          value: 0.0
+          value: -0.9
         P0:
           value: 1. 
         r_c:
-          value: 20.
+          value: 46.8
         beta:
-          value: 5.4905 
+          value: 1.3333 
 
 
