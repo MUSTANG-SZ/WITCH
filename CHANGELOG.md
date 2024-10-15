@@ -1,3 +1,9 @@
+## 6.3.1 (2024-10-15)
+
+### Fix
+
+- bug where it wouldnt model mapmake
+
 ## 6.3.0 (2024-10-14)
 
 ### Feat
