@@ -1,3 +1,9 @@
+## 6.3.2 (2024-10-15)
+
+### Fix
+
+- writting on multiple threads:
+
 ## 6.3.1 (2024-10-15)
 
 ### Fix
