@@ -420,39 +420,38 @@ def main():
         with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
             yaml.dump(final, file)
 
-    # If we arenn't mapmaking then we can stop here
-    if cfg["sub"] is False or not cfg.get("res_map", cfg.get("map", True)):
-        return
-
-    # Compute residual and either set it to the data or use it for noise
-    if model is None:
-        raise ValueError("Somehow trying to make a residual map with no model defined!")
-    for i, tod in enumerate(todvec.tods):
-        pred = model.to_tod(
-            tod.info["dx"] * wu.rad_to_arcsec,
-            tod.info["dy"] * wu.rad_to_arcsec,
-        )
-        if cfg["sub"]:
-            tod.info["dat_calib"] -= np.array(pred)
-            tod.set_noise(noise_class, *noise_args, **noise_kwargs)
-        else:
-            tod.set_noise(
-                noise_class, tod.info["dat_calib"] - pred, *noise_args, **noise_kwargs
+    # Compute Residuals 
+    if cfg["sub"] is True or cfg.get("res_map", cfg.get("map", True)):        
+        # Compute residual and either set it to the data or use it for noise
+        if model is None:
+            raise ValueError("Somehow trying to make a residual map with no model defined!")
+        for i, tod in enumerate(todvec.tods):
+            pred = model.to_tod(
+                tod.info["dx"] * wu.rad_to_arcsec,
+                tod.info["dy"] * wu.rad_to_arcsec,
             )
-
-    # Make residual maps
-    print_once("Making residual map")
-    mm.make_maps(
-        todvec,
-        skymap,
-        noise_class,
-        noise_args,
-        noise_kwargs,
-        os.path.join(outdir, "residual"),
-        cfg["minkasi"]["npass"],
-        cfg["minkasi"]["dograd"],
-    )
-
+            if cfg["sub"]:
+                tod.info["dat_calib"] -= np.array(pred)
+                tod.set_noise(noise_class, *noise_args, **noise_kwargs)
+            else:
+                tod.set_noise(
+                    noise_class, tod.info["dat_calib"] - pred, *noise_args, **noise_kwargs
+                )
+    
+        # Make residual maps
+        print_once("Making residual map")
+        mm.make_maps(
+            todvec,
+            skymap,
+            noise_class,
+            noise_args,
+            noise_kwargs,
+            os.path.join(outdir, "residual"),
+            cfg["minkasi"]["npass"],
+            cfg["minkasi"]["dograd"],
+        )
+  
+    #Make Model maps
     if cfg.get("model_map", False):
         print_once("Making model map")
         model_todvec = deepcopy(todvec)
@@ -486,4 +485,6 @@ def main():
             0.00000969,
         )
         model_skymap.map = model.model
-        model_skymap.write(os.path.join(outdir, "model/truth.fits"))
+        model_skymap.write(os.path.join(outdir, "model/truth.fits"), overwrite=True)
+
+    print_once("Outputs can be found in", outdir)
