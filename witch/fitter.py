@@ -485,6 +485,7 @@ def main():
             0.00000969,
         )
         model_skymap.map = model.model
-        model_skymap.write(os.path.join(outdir, "model/truth.fits"), overwrite=True)
+        if minkasi.myrank == 0:
+            model_skymap.write(os.path.join(outdir, "model/truth.fits"))
 
     print_once("Outputs can be found in", outdir)
