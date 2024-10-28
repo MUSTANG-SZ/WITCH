@@ -24,6 +24,7 @@ from . import mapmaking as mm
 from . import utils as wu
 from .containers import Model
 
+import pdb
 
 def print_once(*args: Unpack[tuple[Any, ...]]):
     """
@@ -129,7 +130,7 @@ def process_tods(
         ipix = skymap.get_pix(tod)
         tod.info["ipix"] = ipix
 
-        if sim:
+        if sim: 
             if cfg["wnoise"]:
                 temp = np.percentile(np.diff(tod.info["dat_calib"]), [33, 68])
                 scale = (temp[1] - temp[0]) / np.sqrt(8)
@@ -459,7 +460,7 @@ def main():
         model_cfg = deepcopy(cfg)
         model_cfg["sim"] = True
         process_tods(
-            cfg,
+            model_cfg,
             model_todvec,
             model_skymap,
             noise_class,

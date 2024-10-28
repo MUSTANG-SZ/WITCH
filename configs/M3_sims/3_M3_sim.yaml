@@ -1,0 +1,49 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "M3_base.yaml"
+
+# Cluster name
+# Used both for the output path as well as to load presets
+name: "M3_2.0"
+sim: True # If True use TODs to make noise and add a simulated cluster
+
+# Define the model
+model:
+  # Unit conversion to apply at the end
+  # Will be evaled
+  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+  # Structure to include in the model
+  structures:
+    # Name of the first structure
+    a10:
+      structure: "a10" # What type of structure it is
+      parameters:
+        dx_1: # Name of the first parameter
+          value: 0.0 # Value to use/start at, will be evaled
+          to_fit: True
+          priors: [-9.0, 9.0]
+        dy_1:
+          value: 0.0
+          to_fit: True
+          priors: [-9.0, 9.0]
+        dz_1:
+          value: 0.0
+        theta:
+          value: 0.
+        P0:
+          value: 3.202
+        c500:
+          value: 1.083
+        m500:
+          value: "3.0e14"
+          to_fit: True
+        gamma:
+          value: 0.3798
+        alpha:
+          value: 1.4063
+        beta:
+          value: 5.4905
+        z:
+          value: 1.19
+

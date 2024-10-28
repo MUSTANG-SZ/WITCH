@@ -29,6 +29,7 @@ ORDER = (
     "exponential",
     "powerlaw",
     "powerlaw_cos",
+    "cylindrical_beta_2d",
     "gaussian",
 )
 
@@ -218,6 +219,20 @@ def model(
     # Integrate along line of site
     ip = trapz(pressure, dx=dz, axis=-1)
 
+    # Stage 2, add non-beam convolved to integrated profile
+    for n_struct, struct in zip(n_structs, ORDER):
+        if STRUCT_STAGE[struct] != 2:
+            continue
+        if not n_struct:
+            continue
+        delta = n_struct * STRUCT_N_PAR[struct]
+        struct_pars = params[start : start + delta].reshape(
+            (n_struct, STRUCT_N_PAR[struct])
+        )
+        start += delta
+        for i in range(n_struct):
+            ip = jnp.add(ip, STRUCT_FUNCS[struct](*struct_pars[i], xyz))
+
     bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
         (ip.shape[1] - beam.shape[1]) / 2
     )
@@ -231,9 +246,9 @@ def model(
 
     ip = fft_conv(ip, beam)
 
-    # Stage 2, add to the integrated profile
+    # Stage 3, add beam convolved to the integrated profile
     for n_struct, struct in zip(n_structs, ORDER):
-        if STRUCT_STAGE[struct] != 2:
+        if STRUCT_STAGE[struct] != 3:
             continue
         if not n_struct:
             continue

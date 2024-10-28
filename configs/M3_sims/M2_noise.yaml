@@ -1,0 +1,10 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "M2_base.yaml"
+noise_map: True
+# Cluster name
+# Used both for the output path as well as to load presets
+name: "M2_noise"
+sim: False # If True use TODs to make noise and add a simulated cluster
+
