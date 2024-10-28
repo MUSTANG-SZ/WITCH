@@ -26,6 +26,7 @@ from .fitting import fit_tods, objective
 
 comm = MPI.COMM_WORLD.Clone()
 
+import pdb
 
 def print_once(*args: Unpack[tuple[Any, ...]]):
     """

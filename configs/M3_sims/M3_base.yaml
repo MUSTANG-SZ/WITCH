@@ -1,0 +1,59 @@
+fit: True # If True fit the cluster, overridden by command line
+sub: True # If True the cluster before mapmaking, overridden by command line
+n_rounds: 4 # How many rounds of fitting to try
+
+# Constants for use in the model and grid construction
+# Can be used as a dict ie: constants['z']
+# All are passed through eval
+constants:
+  Te: 5.0
+  freq: "90e9"
+  z: 1.19
+
+paths:
+  # Location of TOD files
+  # If an absolute path then that is used directly
+  # If a relative path taken relative to MJ_TODROOT
+  tods: "M3"
+  glob: "*.fits" # Pattern to search for TODs with
+  ndo: False # ?
+  odo: False # ?
+  # Directory to use as root for outputs
+  # If an absolute path then that is used directly
+  # If a relative path taken relative to MJ_OUTROOT
+  outroot: ""
+  subdir: "" # Subdirectory to use
+  # Final outdir will be something like: outroot/name/model_name/subdir
+
+# Defines the grid
+# All are passed through eval
+coords:
+  r_map: "3.0*60" # Radial size of grid in arcseconds
+  dr: "1.0" # Pixel size of grid in x and y in arcseconds
+  dz: 1.0 # Pixel size along the LOS, if not provided dr is used
+  x0: "(206*u.degree).to(u.radian).value" # RA of grid origin in radians
+  y0: "(10*u.degree).to(u.radian).value" # Dec of grid origin in radian
+    
+# Defines the beam
+# All are passed through eval
+# Note that these define a double gaussian
+beam:
+  fwhm1: "9.735" # FWHM in arcseconds of the first gaussian
+  amp1: 0.9808 # Amplitude of the first gaussian
+  fwhm2: "32.627" # FWHM in arcseconds of the second gaussian
+  amp2: 0.0192 # Amplitude of the second gaussian
+
+# Settings to pass to minkasi for mapmaking and fitting
+minkasi:
+  # Defines the noise model
+  noise:
+    class: "minkasi.mapmaking.noise.NoiseSmoothedSVD" # Noise class to use
+    args: "[]" # Arguments to pass to apply_noise
+    kwargs: "{'fwhm':10}" # kwargs to pass to apply_noise
+  maxiter: 10 # Maximum fit iterations per round
+  npass: 5 # How many passes of mapmaking to run
+  dograd: False # If True then use gradient priors when mapmaking
+imports:
+  astropy.units: u
+  astropy.coordinates: [Angle]
+
