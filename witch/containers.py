@@ -5,7 +5,6 @@ Data classes for describing models in a structured way.
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import import_module
-from typing import Optional, Sequence
 
 import dill
 import jax
@@ -13,8 +12,6 @@ import jax.numpy as jnp
 import numpy as np
 from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
-from minkasi.tods import Tod
-from numpy.typing import NDArray
 from typing_extensions import Self
 
 from . import core

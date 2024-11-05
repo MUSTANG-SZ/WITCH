@@ -3,7 +3,7 @@ A set of utility functions and constants used for unit conversions
 and cosmology as well as some generically useful math functions.
 """
 
-from functools import cache, partial
+from functools import partial
 
 import jax
 import jax.numpy as jnp
