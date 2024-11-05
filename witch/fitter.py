@@ -18,6 +18,8 @@ import numpy as np
 import yaml
 from jitkasi.tod import TOD
 from mpi4py import MPI
+from astropy.convolution import Gaussian2DKernel, convolve
+from minkasi.tools import presets_by_source as pbs
 from typing_extensions import Any, Unpack
 
 from . import utils as wu
@@ -25,8 +27,6 @@ from .containers import Model
 from .fitting import fit_tods, objective
 
 comm = MPI.COMM_WORLD.Clone()
-
-import pdb
 
 
 def print_once(*args: Unpack[tuple[Any, ...]]):
