@@ -138,7 +138,7 @@ def y2K_RJ(freq: float, Te: float) -> float:
     return factor * K_CMB2K_RJ(freq)
 
 
-@cache
+@jax.jit
 def get_da(z: ArrayLike) -> jax.Array:
     """
     Get factor to convert from arcseconds to MPc.
@@ -156,7 +156,7 @@ def get_da(z: ArrayLike) -> jax.Array:
     return jnp.interp(z, zline, daline)
 
 
-@cache
+@jax.jit
 def get_nz(z: ArrayLike) -> jax.Array:
     """
     Get the critical density at a given redshift.
@@ -175,7 +175,7 @@ def get_nz(z: ArrayLike) -> jax.Array:
     return jnp.interp(z, zline, nzline)
 
 
-@cache
+@jax.jit
 def get_hz(z: ArrayLike) -> jax.Array:
     """
     Get the dimensionless hubble constant, h, at a given redshift.
