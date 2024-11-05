@@ -281,6 +281,18 @@ def make_maps(
     return_maps : bool
         If True, return the mapset. Default; False
     """
+    for tod in todvec.tods:
+        if "ipix" not in tod.info:
+            ipix = skymap.get_pix(tod)
+            tod.info["ipix"] = ipix
+        if tod.noise is None:
+            tod.set_noise(
+                noise_class,
+                tod.info["dat_calib"],
+                *noise_args,
+                **noise_kwargs,
+            )
+
     naive, hits = make_naive(todvec, skymap, outdir)
 
     # Take 1 over hits map
