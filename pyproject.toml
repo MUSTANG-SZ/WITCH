@@ -16,7 +16,7 @@ requires-python = ">=3.8"
 keywords = ["galaxy clusters", "tSZ", "Sunyaev–Zeldovich", "MUSTANG2", "jax", "minkasi"]
 license = {text = "GPLv3"}
 classifiers = [ "Programming Language :: Python" ]
-dependencies = ["numpy", "astropy", "jax", "jaxlib", "dill", "jitkasi", "cython", "mpi4py", "mpi4jax"]
+dependencies = ["numpy", "astropy", "jax", "jaxlib", "dill", "jitkasi @ git+https://github.com/MUSTANG-SZ/jitkasi.git", "cython", "mpi4py", "mpi4jax"]
 
 [project.optional-dependencies]
 fitter = ["pyyaml", "minkasi"]
