@@ -475,7 +475,9 @@ def main():
     if cfg.get("res_map", cfg.get("map", True)):
         # Compute residual and either set it to the data or use it for noise
         if model is None:
-            raise ValueError("Somehow trying to make a residual map with no model defined!")
+            raise ValueError(
+                "Somehow trying to make a residual map with no model defined!"
+            )
         todvec = to_minkasi(todvec, False)
         for i, tod in enumerate(todvec.tods):
             pred = model.to_tod(
@@ -497,9 +499,12 @@ def main():
                     tod.set_noise(noise_class, *noise_args, **noise_kwargs)
                 else:
                     tod.set_noise(
-                        noise_class, tod.info["dat_calib"] - pred, *noise_args, **noise_kwargs
+                        noise_class,
+                        tod.info["dat_calib"] - pred,
+                        *noise_args,
+                        **noise_kwargs,
                     )
-        
+
             # Make residual maps
             print_once("Making residual map")
             mm.make_maps(
@@ -512,17 +517,21 @@ def main():
                 cfg["minkasi"]["npass"],
                 cfg["minkasi"]["dograd"],
             )
-  
-    #Make Model maps
+
+    # Make Model maps
     if cfg.get("model_map", False):
         print_once("Making model map")
         if model is None:
-            raise ValueError("Somehow trying to make a model map with no model defined!")
+            raise ValueError(
+                "Somehow trying to make a model map with no model defined!"
+            )
         model_todvec = deepcopy(todvec)
         model_skymap = minkasi.maps.SkyMap(lims, pixsize)
         model_cfg = deepcopy(cfg)
         model_cfg["sim"] = True
-        model_todvec = process_tods(cfg, model_todvec, noise_args_full, noise_kwargs, model)
+        model_todvec = process_tods(
+            cfg, model_todvec, noise_args_full, noise_kwargs, model
+        )
         model_todvec = to_minkasi(model_todvec, False)
         mm.make_maps(
             model_todvec,
