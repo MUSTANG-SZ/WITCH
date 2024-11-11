@@ -1,3 +1,9 @@
+## 6.5.0 (2024-11-11)
+
+### Feat
+
+- update to match colormap changes
+
 ## 6.4.0 (2024-11-11)
 
 ### Feat
