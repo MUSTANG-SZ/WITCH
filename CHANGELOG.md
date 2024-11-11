@@ -1,3 +1,9 @@
+## 6.4.0 (2024-11-11)
+
+### Feat
+
+- changed colormap handling to be more sensible
+
 ## 6.3.3 (2024-10-15)
 
 ### Fix
