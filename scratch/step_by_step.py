@@ -12,7 +12,10 @@ from functools import partial
 import yaml
 import numpy as np
 import scipy 
+<<<<<<< HEAD
 >>>>>>> 1d74263 (refactor mcmc_check)
+=======
+>>>>>>> 43883e3bbf287cc28dff7707784b612c8dfb3b86
 
 import emcee
 import minkasi.parallel as parallel
@@ -27,6 +30,8 @@ from astropy.coordinates import Angle
 from matplotlib import pyplot as plt
 from minkasi.fitting import models
 from minkasi.mapmaking import noise
+import minkasi
+
 
 from minkasi.maps.skymap import SkyMap
 from minkasi_jax.core import helper, model
@@ -56,6 +61,7 @@ import functools
 
 
 
+<<<<<<< HEAD
 
 
 
@@ -65,6 +71,8 @@ import functools
 
 
 
+=======
+>>>>>>> 43883e3bbf287cc28dff7707784b612c8dfb3b86
 path = "/home/jorlo/dev/minkasi_jax/configs/sampler_sims/"
 with open(path + '/1gauss.yaml', "r") as file:
     cfg = yaml.safe_load(file)
@@ -73,6 +81,7 @@ with open(path + '/1gauss.yaml', "r") as file:
 parser = make_parser()
 args = parser.parse_args()
 
+<<<<<<< HEAD
 
 # Load TODs
 tod_names = glob.glob(os.path.join(cfg["paths"]["tods"], cfg["paths"]["glob"]))
@@ -146,6 +155,40 @@ npars = np.array([len(params)])
 prior_vals = model.priors
 priors = [None if prior is None else "flat" for prior in prior_vals]
 
+=======
+parser = make_parser()
+args = parser.parse_args()
+
+# TODO: Serialize cfg to a data class (pydantic?)
+cfg = load_config({}, args.config)
+cfg["fit"] = cfg.get("fit", "model" in cfg)
+cfg["sim"] = cfg.get("sim", False)
+cfg["map"] = cfg.get("map", True)
+cfg["sub"] = cfg.get("sub", True)
+if args.nosub:
+    cfg["sub"] = False
+if args.nofit:
+    cfg["fit"] = False
+
+# Get TODs
+todvec = load_tods(cfg)
+
+# make a template map with desired pixel size an limits that cover the data
+# todvec.lims() is MPI-aware and will return global limits, not just
+# the ones from private TODs
+lims = todvec.lims()
+pixsize = 2.0 / 3600 * np.pi / 180
+skymap = minkasi.maps.SkyMap(lims, pixsize)
+
+# Define the model and get stuff setup for minkasi
+model = Model.from_cfg(cfg)
+funs = [model.minkasi_helper]
+params = np.array(model.pars)
+npars = np.array([len(params)])
+prior_vals = model.priors
+priors = [None if prior is None else "flat" for prior in prior_vals]
+
+>>>>>>> 43883e3bbf287cc28dff7707784b612c8dfb3b86
 # Deal with bowling and simming in TODs and setup noise
 noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
 noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
@@ -154,8 +197,11 @@ bowl_str = process_tods(
     args, cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
 )
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 43883e3bbf287cc28dff7707784b612c8dfb3b86
 # make a template map with desired pixel size an limits that cover the data
 # todvec.lims() is MPI-aware and will return global limits, not just
 # the ones from private TODs
@@ -164,7 +210,10 @@ pixsize = 2.0 / 3600 * np.pi / 180
 skymap = minkasi.maps.SkyMap(lims, pixsize)
 xyz = make_grid_from_skymap(skymap, cfg["coords"]["r_map"], cfg["coords"]["dr"])
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 43883e3bbf287cc28dff7707784b612c8dfb3b86
 # Get output
 outdir = get_outdir(cfg, bowl_str, model)
 
@@ -175,6 +224,7 @@ pars_fit = params.copy()
 # Check if I can simply fit mapspace models                                #
 ############################################################################
 
+<<<<<<< HEAD
 
 
 import numpy as np
@@ -194,6 +244,16 @@ vis_model = core.model(
     *params,
 )
 
+=======
+vis_model = core.model(
+    model.xyz,
+    *model.n_struct,
+    model.dz,
+    model.beam,
+    *params,
+)
+
+>>>>>>> 43883e3bbf287cc28dff7707784b612c8dfb3b86
 noise = scipy.stats.norm.rvs(size=vis_model.shape,loc=0.00,scale=1.00E-05) 
 dat_model  = vis_model+noise
 
@@ -250,13 +310,19 @@ plt.show(); plt.close()
 # Now fit models in TOD space. Start with a square TOD that matches map.   #
 ############################################################################
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 43883e3bbf287cc28dff7707784b612c8dfb3b86
 def log_likelihood_tod(theta, tod):
      idx, idy, rhs, v, weight, norm = tod
      cur_model =  core.model(model.xyz, *model.n_struct, model.dz, model.beam, *theta) 
       
      return -0.5*(get_chis(cur_model, idx, idy, model.xyz, rhs, v, weight) + norm)
+<<<<<<< HEAD
 
+=======
+>>>>>>> 43883e3bbf287cc28dff7707784b612c8dfb3b86
 
 def log_prior(theta):
      dx, dy, sigma, amp_1 = theta
@@ -271,7 +337,10 @@ def log_probability_tod(theta, data):
      return lp + log_likelihood_tod(theta, data)
 """
 vis_model = core.model_tod(
+<<<<<<< HEAD
 >>>>>>> 1d74263 (refactor mcmc_check)
+=======
+>>>>>>> 43883e3bbf287cc28dff7707784b612c8dfb3b86
     model.xyz,
     *model.n_struct,
     model.dz,
@@ -283,13 +352,21 @@ noise = scipy.stats.norm.rvs(size=vis_model.shape,loc=0.00,scale=1.00E-05)
 dat_model  = vis_model+noise 
 """
 
+tods = make_tod_stuff(todvec, skymap, x0=model.x0, y0=model.y0)
 
+<<<<<<< HEAD
 tods = make_tod_stuff(todvec, skymap, x0=model.x0, y0=model.y0)
 
 x = np.arange(0, len(model.xyz[0][0]), dtype=int)
 y = np.arange(0, len(model.xyz[0][0]), dtype=int)
 
 X, Y = np.meshgrid(x, y)
+=======
+x = np.arange(0, len(model.xyz[0][0]), dtype=int)
+y = np.arange(0, len(model.xyz[0][0]), dtype=int)
+X, Y = np.meshgrid(x, y)
+
+>>>>>>> 43883e3bbf287cc28dff7707784b612c8dfb3b86
 
 
 data_tod = vis_model.at[Y, X].get(mode="fill", fill_value=0)
@@ -300,7 +377,11 @@ params2[:, 2] = np.abs(params2[:, 2])  # Force sigma positive
 nwalkers, ndim = params2.shape
 
 sampler = emcee.EnsembleSampler(
+<<<<<<< HEAD
    nwalkers, ndim, log_probability_tod, args = (tods[0],)
+=======
+    nwalkers, ndim, log_probability_tod, args = (tods[0],)
+>>>>>>> 43883e3bbf287cc28dff7707784b612c8dfb3b86
 )
 
 sampler.run_mcmc(params2, 5000, skip_initial_state_check=True, progress=True)
@@ -313,7 +394,10 @@ ig = corner.corner(
 )
 plt.savefig("corner2.png")
 plt.close()
+<<<<<<< HEAD
 
+=======
+>>>>>>> 43883e3bbf287cc28dff7707784b612c8dfb3b86
 ############################################################################
 # TOD shape TOD                                                            #
 ############################################################################
@@ -540,4 +624,7 @@ fig = corner.corner(flat_samples, labels=labels, truths=truths)
 fig = corner.corner(
     flat_samples, labels=labels, truths=truths
 )
+<<<<<<< HEAD
 
+=======
+>>>>>>> 43883e3bbf287cc28dff7707784b612c8dfb3b86
