@@ -16,7 +16,6 @@ from matplotlib.colors import ListedColormap
 from .fitter import load_config
 from .utils import get_da, get_nz, rad_to_arcsec
 
-
 here, this_filename = os.path.split(__file__)
 
 # from https://gist.github.com/zonca/6515744
@@ -39,6 +38,7 @@ except:
     )
     matplotlib.colormaps.register(cmap=mustang_cmap)
 
+
 def plot_cluster(
     name: str,
     fits_path: str,
@@ -51,7 +51,7 @@ def plot_cluster(
     cmap: str = "mustang",
     bound: Optional[float] = None,
     radius: float = 2.0,
-    plot_r = True,
+    plot_r=True,
     figsize: tuple[float, float] = (6, 5),
     ncontours: int = 0,
     hdu_int: int = 0,
@@ -139,10 +139,10 @@ def plot_cluster(
     hdu = fits.open(fits_path)[0]
     hdu.data *= scale
 
-    plot_hdu = fits.PrimaryHDU(data = hdu.data, header = hdu.header)
+    plot_hdu = fits.PrimaryHDU(data=hdu.data, header=hdu.header)
 
     img = aplpy.FITSFigure(
-        plot_hdu, 
+        plot_hdu,
         hdu=hdu_int,
         figure=fig,
         downsample=downsample,
@@ -155,11 +155,11 @@ def plot_cluster(
         if units == "snr":
             cbar_label = r"$\sigma$"
         elif units == "uK_cmb":
-            #img._data /= 1.28
-            #img._data *= 1e6
+            # img._data /= 1.28
+            # img._data *= 1e6
             cbar_label = r"$uK_{CMB}$"
         elif units == "uK_RJ":
-            #img._data *= 1e6
+            # img._data *= 1e6
             cbar_label = r"$uK_{RJ}"
         else:
             cbar_label = str(units)
@@ -264,7 +264,7 @@ def plot_cluster_act(
     units: str = "mJy",
     bound: Optional[float] = None,
     radius: float = 2.0,
-    plot_r = True,
+    plot_r=True,
     figsize: tuple[float, float] = (5, 5),
     ncontours: int = 0,
     hdu: int = 0,
