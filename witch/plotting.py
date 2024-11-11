@@ -2,14 +2,12 @@ import os
 from typing import Optional, Union
 
 import aplpy
-import astropy.units as u
 import dill as pk
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
-from astropy import wcs
-from astropy.convolution import Gaussian2DKernel, convolve
+from astropy.convolution import Gaussian2DKernel
 from astropy.io import fits
 from matplotlib.colors import ListedColormap
 
