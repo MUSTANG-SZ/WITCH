@@ -7,7 +7,7 @@ base: "MOOJ1142_base.yaml"
 # Used both for the output path as well as to load presets
 name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
-
+ntod: 10
 # Define the model
 model:
   # Unit conversion to apply at the end
@@ -17,7 +17,7 @@ model:
   structures:
     # Name of the first structure
     ea10:
-      structure: "a10" # What type of structure it is
+      structure: "gnfw" # What type of structure it is
 
       parameters:
         dx_1: # Name of the first parameter
@@ -30,6 +30,12 @@ model:
           priors: [-9.0, 9.0]
         dz_1:
           value: 0.0
+        r1:
+          value: 200.0
+        r2:
+          value: 200.0
+        r3:
+          value: 200.0
         theta:
           value: 0. 
         P0:
