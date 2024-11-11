@@ -12,22 +12,14 @@ import numpy as np
 from minkasi.maps.mapset import Mapset
 
 from .core import model
-from .utils import make_grid
+from .grid import make_grid
 
 from .utils import bilinear_interp, rad_to_arcsec
-
-from .utils import bilinear_interp, rad_to_arcsec
-
 
 @jax.jit
-<<<<<<< HEAD:witch/forward_modeling.py
-
-def get_chis(m, idx, idy, rhs, v, weight, dd=None):
-    r"""
-=======
 def get_chis(m, dx, dy, xyz, rhs, v, weight, dd=None):
-    """
->>>>>>> 43883e3bbf287cc28dff7707784b612c8dfb3b86:minkasi_jax/forward_modeling.py
+
+    r"""
     A faster, but more importantly much less memory intensive, way to get chis.
     The idea is ${\chi}^{2} = (d-Am)^T N^{-1} (d-Am)$. Previously we would calculate the residuals $d-Am$
     and calculate directly. However $d-Am$ has shape [ndet, nsamp], which is very big. $m$ has shape
@@ -139,7 +131,7 @@ def sample(cur_model, theta, tods):  # , model_params, xyz, beam):
 
     m = model(
         cur_model.xyz,
-        *cur_model.n_struct,
+        tuple(cur_model.n_struct),
         cur_model.dz, 
         cur_model.beam,
         *theta,
