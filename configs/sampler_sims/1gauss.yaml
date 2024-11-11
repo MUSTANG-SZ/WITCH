@@ -2,7 +2,7 @@ base: "base_sampler.yaml"
 name: "RXJ1347"
 sim: True
 model:
-  unit_conversion: "float(mju.get_da(constants['z'])*mju.y2K_RJ(constants['freq'], constants['Te'])*mju.XMpc/mju.me)"
+  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   structures:
     ps_gauss:
       structure: "gaussian"
