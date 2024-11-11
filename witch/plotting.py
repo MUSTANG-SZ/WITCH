@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, Union
 
 import aplpy
 import astropy.units as u
@@ -17,6 +17,28 @@ from .fitter import load_config
 from .utils import get_da, get_nz, rad_to_arcsec
 
 
+here, this_filename = os.path.split(__file__)
+
+# from https://gist.github.com/zonca/6515744
+cmb_cmap = ListedColormap(
+    np.loadtxt(f"{here}/Planck_Parchment_RGB.txt") / 255.0, name="cmb"
+)
+cmb_cmap.set_bad("white")
+
+matplotlib.colormaps.register(cmb_cmap)
+
+cmap = "mustang"
+try:
+    matplotlib.colormaps.get_cmap(
+        cmap
+    )  # Stops these anoying messages if you've already registered mymap
+
+except:
+    mustang_cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
+        cmap, ["Blue", "White", "Red"]
+    )
+    matplotlib.colormaps.register(cmap=mustang_cmap)
+
 def plot_cluster(
     name: str,
     fits_path: str,
@@ -25,12 +47,14 @@ def plot_cluster(
     ra: Optional[float] = None,
     dec: Optional[float] = None,
     units: str = "mJy",
+    scale: float = 1.0,
+    cmap: str = "mustang",
     bound: Optional[float] = None,
     radius: float = 2.0,
-    plot_r: bool | str = True,
-    figsize: tuple[float, float] = (5, 5),
+    plot_r = True,
+    figsize: tuple[float, float] = (6, 5),
     ncontours: int = 0,
-    hdu: int = 0,
+    hdu_int: int = 0,
     downsample: int = 1,
     smooth: float = 9.0,
     convention: str = "calabretta",
@@ -55,6 +79,8 @@ def plot_cluster(
         Dec of center of plot, in degrees. If none, will be taken from config
     units : str, default: mJy
         String to be used as units. If snr, then it will autoformat to sigma
+    scale : float, default: 1
+        Amount to scale data by
     bound : None | float, default: None
         Bounds for the colormap. If none, reasonable bounds will be computed.
     radius : float, default: 2.0
@@ -65,7 +91,7 @@ def plot_cluster(
         Width and height of plot in inches.
     ncontours : int, default = 0
         Number of countours to be plotted
-    hdu : int, default: 0
+    hdu_int : int, default: 0
         Fits hdu corresponding to the image to be plotted
     downsample : int, default: 1
         Factor by which to downsample the image.
@@ -109,9 +135,15 @@ def plot_cluster(
     kernel = Gaussian2DKernel(x_stddev=smooth * 5)
 
     fig = plt.figure(figsize=figsize)
+
+    hdu = fits.open(fits_path)[0]
+    hdu.data *= scale
+
+    plot_hdu = fits.PrimaryHDU(data = hdu.data, header = hdu.header)
+
     img = aplpy.FITSFigure(
-        fits_path,
-        hdu=hdu,
+        plot_hdu, 
+        hdu=hdu_int,
         figure=fig,
         downsample=downsample,
         smooth=False,
@@ -123,27 +155,14 @@ def plot_cluster(
         if units == "snr":
             cbar_label = r"$\sigma$"
         elif units == "uK_cmb":
-            img._data /= 1.28
-            img._data *= 1e6
+            #img._data /= 1.28
+            #img._data *= 1e6
             cbar_label = r"$uK_{CMB}$"
         elif units == "uK_RJ":
-            img._data *= 1e6
+            #img._data *= 1e6
             cbar_label = r"$uK_{RJ}"
         else:
             cbar_label = str(units)
-
-    ## make and register a divergent blue-orange colormap:
-    cmap = "mymap"
-    try:
-        matplotlib.colormaps.get_cmap(
-            cmap
-        )  # Stops these anoying messages if you've already registered mymap
-
-    except:
-        mymap = matplotlib.colors.LinearSegmentedColormap.from_list(
-            cmap, ["Blue", "White", "Red"]
-        )
-        matplotlib.colormaps.register(cmap=mymap)
 
     if bound is None:
         nx, ny = img._data.shape
@@ -245,7 +264,7 @@ def plot_cluster_act(
     units: str = "mJy",
     bound: Optional[float] = None,
     radius: float = 2.0,
-    plot_r: bool | str = True,
+    plot_r = True,
     figsize: tuple[float, float] = (5, 5),
     ncontours: int = 0,
     hdu: int = 0,
