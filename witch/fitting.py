@@ -64,7 +64,7 @@ def invscale(matrix: jax.Array, thresh: float = 1e-14) -> jax.Array:
     vec = jnp.array(jnp.where(diag != 0, 1.0 / jnp.sqrt(jnp.abs(diag)), 1e-10))
     mm = jnp.outer(vec, vec)
 
-    return mm * invsafe(mm * matrix)
+    return mm * invsafe(mm * matrix, thresh)
 
 
 @jax.jit
