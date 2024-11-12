@@ -420,11 +420,13 @@ def main():
         with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
             yaml.dump(final, file)
 
-    # Compute Residuals 
-    if cfg["sub"] is True or cfg.get("res_map", cfg.get("map", True)):        
+    # Compute Residuals
+    if cfg["sub"] is True or cfg.get("res_map", cfg.get("map", True)):
         # Compute residual and either set it to the data or use it for noise
         if model is None:
-            raise ValueError("Somehow trying to make a residual map with no model defined!")
+            raise ValueError(
+                "Somehow trying to make a residual map with no model defined!"
+            )
         for i, tod in enumerate(todvec.tods):
             pred = model.to_tod(
                 tod.info["dx"] * wu.rad_to_arcsec,
@@ -435,9 +437,12 @@ def main():
                 tod.set_noise(noise_class, *noise_args, **noise_kwargs)
             else:
                 tod.set_noise(
-                    noise_class, tod.info["dat_calib"] - pred, *noise_args, **noise_kwargs
+                    noise_class,
+                    tod.info["dat_calib"] - pred,
+                    *noise_args,
+                    **noise_kwargs,
                 )
-    
+
         # Make residual maps
         print_once("Making residual map")
         mm.make_maps(
@@ -450,8 +455,8 @@ def main():
             cfg["minkasi"]["npass"],
             cfg["minkasi"]["dograd"],
         )
-  
-    #Make Model maps
+
+    # Make Model maps
     if cfg.get("model_map", False):
         print_once("Making model map")
         model_todvec = deepcopy(todvec)
