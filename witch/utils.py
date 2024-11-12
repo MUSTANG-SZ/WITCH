@@ -28,6 +28,9 @@ h = const.h.value
 Xthom = const.sigma_T.to(u.cm**2).value
 XMpc = Xthom * u.Mpc.to(u.cm)
 rad_to_arcsec = (180 * 3600) / np.pi
+rad_to_arcmin = (180 * 60) / np.pi
+rad_to_deg = 180 / np.pi
+
 
 
 # Cosmology
