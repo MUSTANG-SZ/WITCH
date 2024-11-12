@@ -4,12 +4,11 @@ You typically want to run the `witcher` command instead of this.
 """
 
 import argparse as argp
-import glob
 import os
-import pdb
 import sys
 import time
 from copy import deepcopy
+from importlib import import_module
 
 import jax
 import jax.numpy as jnp
@@ -17,15 +16,10 @@ import minkasi
 import mpi4jax
 import numpy as np
 import yaml
-from astropy.convolution import Gaussian2DKernel, convolve
-from jitkasi import noise as jn
-from jitkasi.tod import TOD, TODVec
-from minkasi.tools import presets_by_source as pbs
+from jitkasi.tod import TOD
 from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
-from . import grid
-from . import mapmaking as mm
 from . import utils as wu
 from .containers import Model
 from .fitting import fit_tods, objective
@@ -82,108 +76,7 @@ def _make_parser() -> argp.ArgumentParser:
     return parser
 
 
-def load_tods(cfg: dict, comm: MPI.Intracomm) -> TODVec:
-    rank = comm.Get_rank()
-    nproc = comm.Get_size()
-    todroot = cfg["paths"]["tods"]
-    if not os.path.isabs(todroot):
-        todroot = os.path.join(
-            os.environ.get("MJ_TODROOT", os.environ["HOME"]), todroot
-        )
-    tod_names = glob.glob(os.path.join(todroot, cfg["paths"]["glob"]))
-    bad_tod, _ = pbs.get_bad_tods(
-        cfg["name"], ndo=cfg["paths"]["ndo"], odo=cfg["paths"]["odo"]
-    )
-    if "cut" in cfg["paths"]:
-        bad_tod += cfg["paths"]["cut"]
-    tod_names = minkasi.tods.io.cut_blacklist(tod_names, bad_tod)
-    tod_names.sort()
-    ntods = cfg["minkasi"].get("ntods", None)
-    tod_names = tod_names[:ntods]
-    if nproc > len(tod_names):
-        minkasi.nproc = len(tod_names)
-        nproc = len(tod_names)
-    if rank >= len(tod_names):
-        print(f"More procs than TODs!, exiting process {rank}")
-        sys.exit(0)
-    tod_names = tod_names[rank::nproc]
-
-    tods = []
-    for fname in tod_names:
-        dat = minkasi.tods.io.read_tod_from_fits(fname)
-        minkasi.tods.processing.truncate_tod(dat)
-        minkasi.tods.processing.downsample_tod(dat)
-        tod = minkasi.tods.Tod(dat)
-
-        tods += [from_minkasi_tod(deepcopy(tod))]
-    todvec = TODVec(tods, comm)
-
-    return todvec
-
-
-def to_minkasi(todvec: TODVec, delete=False) -> minkasi.tods.TodVec:
-    todvec_minkasi = minkasi.tods.TodVec()
-    for tod in todvec:
-        dat = {
-            "dat_calib": np.ascontiguousarray(np.array(tod.data)),
-            "dx": np.ascontiguousarray(np.array(tod.x)),
-            "dy": np.ascontiguousarray(np.array(tod.y)),
-        }
-        dat.update(tod.meta)
-        noise = None
-        if isinstance(tod.noise, jn.NoiseWrapper):
-            noise = tod.noise.ext_inst
-        if delete:
-            del tod
-        tod_minkasi = minkasi.tods.Tod(dat)
-        tod_minkasi.noise = noise
-        todvec_minkasi.add_tod(tod_minkasi)
-    if delete:
-        del todvec
-    return todvec_minkasi
-
-
-def from_minkasi(
-    todvec_minkasi: minkasi.tods.TodVec, comm: MPI.Intracomm, delete=False
-) -> TODVec:
-    tods = []
-    for tod_minkasi in todvec_minkasi.tods:
-        tod = from_minkasi_tod(tod_minkasi)
-        if delete:
-            del tod_minkasi
-        tods += [tod]
-    todvec = TODVec(tods, comm)
-    return todvec
-
-
-def from_minkasi_tod(tod_minkasi: minkasi.tods.Tod) -> TOD:
-    meta = deepcopy(tod_minkasi.info)
-    data = jnp.array(meta["dat_calib"])
-    del meta["dat_calib"]
-    x = jnp.array(meta["dx"]).block_until_ready()
-    del meta["dx"]
-    y = jnp.array(meta["dy"]).block_until_ready()
-    del meta["dy"]
-    noise = from_minkasi_noise(tod_minkasi)
-    tod = TOD(data, x, y, meta=meta, noise=noise)
-
-    return tod
-
-
-def from_minkasi_noise(tod_minkasi):
-    if tod_minkasi.noise is None:
-        return jn.NoiseI()
-    return jn.NoiseWrapper(
-        deepcopy(tod_minkasi.noise),
-        "apply_noise",
-        False,
-        jax.ShapeDtypeStruct(
-            tod_minkasi.info["dat_calib"].shape, tod_minkasi.info["dat_calib"].dtype
-        ),
-    )
-
-
-def process_tods(cfg, todvec, noise_args, noise_kwargs, model):
+def process_tods(cfg, todvec, noise_class, noise_args, noise_kwargs, model):
     rank = todvec.comm.Get_rank()
     nproc = todvec.comm.Get_size()
     sim = cfg.get("sim", False)
@@ -204,7 +97,7 @@ def process_tods(cfg, todvec, noise_args, noise_kwargs, model):
                 tod.x * wu.rad_to_arcsec, tod.y * wu.rad_to_arcsec
             ).block_until_ready()
             tod.data = tod.data + pred
-        tod.compute_noise(jn.NoiseWrapper, None, *noise_args, **noise_kwargs)
+        tod.compute_noise(noise_class, None, *noise_args, **noise_kwargs)
     return todvec
 
 
@@ -305,18 +198,33 @@ def main():
     if args.nofit:
         cfg["fit"] = False
 
+    # Do imports
+    for module, name in cfg.get("imports", {}).items():
+        mod = import_module(module)
+        if isinstance(name, str):
+            locals()[name] = mod
+        elif isinstance(name, list):
+            for n in name:
+                locals()[n] = getattr(mod, n)
+        else:
+            raise TypeError("Expect import name to be a string or a list")
+
+    # Get the functions needed to work with out dataset
+    # TODO: make protocols for these and check them
+    dset_name = list(cfg["datasets"].keys())[0]
+    get_info = eval(cfg["datasets"][dset_name]["funcs"]["get_info"])
+    load_tods = eval(cfg["datasets"][dset_name]["funcs"]["load_tods"])
+    preproc = eval(cfg["datasets"][dset_name]["funcs"]["preproc"])
+    postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
+    postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
+
     # Get TODs
-    todvec = load_tods(cfg, comm)
+    todvec = load_tods(dset_name, cfg, comm)
 
-    # make a template map with desired pixel size an limits that cover the data
-    # todvec.lims is MPI-aware and will return global limits, not just
-    # the ones from private TODs
-    lims = todvec.lims.block_until_ready()
-    lims = [np.float64(lim) for lim in np.array(lims)]
-    pixsize = cfg.get("pix_size", 2.0 / wu.rad_to_arcsec)
-    skymap = minkasi.maps.SkyMap(lims, pixsize)
+    # Get any info we need specific to an expiriment
+    info = get_info(dset_name, cfg, todvec)
 
-    # Define the model and get stuff setup for minkasi
+    # Define the model and get stuff setup fitting
     if "model" in cfg:
         model = Model.from_cfg(cfg)
     else:
@@ -327,76 +235,24 @@ def main():
         cfg["sub"] = False
 
     # Setup noise
-    noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
-    noise_args = tuple(eval(str(cfg["minkasi"]["noise"]["args"])))
-    noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
-    noise_args_full = (noise_class, "__call__", "apply_noise", False) + noise_args
+    noise_class = eval(str(cfg["datasets"][dset_name]["noise"]["class"]))
+    noise_args = tuple(eval(str(cfg["datasets"][dset_name]["noise"]["args"])))
+    noise_kwargs = eval(str(cfg["datasets"][dset_name]["noise"]["kwargs"]))
+    info["noise_class"] = noise_class
+    info["noise_args"] = noise_args
+    info["noise_kwargs"] = noise_kwargs
 
     # Get output
     if "base" in cfg.keys():
         del cfg["base"]  # We've collated to the cfg files so no need to keep the base
     outdir = get_outdir(cfg, model)
+    info["outdir"] = outdir
 
-    # Make Noisemaps
-    if cfg.get("noise_map", False):
-        print_once("Making noise map")
-        noise_vec = to_minkasi(todvec, False)  # We always take a mem hit here...
-        noise_skymap = minkasi.maps.SkyMap(lims, pixsize)
-        for i, tod in enumerate(noise_vec.tods):
-            tod.info["dat_calib"] *= (
-                (-1) ** i ** ((minkasi.myrank + minkasi.nproc * i) % 2)
-            )
-        minkasi.barrier()
-        noise_mapset = mm.make_maps(
-            noise_vec,
-            noise_skymap,
-            noise_class,
-            noise_args,
-            noise_kwargs,
-            os.path.join(outdir, "noise"),
-            0,
-            cfg["minkasi"]["dograd"],
-            return_maps=True,
-        )
-
-        if noise_mapset is None:
-            raise ValueError("Noise mapset is none?")
-        nmap = noise_mapset.maps[0].map
-        kernel = Gaussian2DKernel(int(10 / (pixsize * wu.rad_to_arcsec)))
-        nmap = convolve(nmap, kernel)
-
-        flags = wu.get_radial_mask(nmap, pixsize * wu.rad_to_arcsec, 60.0)
-        print_once(
-            "Noise in central 1 arcmin is {:.2f}uK".format(np.std(nmap[flags]) * 1e6)
-        )
-
-    todvec = process_tods(cfg, todvec, noise_args_full, noise_kwargs, model)
+    # Process the TODs
+    preproc(dset_name, cfg, todvec, model, info)
+    todvec = process_tods(cfg, todvec, noise_class, noise_args, noise_kwargs, model)
     todvec = jax.block_until_ready(todvec)
-
-    # Make signal maps
-    if cfg.get("sig_map", cfg.get("map", True)):
-        todvec_minkasi = to_minkasi(todvec, cfg["mem_starved"])
-        print_once("Making signal map")
-        mm.make_maps(
-            todvec_minkasi,
-            skymap,
-            noise_class,
-            noise_args,
-            noise_kwargs,
-            os.path.join(outdir, "signal"),
-            cfg["minkasi"]["npass"],
-            cfg["minkasi"]["dograd"],
-        )
-        if cfg["mem_starved"]:
-            todvec = from_minkasi(todvec, comm, True)
-        else:
-            for tod, tod_minkasi in zip(todvec, todvec_minkasi.tods):
-                tod.noise = from_minkasi_noise(tod_minkasi)
-            del todvec_minkasi
-    else:
-        print_once(
-            "Not making signal map, this means that your starting noise may be more off"
-        )
+    postproc(dset_name, cfg, todvec, model, info)
 
     # Now we fit
     if cfg["fit"]:
@@ -432,8 +288,8 @@ def main():
             model, i, delta_chisq = fit_tods(
                 model,
                 todvec,
-                cfg["minkasi"].get("maxiter", 10),
-                cfg["minkasi"].get("chitol", 1e-5),
+                eval(str(cfg["fitting"].get("maxiter", "10"))),
+                eval(str(cfg["fitting"].get("chitol", "1e-5"))),
             )
             _ = mpi4jax.barrier(comm=comm)
             t2 = time.time()
@@ -453,7 +309,7 @@ def main():
             for tod in todvec:
                 pred = model.to_tod(tod.x * wu.rad_to_arcsec, tod.y * wu.rad_to_arcsec)
                 tod.compute_noise(
-                    jn.NoiseWrapper, tod.data - pred, *noise_args_full, **noise_kwargs
+                    noise_class, tod.data - pred, *noise_args, **noise_kwargs
                 )
             _ = mpi4jax.barrier(comm=comm)
         # Save final pars
@@ -471,87 +327,6 @@ def main():
         with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
             yaml.dump(final, file)
 
-    # Residual map (or with noise from residual)
-    if cfg.get("res_map", cfg.get("map", True)):
-        # Compute residual and either set it to the data or use it for noise
-        if model is None:
-            raise ValueError(
-                "Somehow trying to make a residual map with no model defined!"
-            )
-        todvec = to_minkasi(todvec, False)
-        for i, tod in enumerate(todvec.tods):
-            pred = model.to_tod(
-                tod.info["dx"] * wu.rad_to_arcsec,
-                tod.info["dy"] * wu.rad_to_arcsec,
-            )
-            if cfg["sub"]:
-                tod.info["dat_calib"] -= np.array(pred)
-                tod.set_noise(noise_class, *noise_args, **noise_kwargs)
-            else:
-                tod.set_noise(
-                    noise_class,
-                    tod.info["dat_calib"] - pred,
-                    *noise_args,
-                    **noise_kwargs,
-                )
-                if cfg["sub"]:
-                    tod.info["dat_calib"] -= np.array(pred)
-                    tod.set_noise(noise_class, *noise_args, **noise_kwargs)
-                else:
-                    tod.set_noise(
-                        noise_class,
-                        tod.info["dat_calib"] - pred,
-                        *noise_args,
-                        **noise_kwargs,
-                    )
-
-            # Make residual maps
-            print_once("Making residual map")
-            mm.make_maps(
-                todvec,
-                skymap,
-                noise_class,
-                noise_args,
-                noise_kwargs,
-                os.path.join(outdir, "residual"),
-                cfg["minkasi"]["npass"],
-                cfg["minkasi"]["dograd"],
-            )
-
-    # Make Model maps
-    if cfg.get("model_map", False):
-        print_once("Making model map")
-        if model is None:
-            raise ValueError(
-                "Somehow trying to make a model map with no model defined!"
-            )
-        model_todvec = deepcopy(todvec)
-        model_skymap = minkasi.maps.SkyMap(lims, pixsize)
-        model_cfg = deepcopy(cfg)
-        model_cfg["sim"] = True
-        model_todvec = process_tods(
-            cfg, model_todvec, noise_args_full, noise_kwargs, model
-        )
-        model_todvec = to_minkasi(model_todvec, False)
-        mm.make_maps(
-            model_todvec,
-            model_skymap,
-            noise_class,
-            noise_args,
-            noise_kwargs,
-            os.path.join(outdir, "model"),
-            cfg["minkasi"]["npass"],
-            cfg["minkasi"]["dograd"],
-        )
-        model.xyz = grid.make_grid_from_wcs(
-            model_skymap.wcs,
-            model_skymap.map.shape[0],
-            model_skymap.map.shape[1],
-            0.00116355,
-            0.00000969,
-        )
-        model_skymap.map = model.model
-        if minkasi.myrank == 0:
-            model_skymap.write(os.path.join(outdir, "model/truth.fits"))
+    postfit(dset_name, cfg, todvec, model, info)
 
     print_once("Outputs can be found in", outdir)
