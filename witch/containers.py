@@ -607,6 +607,8 @@ class Model:
         if beam is None:
             beam = jnp.ones((1, 1))
         beam = jax.device_put(beam, device)
+        if beam is None:
+            raise ValueError("Beam somehow still None!")
 
         n_rounds = cfg.get("n_rounds", 1)
         dz = dz * eval(str(cfg["model"]["unit_conversion"]))
@@ -634,7 +636,7 @@ class Model:
                         tuple(fit),
                         jnp.array(val, dtype=float),
                         jnp.array(0.0, dtype=float),
-                        priors,
+                        jnp.array(priors, dtype=float),
                     )
                 )
             structures.append(Structure(name, structure["structure"], parameters))
