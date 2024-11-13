@@ -5,6 +5,7 @@ Data classes for describing models in a structured way.
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import import_module
+from typing import Optional
 
 import dill
 import jax
@@ -551,7 +552,7 @@ class Model:
             return dill.load(f)
 
     @classmethod
-    def from_cfg(cls, cfg: dict) -> Self:
+    def from_cfg(cls, cfg: dict, beam: Optional[jax.Array] = None) -> Self:
         """
         Create an instance of model from a witcher config.
 
@@ -559,6 +560,8 @@ class Model:
         ----------
         cfg : dict
             The config loaded into a dict.
+
+        beam : Optional[Array], default: None
 
         Returns
         -------
@@ -601,13 +604,8 @@ class Model:
         xyz[2].block_until_ready()
 
         # Make beam
-        beam = wu.beam_double_gauss(
-            dr,
-            eval(str(cfg["beam"]["fwhm1"])),
-            eval(str(cfg["beam"]["amp1"])),
-            eval(str(cfg["beam"]["fwhm2"])),
-            eval(str(cfg["beam"]["amp2"])),
-        )
+        if beam is None:
+            beam = jnp.ones((1, 1))
         beam = jax.device_put(beam, device)
 
         n_rounds = cfg.get("n_rounds", 1)

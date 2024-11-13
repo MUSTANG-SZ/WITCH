@@ -212,8 +212,9 @@ def main():
     # Get the functions needed to work with out dataset
     # TODO: make protocols for these and check them
     dset_name = list(cfg["datasets"].keys())[0]
-    get_info = eval(cfg["datasets"][dset_name]["funcs"]["get_info"])
     load_tods = eval(cfg["datasets"][dset_name]["funcs"]["load_tods"])
+    get_info = eval(cfg["datasets"][dset_name]["funcs"]["get_info"])
+    make_beam = eval(cfg["datasets"][dset_name]["funcs"]["make_beam"])
     preproc = eval(cfg["datasets"][dset_name]["funcs"]["preproc"])
     postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
     postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
@@ -224,9 +225,12 @@ def main():
     # Get any info we need specific to an expiriment
     info = get_info(dset_name, cfg, todvec)
 
+    # Get the beam
+    beam = make_beam(dset_name, cfg, info)
+
     # Define the model and get stuff setup fitting
     if "model" in cfg:
-        model = Model.from_cfg(cfg)
+        model = Model.from_cfg(cfg, beam)
     else:
         model = None
         print_once("No model defined, setting fit, sim, and sub to False")
