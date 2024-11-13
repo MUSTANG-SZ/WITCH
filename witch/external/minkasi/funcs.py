@@ -87,6 +87,20 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
     }
 
 
+def make_beam(dset_name: str, cfg: dict, info: dict):
+    _ = info
+    dr = eval(str(cfg["coords"]["dr"]))
+    beam = wu.beam_double_gauss(
+        dr,
+        eval(str(cfg["datasets"][dset_name]["beam"]["fwhm1"])),
+        eval(str(cfg["datasets"][dset_name]["beam"]["amp1"])),
+        eval(str(cfg["datasets"][dset_name]["beam"]["fwhm2"])),
+        eval(str(cfg["datasets"][dset_name]["beam"]["amp2"])),
+    )
+
+    return beam
+
+
 def preproc(dset_name: str, cfg: dict, todvec: TODVec, model: Model, info: dict):
     _ = model
     lims = info["lims"]
