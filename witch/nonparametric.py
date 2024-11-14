@@ -1,7 +1,13 @@
 import warnings 
 import numpy as np
 
+import jax
+import jax.numpy as jnp
+
+from functools import partial
+
 from . import utils as wu
+from .grid import transform_grid
 
 def bin_map(hdu, rbins, x0=None, y0=None, cunit=None):
     """
@@ -65,6 +71,7 @@ def bin_map(hdu, rbins, x0=None, y0=None, cunit=None):
 
     return bin1d, var1d
 
+@jax.jit
 def broken_power(rs: jax.Array,
         rbins: jax.Array,
         amps: jax.Array,
@@ -86,15 +93,16 @@ def broken_power(rs: jax.Array,
     c : float
         Constant offset for powerlaws
     """
-    condlist = [(rbins[i] <= rs) & (rs < rbins[i+1]) for i in range(len(pows))]
+    condlist = [(rbins[i] <= rs) & (rs < rbins[i+1]) for i in range(len(pows)-1, -1, -1)] #TODO: Replace me with jnp.where 
     
     cur_c = c
-    funclist = []
-    def power(x, rbin, cur_amp, cur_pow, c):
-        return cur_amp * (x**cur_pow - rbin**cur_pow) + c
-    for i in range(len(condlist)-1, -1, -1):
-        cur_c += amps[i]*rbins[i+1]**pows[i]
-        funclist.append(functools.partial(power, rbin = rbins[i], cur_amp = amps[i], cur_pow = pows[i], c = cur_c))
+    funclist = [(lambda x: x) for i in range(len(pows))]
+    #def power(x, rbin, cur_amp, cur_pow, c):
+    #    return cur_amp * (x**cur_pow - rbin**cur_pow) + c
+    #for i in range(len(condlist)-1, -1, -1):   
+    #    funclist.append(partial(power, rbin = rbins[i+1], cur_amp = amps[i], cur_pow = pows[i], c = cur_c))
+    #    cur_c += amps[i]*(rbins[i]**pows[i]-rbins[i+1]**pows[i]) 
+    return jnp.piecewise(rs, condlist, funclist)
 
 def nonpara_power(
     dx: float,
@@ -142,3 +150,6 @@ def nonpara_power(
     x, y, z, *_ = transform_grid(dx, dy, dz, 1., 1., 1., 0., xyz)
     r = jnp.sqrt(x**2 + y**2 + z**2)
 
+    pressure = broken_power(r, rbins, amps, pows, c)
+
+    return pressure
