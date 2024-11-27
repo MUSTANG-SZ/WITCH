@@ -21,6 +21,7 @@ from .utils import fft_conv
 ORDER = (
     "isobeta",
     "gnfw",
+    "egnfw",
     "a10",
     "ea10",
     "cylindrical_beta",
