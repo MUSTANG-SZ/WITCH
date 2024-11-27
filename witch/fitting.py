@@ -1,8 +1,10 @@
 from functools import partial
 
+import emcee
 import jax
 import jax.numpy as jnp
 import mpi4jax
+import numpy as np
 from jitkasi.tod import TODVec
 from mpi4py import MPI
 
@@ -95,7 +97,7 @@ def objective(
         This contains the newly computed `chisq` for the input `pars`.
         Also is updated with input `pars` and `errs`.
     grad : jax.Array
-        The gradient of the paramaters at there current values.
+        The gradient of the parameters at there current values.
         This is a `(npar,)` array.
     curve : jax.Array
         The curvature of the parameter space at the current values.
@@ -127,13 +129,49 @@ def objective(
         grad = grad.at[:].add(jnp.dot(grad_filt, jnp.transpose(resid)))
         curve = curve.at[:].add(jnp.dot(grad_filt, jnp.transpose(grad_tod)))
 
-    chisq, _ = mpi4jax.allreduce(chisq, MPI.SUM, comm=todvec.comm)
-    grad, _ = mpi4jax.allreduce(grad, MPI.SUM, comm=todvec.comm)
-    curve, _ = mpi4jax.allreduce(curve, MPI.SUM, comm=todvec.comm)
+    chisq, token = mpi4jax.allreduce(chisq, MPI.SUM, comm=todvec.comm)
+    grad, token = mpi4jax.allreduce(grad, MPI.SUM, comm=todvec.comm, token=token)
+    curve, _ = mpi4jax.allreduce(curve, MPI.SUM, comm=todvec.comm, token=token)
 
     new_model = new_model.update(pars, errs, chisq)
 
     return new_model, grad, curve
+
+
+@jax.jit
+def get_chisq(model: Model, todvec: TODVec) -> jax.Array:
+    """
+    Get the chi-squared of a model given a set of TODs.
+    This is an MPI aware function.
+
+    Parameters
+    ----------
+    model : Model
+        The model object we are using to fit.
+    todvec : TODVec
+        The TODs to fit against.
+        This is what we use to compute our fit residuals.
+
+    Returns
+    -------
+    chisq : jax.Array
+    """
+    token = mpi4jax.barrier(comm=todvec.comm)
+    chisq = jnp.array(0)
+    for tod in todvec:
+        x = tod.x * wu.rad_to_arcsec
+        y = tod.y * wu.rad_to_arcsec
+
+        pred_tod = model.to_tod(x, y)
+
+        resid = tod.data - pred_tod
+        resid_filt = tod.noise.apply_noise(resid)
+        chisq += jnp.sum(resid * resid_filt)
+
+    chisq, token = mpi4jax.allreduce(chisq, MPI.SUM, comm=todvec.comm, token=token)
+    _ = mpi4jax.barrier(comm=todvec.comm, token=token)
+
+    return chisq
 
 
 @jax.jit
@@ -264,3 +302,133 @@ def fit_tods(
     )
 
     return model, i, delta_chisq
+
+
+def run_mcmc(
+    model: Model, todvec: TODVec, num_steps: int = 5000, num_walkers: int = 10
+) -> tuple[Model, jax.Array]:
+    """
+    Run MCMC using the `emcee` package to estimate the posterior for our model.
+    Currently this function only support flat priors, but more will be supported
+    down the line. In order to ensure accuracy of the noise model used, it is
+    reccomended that you run at least one round of `fit_tods` followed by noise
+    reestimation before this function.
+
+    This is MPI aware.
+    Eventually this will be replaced with something more jaxy.
+
+    Parameters
+    ----------
+    model : Model
+        The model to run MCMC on.
+        We expect that all parameters in this model have priors defined.
+    todvec : TODVec
+        The TODs to compute the likelihood of the model with.
+    num_steps : int
+        The number of steps to run MCMC for.
+    num_walkers : int
+        The number of walkers to use.
+        If this is less than 2.1 times the number of
+        parameters in the model then 2.1 times the number
+        of parameters in the model is used.
+
+    Returns
+    -------
+    model : Model
+        The model with MCMC estimated parameters and errors.
+        The parameters are estimated as the mean of the samples.
+        The errors are estimated as the standard deviation.
+        This also has the chi-squared of the estimated parameters.
+    flat_samples : jax.Array
+        Array of samples from running MCMC.
+        This has some samples discarded to account for burn in,
+        we either discard `int(2*tau_max)` samples where `tau_max` is
+        the autocorrelation time for the variable with the longest
+        autocorrelation time or `int(num_steps/25)` if there is an error
+        when estimating autocorrelation. We also thin by a a factor of
+        `int(tau_max/2)` or `int(num_steps/100)`.
+        This array has shape `(npar, nsamps)` where the rows are in
+        the same order as `model.pars`.
+
+    """
+    token = mpi4jax.barrier(comm=todvec.comm)
+    rank = todvec.comm.Get_rank()
+
+    init_pars = jnp.array(model.pars)
+    init_errs = jnp.zeros_like(model.pars)
+    to_fit_init = jnp.ones_like(jnp.array(model.to_fit), dtype=bool)
+
+    num_walkers = max(num_walkers, int(2.1 * len(init_pars)))
+
+    def _log_prob(pars):
+        run = jnp.array(True)
+        _, token = mpi4jax.bcast(run, 0, comm=todvec.comm)
+        _, to_fit = _prior_pars_fit(model.priors, pars, to_fit_init)
+        log_prior = jnp.sum(jnp.where(to_fit, 0, -1 * jnp.inf))
+        if not jnp.isfinite(log_prior):
+            return -1 * np.inf
+        pars, token = mpi4jax.bcast(pars, 0, comm=todvec.comm, token=token)
+        temp_model = model.update(pars, init_errs, model.chisq)
+        log_like = -5.0 * get_chisq(temp_model, todvec)
+        _ = mpi4jax.bcast(run, 0, comm=todvec.comm, token=token)
+        return float(log_like + log_prior)
+
+    run = jnp.array(True)
+    final_pars = init_pars.copy()
+    final_errs = init_errs.copy()
+    if rank == 0:
+        key1 = jax.random.PRNGKey(0)
+        pos = 1e-4 * jax.random.normal(key1, shape=(num_walkers, len(init_pars)))
+        pos = pos.at[:].add(init_pars)
+        sampler = emcee.EnsembleSampler(
+            num_walkers,
+            len(init_pars),
+            _log_prob,
+            moves=[
+                (emcee.moves.DEMove(), 0.8),
+                (emcee.moves.DESnookerMove(), 0.2),
+            ],
+        )
+
+        # Burn in
+        state = sampler.run_mcmc(
+            pos, max(50, min(50, int(num_steps / 10))), progress=True
+        )
+        sampler.reset()
+
+        # Run for real
+        sampler.run_mcmc(state, num_steps, progress=True)
+        run = jnp.array(False)
+        run, token = mpi4jax.bcast(run, 0, comm=todvec.comm, token=token)
+        tau = 0
+        if num_steps > 100:
+            try:
+                tau = int(np.max(sampler.get_autocorr_time()))
+            except emcee.autocorr.AutocorrError:
+                tau = int(num_steps / 50)
+        flat_samples = jnp.array(
+            sampler.get_chain(discard=2 * tau, thin=int(tau / 2), flat=True)
+        )
+        final_pars = jnp.median(flat_samples, axis=0).ravel()
+        final_errs = jnp.std(flat_samples, axis=0).ravel()
+        final_pars, token = mpi4jax.bcast(final_pars, 0, comm=todvec.comm, token=token)
+        final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=todvec.comm, token=token)
+    else:
+        pars = init_pars.copy()
+        flat_samples = jnp.zeros(1)
+        while run:
+            run, token = mpi4jax.bcast(run, 0, comm=todvec.comm, token=token)
+            if not run:
+                break
+            pars, token = mpi4jax.bcast(pars, 0, comm=todvec.comm, token=token)
+            temp_model = model.update(pars, init_errs, model.chisq)
+            _ = get_chisq(temp_model, todvec)
+            run, token = mpi4jax.bcast(run, 0, comm=todvec.comm, token=token)
+        final_pars, token = mpi4jax.bcast(final_pars, 0, comm=todvec.comm, token=token)
+        final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=todvec.comm, token=token)
+
+    model = model.update(final_pars, final_errs, model.chisq)
+    chisq = get_chisq(model, todvec)
+    model = model.update(final_pars, final_errs, chisq)
+
+    return model, flat_samples
