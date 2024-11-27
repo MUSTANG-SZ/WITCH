@@ -8,7 +8,12 @@ base: "MOOJ1142_base.yaml"
 name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
-subdir: "dwxray_peak" # Subdirectory to use
+paths:
+  subdir: "dwxray_peak" # Subdirectory to use
+
+coords:
+  x0: "Angle('11 42 47.44 hours').to(u.radian).value" #peak
+  y0: "Angle('15:27:13.10 degrees').to(u.radian).value" #peak
 
 # Define the model
 model:
