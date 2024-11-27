@@ -93,15 +93,15 @@ def broken_power(rs: jax.Array,
     c : float
         Constant offset for powerlaws
     """
-    condlist = [(rbins[i] <= rs) & (rs < rbins[i+1]) for i in range(len(pows)-1, -1, -1)] #TODO: Replace me with jnp.where 
-    
+    #condlist = [(rbins[i] <= rs) & (rs < rbins[i+1]) for i in range(len(pows)-1, -1, -1)] #TODO: Replace me with jnp.where 
+    condlist = [jnp.where((rbins[i] <= rs) & (rs < rbins[i+1])) for i in range(len(pows)-1, -1, -1)]
     cur_c = c
-    funclist = [(lambda x: x) for i in range(len(pows))]
-    #def power(x, rbin, cur_amp, cur_pow, c):
-    #    return cur_amp * (x**cur_pow - rbin**cur_pow) + c
-    #for i in range(len(condlist)-1, -1, -1):   
-    #    funclist.append(partial(power, rbin = rbins[i+1], cur_amp = amps[i], cur_pow = pows[i], c = cur_c))
-    #    cur_c += amps[i]*(rbins[i]**pows[i]-rbins[i+1]**pows[i]) 
+    funclist = [] 
+    def power(x, rbin, cur_amp, cur_pow, c):
+        return cur_amp * (x**cur_pow - rbin**cur_pow) + c
+    for i in range(len(condlist)-1, -1, -1):   
+        funclist.append(partial(power, rbin = rbins[i+1], cur_amp = amps[i], cur_pow = pows[i], c = cur_c))
+        cur_c += amps[i]*(rbins[i]**pows[i]-rbins[i+1]**pows[i]) 
     return jnp.piecewise(rs, condlist, funclist)
 
 def nonpara_power(
