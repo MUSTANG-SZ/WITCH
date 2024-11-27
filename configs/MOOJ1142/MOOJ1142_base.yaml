@@ -1,7 +1,6 @@
 fit: True # If True fit the cluster, overridden by command line
 sub: True # If True the cluster before mapmaking, overridden by command line
 n_rounds: 4 # How many rounds of fitting to try
-noise_map: True
 model_map: True
 
 # Constants for use in the model and grid construction
@@ -24,7 +23,7 @@ paths:
   # If an absolute path then that is used directly
   # If a relative path taken relative to MJ_OUTROOT
   outroot: ""
-  subdir: "" # Subdirectory to use
+  subdir: "xray_cent"
   # Final outdir will be something like: outroot/name/model_name/subdir
 
 # Defines the grid
@@ -33,9 +32,12 @@ coords:
   r_map: "3.0*60" # Radial size of grid in arcseconds
   dr: "2.0" # Pixel size of grid in x and y in arcseconds
   dz: 2.0 # Pixel size along the LOS, if not provided dr is used
-  x0: "(175.6918169*u.degree).to(u.radian).value"
-  y0: "(15.4532554*u.degree).to(u.radian).value"
-
+    #x0: "(175.6918169*u.degree).to(u.radian).value"
+    #y0: "(15.4532554*u.degree).to(u.radian).value"
+    #x0: "Angle('11 42 47.44 hours').to(u.radian).value" #peak
+    #y0: "Angle('15:27:13.10 degrees').to(u.radian).value" #peak
+  x0: "Angle('11 42 46.82 hours').to(u.radian).value" #centroid
+  y0: "Angle('15:27:15.70 degrees').to(u.radian).value" #centroid
 # Defines the beam
 # All are passed through eval
 # Note that these define a double gaussian
