@@ -12,9 +12,113 @@ import jax.numpy as jnp
 from .grid import transform_grid
 from .utils import ap, get_da, get_hz, get_nz, h70
 
+@jax.jit
+def gnfw(    
+    dx: float,
+    dy: float,
+    dz: float,
+    r: float,
+    P0: float,
+    c500: float,
+    m500: float,
+    gamma: float,
+    alpha: float,
+    beta: float,
+    z: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
+    r"""
+    Spherical gNFW pressure profile in 3d.
+    This function does not include smoothing or declination stretch
+    which should be applied at the end.
+
+    Once the grid is transformed the profile is computed as:
+
+    $$
+    \dfrac{P_{500} * P_{0}}{{\left( r^{\gamma}\left( 1 + r^{\alpha} \right) \right)}^{\dfrac{\beta - \gamma}{\alpha}}}
+    $$
+
+    where:
+
+    $$
+    r = c_{500} \sqrt{x^2 + y^2 + z^2} {\frac{3m_{500}}{2000 \pi n_z}}^{-\frac{1}{3}}
+    $$
+
+    $$
+    P_{500} = 1.65 \times 10^{-3} {\frac{m_{500}*h_{70}}{3 \times 10^{14}}}^{\frac{2}{3} + ap}{h_z}^{\frac{8}{3}}{h_{70}}^2
+    $$
+
+    $n_z$ is the critical density at the cluster redshift and $h_z$ is the Hubble constant at the cluster redshift.
+    
+    Parameters
+    ----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    r : float
+        Amount to scale radially
+        Passed to `grid.transform_grid`.
+        Units: arcmin
+    P0 : float
+        Amplitude of the pressure profile.
+        Units: unitless
+    c500 : float
+        Concentration parameter at a density contrast of 500.
+        Units: unitless
+    m500 : float
+        Mass at a density contrast of 500.
+        Units: M_solar
+    gamma : float
+        The central slope.
+        Units: unitless
+    alpha : float
+        The intermediate slope.
+        Units: unitless
+    beta : float
+        The outer slope.
+        Units: unitless
+    z : float
+        Redshift of cluster.
+        Units: redshift
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+
+    Returns
+    -------
+    model : jax.Array
+        The gnfw model evaluated on the grid.
+    """
+    nz = get_nz(z)
+    hz = get_hz(z)
+
+    x, y, z, *_ = transform_grid(dx, dy, dz, r, r, r, 0, xyz)
+
+    r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
+
+    r = c500 * jnp.sqrt(x**2 + y**2 + z**2) / r500
+    denominator = (r**gamma) * (1 + r**alpha) ** ((beta - gamma) / alpha)
+
+    P500 = (
+        1.65e-03
+        * (m500 / (3.00e14 / h70)) ** (2.00 / 3.00 + ap)
+        * hz ** (8.00 / 3.00)
+        * h70**2
+    )
+
+    return P500 * P0 / denominator
 
 @jax.jit
-def gnfw(
+def egnfw(
     dx: float,
     dy: float,
     dz: float,
@@ -996,6 +1100,7 @@ def add_powerlaw_cos(
 # For now a line needs to be added for each new model but this could be more magic down the line
 N_PAR_ISOBETA = len(inspect.signature(isobeta).parameters) - 1
 N_PAR_GNFW = len(inspect.signature(gnfw).parameters) - 1
+N_PAR_EGNFW = len(inspect.signature(egnfw).parameters) - 1
 N_PAR_A10 = len(inspect.signature(a10).parameters) - 1
 N_PAR_EA10 = len(inspect.signature(ea10).parameters) - 1
 N_PAR_CYLINDRICAL = len(inspect.signature(cylindrical_beta).parameters) - 1
@@ -1017,6 +1122,7 @@ STRUCT_FUNCS = {
     "egaussian": egaussian,
     "gaussian": gaussian,
     "gnfw": gnfw,
+    "egnfw": egnfw,
     "isobeta": isobeta,
 }
 STRUCT_N_PAR = {
@@ -1030,6 +1136,7 @@ STRUCT_N_PAR = {
     "egaussian": N_PAR_EGAUSSIAN,
     "gaussian": N_PAR_GAUSSIAN,
     "gnfw": N_PAR_GNFW,
+    "egnfw": N_PAR_EGNFW,
     "isobeta": N_PAR_ISOBETA,
 }
 STRUCT_STAGE = {
@@ -1043,5 +1150,6 @@ STRUCT_STAGE = {
     "egaussian": 0,
     "gaussian": 2,
     "gnfw": 0,
+    "egnfw": 0,
     "isobeta": 0,
 }
