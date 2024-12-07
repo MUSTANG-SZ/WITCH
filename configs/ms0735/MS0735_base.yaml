@@ -9,13 +9,13 @@ model_map: True
 constants:
   Te: 5.0
   freq: "90e9"
-  z: 1.19
+  z: 0.216
 
 paths:
   # Location of TOD files
   # If an absolute path then that is used directly
   # If a relative path taken relative to MJ_TODROOT
-  tods: "MOOJ1142"
+  tods: "MS0735"
   glob: "Signal_TOD*.fits" # Pattern to search for TODs with
   ndo: False # ?
   odo: False # ?
@@ -32,7 +32,8 @@ coords:
   r_map: "3.0*60" # Radial size of grid in arcseconds
   dr: "2.0" # Pixel size of grid in x and y in arcseconds
   dz: 2.0 # Pixel size along the LOS, if not provided dr is used
-
+  x0: "Angle('07 41 44.5 hours').to(u.radian).value" #centroid
+  y0: "Angle('74:14:38.7 degrees').to(u.radian).value"
 # Defines the beam
 # All are passed through eval
 # Note that these define a double gaussian
