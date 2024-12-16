@@ -5,15 +5,14 @@ Data classes for describing models in a structured way.
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import import_module
-from typing import Optional, Sequence
+from typing import Optional
 
 import dill
 import jax
 import jax.numpy as jnp
 import numpy as np
+from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
-from minkasi.tods import Tod
-from numpy.typing import NDArray
 from typing_extensions import Self
 
 from . import core
@@ -22,6 +21,7 @@ from . import utils as wu
 from .structure import STRUCT_N_PAR
 
 
+@register_pytree_node_class
 @dataclass
 class Parameter:
     """
@@ -32,42 +32,52 @@ class Parameter:
     name : str
         The name of the parameter.
         This is used only for display purposes.
-    fit : list[bool]
-        Should be a a list with length `Model.n_rounds`.
+    fit : jax.Array
+        Should be array with length `Model.n_rounds`.
         `fit[i]` is True if we want to fit this parameter in the `i`'th round.
     val : float
         The value of the parameter.
-    err : float, default: 0
+    err : float
         The error on the parameter value.
-    prior : Optional[tuple[float, float]], default: None
+    prior : tuple[float, float]
         The prior on this parameter.
-        Set to None to have to prior,
-        otherwise should be the tuple `(lower_bound, upper_bound)`.
+        Should be the tuple `(lower_bound, upper_bound)`.
     """
 
     name: str
-    fit: list[bool]
-    val: float
-    err: float = 0
-    prior: Optional[tuple[float, float]] = None  # Only flat for now
-
-    def __post_init__(self):
-        # If this isn't a float autograd breaks
-        self.val = float(self.val)
+    fit: tuple[bool]  # 1d bool array
+    val: jax.Array  # Scalar float array
+    err: jax.Array  # Scalar float array
+    prior: jax.Array  # 2 element float array
 
     @property
-    def fit_ever(self) -> bool:
+    def fit_ever(self) -> bool:  # jax.Array:
         """
         Check if this parameter is set to ever be fit.
 
         Returns
         -------
-        fit_ever : bool
+        fit_ever : jax.Array
+            Single element jax boolean array.
             True if this parameter is ever fit.
         """
-        return bool(np.any(self.fit))
+        return np.any(self.fit).item()
+
+    # Functions for making this a pytree
+    # Don't call this on your own
+    def tree_flatten(self) -> tuple[tuple, tuple]:
+        children = (self.val, self.err, self.prior)
+        aux_data = (self.name, self.fit)
+
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children) -> Self:
+        name, fit = aux_data
+        return cls(name, fit, *children)
 
 
+@register_pytree_node_class
 @dataclass
 class Structure:
     """
@@ -106,7 +116,23 @@ class Structure:
                 f"{self.name} has incorrect number of parameters, expected {STRUCT_N_PAR[self.structure]} for {self.structure} but was given {len(self.parameters)}"
             )
 
+    # Functions for making this a pytree
+    # Don't call this on your own
+    def tree_flatten(self) -> tuple[tuple, tuple]:
+        children = tuple(self.parameters)
+        aux_data = (self.name, self.structure)
 
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children) -> Self:
+        name, structure = aux_data
+        parameters = children
+
+        return cls(name, structure, list(parameters))
+
+
+@register_pytree_node_class
 @dataclass
 class Model:
     """
@@ -138,10 +164,6 @@ class Model:
         The beam to convolve the model with.
     n_rounds : int
         How many rounds of fitting to perform.
-    pix_size : float | None
-        Pix size of corresponding map
-    lims : tuple[float, float, float, float] | None
-        List of ra_min, ra_max, dec_min, dec_max for map model was fit to
     cur_round : int, default: 0
         Which round of fitting we are currently in,
         rounds are 0 indexed.
@@ -158,19 +180,21 @@ class Model:
     dz: float  # arcseconds * unknown
     beam: jax.Array
     n_rounds: int
-    pix_size: Optional[float] = None
-    lims: Optional[tuple[float, float, float, float]] = None
     cur_round: int = 0
-    chisq: float = np.inf
+    chisq: jax.Array = field(
+        default_factory=jnp.array(jnp.inf).copy
+    )  # scalar float array
     original_order: list[int] = field(init=False)
 
     def __post_init__(self):
         # Make sure the structure is in the order that core expects
         structure_idx = np.argsort(
-            [core.ORDER.index(structure.structure) for structure in self.structures]
+            np.array(
+                [core.ORDER.index(structure.structure) for structure in self.structures]
+            )
         )
         self.structures = [self.structures[i] for i in structure_idx]
-        self.original_order = list(np.sort(structure_idx))
+        self.original_order = list(jnp.sort(structure_idx))
 
     def __setattr__(self, name, value):
         if name == "cur_round" or name == "xyz":
@@ -189,11 +213,18 @@ class Model:
                     "\t\t"
                     + par.name
                     + "*" * par.fit[self.cur_round]
-                    + str(par.prior) * (par.prior is not None)
+                    + " ["
+                    + str(par.prior[0])
+                    + ", "
+                    + str(par.prior[1])
+                    + "]"
                     + " = "
                     + str(par.val)
                     + " ± "
                     + str(par.err)
+                    + " ("
+                    + str(jnp.abs(par.val / par.err))
+                    + " σ)"
                     + "\n"
                 )
         rep += f"chisq is {self.chisq}"
@@ -218,19 +249,19 @@ class Model:
         return n_struct
 
     @property
-    def pars(self) -> list[float]:
+    def pars(self) -> jax.Array:
         """
         Get the current parameter values.
 
         Returns
         -------
-        pars : list[float]
+        pars :  jax.Array
             The parameter values in the order expected by `core.model`.
         """
         pars = []
         for structure in self.structures:
             pars += [parameter.val for parameter in structure.parameters]
-        return pars
+        return jnp.array(pars)
 
     @cached_property
     def par_names(self) -> list[str]:
@@ -249,44 +280,49 @@ class Model:
         return par_names
 
     @property
-    def errs(self) -> list[float]:
+    def errs(self) -> jax.Array:
         """
         Get the current parameter errors.
 
         Returns
         -------
-        errs : list[float]
+        errs : jax.Array
             The errors in the same order as vals.
         """
         errs = []
         for structure in self.structures:
             errs += [parameter.err for parameter in structure.parameters]
-        return errs
+        return jnp.array(errs)
 
     @cached_property
-    def priors(self) -> list[Optional[tuple[float, float]]]:
+    def priors(self) -> tuple[jax.Array, jax.Array]:
         """
         Get the priors for all parameters.
         Note that this is cached.
 
         Returns
         -------
-        priors : list[Optional[tuple[float, float]]]
+        priors : tuple[jax.Array, jax.Array]
             Parameter priors in the same order as `pars`.
+            This is a tuple with the first element being an array
+            of lower bounds and the second being upper.
         """
-        priors = []
+        lower = []
+        upper = []
         for structure in self.structures:
-            priors += [parameter.prior for parameter in structure.parameters]
+            lower += [parameter.prior[0] for parameter in structure.parameters]
+            upper += [parameter.prior[1] for parameter in structure.parameters]
+        priors = (jnp.array(lower), jnp.array(upper))
         return priors
 
     @property
-    def to_fit(self) -> list[bool]:
+    def to_fit(self) -> tuple[bool]:  # jax.Array:
         """
         Get which parameters we want to fit for the current round.
 
         Returns
         -------
-        to_fit : list[bool]
+        to_fit : jax.Array
             `to_fit[i]` is True if we want to fit the `i`'th parameter
             in the current round.
             This is in the same order as `pars`.
@@ -296,31 +332,31 @@ class Model:
             to_fit += [
                 parameter.fit[self.cur_round] for parameter in structure.parameters
             ]
-        return to_fit
+        return tuple(to_fit)  # jnp.ravel(jnp.array(to_fit))
 
     @cached_property
-    def to_fit_ever(self) -> list[bool]:
+    def to_fit_ever(self) -> jax.Array:
         """
         Check which parameters we ever fit.
         Note that this is cached.
 
         Returns
         -------
-        to_fit_ever : list[bool]
+        to_fit_ever : jax.Array
             `to_fit[i]` is True if we ever want to fit the `i`'th parameter.
             This is in the same order as `pars`.
         """
         to_fit = []
         for structure in self.structures:
             to_fit += [parameter.fit_ever for parameter in structure.parameters]
-        return to_fit
+        return jnp.ravel(jnp.array(to_fit))
 
     @cached_property
     def model(self) -> jax.Array:
         """
         The evaluated model, see `core.model` for details.
         Note that this is cached, but is automatically reset whenever
-        `update` is called or `cur_round` changes.
+        `update` is called or `cur_round` or `xyz` changes.
 
         Returns
         -------
@@ -383,7 +419,7 @@ class Model:
 
     def to_tod_grad(self, dx: ArrayLike, dy: ArrayLike) -> tuple[jax.Array, jax.Array]:
         """
-        Project the model and gradint into a TOD.
+        Project the model and gradient into a TOD.
 
         Parameters
         ----------
@@ -420,21 +456,30 @@ class Model:
 
         return tod, grad_tod
 
-    def update(self, vals: Sequence[float], errs: Sequence[float], chisq: float):
+    def update(self, vals: jax.Array, errs: jax.Array, chisq: jax.Array) -> Self:
         """
         Update the parameter values and errors as well as the model chi-squared.
-        This also resets the cache on `model` and `model_tod`.
+        This also resets the cache on `model` and `model_grad`
+        if `vals` is different than `self.pars`.
 
         Parameters
         ----------
-        vals : Sequence[float]
+        vals : jax.Array
             The new parameter values.
             Should be in the same order as `pars`.
-        errs : Sequence[float]
+        errs : jax.Array
             The new parameter errors.
             Should be in the same order as `pars`.
-        chisq : float
+        chisq : jax.Array
             The new chi-squared.
+            Should be a scalar float array.
+
+        Returns
+        -------
+        updated : Model
+            The updated model.
+            While nominally the model will update in place, returning it
+            alows us to use this function in JITed functions.
         """
         if not np.array_equal(self.pars, vals):
             self.__dict__.pop("model", None)
@@ -447,39 +492,7 @@ class Model:
                 n += 1
         self.chisq = chisq
 
-    def minkasi_helper(
-        self, params: NDArray[np.floating], tod: Tod
-    ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
-        """
-        Helper function to work with minkasi fitting routines.
-        You should never need to touch this yourself, just pass it to
-        `minkasi.fitting.fit_timestreams_with_derivs_manyfun`.
-
-        Parameters
-        ----------
-        params : NDArray[np.floating]
-            Array of model parameters.
-            Should be in the same order as `pars`
-        tod : Tod
-            A minkasi tod instance.
-            'dx' and 'dy' must be in tod.info and be in radians.
-
-        Returns
-        -------
-        grad : NDArray[np.floating]
-            The gradient of the model with respect to the model parameters.
-        pred : NDArray[np.floating]
-            The model with the specified substructure.
-        """
-        self.update(list(params), self.errs, self.chisq)
-        dx = tod.info["dx"] * wu.rad_to_arcsec
-        dy = tod.info["dy"] * wu.rad_to_arcsec
-
-        pred_tod, grad_tod = self.to_tod_grad(dx, dy)
-        pred_tod = jax.device_get(pred_tod)
-        grad_tod = jax.device_get(grad_tod)
-
-        return grad_tod, pred_tod
+        return self
 
     def remove_struct(self, struct_name: str):
         """
@@ -539,12 +552,7 @@ class Model:
             return dill.load(f)
 
     @classmethod
-    def from_cfg(
-        cls,
-        cfg: dict,
-        pix_size: Optional[float] = None,
-        lims: Optional[tuple[float, float, float, float]] = None,
-    ) -> Self:
+    def from_cfg(cls, cfg: dict, beam: Optional[jax.Array] = None) -> Self:
         """
         Create an instance of model from a witcher config.
 
@@ -552,10 +560,8 @@ class Model:
         ----------
         cfg : dict
             The config loaded into a dict.
-        pix_size : float | None
-            Pix size of corresponding map
-        lims : tuple[float, float, float, float] | None
-            List of ra_min, ra_max, dec_min, dec_max for map model was fit to
+
+        beam : Optional[Array], default: None
 
         Returns
         -------
@@ -598,14 +604,11 @@ class Model:
         xyz[2].block_until_ready()
 
         # Make beam
-        beam = wu.beam_double_gauss(
-            dr,
-            eval(str(cfg["beam"]["fwhm1"])),
-            eval(str(cfg["beam"]["amp1"])),
-            eval(str(cfg["beam"]["fwhm2"])),
-            eval(str(cfg["beam"]["amp2"])),
-        )
+        if beam is None:
+            beam = jnp.ones((1, 1))
         beam = jax.device_put(beam, device)
+        if beam is None:
+            raise ValueError("Beam somehow still None!")
 
         n_rounds = cfg.get("n_rounds", 1)
         dz = dz * eval(str(cfg["model"]["unit_conversion"]))
@@ -625,10 +628,39 @@ class Model:
                 priors = param.get("priors", None)
                 if priors is not None:
                     priors = eval(str(priors))
-                parameters.append(Parameter(par_name, fit, val, 0.0, priors))
+                else:
+                    priors = (-1 * np.inf, np.inf)
+                parameters.append(
+                    Parameter(
+                        par_name,
+                        tuple(fit),
+                        jnp.array(val, dtype=float),
+                        jnp.array(0.0, dtype=float),
+                        jnp.array(priors, dtype=float),
+                    )
+                )
             structures.append(Structure(name, structure["structure"], parameters))
         name = cfg["model"].get(
             "name", "-".join([structure.name for structure in structures])
         )
 
-        return cls(name, structures, xyz, dz, beam, n_rounds, pix_size, lims)
+        return cls(name, structures, xyz, dz, beam, n_rounds)
+
+    # Functions for making this a pytree
+    # Don't call this on your own
+    def tree_flatten(self) -> tuple[tuple, tuple]:
+        children = (tuple(self.structures), self.xyz, self.dz, self.beam, self.chisq)
+        aux_data = (
+            self.name,
+            self.n_rounds,
+            self.cur_round,
+        )
+
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children) -> Self:
+        name, n_rounds, cur_round = aux_data
+        structures, xyz, dz, beam, chisq = children
+
+        return cls(name, list(structures), xyz, dz, beam, n_rounds, cur_round, chisq)
