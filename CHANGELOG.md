@@ -1,3 +1,140 @@
+## 7.0.0 (2024-12-16)
+
+### Feat
+
+- update to match colormap changes
+- changed colormap handling to be more sensible
+- add model map
+- recompute model when xyz is updated
+- add model plotting to fitter
+- removing bowling from configs
+- added noise estimation. Also started removing bowling
+- get_radial_mask util
+- return maps from make_maps
+- add units to doc strings
+- allow no model in config
+- save final fit pars in a seperate yaml
+- adding act fitting and non-witch formating
+- files for checking r500 concordance
+- r500_elip now corresponds to r500_sph
+- ability to turn off structure when sim fitting
+- adding cylindrical beta profile
+- switching to plot_cluster. Need to clean this workbook up more
+- adding lims and pix_size to model
+- base plotting function
+- add example of 2nd stage plotting
+- changing cos powerlaw to simpler powerlaw
+- plotting models is now ez
+- adding aplpy plotting notebook
+- switching presets by source to minkasi
+- solve for signal map before fitting
+- cache model computation
+- let users specify imports in config file
+- wnoise in cfg
+- allow base config to be relative
+- recursive configs and relative paths
+- set coord units
+- add serialization of model dclass
+- repr for model
+- add some convenience classes in prep for new fitter script
+- switch to bilinear interp
+- added unit tests
+- adding itterative fitting
+- print starting params for sims. Also switching to sci notation for params
+- adding white noise option for sims
+- do static argnums and argnum shift via function inspection
+- adding no sub functionality
+- adding downsampling to fitter and small parameter changes
+- Added centering to make_grid_from_skymap
+- spilt creation of model from indexing it onto a tod
+- modify tod pixilization to work on any grid
+- add in function to get grid from skymap
+- faster get_chis
+- new gaussian modeling
+- new streamlined sampler
+- adding mcmc check
+- working towards being able to fix parameters
+- deved constructor function for sampler
+- adding a10 profile
+- adding fix_r500 functionality
+- add helper to profiling and make things more realistic
+
+### Fix
+
+- cyl_unit has wrong structure name
+- writting on multiple threads:
+- bug where it wouldnt model mapmake
+- update grid_from_wcs to match make_grid
+- removing debug print statements
+- bug where it always made noise
+- correcting units pixel to arcsec
+- applying black
+- raise error when we don't have MPI and handle having more procs than TODs
+- adjust cylindical beta name in ORDER
+- making function name and id string agree for cylindrical_beta
+- changing parse args
+- fix misnamed setattr
+- small typing issues
+- updating colormap to matplotlib 3.9.0
+- missed a config_path reference
+- formating
+- applied black formating
+- adding markdown
+- clear naive map after each iter
+- updating a10 pars
+- formating
+- r500 now uses fit value
+- output cfg no longer has base dependency
+- floats in config
+- gradient priors are a ts model so they only need to be in the mapset
+- make sure parameter value is float
+- better printing and error messages
+- handle grid in absolute coords and apply cosdec properly
+- many small bugs
+- also allow kwargs
+- more npars issues :)
+- ensure that samples outside of grid are 0
+- do inspections after function def
+- jnp.trapz depracation
+- undoing default
+- only change variables that are being fit
+- Dont start at the right value when simming
+- make sure grid is floats and return the modified arrays
+- use jax syntax for setting arrays
+- various indexing bugs, also switch to ij indexing
+- make mcmc check consistent with sampler branch
+- several minor fixes, mostly from merge errors but also use seperate ARGNUM_SHIFTS for the two cases
+- fixing merge issue
+- include da in smapler call
+- finally sorted sim issues and other sim improvements
+- restoring jit
+- updating to work with minkasi refactor
+- do sparse grid creation even when using a skymap
+- fixing dr/r_map units
+- updating imports to conform to new minkasi standards
+- don't double divide r500
+- don't allow negetive indices
+- fixing variable name
+- making compatible with minkasi update and small dr fix
+- ARGNUM_SHIFT somehow wrong again
+- make ntod cut MPI aware rather than per proc
+
+### Refactor
+
+- many changes to utils:
+- move bowling to scratch
+- model function now calls structure functions dynamically, introduces the concepts of structure stages
+- removed depracted tod functions
+- streamlined fitter and made it a part of the core library
+- move some inspections around and add variables to make working with things dynamically easier
+
+### Perf
+
+- typing idx/idy for robustness
+- removing dx/dy seems to help fitting
+- expicitly commit arrays to devices
+- prevent unneeded mem transfers
+
 ## 6.5.0 (2024-11-11)
 
 ### Feat
