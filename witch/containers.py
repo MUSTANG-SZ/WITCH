@@ -560,7 +560,6 @@ class Model:
         ----------
         cfg : dict
             The config loaded into a dict.
-
         beam : Optional[Array], default: None
 
         Returns
