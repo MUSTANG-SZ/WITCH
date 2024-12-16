@@ -112,7 +112,8 @@ mm.make_maps(
     cfg["minkasi"]["dograd"],
 )
 
-power_law = broken_power(rs, rbins, amps, pows, 0)
+condlist = tuple([tuple((rbins[i] <= rs) & (rs < rbins[i+1])) for i in range(len(pows)-1, -1, -1)])
+power_law = broken_power(rs, condlist, rbins, amps, pows, 0)
 
 pressure = nonpara_power(0,0,0, rbins, amps, pows, 0, 0, model.xyz)
 
