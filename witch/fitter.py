@@ -17,9 +17,9 @@ import matplotlib.pyplot as plt
 import mpi4jax
 import numpy as np
 import yaml
-from mpi4py import MPI
 from astropy.convolution import Gaussian2DKernel, convolve
 from minkasi.tools import presets_by_source as pbs
+from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
 from . import utils as wu
