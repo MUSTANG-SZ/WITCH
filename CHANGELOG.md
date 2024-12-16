@@ -1,3 +1,18 @@
+## 8.0.0 (2024-12-16)
+
+### Feat
+
+- added tool for updating config files
+- abstract away beam interface
+- abstract away assumption that we are using an minkasi based dataset
+- switch to backending everything in jax
+
+### Fix
+
+- cast priors to array
+- jax array when doing wn sims
+- don;t try to hash tracers
+
 ## 7.0.0 (2024-12-16)
 
 ### Feat
