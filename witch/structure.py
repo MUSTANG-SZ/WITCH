@@ -496,6 +496,7 @@ def cylindrical_beta(
 
     return pressure
 
+
 @jax.jit
 def cylindrical_beta_2d(
     dx: float,
@@ -511,7 +512,7 @@ def cylindrical_beta_2d(
 ) -> jax.Array:
     r"""
 
-    Same as cylindrical_beta but compute 2D profile analytically. 
+    Same as cylindrical_beta but compute 2D profile analytically.
     Should be faster than 3D integration. Useful when you are
     not modifying the 3D grid. Also includes the LoS angle phi.
 
@@ -578,11 +579,15 @@ def cylindrical_beta_2d(
     x, y, *_ = transform_grid(dx, dy, dz, 1.0, 1.0, 1.0, theta, xyz)
     rr = x[..., 0] ** 2 + y[..., 0] ** 2
 
-    gamma_term = (jnp.sqrt(jnp.pi) * jax.scipy.special.gamma(3*beta/2 - 1/2))/jax.scipy.special.gamma(3*beta/ 2)
+    gamma_term = (
+        jnp.sqrt(jnp.pi) * jax.scipy.special.gamma(3 * beta / 2 - 1 / 2)
+    ) / jax.scipy.special.gamma(3 * beta / 2)
 
-    r_term = (1 + (rr/r_c)**2)**(-3*beta/2 + 1/2)
+    r_term = (1 + (rr / r_c) ** 2) ** (-3 * beta / 2 + 1 / 2)
 
-    return gamma_term * 1/jnp.cos(phi) * (P0*r_c) * r_term
+    return gamma_term * 1 / jnp.cos(phi) * (P0 * r_c) * r_term
+
+
 @jax.jit
 def egaussian(
     dx: float,
@@ -1084,7 +1089,7 @@ N_PAR_GNFW = len(inspect.signature(gnfw).parameters) - 1
 N_PAR_A10 = len(inspect.signature(a10).parameters) - 1
 N_PAR_EA10 = len(inspect.signature(ea10).parameters) - 1
 N_PAR_CYLINDRICAL = len(inspect.signature(cylindrical_beta).parameters) - 1
-N_PAR_CYLINDRICAL_2D = len(inspect.signature(cylindrical_beta_2d).parameters)-1
+N_PAR_CYLINDRICAL_2D = len(inspect.signature(cylindrical_beta_2d).parameters) - 1
 N_PAR_GAUSSIAN = len(inspect.signature(gaussian).parameters) - 1
 N_PAR_EGAUSSIAN = len(inspect.signature(egaussian).parameters) - 1
 N_PAR_UNIFORM = len(inspect.signature(add_uniform).parameters) - 2

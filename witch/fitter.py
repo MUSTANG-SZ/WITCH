@@ -28,6 +28,7 @@ comm = MPI.COMM_WORLD.Clone()
 
 import pdb
 
+
 def print_once(*args: Unpack[tuple[Any, ...]]):
     """
     Helper function to print only once when running with MPI.
