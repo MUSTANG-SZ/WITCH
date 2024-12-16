@@ -72,7 +72,34 @@ def bin_map(hdu, rbins, x0=None, y0=None, cunit=None):
     return bin1d, var1d
 
 @jax.jit
+def power(x, rbin, cur_amp, cur_pow, c):
+    """
+    Function which returns the powerlaw, given the bin-edge constraints. Exists to be partialed.
+
+    Parameters:
+    -----------
+    x : float
+        Dummy variable to be partialed over
+    rbin : float
+        Edge of bin for powerlaw
+    cur_amp : float
+        Amplitude of power law
+    cur_pow : float
+        Power of power law
+    c : float
+        Constant offset
+
+    Returns
+    -------
+    tmp : float
+        Powerlaw evaluated at x
+    """
+    tmp = cur_amp * (x**cur_pow - rbin**cur_pow) + c
+    return tmp 
+
+@partial(jax.jit, static_argnums = [1],)
 def broken_power(rs: jax.Array,
+        condlist: tuple,
         rbins: jax.Array,
         amps: jax.Array,
         pows:jax.Array,
@@ -85,6 +112,8 @@ def broken_power(rs: jax.Array,
     -----------
     rs : jax.Array
         Array of rs at which to compute pl.
+    condlist : tuple
+        tuple which enocdes which rs are evaluated by which parametric function
     rbins : jax.Array
         Array of bin edges for power laws
     amps : jax.Array
@@ -94,15 +123,16 @@ def broken_power(rs: jax.Array,
         Constant offset for powerlaws
     """
     #condlist = [(rbins[i] <= rs) & (rs < rbins[i+1]) for i in range(len(pows)-1, -1, -1)] #TODO: Replace me with jnp.where 
-    condlist = [jnp.where((rbins[i] <= rs) & (rs < rbins[i+1])) for i in range(len(pows)-1, -1, -1)]
-    cur_c = c
+    #condlist = [jnp.where((rbins[i] <= rs) & (rs < rbins[i+1])) for i in range(len(pows)-1, -1, -1)]
+    cur_c = c #TODO: necessary?
     funclist = [] 
-    def power(x, rbin, cur_amp, cur_pow, c):
-        return cur_amp * (x**cur_pow - rbin**cur_pow) + c
+#    def power(x, rbin, cur_amp, cur_pow, c):
+#        return cur_amp * (x**cur_pow - rbin**cur_pow) + c
     for i in range(len(condlist)-1, -1, -1):   
         funclist.append(partial(power, rbin = rbins[i+1], cur_amp = amps[i], cur_pow = pows[i], c = cur_c))
         cur_c += amps[i]*(rbins[i]**pows[i]-rbins[i+1]**pows[i]) 
     return jnp.piecewise(rs, condlist, funclist)
+
 
 def nonpara_power(
     dx: float,
@@ -149,7 +179,7 @@ def nonpara_power(
 
     x, y, z, *_ = transform_grid(dx, dy, dz, 1., 1., 1., 0., xyz)
     r = jnp.sqrt(x**2 + y**2 + z**2)
-
-    pressure = broken_power(r, rbins, amps, pows, c)
+    condlist = tuple([tuple((rbins[i] <= r) & (r < rbins[i+1])) for i in range(len(pows)-1, -1, -1)]) #TODO: not generating cond list right for r
+    pressure = broken_power(r, condlist, rbins, amps, pows, c)
 
     return pressure
