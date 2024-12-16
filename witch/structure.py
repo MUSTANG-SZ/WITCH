@@ -498,6 +498,97 @@ def cylindrical_beta(
 
 
 @jax.jit
+def cylindrical_beta_2d(
+    dx: float,
+    dy: float,
+    dz: float,
+    L: float,
+    theta: float,
+    phi: float,
+    P0: float,
+    r_c: float,
+    beta: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
+    r"""
+
+    Same as cylindrical_beta but compute 2D profile analytically.
+    Should be faster than 3D integration. Useful when you are
+    not modifying the 3D grid. Also includes the LoS angle phi.
+
+    Once the grid is transformed the profile is computed as:
+
+    $$
+    y(R) = \frac{\sqrt{\pi} \Gamma (3\beta/2 - 1/2)}{\Gamma(3\beta /2)} \sec{\phi} P_0 r_c [1+\frac{R}{r_c}^2]^{-3\beta /2 + 1/2}
+    $$
+
+    Note the missing factor of
+
+    $$
+    \frac{\sigma_T}{m_e c^2}
+    $$
+
+    is provided by the unit conversion functionality.
+
+    Derivation from Craig Sarazin
+    Parameters
+    ----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    L : float
+        Length of the cylinder.
+        Aligned with the x-axis.
+        Note that we consider anything where $\left| x \right| \\leq L$
+        to be in the profile, so the actual length is $2L$.
+        Units: arcsec
+    theta : float
+        Angle to rotate in xy-plane.
+        Passed to `grid.transform_grid`.
+        Units: radians
+    phi : float
+        Angle to rotate in xz-plane
+        Units: radians
+    P0 : float
+        Amplitude of the pressure profile.
+        Units: unitless
+    r_c : float
+        The critical radius of the cylindrical profile.
+        Units: arcsec
+    beta : float
+        Beta value of isobeta model.
+        Units: unitless
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+
+    Returns
+    -------
+    model : jax.Array
+        The cylindrical beta model evaluated on the grid.
+    """
+    x, y, *_ = transform_grid(dx, dy, dz, 1.0, 1.0, 1.0, theta, xyz)
+    rr = x[..., 0] ** 2 + y[..., 0] ** 2
+
+    gamma_term = (
+        jnp.sqrt(jnp.pi) * jax.scipy.special.gamma(3 * beta / 2 - 1 / 2)
+    ) / jax.scipy.special.gamma(3 * beta / 2)
+
+    r_term = (1 + (rr / r_c) ** 2) ** (-3 * beta / 2 + 1 / 2)
+
+    return gamma_term * 1 / jnp.cos(phi) * (P0 * r_c) * r_term
+
+
+@jax.jit
 def egaussian(
     dx: float,
     dy: float,
@@ -998,6 +1089,7 @@ N_PAR_GNFW = len(inspect.signature(gnfw).parameters) - 1
 N_PAR_A10 = len(inspect.signature(a10).parameters) - 1
 N_PAR_EA10 = len(inspect.signature(ea10).parameters) - 1
 N_PAR_CYLINDRICAL = len(inspect.signature(cylindrical_beta).parameters) - 1
+N_PAR_CYLINDRICAL_2D = len(inspect.signature(cylindrical_beta_2d).parameters) - 1
 N_PAR_GAUSSIAN = len(inspect.signature(gaussian).parameters) - 1
 N_PAR_EGAUSSIAN = len(inspect.signature(egaussian).parameters) - 1
 N_PAR_UNIFORM = len(inspect.signature(add_uniform).parameters) - 2
@@ -1009,6 +1101,7 @@ STRUCT_FUNCS = {
     "a10": a10,
     "ea10": ea10,
     "cylindrical_beta": cylindrical_beta,
+    "cylindrical_beta_2d": cylindrical_beta_2d,
     "exponential": add_exponential,
     "powerlaw": add_powerlaw,
     "powerlaw_cos": add_powerlaw_cos,
@@ -1022,6 +1115,7 @@ STRUCT_N_PAR = {
     "a10": N_PAR_A10,
     "ea10": N_PAR_EA10,
     "cylindrical_beta": N_PAR_CYLINDRICAL,
+    "cylindrical_beta_2d": N_PAR_CYLINDRICAL_2D,
     "exponential": N_PAR_EXPONENTIAL,
     "powerlaw": N_PAR_POWERLAW,
     "powerlaw_cos": N_PAR_POWERLAW,
@@ -1035,12 +1129,13 @@ STRUCT_STAGE = {
     "a10": 0,
     "ea10": 0,
     "cylindrical_beta": 0,
+    "cylindrical_beta_2d": 2,
     "exponential": 1,
     "powerlaw": 1,
     "powerlaw_cos": 1,
     "uniform": 1,
     "egaussian": 0,
-    "gaussian": 2,
+    "gaussian": 3,
     "gnfw": 0,
     "isobeta": 0,
 }
