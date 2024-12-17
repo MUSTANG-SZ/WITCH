@@ -9,6 +9,12 @@ from functools import partial
 from . import utils as wu
 from .grid import transform_grid
 
+def array_to_tuple(arr):
+    if isinstance(arr, list) or type(arr) is np.ndarray:
+        return tuple(array_to_tuple(item) for item in arr)
+    else:
+        return arr
+
 def bin_map(hdu, rbins, x0=None, y0=None, cunit=None):
     """
     Radially bin a map into rbins. Code adapted from CLASS
@@ -97,7 +103,7 @@ def power(x, rbin, cur_amp, cur_pow, c):
     tmp = cur_amp * (x**cur_pow - rbin**cur_pow) + c
     return tmp 
 
-@partial(jax.jit, static_argnums = [1],)
+@partial(jax.jit, static_argnums = [1,2],)
 def broken_power(rs: jax.Array,
         condlist: tuple,
         rbins: jax.Array,
@@ -122,18 +128,14 @@ def broken_power(rs: jax.Array,
     c : float
         Constant offset for powerlaws
     """
-    #condlist = [(rbins[i] <= rs) & (rs < rbins[i+1]) for i in range(len(pows)-1, -1, -1)] #TODO: Replace me with jnp.where 
-    #condlist = [jnp.where((rbins[i] <= rs) & (rs < rbins[i+1])) for i in range(len(pows)-1, -1, -1)]
     cur_c = c #TODO: necessary?
     funclist = [] 
-#    def power(x, rbin, cur_amp, cur_pow, c):
-#        return cur_amp * (x**cur_pow - rbin**cur_pow) + c
     for i in range(len(condlist)-1, -1, -1):   
         funclist.append(partial(power, rbin = rbins[i+1], cur_amp = amps[i], cur_pow = pows[i], c = cur_c))
         cur_c += amps[i]*(rbins[i]**pows[i]-rbins[i+1]**pows[i]) 
     return jnp.piecewise(rs, condlist, funclist)
 
-
+#@partial(jax.jit, static_argnums = [3],)
 def nonpara_power(
     dx: float,
     dy: float,
@@ -179,7 +181,10 @@ def nonpara_power(
 
     x, y, z, *_ = transform_grid(dx, dy, dz, 1., 1., 1., 0., xyz)
     r = jnp.sqrt(x**2 + y**2 + z**2)
-    condlist = tuple([tuple((rbins[i] <= r) & (r < rbins[i+1])) for i in range(len(pows)-1, -1, -1)]) #TODO: not generating cond list right for r
-    pressure = broken_power(r, condlist, rbins, amps, pows, c)
+    mapshape = r.shape
+    r = r.ravel()
+    condlist = jnp.array(([(rbins[i] <= r) & (r < rbins[i+1]) for i in range(len(pows)-1, -1, -1)]))
+    condlist = tuple(map(tuple, condlist)) 
+    pressure = broken_power(r, condlist, rbins, amps, pows, c).reshape(mapshape)
 
     return pressure

@@ -2,7 +2,7 @@ from witch.core import model
 from witch.utils import *
 from witch.fitter import *
 from witch.containers import Model
-import witch.mapmaking as mm
+import witch.external.minkasi.mapmaking as mm
 from witch.nonparametric import broken_power, nonpara_power
 
 import minkasi.tools.presets_by_source as pbs
@@ -19,11 +19,16 @@ import shutil
 
 import matplotlib.pyplot as plt
 
+def array_to_tuple(arr):
+    if isinstance(arr, list) or type(arr) is np.ndarray:
+        return tuple(array_to_tuple(item) for item in arr)
+    else:
+        return arr
 
 rs = np.linspace(1, 10, 1000)
 pows = np.array([-1. , -1.5, -2. , -2.5, -3., -4 ])
 amps = np.array([-2, -3, -4, -5, -6, 0])
-rbins = np.array([0, 1, 2, 3, 5, 7, 999999])
+rbins = (0, 1, 2, 3, 5, 7, 999999)
 
 path = "/home/jorlo/dev/minkasi_jax/unit_tests/cyl_unit.yaml"
 with open(path, "r") as file:
@@ -31,93 +36,88 @@ with open(path, "r") as file:
 if "models" not in cfg:
     cfg["models"] = {}
 
+# TODO: Serialize cfg to a data class (pydantic?)
 cfg = load_config({}, path)
 cfg["fit"] = cfg.get("fit", "model" in cfg)
 cfg["sim"] = cfg.get("sim", False)
 cfg["wnoise"] = cfg.get("wnoise", False)
 cfg["map"] = cfg.get("map", True)
 cfg["sub"] = cfg.get("sub", True)
-
-cfg["sim"] = False
-
-todroot = cfg["paths"]["tods"]
-if not os.path.isabs(todroot):
-    todroot = os.path.join(
-        os.environ.get("MJ_TODROOT", os.environ["HOME"]), todroot
-    )
-tod_names = glob.glob(os.path.join(todroot, cfg["paths"]["glob"]))
-bad_tod, _ = pbs.get_bad_tods(
-    cfg["name"], ndo=cfg["paths"]["ndo"], odo=cfg["paths"]["odo"]
-)
-if "cut" in cfg["paths"]:
-    bad_tod += cfg["paths"]["cut"]
-tod_names = minkasi.tods.io.cut_blacklist(tod_names, bad_tod)
-tod_names.sort()
-ntods = cfg["minkasi"].get("ntods", None)
-tod_names = tod_names[:ntods]
-tod_names = tod_names[minkasi.myrank :: minkasi.nproc]
-minkasi.barrier()  # Is this needed?
-
-todvec = minkasi.tods.TodVec()
-ntods = 2
-for i, fname in enumerate(tod_names):
-    if i > ntods: break
-    dat = minkasi.tods.io.read_tod_from_fits(fname)
-    minkasi.tods.processing.truncate_tod(dat)
-    minkasi.tods.processing.downsample_tod(dat)
-    minkasi.tods.processing.truncate_tod(dat)
-    # figure out a guess at common mode and (assumed) linear detector drifts/offset
-    # drifts/offsets are removed, which is important for mode finding.  CM is *not* removed.
-    dd, pred2, cm = minkasi.tods.processing.fit_cm_plus_poly(
-        dat["dat_calib"], cm_ord=3, full_out=True
-    )
-    dat["dat_calib"] = dd
-    dat["pred2"] = pred2
-    dat["cm"] = cm
-
-    tod = minkasi.tods.Tod(dat)
-    todvec.add_tod(tod)
-
-lims = todvec.lims()
-pixsize = 2.0 / 3600 * np.pi / 180
-skymap = minkasi.maps.SkyMap(lims, pixsize)
+cfg["mem_starved"] = cfg.get("mem_starved", False)
 
 
-model = Model.from_cfg(cfg)
-funs = [model.minkasi_helper]
-params = np.array(model.pars)
-npars = np.array([len(params)])
-prior_vals = model.priors
-priors = [None if prior is None else "flat" for prior in prior_vals]
+# Do imports
+for module, name in cfg.get("imports", {}).items():
+    mod = import_module(module)
+    if isinstance(name, str):
+        locals()[name] = mod
+    elif isinstance(name, list):
+        for n in name:
+            locals()[n] = getattr(mod, n)
+    else:
+        raise TypeError("Expect import name to be a string or a list")
 
-# Deal with bowling and simming in TODs and setup noise
-noise_class = eval(str(cfg["minkasi"]["noise"]["class"]))
-noise_args = eval(str(cfg["minkasi"]["noise"]["args"]))
-noise_kwargs = eval(str(cfg["minkasi"]["noise"]["kwargs"]))
-bowl_str = process_tods(
-    cfg, todvec, skymap, noise_class, noise_args, noise_kwargs, model
-)
+# Get the functions needed to work with out dataset
+# TODO: make protocols for these and check them
+dset_name = list(cfg["datasets"].keys())[0]
+load_tods = eval(cfg["datasets"][dset_name]["funcs"]["load_tods"])
+get_info = eval(cfg["datasets"][dset_name]["funcs"]["get_info"])
+make_beam = eval(cfg["datasets"][dset_name]["funcs"]["make_beam"])
+preproc = eval(cfg["datasets"][dset_name]["funcs"]["preproc"])
+postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
+postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
+
+# Get TODs
+todvec = load_tods(dset_name, cfg, comm)
+
+# Get any info we need specific to an expiriment
+info = get_info(dset_name, cfg, todvec)
+
+# Get the beam
+beam = make_beam(dset_name, cfg, info)
+
+# Define the model and get stuff setup fitting
+if "model" in cfg:
+    model = Model.from_cfg(cfg, beam)
+else:
+    model = None
+    print_once("No model defined, setting fit, sim, and sub to False")
+    cfg["fit"] = False
+    cfg["sim"] = False
+    cfg["sub"] = False
+
+# Setup noise
+noise_class = eval(str(cfg["datasets"][dset_name]["noise"]["class"]))
+noise_args = tuple(eval(str(cfg["datasets"][dset_name]["noise"]["args"])))
+noise_kwargs = eval(str(cfg["datasets"][dset_name]["noise"]["kwargs"]))
+info["noise_class"] = noise_class
+info["noise_args"] = noise_args
+info["noise_kwargs"] = noise_kwargs
 
 # Get output
+if "base" in cfg.keys():
+    del cfg["base"]  # We've collated to the cfg files so no need to keep the base
 outdir = get_outdir(cfg, model)
+info["outdir"] = outdir
 
-mm.make_maps(
-    todvec,
-    skymap,
-    noise_class,
-    noise_args,
-    noise_kwargs,
-    os.path.join(outdir, "signal"),
-    cfg["minkasi"]["npass"],
-    cfg["minkasi"]["dograd"],
-)
+# Process the TODs
+preproc(dset_name, cfg, todvec, model, info)
+todvec = process_tods(cfg, todvec, noise_class, noise_args, noise_kwargs, model)
+todvec = jax.block_until_ready(todvec)
+postproc(dset_name, cfg, todvec, model, info)
 
-condlist = tuple([tuple((rbins[i] <= rs) & (rs < rbins[i+1])) for i in range(len(pows)-1, -1, -1)])
+
+condlist = ([(rbins[i] <= rs) & (rs < rbins[i+1]) for i in range(len(pows)-1, -1, -1)])
+condlist = array_to_tuple(condlist)
 power_law = broken_power(rs, condlist, rbins, amps, pows, 0)
 
-pressure = nonpara_power(0,0,0, rbins, amps, pows, 0, 0, model.xyz)
+
+with jax.profiler.trace("/tmp/jax-trace", create_perfetto_link=True):
+    pressure = nonpara_power(0,0,0, rbins, amps, pows, 0, 0, model.xyz).block_until_ready()
 
 asdf
+
+
 
 
 
