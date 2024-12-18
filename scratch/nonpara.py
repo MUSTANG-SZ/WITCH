@@ -3,7 +3,8 @@ from witch.utils import *
 from witch.fitter import *
 from witch.containers import Model
 import witch.external.minkasi.mapmaking as mm
-from witch.nonparametric import broken_power, nonpara_power
+from witch.nonparametric import broken_power
+from witch.structure import nonpara_power
 
 import minkasi.tools.presets_by_source as pbs
 import minkasi
@@ -111,6 +112,7 @@ condlist = ([(rbins[i] <= rs) & (rs < rbins[i+1]) for i in range(len(pows)-1, -1
 condlist = array_to_tuple(condlist)
 power_law = broken_power(rs, condlist, rbins, amps, pows, 0)
 
+pressure = nonpara_power(0,0,0, rbins, amps, pows, 0, 0, model.xyz)
 
 with jax.profiler.trace("/tmp/jax-trace", create_perfetto_link=True):
     pressure = nonpara_power(0,0,0, rbins, amps, pows, 0, 0, model.xyz).block_until_ready()

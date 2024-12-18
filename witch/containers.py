@@ -104,6 +104,7 @@ class Structure:
     name: str
     structure: str
     parameters: list[Parameter]
+    n_rbins: int = 0
 
     def __post_init__(self):
         self.structure = self.structure.lower()
@@ -120,16 +121,16 @@ class Structure:
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
         children = tuple(self.parameters)
-        aux_data = (self.name, self.structure)
+        aux_data = (self.name, self.structure, self.n_rbins)
 
         return (children, aux_data)
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        name, structure = aux_data
+        name, structure, n_rbins = aux_data
         parameters = children
 
-        return cls(name, structure, list(parameters))
+        return cls(name, structure, list(parameters), n_rbins)
 
 
 @register_pytree_node_class
@@ -248,6 +249,21 @@ class Model:
             n_struct[idx] += 1
         return n_struct
 
+    @cached_property
+    def n_rbins(self) -> list[int]:
+        """
+        Number of r bins for nonparametric structures. 
+        Note that this is cached.
+
+        Returns
+        -------
+        n_rbins : list[int]
+            `n_rbins[i]` is the number of rbins in this structure.
+        """
+        n_rbins = [structure.n_rbins for structure in self. structures] 
+
+        return n_rbins
+
     @property
     def pars(self) -> jax.Array:
         """
@@ -258,9 +274,10 @@ class Model:
         pars :  jax.Array
             The parameter values in the order expected by `core.model`.
         """
-        pars = []
+        pars = jnp.array([])
         for structure in self.structures:
-            pars += [parameter.val for parameter in structure.parameters]
+            for parameter in structure.parameters:
+                pars = jnp.append(pars, parameter.val.ravel()) 
         return jnp.array(pars)
 
     @cached_property
@@ -366,6 +383,7 @@ class Model:
         return core.model(
             self.xyz,
             tuple(self.n_struct),
+            tuple(self.n_rbins),
             self.dz,
             self.beam,
             *self.pars,
@@ -390,6 +408,7 @@ class Model:
         return core.model_grad(
             self.xyz,
             tuple(self.n_struct),
+            tuple(self.n_rbins),
             self.dz,
             self.beam,
             argnums,
@@ -615,6 +634,7 @@ class Model:
 
         structures = []
         for name, structure in cfg["model"]["structures"].items():
+            n_rbins = structure.get("n_rbins", 0)
             parameters = []
             for par_name, param in structure["parameters"].items():
                 val = eval(str(param["value"]))
@@ -639,7 +659,7 @@ class Model:
                         jnp.array(priors, dtype=float),
                     )
                 )
-            structures.append(Structure(name, structure["structure"], parameters))
+            structures.append(Structure(name, structure["structure"], parameters, n_rbins = n_rbins))
         name = cfg["model"].get(
             "name", "-".join([structure.name for structure in structures])
         )

@@ -103,7 +103,7 @@ def power(x, rbin, cur_amp, cur_pow, c):
     tmp = cur_amp * (x**cur_pow - rbin**cur_pow) + c
     return tmp 
 
-@partial(jax.jit, static_argnums = [1,2],)
+@jax.jit
 def broken_power(rs: jax.Array,
         condlist: tuple,
         rbins: jax.Array,
@@ -135,56 +135,4 @@ def broken_power(rs: jax.Array,
         cur_c += amps[i]*(rbins[i]**pows[i]-rbins[i+1]**pows[i]) 
     return jnp.piecewise(rs, condlist, funclist)
 
-#@partial(jax.jit, static_argnums = [3],)
-def nonpara_power(
-    dx: float,
-    dy: float,
-    dz: float,
-    rbins: jax.Array, 
-    amps: jax.Array, 
-    pows:jax.Array,
-    c: float,
-    z: float,
-    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
-) -> jax.Array:
-    """
-    Function which computes 3D pressure of segmented power laws
 
-    Parameters:
-    -----------
-    dx : float
-        RA of cluster center relative to grid origin.
-        Passed to `grid.transform_grid`.
-        Units: arcsec
-    dy : float
-        Dec of cluster center relative to grid origin.
-        Passed to `grid.transform_grid`.
-        Units: arcsec
-    dz : float
-        Line of sight offset of cluster center relative to grid origin.
-        Passed to `grid.transform_grid`.
-        Units: arcsec
-    rbins : jax.Array
-        Array of bin edges for power laws
-    amps : jax.Array
-        Amplitudes of power laws
-    pows : jax.Array 
-        Exponents of power laws
-    c : float
-        Constant offset for powerlaws
-    z : float,
-        Redshift of cluster
-    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
-        Coordinte grid to calculate model on.
-        See `containers.Model.xyz` for details.
-    """
-
-    x, y, z, *_ = transform_grid(dx, dy, dz, 1., 1., 1., 0., xyz)
-    r = jnp.sqrt(x**2 + y**2 + z**2)
-    mapshape = r.shape
-    r = r.ravel()
-    condlist = jnp.array(([(rbins[i] <= r) & (r < rbins[i+1]) for i in range(len(pows)-1, -1, -1)]))
-    condlist = tuple(map(tuple, condlist)) 
-    pressure = broken_power(r, condlist, rbins, amps, pows, c).reshape(mapshape)
-
-    return pressure

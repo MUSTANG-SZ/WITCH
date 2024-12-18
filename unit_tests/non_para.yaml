@@ -1,0 +1,44 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "base_unit.yaml"
+model_map: True
+# Cluster name
+# Used both for the output path as well as to load presets
+name: "nonpara"
+sim: True # If True use TODs to make noise and add a simulated cluster
+
+# Define the model
+model:
+  # Unit conversion to apply at the end
+  # Will be evaled
+  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+  # Structure to include in the model
+  structures:
+    # Name of the first structure
+    nonpara:
+      structure: "nonpara_power"
+      n_rbins: 5
+      parameters:
+        rbins:
+          value: "(0, 60, 120, 180, 300)"
+        amps:
+          value: "jnp.array([-2, -3, -4, -5, 0])"
+        pows:
+          value: "jnp.array([-1. , -1.5, -2. , -2.5, -3.])"
+        dx_1: # Name of the first parameter
+          value: 0.0 # Value to use/start at, will be evaled
+          to_fit: False
+        dy_1:
+          value: 0.0
+          to_fit: False
+        dz_1:
+          value: 0.0
+          to_fit: False
+        c:
+          value: 0
+          to_fit: False
+        z:
+          value: 0.25
+          to_fit: False
+

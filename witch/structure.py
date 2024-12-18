@@ -8,8 +8,18 @@ import inspect
 import jax
 import jax.numpy as jnp
 
+import numpy as np
+
 from .grid import transform_grid
 from .utils import ap, get_da, get_hz, get_nz, h70
+from .nonparametric import broken_power 
+
+def _get_nonpara(signature, prefix_list=["nonpara_"]):
+    par_names = np.array(list(signature.parameters.keys()), dtype=str)
+    static_msk = np.zeros_like(par_names, dtype=bool)
+    for prefix in prefix_list:
+        static_msk += np.char.startswith(par_names, prefix)
+    return np.sum(static_msk)
 
 @jax.jit
 def gnfw(    
@@ -1092,6 +1102,60 @@ def add_powerlaw_cos(
     new_pressure = jnp.where(r > 1, pressure, (1 + powerlaw) * pressure)
     return new_pressure
 
+#@jax.jit
+def nonpara_power(
+    nonpara_rbins: jax.Array,
+    nonpara_amps: jax.Array,
+    nonpara_pows:jax.Array,
+    dx: float,
+    dy: float,
+    dz: float,
+    c: float,
+    z: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
+    """
+    Function which computes 3D pressure of segmented power laws
+
+    Parameters:
+    -----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    rbins : jax.Array
+        Array of bin edges for power laws
+    amps : jax.Array
+        Amplitudes of power laws
+    pows : jax.Array
+        Exponents of power laws
+    c : float
+        Constant offset for powerlaws
+    z : float,
+        Redshift of cluster
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+    """
+    print(dz)
+    x, y, z, *_ = transform_grid(dx, dy, dz, 1., 1., 1., 0., xyz)
+    r = jnp.sqrt(x**2 + y**2 + z**2)
+    nonpara_rbins = jnp.append(nonpara_rbins, jnp.array([jnp.amax(r)]))
+    mapshape = r.shape
+    r = r.ravel()
+    condlist = ([jnp.array((rbins[i] <= r) & (r < rbins[i+1])) for i in range(len(pows)-1, -1, -1)])
+    pressure = broken_power(r, condlist, nonpara_rbins, nonpara_amps, nonpara_pows, c).reshape(mapshape)
+
+    return pressure
+
 
 # Get number of parameters for each structure
 # The -1 is because xyz doesn't count
@@ -1108,6 +1172,9 @@ N_PAR_EGAUSSIAN = len(inspect.signature(egaussian).parameters) - 1
 N_PAR_UNIFORM = len(inspect.signature(add_uniform).parameters) - 2
 N_PAR_EXPONENTIAL = len(inspect.signature(add_exponential).parameters) - 2
 N_PAR_POWERLAW = len(inspect.signature(add_powerlaw).parameters) - 2
+N_PAR_NONPARA_POWER = len(inspect.signature(nonpara_power).parameters) - 1
+
+N_NONPARA_POWER = _get_nonpara(inspect.signature(nonpara_power)) 
 
 # Make a convenience mapping
 STRUCT_FUNCS = {
@@ -1123,6 +1190,7 @@ STRUCT_FUNCS = {
     "gnfw": gnfw,
     "egnfw": egnfw,
     "isobeta": isobeta,
+    "nonpara_power": nonpara_power,
 }
 STRUCT_N_PAR = {
     "a10": N_PAR_A10,
@@ -1137,6 +1205,10 @@ STRUCT_N_PAR = {
     "gnfw": N_PAR_GNFW,
     "egnfw": N_PAR_EGNFW,
     "isobeta": N_PAR_ISOBETA,
+    "nonpara_power": N_PAR_NONPARA_POWER,
+}
+STRUCT_N_NONPARA = {
+    "nonpara_power": N_NONPARA_POWER,
 }
 STRUCT_STAGE = {
     "a10": 0,
@@ -1151,4 +1223,5 @@ STRUCT_STAGE = {
     "gnfw": 0,
     "egnfw": 0,
     "isobeta": 0,
+    "nonpara_power": -1,
 }
