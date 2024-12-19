@@ -22,10 +22,13 @@ model:
       parameters:
         rbins:
           value: "(0, 60, 120, 180, 300)"
+          to_fit: True
         amps:
-          value: "jnp.array([-2, -3, -4, -5, 0])"
+          value: "jnp.array([-2.0, -3.0, -4.0, -1.0, 0])"
+          to_fit: True
         pows:
           value: "jnp.array([-1. , -1.5, -2. , -2.5, -3.])"
+          to_fit: True
         dx_1: # Name of the first parameter
           value: 0.0 # Value to use/start at, will be evaled
           to_fit: False

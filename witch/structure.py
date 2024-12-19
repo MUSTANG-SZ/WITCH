@@ -1151,7 +1151,7 @@ def nonpara_power(
     nonpara_rbins = jnp.append(nonpara_rbins, jnp.array([jnp.amax(r)]))
     mapshape = r.shape
     r = r.ravel()
-    condlist = ([jnp.array((rbins[i] <= r) & (r < rbins[i+1])) for i in range(len(pows)-1, -1, -1)])
+    condlist = ([jnp.array((nonpara_rbins[i] <= r) & (r < nonpara_rbins[i+1])) for i in range(len(nonpara_pows)-1, -1, -1)])
     pressure = broken_power(r, condlist, nonpara_rbins, nonpara_amps, nonpara_pows, c).reshape(mapshape)
 
     return pressure

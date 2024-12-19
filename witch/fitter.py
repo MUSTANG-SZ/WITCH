@@ -327,7 +327,7 @@ def main():
             ):
                 final["model"]["structures"][struct_name]["parameters"][par_name][
                     "value"
-                ] = float(par.val)
+                ] = par.val
         with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
             yaml.dump(final, file)
 

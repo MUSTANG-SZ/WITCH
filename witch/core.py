@@ -202,7 +202,7 @@ def model(
             nonpara_struct_pars = cur_struct_pars[:n_rbins[i] * STRUCT_N_NONPARA[struct]].reshape((STRUCT_N_NONPARA[struct], n_rbins[i]))
             cur_struct_pars = cur_struct_pars[n_rbins[i] * STRUCT_N_NONPARA[struct]:]
             #pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*nonpara_struct_pars, *struct_pars, xyz))
-            cur_pars = [nonpara_struct_pars[k] for k in range(STRUCT_N_NONPARA[struct])] + [struct_pars[k] for k in range(STRUCT_N_PAR[struct] - STRUCT_N_NONPARA[struct])]
+            cur_pars = [nonpara_struct_pars[k] for k in range(STRUCT_N_NONPARA[struct])] + [cur_struct_pars[k] for k in range(STRUCT_N_PAR[struct] - STRUCT_N_NONPARA[struct])]
             #pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*nonpara_struct_pars, *struct_pars, xyz))
             pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*cur_pars, xyz))
 

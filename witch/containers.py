@@ -293,7 +293,13 @@ class Model:
         """
         par_names = []
         for structure in self.structures:
-            par_names += [parameter.name for parameter in structure.parameters]
+            for parameter in structure.parameters:
+                if len(parameter.val) > 1:
+                    for i in range(len(parameter.val)):
+                        par_names += [parameter.name+"_{}".format(i)]
+                else:
+                    par_names += [parameter.name]
+
         return par_names
 
     @property
@@ -306,10 +312,12 @@ class Model:
         errs : jax.Array
             The errors in the same order as vals.
         """
-        errs = []
+        errs = jnp.array([])
         for structure in self.structures:
-            errs += [parameter.err for parameter in structure.parameters]
+            for parameter in structure.parameters:
+                errs = jnp.append(errs, parameter.err.ravel()) 
         return jnp.array(errs)
+
 
     @cached_property
     def priors(self) -> tuple[jax.Array, jax.Array]:
@@ -327,8 +335,9 @@ class Model:
         lower = []
         upper = []
         for structure in self.structures:
-            lower += [parameter.prior[0] for parameter in structure.parameters]
-            upper += [parameter.prior[1] for parameter in structure.parameters]
+            for parameter in structure.parameters:
+                lower += [parameter.prior[0]] * len(parameter.val)
+                upper += [parameter.prior[1]] * len(parameter.val)
         priors = (jnp.array(lower), jnp.array(upper))
         return priors
 
@@ -344,11 +353,13 @@ class Model:
             in the current round.
             This is in the same order as `pars`.
         """
+
         to_fit = []
         for structure in self.structures:
-            to_fit += [
-                parameter.fit[self.cur_round] for parameter in structure.parameters
-            ]
+            for parameter in structure.parameters:
+                to_fit += [parameter.fit[self.cur_round]] * len(parameter.val)
+                    #to_fit = jnp.append(to_fit, jnp.array([parameter.fit[self.cur_round]] * len(parameter.val)).ravel())
+
         return tuple(to_fit)  # jnp.ravel(jnp.array(to_fit))
 
     @cached_property
@@ -363,9 +374,11 @@ class Model:
             `to_fit[i]` is True if we ever want to fit the `i`'th parameter.
             This is in the same order as `pars`.
         """
-        to_fit = []
+        to_fit = jnp.array([], dtype=bool)
         for structure in self.structures:
-            to_fit += [parameter.fit_ever for parameter in structure.parameters]
+            for parameter in structure.parameters:
+                to_fit = jnp.append(to_fit, jnp.array([parameter.fit_ever] * len(parameter.val), dtype=bool).ravel()) 
+
         return jnp.ravel(jnp.array(to_fit))
 
     @cached_property
@@ -506,8 +519,9 @@ class Model:
         n = 0
         for struct in self.structures:
             for par in struct.parameters:
-                par.val = vals[n]
-                par.err = errs[n]
+                for i in range(len(par.val)): #TODO
+                    par.val = par.val.at[i].set(vals[n])
+                    par.err = par.err.at[i].set(errs[n])
                 n += 1
         self.chisq = chisq
 
@@ -654,8 +668,8 @@ class Model:
                     Parameter(
                         par_name,
                         tuple(fit),
-                        jnp.array(val, dtype=float),
-                        jnp.array(0.0, dtype=float),
+                        jnp.atleast_1d(jnp.array(val, dtype=float)),
+                        jnp.zeros_like(jnp.atleast_1d(jnp.array(val)), dtype=float),
                         jnp.array(priors, dtype=float),
                     )
                 )
