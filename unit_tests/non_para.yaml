@@ -22,7 +22,6 @@ model:
       parameters:
         rbins:
           value: "(0, 60, 120, 180, 300)"
-          to_fit: True
         amps:
           value: "jnp.array([-2.0, -3.0, -4.0, -1.0, 0])"
           to_fit: True
@@ -40,7 +39,7 @@ model:
           to_fit: False
         c:
           value: 0
-          to_fit: False
+          to_fit: True 
         z:
           value: 0.25
           to_fit: False
