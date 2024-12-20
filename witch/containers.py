@@ -519,10 +519,10 @@ class Model:
         n = 0
         for struct in self.structures:
             for par in struct.parameters:
-                for i in range(len(par.val)): #TODO
+                for i in range(len(par.val)): 
                     par.val = par.val.at[i].set(vals[n])
                     par.err = par.err.at[i].set(errs[n])
-                n += 1
+                    n += 1
         self.chisq = chisq
 
         return self
