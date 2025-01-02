@@ -17,9 +17,9 @@ import matplotlib.pyplot as plt
 import mpi4jax
 import numpy as np
 import yaml
-from mpi4py import MPI
 from astropy.convolution import Gaussian2DKernel, convolve
 from minkasi.tools import presets_by_source as pbs
+from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
 from . import utils as wu
@@ -160,7 +160,7 @@ def _save_model(cfg, model, outdir, desc_str):
             final["model"]["structures"][struct_name]["parameters"][par_name][
                 "value"
             ] = float(par.val)
-    with open(os.path.join(outdir, f"mcmc_{desc_str}.yaml"), "w") as file:
+    with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
         yaml.dump(final, file)
 
 
@@ -227,12 +227,12 @@ def _run_mcmc(cfg, model, todvec, outdir, noise_class, noise_args, noise_kwargs)
     _save_model(cfg, model, outdir, "mcmc")
     if comm.Get_rank() == 0:
         samples = np.array(samples)
-        samps_path = os.path.join(outdir, f"samples_mcmc.dill")
+        samps_path = os.path.join(outdir, f"samples_mcmc.npz")
         print_once("Saving samples to", samps_path)
         np.savez_compressed(samps_path, samples=samples)
         try:
             corner.corner(samples, labels=model.par_names, truths=init_pars)
-            plt.savefig("corner.png")
+            plt.savefig(os.path.join(outdir, "corner.png"))
         except Exception as e:
             print_once(f"Failed to make corner plot with error: {str(e)}")
     else:
