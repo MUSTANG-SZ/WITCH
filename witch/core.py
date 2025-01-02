@@ -15,7 +15,7 @@ else:
 
 import numpy as np
 
-from .structure import STRUCT_FUNCS, STRUCT_N_PAR, STRUCT_STAGE, STRUCT_N_NONPARA
+from .structure import STRUCT_FUNCS, STRUCT_N_NONPARA, STRUCT_N_PAR, STRUCT_STAGE
 from .utils import fft_conv
 
 ORDER = (
@@ -44,6 +44,7 @@ def _get_static(signature, prefix_list=["n_", "argnums"]):
     for prefix in prefix_list:
         static_msk += np.char.startswith(par_names, prefix)
     return tuple(np.where(static_msk)[0])
+
 
 def _check_order():
     or_uniq, or_cts = np.unique(ORDER, return_counts=True)
@@ -194,16 +195,29 @@ def model(
             continue
         if not n_struct:
             continue
-        delta = n_struct * (n_rbins[i] * STRUCT_N_NONPARA[struct] + STRUCT_N_PAR[struct] - STRUCT_N_NONPARA[struct])
-        struct_pars = params[start : start + delta].reshape((n_struct, int(delta/n_struct))) 
+        delta = n_struct * (
+            n_rbins[i] * STRUCT_N_NONPARA[struct]
+            + STRUCT_N_PAR[struct]
+            - STRUCT_N_NONPARA[struct]
+        )
+        struct_pars = params[start : start + delta].reshape(
+            (n_struct, int(delta / n_struct))
+        )
         start += delta
         for j in range(n_struct):
             cur_struct_pars = struct_pars[j]
-            nonpara_struct_pars = cur_struct_pars[:n_rbins[i] * STRUCT_N_NONPARA[struct]].reshape((STRUCT_N_NONPARA[struct], n_rbins[i]))
-            cur_struct_pars = cur_struct_pars[n_rbins[i] * STRUCT_N_NONPARA[struct]:]
-            #pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*nonpara_struct_pars, *struct_pars, xyz))
-            cur_pars = [nonpara_struct_pars[k] for k in range(STRUCT_N_NONPARA[struct])] + [cur_struct_pars[k] for k in range(STRUCT_N_PAR[struct] - STRUCT_N_NONPARA[struct])]
-            #pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*nonpara_struct_pars, *struct_pars, xyz))
+            nonpara_struct_pars = cur_struct_pars[
+                : n_rbins[i] * STRUCT_N_NONPARA[struct]
+            ].reshape((STRUCT_N_NONPARA[struct], n_rbins[i]))
+            cur_struct_pars = cur_struct_pars[n_rbins[i] * STRUCT_N_NONPARA[struct] :]
+            # pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*nonpara_struct_pars, *struct_pars, xyz))
+            cur_pars = [
+                nonpara_struct_pars[k] for k in range(STRUCT_N_NONPARA[struct])
+            ] + [
+                cur_struct_pars[k]
+                for k in range(STRUCT_N_PAR[struct] - STRUCT_N_NONPARA[struct])
+            ]
+            # pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*nonpara_struct_pars, *struct_pars, xyz))
             pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*cur_pars, xyz))
 
     # Stage 0, add to the 3d grid
@@ -332,5 +346,5 @@ model_static = _get_static(model_sig)
 model_grad_static = _get_static(model_grad_sig)
 
 # Now JIT
-#model = jax.jit(model, static_argnums=model_static)
+# model = jax.jit(model, static_argnums=model_static)
 model_grad = jax.jit(model_grad, static_argnums=model_grad_static)

@@ -1,24 +1,23 @@
-from witch.core import model
-from witch.utils import *
-from witch.fitter import *
-from witch.containers import Model
-import witch.external.minkasi.mapmaking as mm
-from witch.nonparametric import broken_power
-from witch.structure import nonpara_power
-
-import minkasi.tools.presets_by_source as pbs
-import minkasi
-
-from astropy.coordinates import Angle
-import astropy.units as units
-
-import yaml
-import numpy as np
-import os
 import glob
+import os
 import shutil
 
+import astropy.units as units
 import matplotlib.pyplot as plt
+import minkasi
+import minkasi.tools.presets_by_source as pbs
+import numpy as np
+import yaml
+from astropy.coordinates import Angle
+
+import witch.external.minkasi.mapmaking as mm
+from witch.containers import Model
+from witch.core import model
+from witch.fitter import *
+from witch.nonparametric import broken_power
+from witch.structure import nonpara_power
+from witch.utils import *
+
 
 def array_to_tuple(arr):
     if isinstance(arr, list) or type(arr) is np.ndarray:
@@ -26,13 +25,14 @@ def array_to_tuple(arr):
     else:
         return arr
 
+
 rs = np.linspace(1, 10, 1000)
-pows = np.array([-1. , -1.5, -2. , -2.5, -3., -4 ])
+pows = np.array([-1.0, -1.5, -2.0, -2.5, -3.0, -4])
 amps = np.array([-2, -3, -4, -5, -6, 0])
 rbins = (0, 1, 2, 3, 5, 7, 999999)
 
 path = "/home/jorlo/dev/minkasi_jax/unit_tests/cyl_unit.yaml"
-with open(path, "r") as file:
+with open(path) as file:
     cfg = yaml.safe_load(file)
 if "models" not in cfg:
     cfg["models"] = {}
@@ -108,18 +108,17 @@ todvec = jax.block_until_ready(todvec)
 postproc(dset_name, cfg, todvec, model, info)
 
 
-condlist = ([(rbins[i] <= rs) & (rs < rbins[i+1]) for i in range(len(pows)-1, -1, -1)])
+condlist = [
+    (rbins[i] <= rs) & (rs < rbins[i + 1]) for i in range(len(pows) - 1, -1, -1)
+]
 condlist = array_to_tuple(condlist)
 power_law = broken_power(rs, condlist, rbins, amps, pows, 0)
 
-pressure = nonpara_power(0,0,0, rbins, amps, pows, 0, 0, model.xyz)
+pressure = nonpara_power(0, 0, 0, rbins, amps, pows, 0, 0, model.xyz)
 
 with jax.profiler.trace("/tmp/jax-trace", create_perfetto_link=True):
-    pressure = nonpara_power(0,0,0, rbins, amps, pows, 0, 0, model.xyz).block_until_ready()
+    pressure = nonpara_power(
+        0, 0, 0, rbins, amps, pows, 0, 0, model.xyz
+    ).block_until_ready()
 
 asdf
-
-
-
-
-

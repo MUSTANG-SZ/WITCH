@@ -252,7 +252,7 @@ class Model:
     @cached_property
     def n_rbins(self) -> list[int]:
         """
-        Number of r bins for nonparametric structures. 
+        Number of r bins for nonparametric structures.
         Note that this is cached.
 
         Returns
@@ -260,7 +260,7 @@ class Model:
         n_rbins : list[int]
             `n_rbins[i]` is the number of rbins in this structure.
         """
-        n_rbins = [structure.n_rbins for structure in self. structures] 
+        n_rbins = [structure.n_rbins for structure in self.structures]
 
         return n_rbins
 
@@ -277,7 +277,7 @@ class Model:
         pars = jnp.array([])
         for structure in self.structures:
             for parameter in structure.parameters:
-                pars = jnp.append(pars, parameter.val.ravel()) 
+                pars = jnp.append(pars, parameter.val.ravel())
         return jnp.array(pars)
 
     @cached_property
@@ -296,7 +296,7 @@ class Model:
             for parameter in structure.parameters:
                 if len(parameter.val) > 1:
                     for i in range(len(parameter.val)):
-                        par_names += [parameter.name+"_{}".format(i)]
+                        par_names += [parameter.name + "_{}".format(i)]
                 else:
                     par_names += [parameter.name]
 
@@ -315,9 +315,8 @@ class Model:
         errs = jnp.array([])
         for structure in self.structures:
             for parameter in structure.parameters:
-                errs = jnp.append(errs, parameter.err.ravel()) 
+                errs = jnp.append(errs, parameter.err.ravel())
         return jnp.array(errs)
-
 
     @cached_property
     def priors(self) -> tuple[jax.Array, jax.Array]:
@@ -358,7 +357,7 @@ class Model:
         for structure in self.structures:
             for parameter in structure.parameters:
                 to_fit += [parameter.fit[self.cur_round]] * len(parameter.val)
-                    #to_fit = jnp.append(to_fit, jnp.array([parameter.fit[self.cur_round]] * len(parameter.val)).ravel())
+                # to_fit = jnp.append(to_fit, jnp.array([parameter.fit[self.cur_round]] * len(parameter.val)).ravel())
 
         return tuple(to_fit)  # jnp.ravel(jnp.array(to_fit))
 
@@ -377,7 +376,12 @@ class Model:
         to_fit = jnp.array([], dtype=bool)
         for structure in self.structures:
             for parameter in structure.parameters:
-                to_fit = jnp.append(to_fit, jnp.array([parameter.fit_ever] * len(parameter.val), dtype=bool).ravel()) 
+                to_fit = jnp.append(
+                    to_fit,
+                    jnp.array(
+                        [parameter.fit_ever] * len(parameter.val), dtype=bool
+                    ).ravel(),
+                )
 
         return jnp.ravel(jnp.array(to_fit))
 
@@ -519,7 +523,7 @@ class Model:
         n = 0
         for struct in self.structures:
             for par in struct.parameters:
-                for i in range(len(par.val)): 
+                for i in range(len(par.val)):
                     par.val = par.val.at[i].set(vals[n])
                     par.err = par.err.at[i].set(errs[n])
                     n += 1
@@ -673,7 +677,9 @@ class Model:
                         jnp.array(priors, dtype=float),
                     )
                 )
-            structures.append(Structure(name, structure["structure"], parameters, n_rbins = n_rbins))
+            structures.append(
+                Structure(name, structure["structure"], parameters, n_rbins=n_rbins)
+            )
         name = cfg["model"].get(
             "name", "-".join([structure.name for structure in structures])
         )

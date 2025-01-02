@@ -32,7 +32,6 @@ rad_to_arcmin = (180 * 60) / np.pi
 rad_to_deg = 180 / np.pi
 
 
-
 # Cosmology
 # --------------------------------------------------------
 zline = jnp.linspace(0, 10, 100)

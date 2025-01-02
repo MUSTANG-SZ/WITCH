@@ -1,19 +1,20 @@
-import warnings 
-import numpy as np
+import warnings
+from functools import partial
 
 import jax
 import jax.numpy as jnp
-
-from functools import partial
+import numpy as np
 
 from . import utils as wu
 from .grid import transform_grid
+
 
 def array_to_tuple(arr):
     if isinstance(arr, list) or type(arr) is np.ndarray:
         return tuple(array_to_tuple(item) for item in arr)
     else:
         return arr
+
 
 def bin_map(hdu, rbins, x0=None, y0=None, cunit=None):
     """
@@ -27,7 +28,7 @@ def bin_map(hdu, rbins, x0=None, y0=None, cunit=None):
         Bin edges in radians
     cunit : Union[None, np.floating], Default: None
         Pixel units. If None, will atempt to infer from imap
-    
+
     Returns
     -------
     bin1d : NDArray[np.floating]
@@ -42,14 +43,30 @@ def bin_map(hdu, rbins, x0=None, y0=None, cunit=None):
         except KeyError as e:
             raise e
 
-    if cunit.lower() == "rad" or cunit.lower() == "radian" or cunit.lower() == "radians":
+    if (
+        cunit.lower() == "rad"
+        or cunit.lower() == "radian"
+        or cunit.lower() == "radians"
+    ):
         pixunits = 1
-    elif cunit.lower() == "deg" or cunit.lower() == "degree" or cunit.lower() == "degrees":
-        pixunits = wu.rad_to_deg 
-    elif cunit.lower() == "arcmin" or cunit.lower() == "arcminute" or cunit.lower() == "arcminutes":
-        pixunits = wu.rad_to_arcmin 
-    elif cunit.lower() == "arcsec" or cunit.lower() == "arcsecond" or cunit.lower() == "arcseconds":
-        pixunits = wu.rad_to_arcsec 
+    elif (
+        cunit.lower() == "deg"
+        or cunit.lower() == "degree"
+        or cunit.lower() == "degrees"
+    ):
+        pixunits = wu.rad_to_deg
+    elif (
+        cunit.lower() == "arcmin"
+        or cunit.lower() == "arcminute"
+        or cunit.lower() == "arcminutes"
+    ):
+        pixunits = wu.rad_to_arcmin
+    elif (
+        cunit.lower() == "arcsec"
+        or cunit.lower() == "arcsecond"
+        or cunit.lower() == "arcseconds"
+    ):
+        pixunits = wu.rad_to_arcsec
     else:
         raise ValueError("Error: cunit {} is not a valid pixel unit".format(cunit))
 
@@ -58,24 +75,42 @@ def bin_map(hdu, rbins, x0=None, y0=None, cunit=None):
     y0 = hdu[0].header["CRVAL2"] / pixunits
 
     if np.abs(hdu[0].header["CDELT1"]) != np.abs(hdu[0].header["CDELT2"]):
-        warnings.warn("Warning: non-square pixels: RA: {} Dec{}".format(np.abs(hdu[0].header["CDELT1"]), np.abs(hdu[0].header["CDELT2"])))
+        warnings.warn(
+            "Warning: non-square pixels: RA: {} Dec{}".format(
+                np.abs(hdu[0].header["CDELT1"]), np.abs(hdu[0].header["CDELT2"])
+            )
+        )
 
-    #The offset is redundent if the binning center is taken to be the map center but frequently it is not
-    x = np.linspace(-hdu[0].data.shape[1]/2*pixsize + hdu[0].header["CRVAL1"] / pixunits, hdu[0].data.shape[1]/2*pixsize + hdu[0].header["CRVAL1"] / pixunits, hdu[0].data.shape[1])
-    y = np.linspace(-hdu[0].data.shape[0]/2*pixsize + hdu[0].header["CRVAL2"] / pixunits, hdu[0].data.shape[0]/2*pixsize + hdu[0].header["CRVAL2"] / pixunits, hdu[0].data.shape[0])
-    
+    # The offset is redundent if the binning center is taken to be the map center but frequently it is not
+    x = np.linspace(
+        -hdu[0].data.shape[1] / 2 * pixsize + hdu[0].header["CRVAL1"] / pixunits,
+        hdu[0].data.shape[1] / 2 * pixsize + hdu[0].header["CRVAL1"] / pixunits,
+        hdu[0].data.shape[1],
+    )
+    y = np.linspace(
+        -hdu[0].data.shape[0] / 2 * pixsize + hdu[0].header["CRVAL2"] / pixunits,
+        hdu[0].data.shape[0] / 2 * pixsize + hdu[0].header["CRVAL2"] / pixunits,
+        hdu[0].data.shape[0],
+    )
+
     X, Y = np.meshgrid(x, y)
-    R = np.sqrt((X-x0)**2+(Y-y0)**2)
+    R = np.sqrt((X - x0) ** 2 + (Y - y0) ** 2)
 
-    bin1d = np.zeros(len(rbins)-1)
-    var1d = np.zeros(len(rbins)-1)
+    bin1d = np.zeros(len(rbins) - 1)
+    var1d = np.zeros(len(rbins) - 1)
 
-    for k in range(len(rbins)-1):
-        pixels = [hdu[0].data[i,j] for i in range(len(y)) for j in range(len(x)) if rbins[k] < R[i,j] <= rbins[k+1]] 
+    for k in range(len(rbins) - 1):
+        pixels = [
+            hdu[0].data[i, j]
+            for i in range(len(y))
+            for j in range(len(x))
+            if rbins[k] < R[i, j] <= rbins[k + 1]
+        ]
         bin1d[k] = np.mean(pixels)
         var1d[k] = np.var(pixels)
 
     return bin1d, var1d
+
 
 @jax.jit
 def power(x, rbin, cur_amp, cur_pow, c):
@@ -101,16 +136,18 @@ def power(x, rbin, cur_amp, cur_pow, c):
         Powerlaw evaluated at x
     """
     tmp = cur_amp * (x**cur_pow - rbin**cur_pow) + c
-    return tmp 
+    return tmp
+
 
 @jax.jit
-def broken_power(rs: jax.Array,
-        condlist: tuple,
-        rbins: jax.Array,
-        amps: jax.Array,
-        pows:jax.Array,
-        c: float,
-        ) -> jax.Array:
+def broken_power(
+    rs: jax.Array,
+    condlist: tuple,
+    rbins: jax.Array,
+    amps: jax.Array,
+    pows: jax.Array,
+    c: float,
+) -> jax.Array:
     """
     Function which returns a broken powerlaw evaluated at rs.
 
@@ -128,11 +165,11 @@ def broken_power(rs: jax.Array,
     c : float
         Constant offset for powerlaws
     """
-    cur_c = c #TODO: necessary?
-    funclist = [] 
-    for i in range(len(condlist)-1, -1, -1):   
-        funclist.append(partial(power, rbin = rbins[i+1], cur_amp = amps[i], cur_pow = pows[i], c = cur_c))
-        cur_c += amps[i]*(rbins[i]**pows[i]-rbins[i+1]**pows[i]) 
+    cur_c = c  # TODO: necessary?
+    funclist = []
+    for i in range(len(condlist) - 1, -1, -1):
+        funclist.append(
+            partial(power, rbin=rbins[i + 1], cur_amp=amps[i], cur_pow=pows[i], c=cur_c)
+        )
+        cur_c += amps[i] * (rbins[i] ** pows[i] - rbins[i + 1] ** pows[i])
     return jnp.piecewise(rs, condlist, funclist)
-
-

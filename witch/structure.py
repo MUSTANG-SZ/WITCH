@@ -7,12 +7,12 @@ import inspect
 
 import jax
 import jax.numpy as jnp
-
 import numpy as np
 
 from .grid import transform_grid
+from .nonparametric import broken_power
 from .utils import ap, get_da, get_hz, get_nz, h70
-from .nonparametric import broken_power 
+
 
 def _get_nonpara(signature, prefix_list=["nonpara_"]):
     par_names = np.array(list(signature.parameters.keys()), dtype=str)
@@ -21,8 +21,9 @@ def _get_nonpara(signature, prefix_list=["nonpara_"]):
         static_msk += np.char.startswith(par_names, prefix)
     return np.sum(static_msk)
 
+
 @jax.jit
-def gnfw(    
+def gnfw(
     dx: float,
     dy: float,
     dz: float,
@@ -58,7 +59,7 @@ def gnfw(
     $$
 
     $n_z$ is the critical density at the cluster redshift and $h_z$ is the Hubble constant at the cluster redshift.
-    
+
     Parameters
     ----------
     dx : float
@@ -125,6 +126,7 @@ def gnfw(
     )
 
     return P500 * P0 / denominator
+
 
 @jax.jit
 def egnfw(
@@ -1102,11 +1104,12 @@ def add_powerlaw_cos(
     new_pressure = jnp.where(r > 1, pressure, (1 + powerlaw) * pressure)
     return new_pressure
 
-#@jax.jit
+
+# @jax.jit
 def nonpara_power(
     nonpara_rbins: jax.Array,
     nonpara_amps: jax.Array,
-    nonpara_pows:jax.Array,
+    nonpara_pows: jax.Array,
     dx: float,
     dy: float,
     dz: float,
@@ -1146,13 +1149,18 @@ def nonpara_power(
         See `containers.Model.xyz` for details.
     """
     print(dz)
-    x, y, z, *_ = transform_grid(dx, dy, dz, 1., 1., 1., 0., xyz)
+    x, y, z, *_ = transform_grid(dx, dy, dz, 1.0, 1.0, 1.0, 0.0, xyz)
     r = jnp.sqrt(x**2 + y**2 + z**2)
     nonpara_rbins = jnp.append(nonpara_rbins, jnp.array([jnp.amax(r)]))
     mapshape = r.shape
     r = r.ravel()
-    condlist = ([jnp.array((nonpara_rbins[i] <= r) & (r < nonpara_rbins[i+1])) for i in range(len(nonpara_pows)-1, -1, -1)])
-    pressure = broken_power(r, condlist, nonpara_rbins, nonpara_amps, nonpara_pows, c).reshape(mapshape)
+    condlist = [
+        jnp.array((nonpara_rbins[i] <= r) & (r < nonpara_rbins[i + 1]))
+        for i in range(len(nonpara_pows) - 1, -1, -1)
+    ]
+    pressure = broken_power(
+        r, condlist, nonpara_rbins, nonpara_amps, nonpara_pows, c
+    ).reshape(mapshape)
 
     return pressure
 
@@ -1174,7 +1182,7 @@ N_PAR_EXPONENTIAL = len(inspect.signature(add_exponential).parameters) - 2
 N_PAR_POWERLAW = len(inspect.signature(add_powerlaw).parameters) - 2
 N_PAR_NONPARA_POWER = len(inspect.signature(nonpara_power).parameters) - 1
 
-N_NONPARA_POWER = _get_nonpara(inspect.signature(nonpara_power)) 
+N_NONPARA_POWER = _get_nonpara(inspect.signature(nonpara_power))
 
 # Make a convenience mapping
 STRUCT_FUNCS = {
