@@ -7,6 +7,7 @@ model_map: True
 # Used both for the output path as well as to load presets
 name: "nonpara"
 sim: True # If True use TODs to make noise and add a simulated cluster
+par_offset: 1.5
 
 # Define the model
 model:
