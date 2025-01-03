@@ -210,8 +210,8 @@ def postfit(dset_name: str, cfg: dict, todvec: TODVec, model: Model, info: dict)
             raise ValueError(
                 "Somehow trying to make a residual map with no model defined!"
             )
-        todvec = to_minkasi(todvec, False)
-        for tod in todvec.tods:
+        todvec_minkasi = to_minkasi(todvec, False)
+        for tod in todvec_minkasi.tods:
             pred = model.to_tod(
                 tod.info["dx"] * wu.rad_to_arcsec,
                 tod.info["dy"] * wu.rad_to_arcsec,
@@ -237,7 +237,7 @@ def postfit(dset_name: str, cfg: dict, todvec: TODVec, model: Model, info: dict)
                 print_once("Making signal map with residual noise")
                 name = "signal_res_noise"
             mm.make_maps(
-                todvec,
+                todvec_minkasi,
                 skymap,
                 minkasi_noise_class,
                 minkasi_noise_args,
