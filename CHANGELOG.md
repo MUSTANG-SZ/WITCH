@@ -1,3 +1,9 @@
+## 8.1.1 (2025-01-03)
+
+### Fix
+
+- make sure todvec isnt converted to minkasi todvec before processing
+
 ## 8.1.0 (2024-12-16)
 
 ### Feat
