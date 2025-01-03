@@ -26,39 +26,58 @@ paths:
   subdir: ""
   # Final outdir will be something like: outroot/name/model_name/subdir
 
-# Defines the grid
-# All are passed through eval
 coords:
   r_map: "3.0*60" # Radial size of grid in arcseconds
   dr: "2.0" # Pixel size of grid in x and y in arcseconds
   dz: 2.0 # Pixel size along the LOS, if not provided dr is used
 
-# Defines the beam
-# All are passed through eval
-# Note that these define a double gaussian
-beam:
-  fwhm1: "9.735" # FWHM in arcseconds of the first gaussian
-  amp1: 0.9808 # Amplitude of the first gaussian
-  fwhm2: "32.627" # FWHM in arcseconds of the second gaussian
-  amp2: 0.0192 # Amplitude of the second gaussian
+# Settings that define the datasets we are working with
+# For now you can only have one, but this structure is in prep for the future
+datasets:
+  mustang2:
+    # These fields need to be set regardless of the dataset
+    # This can rely on the imports section
+    noise: # Noise to use while fitting
+      class: "jn.NoiseSmoothedSVD"
+      args: "[]"
+      kwargs: "{'fwhm':10}"
+    funcs: # Functions needed to interact with your dataset
+      # All of these need to exist and be importable
+      # If you don't have them in a library add the relevant file to your $PYTHONPATH
+      # Check docs for the needed signatures
+      load_tods: "mf.load_tods"
+      get_info: "mf.get_info"
+      make_beam: "mf.make_beam"
+      preproc: "mf.preproc"
+      postproc: "mf.postproc"
+      postfit: "mf.postfit"
+    # The rest are user specified and will depend on your dataset
+    # These should only ever be needed in the function set in "funcs" above
+    # Since they are only called from the specified "funcs" make sure the scope
+    # of things referenced here is based on the module(s) that "funcs" is from.
+    minkasi_noise:
+      class: "minkasi.mapmaking.noise.NoiseSmoothedSVD" # Noise class to use
+      args: "[]" # Arguments to pass to apply_noise
+      kwargs: "{'fwhm':10}" # kwargs to pass to apply_noise
+    # Defines the beam
+    # All are passed through eval
+    # Note that these define a double gaussian
+    beam:
+      fwhm1: "9.735" # FWHM in arcseconds of the first gaussian
+      amp1: 0.9808 # Amplitude of the first gaussian
+      fwhm2: "32.627" # FWHM in arcseconds of the second gaussian
+      amp2: 0.0192 # Amplitude of the second gaussian
+    copy_noise: False # If true then fitting noise just wraps minkasi noise, may make this automatic later
+    dograd: False # If True then use gradient priors when mapmaking
+    npass: 1 # How many passes of mapmaking to run
 
-# Settings for subtracting off a bowl before fitting
-bowling:
-  sub_poly: False # If true fit and subtract a polynomial bowl
-  method: "pred2" # Which common mode to subtract before bowl fitting
-  degree: 5 # Degree of the polynomial to fit to the bowl
-
-# Settings to pass to minkasi for mapmaking and fitting
-minkasi:
-  # Defines the noise model
-  noise:
-    class: "minkasi.mapmaking.noise.NoiseSmoothedSVD" # Noise class to use
-    args: "[]" # Arguments to pass to apply_noise
-    kwargs: "{'fwhm':10}" # kwargs to pass to apply_noise
+# Setting for the fitter
+fitting:
   maxiter: 10 # Maximum fit iterations per round
-  npass: 5 # How many passes of mapmaking to run
-  dograd: False # If True then use gradient priors when mapmaking
+  chitol: 1e-5 # Change in chisq that we consider to be converged
+
 imports:
   astropy.units: u
   astropy.coordinates: [Angle]
-
+  witch.external.minkasi.funcs: mf
+  jitkasi.noise: jn
