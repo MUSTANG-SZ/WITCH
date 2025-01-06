@@ -210,8 +210,8 @@ def postfit(dset_name: str, cfg: dict, todvec: TODVec, model: Model, info: dict)
             raise ValueError(
                 "Somehow trying to make a residual map with no model defined!"
             )
-        todvec = to_minkasi(todvec, False)
-        for tod in todvec.tods:
+        todvec_minkasi = to_minkasi(todvec, False)
+        for tod in todvec_minkasi.tods:
             pred = model.to_tod(
                 tod.info["dx"] * wu.rad_to_arcsec,
                 tod.info["dy"] * wu.rad_to_arcsec,
@@ -229,23 +229,23 @@ def postfit(dset_name: str, cfg: dict, todvec: TODVec, model: Model, info: dict)
                     **minkasi_noise_kwargs,
                 )
 
-            # Make residual maps
-            if cfg["sub"]:
-                print_once("Making residual map")
-                name = "residual"
-            else:
-                print_once("Making signal map with residual noise")
-                name = "signal_res_noise"
-            mm.make_maps(
-                todvec,
-                skymap,
-                minkasi_noise_class,
-                minkasi_noise_args,
-                minkasi_noise_kwargs,
-                os.path.join(outdir, dset_name, name),
-                cfg["datasets"][dset_name]["npass"],
-                cfg["datasets"][dset_name]["dograd"],
-            )
+        # Make residual maps
+        if cfg["sub"]:
+            print_once("Making residual map")
+            name = "residual"
+        else:
+            print_once("Making signal map with residual noise")
+            name = "signal_res_noise"
+        mm.make_maps(
+            todvec_minkasi,
+            skymap,
+            minkasi_noise_class,
+            minkasi_noise_args,
+            minkasi_noise_kwargs,
+            os.path.join(outdir, dset_name, name),
+            cfg["datasets"][dset_name]["npass"],
+            cfg["datasets"][dset_name]["dograd"],
+        )
 
     # Make Model maps
     if cfg.get("model_map", False):
@@ -254,7 +254,7 @@ def postfit(dset_name: str, cfg: dict, todvec: TODVec, model: Model, info: dict)
             raise ValueError(
                 "Somehow trying to make a model map with no model defined!"
             )
-        model_todvec = deepcopy(todvec)
+        model_todvec = todvec.copy(deep=True)
         model_skymap = minkasi.maps.SkyMap(lims, pixsize)
         model_cfg = deepcopy(cfg)
         model_cfg["sim"] = True
@@ -265,9 +265,9 @@ def postfit(dset_name: str, cfg: dict, todvec: TODVec, model: Model, info: dict)
         mm.make_maps(
             model_todvec,
             model_skymap,
-            noise_class,
-            noise_args,
-            noise_kwargs,
+            minkasi_noise_class,
+            minkasi_noise_args,
+            minkasi_noise_kwargs,
             os.path.join(outdir, dset_name, "model"),
             cfg["datasets"][dset_name]["npass"],
             cfg["datasets"][dset_name]["dograd"],
