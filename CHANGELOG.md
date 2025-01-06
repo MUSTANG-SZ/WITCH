@@ -1,3 +1,9 @@
+## 8.1.2 (2025-01-06)
+
+### Fix
+
+- small fixes to minkasi postfit
+
 ## 8.1.1 (2025-01-03)
 
 ### Fix
