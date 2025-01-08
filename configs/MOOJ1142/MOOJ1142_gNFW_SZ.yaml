@@ -8,6 +8,13 @@ base: "MOOJ1142_base.yaml"
 name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
+paths:
+  subdir: "SZ_cent"
+
+coords:
+  x0: "(175.6918169*u.degree).to(u.radian).value"
+  y0: "(15.4532554*u.degree).to(u.radian).value"
+
 # Define the model
 model:
   # Unit conversion to apply at the end
