@@ -413,9 +413,11 @@ class Model:
             The model as a TOD.
             Same shape as dx.
         """
-        return wu.bilinear_interp(
+        tod = wu.bilinear_interp(
             dx, dy, self.xyz[0].ravel(), self.xyz[1].ravel(), self.model
         )
+        tod = tod - jnp.mean(tod, axis=-1)[..., None]
+        return tod
 
     def to_tod_grad(self, dx: ArrayLike, dy: ArrayLike) -> tuple[jax.Array, jax.Array]:
         """
@@ -441,6 +443,7 @@ class Model:
         tod = wu.bilinear_interp(
             dx, dy, self.xyz[0].ravel(), self.xyz[1].ravel(), model
         )
+        tod = tod - jnp.mean(tod, axis=-1)[..., None]
         grad_tod = jnp.array(
             [
                 (

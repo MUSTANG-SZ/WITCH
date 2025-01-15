@@ -87,10 +87,15 @@ def process_tods(cfg, todvec, noise_class, noise_args, noise_kwargs, model):
     for i, tod in enumerate(todvec.tods):
         if sim:
             if cfg["wnoise"]:
-                temp = jnp.percentile(jnp.diff(tod.data), jnp.array([33.0, 68.0]))
+                temp = jnp.percentile(
+                    jnp.diff(tod.data, axis=-1), jnp.array([33.0, 68.0]), axis=-1
+                )
                 scale = (temp[1] - temp[0]) / jnp.sqrt(8)
-                tod.data = scale * jax.random.normal(
-                    jax.random.key(0), shape=tod.data.shape, dtype=tod.data.dtype
+                tod.data = (
+                    jax.random.normal(
+                        jax.random.key(0), shape=tod.data.shape, dtype=tod.data.dtype
+                    )
+                    * scale[..., None]
                 )
             else:
                 tod.data *= tod.data * (-1) ** ((rank + nproc * i) % 2)
@@ -99,6 +104,7 @@ def process_tods(cfg, todvec, noise_class, noise_args, noise_kwargs, model):
                 tod.x * wu.rad_to_arcsec, tod.y * wu.rad_to_arcsec
             ).block_until_ready()
             tod.data = tod.data + pred
+        tod.data = tod.data - jnp.mean(tod.data, axis=-1)[..., None]
         tod.compute_noise(noise_class, None, *noise_args, **noise_kwargs)
     return todvec
 

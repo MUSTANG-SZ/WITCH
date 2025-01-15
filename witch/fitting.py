@@ -358,36 +358,45 @@ def run_mcmc(
     init_errs = jnp.zeros_like(model.pars)
     to_fit_init = jnp.ones_like(jnp.array(model.to_fit), dtype=bool)
 
+    prior_l, prior_u = model.priors
+    scale = (jnp.abs(prior_l) + jnp.abs(prior_u)) / 2.0
+    scale = jnp.where(scale == 0, 1, scale)
+
     num_walkers = max(num_walkers, int(2.1 * len(init_pars)))
 
-    def _log_prob(pars):
+    def _is_inf(log_prior, pars, token, model):
+        _ = (log_prior, pars, token, model)
+        return -1 * jnp.inf
+
+    def _not_inf(log_prior, pars, token, model):
+        pars, token = mpi4jax.bcast(pars, 0, comm=todvec.comm, token=token)
+        temp_model = model.update(pars, init_errs, model.chisq)
+        log_like = -0.5 * get_chisq(temp_model, todvec)  # * 10000
+        _ = mpi4jax.bcast(run, 0, comm=todvec.comm, token=token)
+        return log_like + log_prior
+
+    @jax.jit
+    def _log_prob(pars, model=model):
+        pars = pars.at[:].multiply(scale)
         run = jnp.array(True)
         _, token = mpi4jax.bcast(run, 0, comm=todvec.comm)
         _, to_fit = _prior_pars_fit(model.priors, pars, to_fit_init)
         log_prior = jnp.sum(jnp.where(to_fit, 0, -1 * jnp.inf))
-        if not jnp.isfinite(log_prior):
-            return -1 * np.inf
-        pars, token = mpi4jax.bcast(pars, 0, comm=todvec.comm, token=token)
-        temp_model = model.update(pars, init_errs, model.chisq)
-        log_like = -5.0 * get_chisq(temp_model, todvec)
-        _ = mpi4jax.bcast(run, 0, comm=todvec.comm, token=token)
-        return float(log_like + log_prior)
+        return jax.lax.cond(
+            jnp.isfinite(log_prior), _not_inf, _is_inf, log_prior, pars, token, model
+        )
 
     run = jnp.array(True)
     final_pars = init_pars.copy()
     final_errs = init_errs.copy()
     if rank == 0:
         key1 = jax.random.PRNGKey(0)
-        pos = 1e-4 * jax.random.normal(key1, shape=(num_walkers, len(init_pars)))
-        pos = pos.at[:].add(init_pars)
+        pos = 1e-5 * jax.random.normal(key1, shape=(num_walkers, len(init_pars)))
+        pos = pos.at[:].add(init_pars / scale)
         sampler = emcee.EnsembleSampler(
             num_walkers,
             len(init_pars),
             _log_prob,
-            moves=[
-                (emcee.moves.DEMove(), 0.8),
-                (emcee.moves.DESnookerMove(), 0.2),
-            ],
         )
 
         # Burn in
@@ -407,7 +416,8 @@ def run_mcmc(
             except emcee.autocorr.AutocorrError:
                 tau = int(num_steps / 50)
         flat_samples = jnp.array(
-            sampler.get_chain(discard=2 * tau, thin=int(tau / 2), flat=True)
+            sampler.get_chain(discard=2 * tau, thin=max(1, int(tau / 2)), flat=True)
+            * scale
         )
         final_pars = jnp.median(flat_samples, axis=0).ravel()
         final_errs = jnp.std(flat_samples, axis=0).ravel()
@@ -427,7 +437,9 @@ def run_mcmc(
         final_pars, token = mpi4jax.bcast(final_pars, 0, comm=todvec.comm, token=token)
         final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=todvec.comm, token=token)
 
-    model = model.update(final_pars, final_errs, model.chisq)
+    model = model.update(
+        final_pars.block_until_ready(), final_errs.block_until_ready(), model.chisq
+    )
     chisq = get_chisq(model, todvec)
     model = model.update(final_pars, final_errs, chisq)
 
