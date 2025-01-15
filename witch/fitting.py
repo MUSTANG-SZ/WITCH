@@ -305,7 +305,11 @@ def fit_tods(
 
 
 def run_mcmc(
-    model: Model, todvec: TODVec, num_steps: int = 5000, num_walkers: int = 10
+    model: Model,
+    todvec: TODVec,
+    num_steps: int = 5000,
+    num_walkers: int = 10,
+    rescale: float = 1e4,
 ) -> tuple[Model, jax.Array]:
     """
     Run MCMC using the `emcee` package to estimate the posterior for our model.
@@ -331,6 +335,10 @@ def run_mcmc(
         If this is less than 2.1 times the number of
         parameters in the model then 2.1 times the number
         of parameters in the model is used.
+    rescale : float, default: 1e4
+        Factor to rescale chi-squared by.
+        This is a temporary fudge factor until the root issue is addressed.
+        It will be removed in a later release.
 
     Returns
     -------
@@ -371,7 +379,7 @@ def run_mcmc(
     def _not_inf(log_prior, pars, token, model):
         pars, token = mpi4jax.bcast(pars, 0, comm=todvec.comm, token=token)
         temp_model = model.update(pars, init_errs, model.chisq)
-        log_like = -0.5 * get_chisq(temp_model, todvec)  # * 10000
+        log_like = -0.5 * get_chisq(temp_model, todvec) * rescale
         _ = mpi4jax.bcast(run, 0, comm=todvec.comm, token=token)
         return log_like + log_prior
 
