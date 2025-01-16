@@ -10,8 +10,9 @@ sim: True # If True use TODs to make noise and add a simulated cluster
 
 mcmc:
   run: True
-  num_steps: 1000
+  num_steps: 300
   num_walkers: 10
+  sample_which: -1
 
 model:
   # Unit conversion to apply at the end
@@ -19,7 +20,41 @@ model:
   unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   # Structure to include in the model
   structures:
-    # Name of the first structure
+    # isobeta:
+    #   structure: "isobeta"
+    #   parameters:
+    #     dx_g:
+    #       value: 0.0
+    #       to_fit: True # [True, True, False, True]
+    #       priors: [-9.0, 9.0]
+    #     dy_g:
+    #       value: 0.0
+    #       to_fit: True #[True, True, False, True]
+    #       priors: [-9.0, 9.0]
+    #     dz_g:
+    #       value: 0.0
+    #       to_fit: True #[True, True, False, True]
+    #       priors: [-9.0, 9.0]
+    #     r1_g:
+    #       value: 1.0
+    #       priors: [.1, 9.0]
+    #     r2_g:
+    #       value: 1.0
+    #       priors: [.1, 9.0]
+    #     r3_g:
+    #       value: 1.0
+    #       priors: [.1, 9.0]
+    #     theta:
+    #       value: .0
+    #       priors: [0, 6.29]
+    #     beta_1:
+    #       value: .98
+    #       to_fit: True
+    #       priors: [.1, 2]
+    #     amp_1:
+    #       value: .002
+    #       to_fit: True
+    #       priors: [0, .005]
     ps_gauss:
       structure: "gaussian"
       parameters:
@@ -33,8 +68,9 @@ model:
           priors: [-9.0, 9.0]
         sigma:
           value: 4
+          to_fit: [False, True, False, True]
           priors: [1, 10]
         amp_g:
           value: 0.002
-          to_fit: [True, False, True, True]
+          to_fit: [True, False, True, False]
           priors: [0, .005]
