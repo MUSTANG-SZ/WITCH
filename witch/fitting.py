@@ -309,6 +309,7 @@ def run_mcmc(
     todvec: TODVec,
     num_steps: int = 5000,
     num_walkers: int = 10,
+    sample_which: int = -1,
     rescale: float = 1e4,
 ) -> tuple[Model, jax.Array]:
     """
@@ -335,6 +336,14 @@ def run_mcmc(
         If this is less than 2.1 times the number of
         parameters in the model then 2.1 times the number
         of parameters in the model is used.
+    sample_which : int, default: -1,
+        Sets which parameters to sample.
+        If this is >= 0 then we will sample which ever parameters were
+        fit in that round of fitting.
+        If this is -1 then we will sample which ever parameters were fit
+        in the last round of fitting.
+        If this is -2 then any parameters that were ever fit will be sampled.
+        If this is <= -3 or >= `model.n_rounds` then all parameters are sampled.
     rescale : float, default: 1e4
         Factor to rescale chi-squared by.
         This is a temporary fudge factor until the root issue is addressed.
@@ -362,13 +371,28 @@ def run_mcmc(
     token = mpi4jax.barrier(comm=todvec.comm)
     rank = todvec.comm.Get_rank()
 
+    if sample_which >= 0 and sample_which < model.n_rounds:
+        model.cur_round = sample_which
+        to_fit = model.to_fit
+    elif sample_which == -1:
+        to_fit = model.to_fit
+    elif sample_which == -2:
+        to_fit = model.to_fit_ever
+    else:
+        to_fit = jnp.ones_like(model.to_fit_ever, dtype=bool)
+    model = model.add_round(jnp.array(to_fit))
+
     init_pars = jnp.array(model.pars)
     init_errs = jnp.zeros_like(model.pars)
-    to_fit_init = jnp.ones_like(jnp.array(model.to_fit), dtype=bool)
+    final_pars = init_pars.copy()
+    final_errs = init_errs.copy()
+    to_fit = model.to_fit_ever
+    npar = int(jnp.sum(to_fit))
 
     prior_l, prior_u = model.priors
     scale = (jnp.abs(prior_l) + jnp.abs(prior_u)) / 2.0
     scale = jnp.where(scale == 0, 1, scale)
+    init_pars = init_pars.at[:].multiply(1.0 / scale)
 
     num_walkers = max(num_walkers, int(2.1 * len(init_pars)))
 
@@ -380,30 +404,36 @@ def run_mcmc(
         pars, token = mpi4jax.bcast(pars, 0, comm=todvec.comm, token=token)
         temp_model = model.update(pars, init_errs, model.chisq)
         log_like = -0.5 * get_chisq(temp_model, todvec) * rescale
+        run = jnp.array(True)
         _ = mpi4jax.bcast(run, 0, comm=todvec.comm, token=token)
         return log_like + log_prior
 
     @jax.jit
-    def _log_prob(pars, model=model):
-        pars = pars.at[:].multiply(scale)
+    def _log_prob(pars, model=model, init_pars=init_pars, scale=scale, to_fit=to_fit):
+        full_pars = init_pars.at[to_fit].set(pars)
+        full_pars = full_pars.at[:].multiply(scale)
         run = jnp.array(True)
         _, token = mpi4jax.bcast(run, 0, comm=todvec.comm)
-        _, to_fit = _prior_pars_fit(model.priors, pars, to_fit_init)
-        log_prior = jnp.sum(jnp.where(to_fit, 0, -1 * jnp.inf))
+        _, in_bounds = _prior_pars_fit(model.priors, full_pars, to_fit)
+        log_prior = jnp.sum(jnp.where(in_bounds.at[to_fit].get(), 0, -1 * jnp.inf))
         return jax.lax.cond(
-            jnp.isfinite(log_prior), _not_inf, _is_inf, log_prior, pars, token, model
+            jnp.isfinite(log_prior),
+            _not_inf,
+            _is_inf,
+            log_prior,
+            full_pars,
+            token,
+            model,
         )
 
     run = jnp.array(True)
-    final_pars = init_pars.copy()
-    final_errs = init_errs.copy()
     if rank == 0:
         key1 = jax.random.PRNGKey(0)
-        pos = 1e-5 * jax.random.normal(key1, shape=(num_walkers, len(init_pars)))
-        pos = pos.at[:].add(init_pars / scale)
+        pos = 1e-5 * jax.random.normal(key1, shape=(num_walkers, npar))
+        pos = pos.at[:].add(init_pars.at[to_fit].get())
         sampler = emcee.EnsembleSampler(
             num_walkers,
-            len(init_pars),
+            npar,
             _log_prob,
         )
 
@@ -425,10 +455,10 @@ def run_mcmc(
                 tau = int(num_steps / 50)
         flat_samples = jnp.array(
             sampler.get_chain(discard=2 * tau, thin=max(1, int(tau / 2)), flat=True)
-            * scale
+            * scale.at[to_fit].get()
         )
-        final_pars = jnp.median(flat_samples, axis=0).ravel()
-        final_errs = jnp.std(flat_samples, axis=0).ravel()
+        final_pars = final_pars.at[to_fit].set(jnp.median(flat_samples, axis=0).ravel())
+        final_errs = final_errs.at[to_fit].set(jnp.std(flat_samples, axis=0).ravel())
         final_pars, token = mpi4jax.bcast(final_pars, 0, comm=todvec.comm, token=token)
         final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=todvec.comm, token=token)
     else:

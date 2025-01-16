@@ -200,6 +200,8 @@ class Model:
         if name == "cur_round" or name == "xyz":
             self.__dict__.pop("model_grad", None)
             self.__dict__.pop("model", None)
+        if name == "n_rounds":
+            self.__dict__.pop("to_fit_ever", None)
         return super().__setattr__(name, value)
 
     def __repr__(self) -> str:
@@ -495,6 +497,32 @@ class Model:
                 n += 1
         self.chisq = chisq
 
+        return self
+
+    def add_round(self, to_fit) -> Self:
+        """
+        Add an additional round to the model.
+
+        Parameters
+        ----------
+        to_fit : jax.Array
+            Boolean array denoting which parameters to fit this round.
+            Should be in the same order as `pars`.
+
+        Returns
+        -------
+        updated : Model
+            The updated model with the new round.
+            While nominally the model will update in place, returning it
+            alows us to use this function in JITed functions.
+        """
+        self.n_rounds = self.n_rounds + 1
+        self.cur_round = self.cur_round + 1
+        n = 0
+        for struct in self.structures:
+            for par in struct.parameters:
+                par.fit = par.fit + tuple((to_fit[n].item(),))
+                n += 1
         return self
 
     def remove_struct(self, struct_name: str):
