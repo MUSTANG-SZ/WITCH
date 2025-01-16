@@ -127,6 +127,7 @@ def gnfw(
 
     return P500 * P0 / denominator
 
+
 @jax.jit
 def gnfw_rs(
     dx: float,
@@ -175,7 +176,7 @@ def gnfw_rs(
         Amplitude of the pressure profile.
         Units: unitless
     r_s : float
-        Charicteristic scale of the profile. 
+        Charicteristic scale of the profile.
         Units: arcsec
     gamma : float
         The central slope.
@@ -201,9 +202,12 @@ def gnfw_rs(
     x, y, z, *_ = transform_grid(dx, dy, dz, 1, 1, 1, 0, xyz)
 
     r = jnp.sqrt(x**2 + y**2 + z**2)
-    denominator = ((r/r_s)**gamma) * (1 + (r/r_s)**alpha) ** ((beta - gamma) / alpha)
+    denominator = ((r / r_s) ** gamma) * (1 + (r / r_s) ** alpha) ** (
+        (beta - gamma) / alpha
+    )
 
     return P0 / denominator
+
 
 @jax.jit
 def egnfw(
@@ -1339,7 +1343,7 @@ def nonpara_power(
 # For now a line needs to be added for each new model but this could be more magic down the line
 N_PAR_ISOBETA = len(inspect.signature(isobeta).parameters) - 1
 N_PAR_GNFW = len(inspect.signature(gnfw).parameters) - 1
-N_PAR_GNFW_RS = len(inspect.signature(gnfw_rs).parameters) -1
+N_PAR_GNFW_RS = len(inspect.signature(gnfw_rs).parameters) - 1
 N_PAR_EGNFW = len(inspect.signature(egnfw).parameters) - 1
 N_PAR_A10 = len(inspect.signature(a10).parameters) - 1
 N_PAR_EA10 = len(inspect.signature(ea10).parameters) - 1
