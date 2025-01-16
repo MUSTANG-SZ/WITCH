@@ -127,6 +127,83 @@ def gnfw(
 
     return P500 * P0 / denominator
 
+@jax.jit
+def gnfw_rs(
+    dx: float,
+    dy: float,
+    dz: float,
+    P0: float,
+    r_s: float,
+    gamma: float,
+    alpha: float,
+    beta: float,
+    z: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
+    r"""
+    Spherical gNFW pressure profile in 3d. Fits for r_s directly instead of m500.
+    This function does not include smoothing or declination stretch
+    which should be applied at the end.
+
+    Once the grid is transformed the profile is computed as:
+
+    $$
+    \dfrac{P_{0}}{{\left( \left(r/r_{s}\right)^{\gamma}\left( 1 + \left(r/r_{s}\right)^{\alpha} \right) \right)}^{\dfrac{\beta - \gamma}{\alpha}}}
+    $$
+
+    where:
+
+    $$
+    r = \sqrt{x^2 + y^2 + z^2}
+    $$
+
+    Parameters
+    ----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    P0 : float
+        Amplitude of the pressure profile.
+        Units: unitless
+    r_s : float
+        Charicteristic scale of the profile. 
+        Units: arcsec
+    gamma : float
+        The central slope.
+        Units: unitless
+    alpha : float
+        The intermediate slope.
+        Units: unitless
+    beta : float
+        The outer slope.
+        Units: unitless
+    z : float
+        Redshift of cluster.
+        Units: redshift
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+
+    Returns
+    -------
+    model : jax.Array
+        The gnfw model evaluated on the grid.
+    """
+    x, y, z, *_ = transform_grid(dx, dy, dz, 1, 1, 1, 0, xyz)
+
+    r = jnp.sqrt(x**2 + y**2 + z**2)
+    denominator = ((r/r_s)**gamma) * (1 + (r/r_s)**alpha) ** ((beta - gamma) / alpha)
+
+    return P0 / denominator
 
 @jax.jit
 def egnfw(
@@ -1262,6 +1339,7 @@ def nonpara_power(
 # For now a line needs to be added for each new model but this could be more magic down the line
 N_PAR_ISOBETA = len(inspect.signature(isobeta).parameters) - 1
 N_PAR_GNFW = len(inspect.signature(gnfw).parameters) - 1
+N_PAR_GNFW_RS = len(inspect.signature(gnfw_rs).parameters) -1
 N_PAR_EGNFW = len(inspect.signature(egnfw).parameters) - 1
 N_PAR_A10 = len(inspect.signature(a10).parameters) - 1
 N_PAR_EA10 = len(inspect.signature(ea10).parameters) - 1
@@ -1289,6 +1367,7 @@ STRUCT_FUNCS = {
     "egaussian": egaussian,
     "gaussian": gaussian,
     "gnfw": gnfw,
+    "gnfw_rs": gnfw_rs,
     "egnfw": egnfw,
     "isobeta": isobeta,
     "nonpara_power": nonpara_power,
@@ -1305,6 +1384,7 @@ STRUCT_N_PAR = {
     "egaussian": N_PAR_EGAUSSIAN,
     "gaussian": N_PAR_GAUSSIAN,
     "gnfw": N_PAR_GNFW,
+    "gnfw_rs": N_PAR_GNFW_RS,
     "egnfw": N_PAR_EGNFW,
     "isobeta": N_PAR_ISOBETA,
     "nonpara_power": N_PAR_NONPARA_POWER,
@@ -1324,6 +1404,7 @@ STRUCT_STAGE = {
     "egaussian": 0,
     "gaussian": 3,
     "gnfw": 0,
+    "gnfw_rs": 0,
     "egnfw": 0,
     "isobeta": 0,
     "nonpara_power": -1,

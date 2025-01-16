@@ -22,6 +22,7 @@ ORDER = (
     "nonpara_power",
     "isobeta",
     "gnfw",
+    "gnfw_rs",
     "egnfw",
     "a10",
     "ea10",

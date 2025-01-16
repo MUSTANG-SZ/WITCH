@@ -95,7 +95,7 @@ def bin_map(hdu, rbins, x0=None, y0=None, cunit=None):
 
     X, Y = np.meshgrid(x, y)
     R = np.sqrt((X - x0) ** 2 + (Y - y0) ** 2)
-
+    rbins = rbins.append(999999)
     bin1d = np.zeros(len(rbins) - 1)
     var1d = np.zeros(len(rbins) - 1)
 
