@@ -177,9 +177,10 @@ def postproc(dset_name: str, cfg: dict, todvec: TODVec, model: Model, info: dict
                 tod.noise = from_minkasi_noise(tod_minkasi)
         else:
             for tod, tod_minkasi in zip(todvec, todvec_minkasi.tods):
-                mat = 0 * tod_minkasi.info["dat_calib"]
+                mat = 0 * tod_minkasi.info["dat_calib"].copy()
                 for m in mapset.maps:
                     m.map2tod(tod_minkasi, mat)
+                mat -= np.mean(mat, axis=-1)[..., None]  # Avoid overflow
                 tod.recompute_noise(
                     data=tod.data - jnp.array(mat),
                     *info["noise_args"],
