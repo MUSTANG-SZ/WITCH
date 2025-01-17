@@ -1,3 +1,21 @@
+## 8.2.1 (2025-01-17)
+
+### Fix
+
+- fix using wrong kT for ultra relativistic
+
+## 8.2.0 (2025-01-16)
+
+### Feat
+
+- re-adding supfactor
+
+## 8.1.2 (2025-01-06)
+
+### Fix
+
+- small fixes to minkasi postfit
+
 ## 8.1.1 (2025-01-03)
 
 ### Fix
