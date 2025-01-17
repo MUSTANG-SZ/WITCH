@@ -2,11 +2,18 @@
 # If an absolute path is given then it is used
 # Otherwise it is assumed to me reative to the directory of this file
 base: "MOOJ1142_base.yaml"
-
+model_map: True
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "MOOJ1142"
-sim: False # If True use TODs to make noise and add a simulated cluster
+sim: False
+
+path:
+  subdir: "nonpara"
+
+coords:
+  x0: "Angle('11 42 46.82 hours').to(u.radian).value" #centroid
+  y0: "Angle('15:27:15.70 degrees').to(u.radian).value" #centroid
 
 # Define the model
 model:
@@ -16,39 +23,35 @@ model:
   # Structure to include in the model
   structures:
     # Name of the first structure
-    ea10:
-      structure: "gnfw" # What type of structure it is
-
+    nonpara:
+    # Name of the first structure
+      structure: "nonpara_power"
+      n_rbins: 5
       parameters:
+        rbins:
+          #value: "(0, 30, 60, 90, 120, 180, 300)"
+          value: "(0,30,60, 120, 180)"
+        amps:
+          value: "jnp.array([5.0, 2., 0.01, 0.01, 0.01])"
+          to_fit: True
+        pows:
+          value: "jnp.array([-0.4, -0.4, -0.4, -1. , -2.5])"
+          to_fit: True
         dx_1: # Name of the first parameter
           value: 0.0 # Value to use/start at, will be evaled
-          to_fit: True
-          priors: [-9.0, 9.0]
+          to_fit: False
         dy_1:
           value: 0.0
-          to_fit: True
-          priors: [-9.0, 9.0]
+          to_fit: False
         dz_1:
           value: 0.0
-        r1:
-          value: 200.0
+          to_fit: False
+        c:
+          value: 0
           to_fit: True
-        P0:
-          value: 3.202
-        c500:
-          value: 1.083
-        m500:
-          value: "8.4e14"
-          to_fit: True
-        gamma:
-          value: 0.3798
-          to_fit: True 
-        alpha:
-          value: 1.4063
-        beta:
-          value: 5.4905
         z:
-          value: 1.19
+          value: 0.25
+          to_fit: False
     ps_gauss:
       structure: "gaussian"
       parameters:
@@ -63,5 +66,5 @@ model:
         sigma:
           value: 4.0
         amp_g:
-          value: 0.01
+          value: 0.1
           to_fit: True

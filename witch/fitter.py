@@ -21,7 +21,7 @@ from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
 from . import utils as wu
-from .containers import Model
+from .containers import Model, Model_xfer
 from .fitting import fit_tods, objective
 
 comm = MPI.COMM_WORLD.Clone()
@@ -78,12 +78,16 @@ def _make_parser() -> argp.ArgumentParser:
     return parser
 
 
-def process_tods(cfg, todvec, noise_class, noise_args, noise_kwargs, model):
+def process_tods(cfg, todvec, noise_class, noise_args, noise_kwargs, model, xfer=""):
     rank = todvec.comm.Get_rank()
     nproc = todvec.comm.Get_size()
     sim = cfg.get("sim", False)
     if model is None and sim:
         raise ValueError("model cannot be None when simming!")
+    model_cur = model
+    if xfer:
+        model_cur = Model_xfer.from_parent(model, xfer)
+
     for i, tod in enumerate(todvec.tods):
         if sim:
             if cfg["wnoise"]:
@@ -95,7 +99,7 @@ def process_tods(cfg, todvec, noise_class, noise_args, noise_kwargs, model):
             else:
                 tod.data *= tod.data * (-1) ** ((rank + nproc * i) % 2)
 
-            pred = model.to_tod(
+            pred = model_cur.to_tod(
                 tod.x * wu.rad_to_arcsec, tod.y * wu.rad_to_arcsec
             ).block_until_ready()
             tod.data = tod.data + pred
@@ -256,7 +260,9 @@ def main():
 
     # Process the TODs
     preproc(dset_name, cfg, todvec, model, info)
-    todvec = process_tods(cfg, todvec, noise_class, noise_args, noise_kwargs, model)
+    todvec = process_tods(
+        cfg, todvec, noise_class, noise_args, noise_kwargs, model, info["xfer"]
+    )
     todvec = jax.block_until_ready(todvec)
     postproc(dset_name, cfg, todvec, model, info)
 
@@ -271,8 +277,9 @@ def main():
                 if cfg["model"]["structures"][struct_name].get("to_remove", False):
                     model.remove_struct(struct_name)
             params = jnp.array(model.pars)
+            par_offset = cfg.get("par_offset", 1.1)
             params = params.at[model.to_fit_ever].multiply(
-                1.1
+                par_offset
             )  # Don't start at exactly the right value
             model.update(params, model.errs, model.chisq)
 
@@ -329,7 +336,7 @@ def main():
             ):
                 final["model"]["structures"][struct_name]["parameters"][par_name][
                     "value"
-                ] = float(par.val)
+                ] = par.val
         with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
             yaml.dump(final, file)
 
