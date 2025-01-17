@@ -84,6 +84,7 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
         "minkasi_noise_args": noise_args,
         "minkasi_noise_kwargs": noise_kwargs,
         "copy_noise": cfg["datasets"][dset_name]["copy_noise"],
+        "xfer": cfg["datasets"][dset_name].get("xfer", ""),
     }
 
 
