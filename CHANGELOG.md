@@ -1,3 +1,9 @@
+## 8.2.1 (2025-01-17)
+
+### Fix
+
+- fix using wrong kT for ultra relativistic
+
 ## 8.2.0 (2025-01-16)
 
 ### Feat

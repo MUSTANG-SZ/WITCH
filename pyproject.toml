@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name="witch"
-version="8.2.0"
+version="8.2.1"
 authors= [
 {name ="Jack Orlowski-Scherer"},
 {name ="Saianeesh Keshav Haridas"},
