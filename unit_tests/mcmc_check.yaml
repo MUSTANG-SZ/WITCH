@@ -2,6 +2,8 @@
 # If an absolute path is given then it is used
 # Otherwise it is assumed to me reative to the directory of this file
 base: "base_unit.yaml"
+n_rounds: 1
+wnoise: True
 
 # Cluster name
 # Used both for the output path as well as to load presets
@@ -10,8 +12,7 @@ sim: True # If True use TODs to make noise and add a simulated cluster
 
 mcmc:
   run: True
-  num_steps: 300
-  num_walkers: 10
+  num_steps: 1000
   sample_which: -1
 
 model:
@@ -60,17 +61,17 @@ model:
       parameters:
         dx_g:
           value: 0.0
-          to_fit: [True, True, False, True]
+          to_fit: True #[True, True, False, True]
           priors: [-9.0, 9.0]
         dy_g:
           value: 0.0
-          to_fit: [True, True, False, True]
+          to_fit: True #[True, True, False, True]
           priors: [-9.0, 9.0]
         sigma:
           value: 4
-          to_fit: [False, True, False, True]
+          to_fit: True #[False, True, False, True]
           priors: [1, 10]
         amp_g:
           value: 0.002
-          to_fit: [True, False, True, False]
+          to_fit: True #[True, False, True, False]
           priors: [0, .005]

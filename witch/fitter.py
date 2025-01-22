@@ -220,7 +220,9 @@ def _run_mcmc(cfg, model, todvec, outdir, noise_class, noise_args, noise_kwargs)
         model,
         todvec,
         num_steps=int(cfg["mcmc"].get("num_steps", 5000)),
-        num_walkers=int(cfg["mcmc"].get("num_walkers", 10)),
+        num_leaps=int(cfg["mcmc"].get("num_leaps", 10)),
+        step_size=float(cfg["mcmc"].get("step_size", 0.02)),
+        sample_which=int(cfg["mcmc"].get("sample_which", -1)),
     )
     _ = mpi4jax.barrier(comm=comm)
     t2 = time.time()
