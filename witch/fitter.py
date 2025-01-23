@@ -10,23 +10,23 @@ import time
 from copy import deepcopy
 from importlib import import_module
 
+import corner
 import jax
 import jax.numpy as jnp
-import minkasi
+import matplotlib.pyplot as plt
 import mpi4jax
 import numpy as np
 import yaml
-from jitkasi.tod import TOD
+from astropy.convolution import Gaussian2DKernel, convolve
+from minkasi.tools import presets_by_source as pbs
 from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
 from . import utils as wu
 from .containers import Model
-from .fitting import fit_tods, objective
+from .fitting import fit_tods, objective, run_mcmc
 
 comm = MPI.COMM_WORLD.Clone()
-
-import pdb
 
 
 def print_once(*args: Unpack[tuple[Any, ...]]):
@@ -87,10 +87,15 @@ def process_tods(cfg, todvec, noise_class, noise_args, noise_kwargs, model):
     for i, tod in enumerate(todvec.tods):
         if sim:
             if cfg["wnoise"]:
-                temp = jnp.percentile(jnp.diff(tod.data), jnp.array([33.0, 68.0]))
+                temp = jnp.percentile(
+                    jnp.diff(tod.data, axis=-1), jnp.array([33.0, 68.0]), axis=-1
+                )
                 scale = (temp[1] - temp[0]) / jnp.sqrt(8)
-                tod.data = scale * jax.random.normal(
-                    jax.random.key(0), shape=tod.data.shape, dtype=tod.data.dtype
+                tod.data = (
+                    jax.random.normal(
+                        jax.random.key(0), shape=tod.data.shape, dtype=tod.data.dtype
+                    )
+                    * scale[..., None]
                 )
             else:
                 tod.data *= tod.data * (-1) ** ((rank + nproc * i) % 2)
@@ -99,6 +104,7 @@ def process_tods(cfg, todvec, noise_class, noise_args, noise_kwargs, model):
                 tod.x * wu.rad_to_arcsec, tod.y * wu.rad_to_arcsec
             ).block_until_ready()
             tod.data = tod.data + pred
+        tod.data = tod.data - jnp.mean(tod.data, axis=-1)[..., None]
         tod.compute_noise(noise_class, None, *noise_args, **noise_kwargs)
     return todvec
 
@@ -134,12 +140,115 @@ def get_outdir(cfg, model):
         outdir += "-sim"
 
     print_once("Outputs can be found in", outdir)
-    if minkasi.myrank == 0:
+    if comm.Get_rank() == 0:
         os.makedirs(outdir, exist_ok=True)
         with open(os.path.join(outdir, "config.yaml"), "w") as file:
             yaml.dump(cfg, file)
 
     return outdir
+
+
+def _save_model(cfg, model, outdir, desc_str):
+    if comm.Get_rank() != 0:
+        return
+    res_path = os.path.join(outdir, f"results_{desc_str}.dill")
+    print_once("Saving results to", res_path)
+    model.save(res_path)
+
+    final = {"model": cfg["model"]}
+    for i, (struct_name, structure) in zip(
+        model.original_order, cfg["model"]["structures"].items()
+    ):
+        model_struct = model.structures[i]
+        for par, par_name in zip(
+            model_struct.parameters, structure["parameters"].keys()
+        ):
+            final["model"]["structures"][struct_name]["parameters"][par_name][
+                "value"
+            ] = float(par.val)
+    with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
+        yaml.dump(final, file)
+
+
+def _reestimate_noise(model, todvec, noise_class, noise_args, noise_kwargs):
+    for tod in todvec:
+        pred = model.to_tod(
+            tod.x * wu.rad_to_arcsec, tod.y * wu.rad_to_arcsec
+        ).block_until_ready()
+        tod.compute_noise(noise_class, tod.data - pred, *noise_args, **noise_kwargs)
+    return todvec
+
+
+def _run_fit(cfg, model, todvec, outdir, r, noise_class, noise_args, noise_kwargs):
+    model.cur_round = r
+    to_fit = np.array(model.to_fit)
+    print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
+    t1 = time.time()
+    model, i, delta_chisq = fit_tods(
+        model,
+        todvec,
+        eval(str(cfg["fitting"].get("maxiter", "10"))),
+        eval(str(cfg["fitting"].get("chitol", "1e-5"))),
+    )
+    _ = mpi4jax.barrier(comm=comm)
+    t2 = time.time()
+    print_once(
+        f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}"
+    )
+
+    print_once(model)
+    _save_model(cfg, model, outdir, f"fit{r}")
+
+    todvec = _reestimate_noise(model, todvec, noise_class, noise_args, noise_kwargs)
+    return model, todvec
+
+
+def _run_mcmc(cfg, model, todvec, outdir, noise_class, noise_args, noise_kwargs):
+    print_once("Running MCMC")
+    no_priors = ~np.isfinite(
+        np.array(jnp.abs(model.priors[0]) + jnp.abs(model.priors[1]))
+    )
+    if np.sum(no_priors) != 0:
+        print_once(
+            f"{np.sum(no_priors)} parameters without priors found!:\n {[name for name, nprior in zip(model.par_names, no_priors) if nprior]}\nCan't run MCMC! Moving on..."
+        )
+        return model
+
+    init_pars = np.array(model.pars.copy())
+    t1 = time.time()
+    model, samples = run_mcmc(
+        model,
+        todvec,
+        num_steps=int(cfg["mcmc"].get("num_steps", 5000)),
+        num_leaps=int(cfg["mcmc"].get("num_leaps", 10)),
+        step_size=float(cfg["mcmc"].get("step_size", 0.02)),
+        sample_which=int(cfg["mcmc"].get("sample_which", -1)),
+    )
+    _ = mpi4jax.barrier(comm=comm)
+    t2 = time.time()
+    print_once(f"Took {t2 - t1} s to run mcmc")
+
+    message = str(model).split("\n")
+    message[1] = "MCMC estimated pars:"
+    print_once("\n".join(message))
+
+    _save_model(cfg, model, outdir, "mcmc")
+    if comm.Get_rank() == 0:
+        samples = np.array(samples)
+        samps_path = os.path.join(outdir, f"samples_mcmc.npz")
+        print_once("Saving samples to", samps_path)
+        np.savez_compressed(samps_path, samples=samples)
+        try:
+            corner.corner(samples, labels=model.par_names, truths=init_pars)
+            plt.savefig(os.path.join(outdir, "corner.png"))
+        except Exception as e:
+            print_once(f"Failed to make corner plot with error: {str(e)}")
+    else:
+        # samples are incomplete on non root procs
+        del samples
+
+    todvec = _reestimate_noise(model, todvec, noise_class, noise_args, noise_kwargs)
+    return model, todvec
 
 
 def deep_merge(a: dict, b: dict) -> dict:
@@ -175,10 +284,6 @@ def load_config(start_cfg, cfg_path):
 
 
 def main():
-    # Check if we have MPI
-    if minkasi.comm is None:
-        raise RuntimeError("Running without MPI is not currently supported!")
-
     parser = _make_parser()
     args = parser.parse_args()
 
@@ -264,7 +369,6 @@ def main():
     if cfg["fit"]:
         if model is None:
             raise ValueError("Can't fit without a model defined!")
-
         if cfg["sim"]:
             # Remove structs we deliberately want to leave out of model
             for struct_name in cfg["model"]["structures"]:
@@ -285,53 +389,16 @@ def main():
         message[1] = "Starting pars:"
         print_once("\n".join(message))
         for r in range(model.n_rounds):
-            model.cur_round = r
-            to_fit = np.array(model.to_fit)
-            print_once(
-                f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free"
-            )
-            t1 = time.time()
-            model, i, delta_chisq = fit_tods(
-                model,
-                todvec,
-                eval(str(cfg["fitting"].get("maxiter", "10"))),
-                eval(str(cfg["fitting"].get("chitol", "1e-5"))),
+            model, todvec = _run_fit(
+                cfg, model, todvec, outdir, r, noise_class, noise_args, noise_kwargs
             )
             _ = mpi4jax.barrier(comm=comm)
-            t2 = time.time()
-            print_once(
-                f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}"
+
+        if "mcmc" in cfg and cfg["mcmc"].get("run", True):
+            model, todvec = _run_mcmc(
+                cfg, model, todvec, outdir, noise_class, noise_args, noise_kwargs
             )
-
-            print_once(model)
-
-            if minkasi.myrank == 0:
-                res_path = os.path.join(outdir, f"results_{r}.dill")
-                print_once("Saving results to", res_path)
-                # TODO: switch to h5?
-                model.save(res_path)
-
-            # Reestimate noise
-            for tod in todvec:
-                pred = model.to_tod(tod.x * wu.rad_to_arcsec, tod.y * wu.rad_to_arcsec)
-                tod.compute_noise(
-                    noise_class, tod.data - pred, *noise_args, **noise_kwargs
-                )
             _ = mpi4jax.barrier(comm=comm)
-        # Save final pars
-        final = {"model": cfg["model"]}
-        for i, (struct_name, structure) in zip(
-            model.original_order, cfg["model"]["structures"].items()
-        ):
-            model_struct = model.structures[i]
-            for par, par_name in zip(
-                model_struct.parameters, structure["parameters"].keys()
-            ):
-                final["model"]["structures"][struct_name]["parameters"][par_name][
-                    "value"
-                ] = float(par.val)
-        with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
-            yaml.dump(final, file)
 
     postfit(dset_name, cfg, todvec, model, info)
 
