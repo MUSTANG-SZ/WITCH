@@ -741,7 +741,7 @@ class Model_xfer(Model):
     @classmethod
     def from_parent(cls, parent, xfer_str) -> Self:
         xfer = load_xfer(xfer_str)
-        pixsize = np.abs(parent.xyz[0][1]-parent.xyz[0][0])
+        pixsize = np.abs(parent.xyz[1][0][1]-parent.xyz[1][0][0]) 
         ks = xfer[0,0:] * pixsize #This picks up an extra dim?
         xfer_vals = xfer[1,0:]
         my_dict = {}
