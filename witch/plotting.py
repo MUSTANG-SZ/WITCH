@@ -14,6 +14,8 @@ from matplotlib.colors import ListedColormap
 from .fitter import load_config
 from .utils import get_da, get_nz, rad_to_arcsec
 
+from importlib import import_module
+
 here, this_filename = os.path.split(__file__)
 
 # from https://gist.github.com/zonca/6515744
@@ -103,9 +105,23 @@ def plot_cluster(
     img: aplpy.FITSFigure
         FITSFigure plot of the cluster
     """
+
     fits_path = os.path.abspath(fits_path)
     if root is None:
         root = os.path.split(os.path.split(fits_path)[0])[0]
+
+    cfg_path = os.path.split(root)[0] + "/" + "config.yaml"
+    cfg = load_config({}, cfg_path)
+    #Do imports
+    for module, name in cfg.get("imports", {}).items():
+        mod = import_module(module)
+        if isinstance(name, str):
+            locals()[name] = mod
+        elif isinstance(name, list):
+            for n in name:
+                locals()[n] = getattr(mod, n)
+        else:
+            raise TypeError("Expect import name to be a string or a list")
 
     if pix_size is None:
         res_path = (
@@ -118,8 +134,6 @@ def plot_cluster(
         pix_size = results.pix_size * rad_to_arcsec
 
     if ra is None or dec is None:
-        cfg_path = root + "/" + "config.yaml"
-        cfg = load_config({}, cfg_path)
         ra = eval(cfg["coords"]["x0"])
         dec = eval(cfg["coords"]["y0"])
         ra, dec = np.rad2deg(
