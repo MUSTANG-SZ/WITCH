@@ -260,7 +260,9 @@ def main():
 
     # Process the TODs
     preproc(dset_name, cfg, todvec, model, info)
-    todvec = process_tods(cfg, todvec, noise_class, noise_args, noise_kwargs, model, info["xfer"])
+    todvec = process_tods(
+        cfg, todvec, noise_class, noise_args, noise_kwargs, model, info["xfer"]
+    )
     todvec = jax.block_until_ready(todvec)
     postproc(dset_name, cfg, todvec, model, info)
 

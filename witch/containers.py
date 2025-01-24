@@ -2,6 +2,7 @@
 Data classes for describing models in a structured way.
 """
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import import_module
@@ -13,34 +14,35 @@ import jax.numpy as jnp
 import numpy as np
 from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
-from typing_extensions import Self
-from copy import deepcopy
 from scipy import interpolate
+from typing_extensions import Self
 
 from . import core
 from . import grid as wg
 from . import utils as wu
 from .structure import STRUCT_N_PAR
 
+
 def load_xfer(xfer_str) -> jax.Array:
-    #Code from Charles
+    # Code from Charles
     tab = np.loadtxt(xfer_str).T
     tdim = tab.shape
-    #import pdb;pdb.set_trace()
-    pfit = np.polyfit(tab[0,tdim[1]//2:],tab[1,tdim[1]//2:],1)
-    addt = np.max(tab[0,:]) * np.array([2.0,4.0,8.0,16.0,32.0])
-    extt = np.polyval(pfit,addt)
+    # import pdb;pdb.set_trace()
+    pfit = np.polyfit(tab[0, tdim[1] // 2 :], tab[1, tdim[1] // 2 :], 1)
+    addt = np.max(tab[0, :]) * np.array([2.0, 4.0, 8.0, 16.0, 32.0])
+    extt = np.polyval(pfit, addt)
     ### For better backwards compatability I've editted to np.vstack instead of np.stack
     if tdim[0] == 2:
-        foo = np.vstack((addt,extt)) # Mar 5, 2018
+        foo = np.vstack((addt, extt))  # Mar 5, 2018
     else:
-        pfit2 = np.polyfit(tab[0,tdim[1]//2:],tab[2,tdim[1]//2:],1)
-        extt2 = np.polyval(pfit2,addt)
-        foo = np.vstack((addt,extt,extt2)) # Mar 5, 2018
+        pfit2 = np.polyfit(tab[0, tdim[1] // 2 :], tab[2, tdim[1] // 2 :], 1)
+        extt2 = np.polyval(pfit2, addt)
+        foo = np.vstack((addt, extt, extt2))  # Mar 5, 2018
 
-    #print(tab.shape, foo.shape)
-    tab = np.concatenate((tab,foo),axis=1)
+    # print(tab.shape, foo.shape)
+    tab = np.concatenate((tab, foo), axis=1)
     return jnp.array(tab)
+
 
 @register_pytree_node_class
 @dataclass
@@ -152,6 +154,7 @@ class Structure:
         parameters = children
 
         return cls(name, structure, list(parameters), n_rbins)
+
 
 @register_pytree_node_class
 @dataclass
@@ -725,13 +728,12 @@ class Model:
 
         return cls(name, list(structures), xyz, dz, beam, n_rounds, cur_round, chisq)
 
+
 @dataclass
 class Model_xfer(Model):
 
-    ks : jax.Array = field(
-        default_factory=jnp.array([0]).copy
-    )  # scalar float array 
-    xfer_vals : jax.Array = field(
+    ks: jax.Array = field(default_factory=jnp.array([0]).copy)  # scalar float array
+    xfer_vals: jax.Array = field(
         default_factory=jnp.array([1]).copy
     )  # scalar float array
 
@@ -741,31 +743,34 @@ class Model_xfer(Model):
     @classmethod
     def from_parent(cls, parent, xfer_str) -> Self:
         xfer = load_xfer(xfer_str)
+
         pixsize = np.abs(parent.xyz[1][0][1]-parent.xyz[1][0][0]) 
         ks = xfer[0,0:] * pixsize #This picks up an extra dim?
         xfer_vals = xfer[1,0:]
+
         my_dict = {}
         for key in parent.__dataclass_fields__.keys():
             if parent.__dataclass_fields__[key].init:
                 my_dict[key] = deepcopy(parent.__dict__[key])
-        
-        return cls(**my_dict, ks = ks.ravel(), xfer_vals = xfer_vals)
+
+        return cls(**my_dict, ks=ks.ravel(), xfer_vals=xfer_vals)
 
     @cached_property
     def model(self) -> jax.Array:
-        cur_map = core.model(self.xyz,
+        cur_map = core.model(
+            self.xyz,
             tuple(self.n_struct),
             tuple(self.n_rbins),
             self.dz,
             self.beam,
             *self.pars,
-            )
-        #Code from JMP, whoever that is, by way of Charles
+        )
+        # Code from JMP, whoever that is, by way of Charles
         farr = np.fft.fft2(cur_map)
-        nx,ny = cur_map.shape
-        kx    = np.outer(np.fft.fftfreq(nx),np.zeros(ny).T+1.0)
-        ky    = np.outer(np.zeros(nx).T+1.0,np.fft.fftfreq(ny))
-        k     = np.sqrt(kx*kx + ky*ky)
+        nx, ny = cur_map.shape
+        kx = np.outer(np.fft.fftfreq(nx), np.zeros(ny).T + 1.0)
+        ky = np.outer(np.zeros(nx).T + 1.0, np.fft.fftfreq(ny))
+        k = np.sqrt(kx * kx + ky * ky)
 
         filt = self.table_filter_2d(k)
         farr *= filt
@@ -778,7 +783,9 @@ class Model_xfer(Model):
         kbin_max = self.ks.max()
 
         filt = k * 0.0
-        filt[(k >= kbin_min)  & (k <= kbin_max)] = f(k[(k >= kbin_min)  & (k <= kbin_max)])
+        filt[(k >= kbin_min) & (k <= kbin_max)] = f(
+            k[(k >= kbin_min) & (k <= kbin_max)]
+        )
         filt[(k < kbin_min)] = self.xfer_vals[self.ks == kbin_min]
         filt[(k > kbin_max)] = self.xfer_vals[self.ks == kbin_max]
 
@@ -797,8 +804,10 @@ class Model_xfer(Model):
         None
         """
 
-        raise TypeError("Error; Grad cannot currently be computed on Models with transfer function")
-        return None #Shouldnt get here
+        raise TypeError(
+            "Error; Grad cannot currently be computed on Models with transfer function"
+        )
+        return None  # Shouldnt get here
 
     def to_tod_grad(self, dx: ArrayLike, dy: ArrayLike) -> None:
         """
@@ -809,8 +818,7 @@ class Model_xfer(Model):
         -------
         None
         """
-        raise TypeError("Error; Grad cannot currently be computed on Models with transfer function")
-        return None #Shouldnt get here       
-
-
-
+        raise TypeError(
+            "Error; Grad cannot currently be computed on Models with transfer function"
+        )
+        return None  # Shouldnt get here
