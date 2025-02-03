@@ -1,3 +1,37 @@
+## 8.4.0 (2025-02-03)
+
+### Feat
+
+- add uJy/beam units
+- restore plot of non-thermal SZ effects
+- Hydra A plotting
+- adding transfer function smoothed model
+- add rs dependant gnfw
+- adding config option to change starting offset
+- adding 1142 nonpara config and updating config formating
+- modifying model to accept nonpara structures
+- speed up by improving cast to tuple. Still error
+- small changes to accomadate changes to broken_powerlaw
+- large speedup of broken_powerlaw by passing cond list as static arg. TODO: nonpara_power computation of condlist doesnt work
+- adding to nonpara and trying to speed up broken_power
+- new centerings
+- splitting eliptical and non-eliptical gnfw
+- adding piecewise powerlaw
+- adding more unit conversions
+- initial attempt at map binning
+
+### Fix
+
+- pixel size was wrong
+- pix size was wrong
+- updating path specifications
+- updating for refactor
+- dont fit rbinds
+- iterator in wrong loop:
+- updating constainer properties to accomadate array parameter values
+- yaml syntax
+- broken_power now works
+
 ## 8.3.0 (2025-01-23)
 
 ### Feat
