@@ -1,4 +1,5 @@
 import os
+from importlib import import_module
 from typing import Optional, Union
 
 import aplpy
@@ -13,8 +14,6 @@ from matplotlib.colors import ListedColormap
 
 from .fitter import load_config
 from .utils import get_da, get_nz, rad_to_arcsec
-
-from importlib import import_module
 
 here, this_filename = os.path.split(__file__)
 
@@ -112,7 +111,7 @@ def plot_cluster(
 
     cfg_path = os.path.split(root)[0] + "/" + "config.yaml"
     cfg = load_config({}, cfg_path)
-    #Do imports
+    # Do imports
     for module, name in cfg.get("imports", {}).items():
         mod = import_module(module)
         if isinstance(name, str):
@@ -166,14 +165,14 @@ def plot_cluster(
     if units is not None:
         if units == "snr":
             cbar_label = r"$\sigma$"
-        elif units == "uK_cmb": 
+        elif units == "uK_cmb":
             img._data *= 1e6
             cbar_label = r"$uK_{CMB}$"
         elif units == "uK_RJ":
             img._data *= 1e6
             cbar_label = r"$uK_{RJ}$"
         elif units == "uJy/beam":
-            img._data *= 0.7*1e6
+            img._data *= 0.7 * 1e6
             cbar_label = r"$\mu Jy/beam$"
         else:
             cbar_label = str(units)

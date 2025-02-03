@@ -26,7 +26,6 @@ from . import utils as wu
 from .containers import Model, Model_xfer
 from .fitting import fit_tods, objective, run_mcmc
 
-
 comm = MPI.COMM_WORLD.Clone()
 
 
@@ -421,7 +420,6 @@ def main():
                 ] = par.val
         with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
             yaml.dump(final, file)
-
 
     postfit(dset_name, cfg, todvec, model, info)
 
