@@ -7,13 +7,210 @@ import inspect
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from .grid import transform_grid
+from .nonparametric import broken_power
 from .utils import ap, get_da, get_hz, get_nz, h70
+
+
+def _get_nonpara(signature, prefix_list=["nonpara_"]):
+    par_names = np.array(list(signature.parameters.keys()), dtype=str)
+    static_msk = np.zeros_like(par_names, dtype=bool)
+    for prefix in prefix_list:
+        static_msk += np.char.startswith(par_names, prefix)
+    return np.sum(static_msk)
 
 
 @jax.jit
 def gnfw(
+    dx: float,
+    dy: float,
+    dz: float,
+    r: float,
+    P0: float,
+    c500: float,
+    m500: float,
+    gamma: float,
+    alpha: float,
+    beta: float,
+    z: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
+    r"""
+    Spherical gNFW pressure profile in 3d.
+    This function does not include smoothing or declination stretch
+    which should be applied at the end.
+
+    Once the grid is transformed the profile is computed as:
+
+    $$
+    \dfrac{P_{500} * P_{0}}{{\left( r^{\gamma}\left( 1 + r^{\alpha} \right) \right)}^{\dfrac{\beta - \gamma}{\alpha}}}
+    $$
+
+    where:
+
+    $$
+    r = c_{500} \sqrt{x^2 + y^2 + z^2} {\frac{3m_{500}}{2000 \pi n_z}}^{-\frac{1}{3}}
+    $$
+
+    $$
+    P_{500} = 1.65 \times 10^{-3} {\frac{m_{500}*h_{70}}{3 \times 10^{14}}}^{\frac{2}{3} + ap}{h_z}^{\frac{8}{3}}{h_{70}}^2
+    $$
+
+    $n_z$ is the critical density at the cluster redshift and $h_z$ is the Hubble constant at the cluster redshift.
+
+    Parameters
+    ----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    r : float
+        Amount to scale radially
+        Passed to `grid.transform_grid`.
+        Units: arcmin
+    P0 : float
+        Amplitude of the pressure profile.
+        Units: unitless
+    c500 : float
+        Concentration parameter at a density contrast of 500.
+        Units: unitless
+    m500 : float
+        Mass at a density contrast of 500.
+        Units: M_solar
+    gamma : float
+        The central slope.
+        Units: unitless
+    alpha : float
+        The intermediate slope.
+        Units: unitless
+    beta : float
+        The outer slope.
+        Units: unitless
+    z : float
+        Redshift of cluster.
+        Units: redshift
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+
+    Returns
+    -------
+    model : jax.Array
+        The gnfw model evaluated on the grid.
+    """
+    nz = get_nz(z)
+    hz = get_hz(z)
+
+    x, y, z, *_ = transform_grid(dx, dy, dz, r, r, r, 0, xyz)
+
+    r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
+
+    r = c500 * jnp.sqrt(x**2 + y**2 + z**2) / r500
+    denominator = (r**gamma) * (1 + r**alpha) ** ((beta - gamma) / alpha)
+
+    P500 = (
+        1.65e-03
+        * (m500 / (3.00e14 / h70)) ** (2.00 / 3.00 + ap)
+        * hz ** (8.00 / 3.00)
+        * h70**2
+    )
+
+    return P500 * P0 / denominator
+
+
+@jax.jit
+def gnfw_rs(
+    dx: float,
+    dy: float,
+    dz: float,
+    P0: float,
+    r_s: float,
+    gamma: float,
+    alpha: float,
+    beta: float,
+    z: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
+    r"""
+    Spherical gNFW pressure profile in 3d. Fits for r_s directly instead of m500.
+    This function does not include smoothing or declination stretch
+    which should be applied at the end.
+
+    Once the grid is transformed the profile is computed as:
+
+    $$
+    \dfrac{P_{0}}{{\left( \left(r/r_{s}\right)^{\gamma}\left( 1 + \left(r/r_{s}\right)^{\alpha} \right) \right)}^{\dfrac{\beta - \gamma}{\alpha}}}
+    $$
+
+    where:
+
+    $$
+    r = \sqrt{x^2 + y^2 + z^2}
+    $$
+
+    Parameters
+    ----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    P0 : float
+        Amplitude of the pressure profile.
+        Units: unitless
+    r_s : float
+        Charicteristic scale of the profile.
+        Units: arcsec
+    gamma : float
+        The central slope.
+        Units: unitless
+    alpha : float
+        The intermediate slope.
+        Units: unitless
+    beta : float
+        The outer slope.
+        Units: unitless
+    z : float
+        Redshift of cluster.
+        Units: redshift
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+
+    Returns
+    -------
+    model : jax.Array
+        The gnfw model evaluated on the grid.
+    """
+    x, y, z, *_ = transform_grid(dx, dy, dz, 1, 1, 1, 0, xyz)
+
+    r = jnp.sqrt(x**2 + y**2 + z**2)
+    denominator = ((r / r_s) ** gamma) * (1 + (r / r_s) ** alpha) ** (
+        (beta - gamma) / alpha
+    )
+
+    return P0 / denominator
+
+
+@jax.jit
+def egnfw(
     dx: float,
     dy: float,
     dz: float,
@@ -1080,12 +1277,74 @@ def add_powerlaw_cos(
     return new_pressure
 
 
+# @jax.jit
+def nonpara_power(
+    nonpara_rbins: jax.Array,
+    nonpara_amps: jax.Array,
+    nonpara_pows: jax.Array,
+    dx: float,
+    dy: float,
+    dz: float,
+    c: float,
+    z: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
+    """
+    Function which computes 3D pressure of segmented power laws
+
+    Parameters:
+    -----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    rbins : jax.Array
+        Array of bin edges for power laws
+    amps : jax.Array
+        Amplitudes of power laws
+    pows : jax.Array
+        Exponents of power laws
+    c : float
+        Constant offset for powerlaws
+    z : float,
+        Redshift of cluster
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+    """
+    print(dz)
+    x, y, z, *_ = transform_grid(dx, dy, dz, 1.0, 1.0, 1.0, 0.0, xyz)
+    r = jnp.sqrt(x**2 + y**2 + z**2)
+    nonpara_rbins = jnp.append(nonpara_rbins, jnp.array([jnp.amax(r)]))
+    mapshape = r.shape
+    r = r.ravel()
+    condlist = [
+        jnp.array((nonpara_rbins[i] <= r) & (r < nonpara_rbins[i + 1]))
+        for i in range(len(nonpara_pows) - 1, -1, -1)
+    ]
+    pressure = broken_power(
+        r, condlist, nonpara_rbins, nonpara_amps, nonpara_pows, c
+    ).reshape(mapshape)
+
+    return pressure
+
+
 # Get number of parameters for each structure
 # The -1 is because xyz doesn't count
 # -2 for Uniform, expo, and power as they also take a pressure arg that doesn't count
 # For now a line needs to be added for each new model but this could be more magic down the line
 N_PAR_ISOBETA = len(inspect.signature(isobeta).parameters) - 1
 N_PAR_GNFW = len(inspect.signature(gnfw).parameters) - 1
+N_PAR_GNFW_RS = len(inspect.signature(gnfw_rs).parameters) - 1
+N_PAR_EGNFW = len(inspect.signature(egnfw).parameters) - 1
 N_PAR_A10 = len(inspect.signature(a10).parameters) - 1
 N_PAR_EA10 = len(inspect.signature(ea10).parameters) - 1
 N_PAR_CYLINDRICAL = len(inspect.signature(cylindrical_beta).parameters) - 1
@@ -1095,6 +1354,9 @@ N_PAR_EGAUSSIAN = len(inspect.signature(egaussian).parameters) - 1
 N_PAR_UNIFORM = len(inspect.signature(add_uniform).parameters) - 2
 N_PAR_EXPONENTIAL = len(inspect.signature(add_exponential).parameters) - 2
 N_PAR_POWERLAW = len(inspect.signature(add_powerlaw).parameters) - 2
+N_PAR_NONPARA_POWER = len(inspect.signature(nonpara_power).parameters) - 1
+
+N_NONPARA_POWER = _get_nonpara(inspect.signature(nonpara_power))
 
 # Make a convenience mapping
 STRUCT_FUNCS = {
@@ -1109,7 +1371,10 @@ STRUCT_FUNCS = {
     "egaussian": egaussian,
     "gaussian": gaussian,
     "gnfw": gnfw,
+    "gnfw_rs": gnfw_rs,
+    "egnfw": egnfw,
     "isobeta": isobeta,
+    "nonpara_power": nonpara_power,
 }
 STRUCT_N_PAR = {
     "a10": N_PAR_A10,
@@ -1123,7 +1388,13 @@ STRUCT_N_PAR = {
     "egaussian": N_PAR_EGAUSSIAN,
     "gaussian": N_PAR_GAUSSIAN,
     "gnfw": N_PAR_GNFW,
+    "gnfw_rs": N_PAR_GNFW_RS,
+    "egnfw": N_PAR_EGNFW,
     "isobeta": N_PAR_ISOBETA,
+    "nonpara_power": N_PAR_NONPARA_POWER,
+}
+STRUCT_N_NONPARA = {
+    "nonpara_power": N_NONPARA_POWER,
 }
 STRUCT_STAGE = {
     "a10": 0,
@@ -1137,5 +1408,8 @@ STRUCT_STAGE = {
     "egaussian": 0,
     "gaussian": 3,
     "gnfw": 0,
+    "gnfw_rs": 0,
+    "egnfw": 0,
     "isobeta": 0,
+    "nonpara_power": -1,
 }

@@ -1,11 +1,11 @@
 # Base config to merge into
 # If an absolute path is given then it is used
 # Otherwise it is assumed to me reative to the directory of this file
-base: "MOOJ1142_base.yaml"
+base: "MS0735_base.yaml"
 
 # Cluster name
 # Used both for the output path as well as to load presets
-name: "MOOJ1142"
+name: "MS0735"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
 # Define the model
@@ -17,8 +17,7 @@ model:
   structures:
     # Name of the first structure
     ea10:
-      structure: "gnfw" # What type of structure it is
-
+      structure: "a10" # What type of structure it is
       parameters:
         dx_1: # Name of the first parameter
           value: 0.0 # Value to use/start at, will be evaled
@@ -30,9 +29,8 @@ model:
           priors: [-9.0, 9.0]
         dz_1:
           value: 0.0
-        r1:
-          value: 200.0
-          to_fit: True
+        theta:
+          value: 0. 
         P0:
           value: 3.202
         c500:
@@ -53,13 +51,13 @@ model:
       structure: "gaussian"
       parameters:
         dx_g:
-          value: 19.0
+          value: 0.0
           to_fit: True
-          priors: [10.0, 28.0]
+          priors: [-5.0, 5.0] 
         dy_g:
-          value: -4.0
+          value: 0.0
           to_fit: True
-          priors: [-13.0, 5.0]
+          priors: [-5.0, 5.0]
         sigma:
           value: 4.0
         amp_g:

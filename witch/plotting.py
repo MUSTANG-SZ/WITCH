@@ -1,4 +1,5 @@
 import os
+from importlib import import_module
 from typing import Optional, Union
 
 import aplpy
@@ -103,9 +104,23 @@ def plot_cluster(
     img: aplpy.FITSFigure
         FITSFigure plot of the cluster
     """
+
     fits_path = os.path.abspath(fits_path)
     if root is None:
         root = os.path.split(os.path.split(fits_path)[0])[0]
+
+    cfg_path = os.path.split(root)[0] + "/" + "config.yaml"
+    cfg = load_config({}, cfg_path)
+    # Do imports
+    for module, name in cfg.get("imports", {}).items():
+        mod = import_module(module)
+        if isinstance(name, str):
+            locals()[name] = mod
+        elif isinstance(name, list):
+            for n in name:
+                locals()[n] = getattr(mod, n)
+        else:
+            raise TypeError("Expect import name to be a string or a list")
 
     if pix_size is None:
         res_path = (
@@ -118,8 +133,6 @@ def plot_cluster(
         pix_size = results.pix_size * rad_to_arcsec
 
     if ra is None or dec is None:
-        cfg_path = root + "/" + "config.yaml"
-        cfg = load_config({}, cfg_path)
         ra = eval(cfg["coords"]["x0"])
         dec = eval(cfg["coords"]["y0"])
         ra, dec = np.rad2deg(
@@ -153,12 +166,14 @@ def plot_cluster(
         if units == "snr":
             cbar_label = r"$\sigma$"
         elif units == "uK_cmb":
-            # img._data /= 1.28
-            # img._data *= 1e6
+            img._data *= 1e6
             cbar_label = r"$uK_{CMB}$"
         elif units == "uK_RJ":
-            # img._data *= 1e6
-            cbar_label = r"$uK_{RJ}"
+            img._data *= 1e6
+            cbar_label = r"$uK_{RJ}$"
+        elif units == "uJy/beam":
+            img._data *= 0.7 * 1e6
+            cbar_label = r"$\mu Jy/beam$"
         else:
             cbar_label = str(units)
 

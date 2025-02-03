@@ -8,6 +8,13 @@ base: "MOOJ1142_base.yaml"
 name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
+paths:
+  subdir: "xray_cent" # Subdirectory to use
+
+coords:
+  x0: "Angle('11 42 46.82 hours').to(u.radian).value" #centroid
+  y0: "Angle('15:27:15.70 degrees').to(u.radian).value" #centroid
+
 # Define the model
 model:
   # Unit conversion to apply at the end
@@ -22,17 +29,14 @@ model:
       parameters:
         dx_1: # Name of the first parameter
           value: 0.0 # Value to use/start at, will be evaled
-          to_fit: True
-          priors: [-9.0, 9.0]
         dy_1:
           value: 0.0
-          to_fit: True
-          priors: [-9.0, 9.0]
         dz_1:
           value: 0.0
         r1:
-          value: 200.0
+          value: 90.0
           to_fit: True
+          priors: [0.,300.]
         P0:
           value: 3.202
         c500:
@@ -42,7 +46,8 @@ model:
           to_fit: True
         gamma:
           value: 0.3798
-          to_fit: True 
+          to_fit: True
+          priors: [0., 2.] 
         alpha:
           value: 1.4063
         beta:
@@ -53,15 +58,10 @@ model:
       structure: "gaussian"
       parameters:
         dx_g:
-          value: 19.0
-          to_fit: True
-          priors: [10.0, 28.0]
+          value: 11.06 
         dy_g:
-          value: -4.0
-          to_fit: True
-          priors: [-13.0, 5.0]
+          value: -5.98
         sigma:
           value: 4.0
         amp_g:
-          value: 0.01
-          to_fit: True
+          value: 0.00128582673

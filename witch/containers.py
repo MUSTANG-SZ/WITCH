@@ -2,6 +2,7 @@
 Data classes for describing models in a structured way.
 """
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import import_module
@@ -13,12 +14,34 @@ import jax.numpy as jnp
 import numpy as np
 from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
+from scipy import interpolate
 from typing_extensions import Self
 
 from . import core
 from . import grid as wg
 from . import utils as wu
 from .structure import STRUCT_N_PAR
+
+
+def load_xfer(xfer_str) -> jax.Array:
+    # Code from Charles
+    tab = np.loadtxt(xfer_str).T
+    tdim = tab.shape
+    # import pdb;pdb.set_trace()
+    pfit = np.polyfit(tab[0, tdim[1] // 2 :], tab[1, tdim[1] // 2 :], 1)
+    addt = np.max(tab[0, :]) * np.array([2.0, 4.0, 8.0, 16.0, 32.0])
+    extt = np.polyval(pfit, addt)
+    ### For better backwards compatability I've editted to np.vstack instead of np.stack
+    if tdim[0] == 2:
+        foo = np.vstack((addt, extt))  # Mar 5, 2018
+    else:
+        pfit2 = np.polyfit(tab[0, tdim[1] // 2 :], tab[2, tdim[1] // 2 :], 1)
+        extt2 = np.polyval(pfit2, addt)
+        foo = np.vstack((addt, extt, extt2))  # Mar 5, 2018
+
+    # print(tab.shape, foo.shape)
+    tab = np.concatenate((tab, foo), axis=1)
+    return jnp.array(tab)
 
 
 @register_pytree_node_class
@@ -104,6 +127,7 @@ class Structure:
     name: str
     structure: str
     parameters: list[Parameter]
+    n_rbins: int = 0
 
     def __post_init__(self):
         self.structure = self.structure.lower()
@@ -120,16 +144,16 @@ class Structure:
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
         children = tuple(self.parameters)
-        aux_data = (self.name, self.structure)
+        aux_data = (self.name, self.structure, self.n_rbins)
 
         return (children, aux_data)
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        name, structure = aux_data
+        name, structure, n_rbins = aux_data
         parameters = children
 
-        return cls(name, structure, list(parameters))
+        return cls(name, structure, list(parameters), n_rbins)
 
 
 @register_pytree_node_class
@@ -250,6 +274,21 @@ class Model:
             n_struct[idx] += 1
         return n_struct
 
+    @cached_property
+    def n_rbins(self) -> list[int]:
+        """
+        Number of r bins for nonparametric structures.
+        Note that this is cached.
+
+        Returns
+        -------
+        n_rbins : list[int]
+            `n_rbins[i]` is the number of rbins in this structure.
+        """
+        n_rbins = [structure.n_rbins for structure in self.structures]
+
+        return n_rbins
+
     @property
     def pars(self) -> jax.Array:
         """
@@ -260,9 +299,10 @@ class Model:
         pars :  jax.Array
             The parameter values in the order expected by `core.model`.
         """
-        pars = []
+        pars = jnp.array([])
         for structure in self.structures:
-            pars += [parameter.val for parameter in structure.parameters]
+            for parameter in structure.parameters:
+                pars = jnp.append(pars, parameter.val.ravel())
         return jnp.array(pars)
 
     @cached_property
@@ -278,7 +318,13 @@ class Model:
         """
         par_names = []
         for structure in self.structures:
-            par_names += [parameter.name for parameter in structure.parameters]
+            for parameter in structure.parameters:
+                if len(parameter.val) > 1:
+                    for i in range(len(parameter.val)):
+                        par_names += [parameter.name + "_{}".format(i)]
+                else:
+                    par_names += [parameter.name]
+
         return par_names
 
     @property
@@ -291,9 +337,10 @@ class Model:
         errs : jax.Array
             The errors in the same order as vals.
         """
-        errs = []
+        errs = jnp.array([])
         for structure in self.structures:
-            errs += [parameter.err for parameter in structure.parameters]
+            for parameter in structure.parameters:
+                errs = jnp.append(errs, parameter.err.ravel())
         return jnp.array(errs)
 
     @cached_property
@@ -312,8 +359,9 @@ class Model:
         lower = []
         upper = []
         for structure in self.structures:
-            lower += [parameter.prior[0] for parameter in structure.parameters]
-            upper += [parameter.prior[1] for parameter in structure.parameters]
+            for parameter in structure.parameters:
+                lower += [parameter.prior[0]] * len(parameter.val)
+                upper += [parameter.prior[1]] * len(parameter.val)
         priors = (jnp.array(lower), jnp.array(upper))
         return priors
 
@@ -329,11 +377,13 @@ class Model:
             in the current round.
             This is in the same order as `pars`.
         """
+
         to_fit = []
         for structure in self.structures:
-            to_fit += [
-                parameter.fit[self.cur_round] for parameter in structure.parameters
-            ]
+            for parameter in structure.parameters:
+                to_fit += [parameter.fit[self.cur_round]] * len(parameter.val)
+                # to_fit = jnp.append(to_fit, jnp.array([parameter.fit[self.cur_round]] * len(parameter.val)).ravel())
+
         return tuple(to_fit)  # jnp.ravel(jnp.array(to_fit))
 
     @cached_property
@@ -348,9 +398,16 @@ class Model:
             `to_fit[i]` is True if we ever want to fit the `i`'th parameter.
             This is in the same order as `pars`.
         """
-        to_fit = []
+        to_fit = jnp.array([], dtype=bool)
         for structure in self.structures:
-            to_fit += [parameter.fit_ever for parameter in structure.parameters]
+            for parameter in structure.parameters:
+                to_fit = jnp.append(
+                    to_fit,
+                    jnp.array(
+                        [parameter.fit_ever] * len(parameter.val), dtype=bool
+                    ).ravel(),
+                )
+
         return jnp.ravel(jnp.array(to_fit))
 
     @cached_property
@@ -368,6 +425,7 @@ class Model:
         return core.model(
             self.xyz,
             tuple(self.n_struct),
+            tuple(self.n_rbins),
             self.dz,
             self.beam,
             *self.pars,
@@ -392,6 +450,7 @@ class Model:
         return core.model_grad(
             self.xyz,
             tuple(self.n_struct),
+            tuple(self.n_rbins),
             self.dz,
             self.beam,
             argnums,
@@ -492,9 +551,10 @@ class Model:
         n = 0
         for struct in self.structures:
             for par in struct.parameters:
-                par.val = vals[n]
-                par.err = errs[n]
-                n += 1
+                for i in range(len(par.val)):
+                    par.val = par.val.at[i].set(vals[n])
+                    par.err = par.err.at[i].set(errs[n])
+                    n += 1
         self.chisq = chisq
 
         return self
@@ -645,6 +705,7 @@ class Model:
 
         structures = []
         for name, structure in cfg["model"]["structures"].items():
+            n_rbins = structure.get("n_rbins", 0)
             parameters = []
             for par_name, param in structure["parameters"].items():
                 val = eval(str(param["value"]))
@@ -664,12 +725,14 @@ class Model:
                     Parameter(
                         par_name,
                         tuple(fit),
-                        jnp.array(val, dtype=float),
-                        jnp.array(0.0, dtype=float),
+                        jnp.atleast_1d(jnp.array(val, dtype=float)),
+                        jnp.zeros_like(jnp.atleast_1d(jnp.array(val)), dtype=float),
                         jnp.array(priors, dtype=float),
                     )
                 )
-            structures.append(Structure(name, structure["structure"], parameters))
+            structures.append(
+                Structure(name, structure["structure"], parameters, n_rbins=n_rbins)
+            )
         name = cfg["model"].get(
             "name", "-".join([structure.name for structure in structures])
         )
@@ -694,3 +757,98 @@ class Model:
         structures, xyz, dz, beam, chisq = children
 
         return cls(name, list(structures), xyz, dz, beam, n_rounds, cur_round, chisq)
+
+
+@dataclass
+class Model_xfer(Model):
+
+    ks: jax.Array = field(default_factory=jnp.array([0]).copy)  # scalar float array
+    xfer_vals: jax.Array = field(
+        default_factory=jnp.array([1]).copy
+    )  # scalar float array
+
+    def __post_init__(self):
+        pass
+
+    @classmethod
+    def from_parent(cls, parent, xfer_str) -> Self:
+        xfer = load_xfer(xfer_str)
+
+        pixsize = np.abs(parent.xyz[1][0][1] - parent.xyz[1][0][0])
+        ks = xfer[0, 0:] * pixsize  # This picks up an extra dim?
+        xfer_vals = xfer[1, 0:]
+
+        my_dict = {}
+        for key in parent.__dataclass_fields__.keys():
+            if parent.__dataclass_fields__[key].init:
+                my_dict[key] = deepcopy(parent.__dict__[key])
+
+        return cls(**my_dict, ks=ks.ravel(), xfer_vals=xfer_vals)
+
+    @cached_property
+    def model(self) -> jax.Array:
+        cur_map = core.model(
+            self.xyz,
+            tuple(self.n_struct),
+            tuple(self.n_rbins),
+            self.dz,
+            self.beam,
+            *self.pars,
+        )
+        # Code from JMP, whoever that is, by way of Charles
+        farr = np.fft.fft2(cur_map)
+        nx, ny = cur_map.shape
+        kx = np.outer(np.fft.fftfreq(nx), np.zeros(ny).T + 1.0)
+        ky = np.outer(np.zeros(nx).T + 1.0, np.fft.fftfreq(ny))
+        k = np.sqrt(kx * kx + ky * ky)
+
+        filt = self.table_filter_2d(k)
+        farr *= filt
+
+        return np.real(np.fft.ifft2(farr))
+
+    def table_filter_2d(self, k) -> jax.Array:
+        f = interpolate.interp1d(self.ks, self.xfer_vals)
+        kbin_min = self.ks.min()
+        kbin_max = self.ks.max()
+
+        filt = k * 0.0
+        filt[(k >= kbin_min) & (k <= kbin_max)] = f(
+            k[(k >= kbin_min) & (k <= kbin_max)]
+        )
+        filt[(k < kbin_min)] = self.xfer_vals[self.ks == kbin_min]
+        filt[(k > kbin_max)] = self.xfer_vals[self.ks == kbin_max]
+
+        return filt
+
+    @cached_property
+    def model_grad(self) -> None:
+        """
+        The evaluated model and its gradient, see `core.model_grad` for details.
+        Note that this is cached, but is automatically reset whenever
+        `update` is called or `cur_round` changes. Currently computing
+        grad for models with transfer function is not supported.
+
+        Returns
+        -------
+        None
+        """
+
+        raise TypeError(
+            "Error; Grad cannot currently be computed on Models with transfer function"
+        )
+        return None  # Shouldnt get here
+
+    def to_tod_grad(self, dx: ArrayLike, dy: ArrayLike) -> None:
+        """
+        Project the model and gradient into a TOD. Currently computing
+        grad for models with transfer function is not supported.
+
+        Returns
+        -------
+        None
+        """
+        raise TypeError(
+            "Error; Grad cannot currently be computed on Models with transfer function"
+        )
+        return None  # Shouldnt get here
