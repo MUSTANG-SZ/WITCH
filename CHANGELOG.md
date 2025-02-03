@@ -1,3 +1,21 @@
+## 8.3.0 (2025-01-23)
+
+### Feat
+
+- switch to hmc
+- add ability to add a fitting round and control over which pars mcmc samples
+- mean sub, jaxify sampling, and make mcmc pars scale invarient
+- add mcmc and some cleanup on fitter
+- switch to backending everything in jax
+
+### Fix
+
+- add fudge factor to rescale chisq
+- mean sub to avoid loss of precision
+- use corrct paths for mcmc outputs
+- missing tqdm in toml dependency list
+- missing dependencies in .toml
+
 ## 8.2.1 (2025-01-17)
 
 ### Fix
