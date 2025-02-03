@@ -166,13 +166,15 @@ def plot_cluster(
     if units is not None:
         if units == "snr":
             cbar_label = r"$\sigma$"
-        elif units == "uK_cmb":
-            # img._data /= 1.28
-            # img._data *= 1e6
+        elif units == "uK_cmb": 
+            img._data *= 1e6
             cbar_label = r"$uK_{CMB}$"
         elif units == "uK_RJ":
-            # img._data *= 1e6
-            cbar_label = r"$uK_{RJ}"
+            img._data *= 1e6
+            cbar_label = r"$uK_{RJ}$"
+        elif units == "uJy/beam":
+            img._data *= 0.7*1e6
+            cbar_label = r"$\mu Jy/beam$"
         else:
             cbar_label = str(units)
 
