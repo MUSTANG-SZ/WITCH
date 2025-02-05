@@ -169,7 +169,7 @@ def _save_model(cfg, model, outdir, desc_str):
         ):
             final["model"]["structures"][struct_name]["parameters"][par_name][
                 "value"
-            ] = float(par.val)
+            ] = [float(cur_par) for cur_par in par.val]
     with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
         yaml.dump(final, file)
 
