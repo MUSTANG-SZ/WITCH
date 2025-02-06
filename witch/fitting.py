@@ -645,7 +645,7 @@ def run_mcmc(
         temp_model = model.update(pars, init_errs, model.chisq)
         grad = get_grad(temp_model, todvec)
         grad = grad.at[:].multiply(scale)
-        return grad.at[model.to_fit].get().ravel()
+        return grad#.at[model.to_fit].get()
 
     @jax.jit
     def _log_prob_grad(pars, model=model, init_pars=init_pars, scale=scale):
