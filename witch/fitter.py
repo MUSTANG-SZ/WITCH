@@ -208,16 +208,7 @@ def _run_fit(cfg, model, todvec, outdir, r, noise_class, noise_args, noise_kwarg
 
 
 def _run_mcmc(cfg, model, todvec, outdir, noise_class, noise_args, noise_kwargs):
-    print_once("Running MCMC")
-    no_priors = ~np.isfinite(
-        np.array(jnp.abs(model.priors[0]) + jnp.abs(model.priors[1]))
-    )
-    if np.sum(no_priors) != 0:
-        print_once(
-            f"{np.sum(no_priors)} parameters without priors found!:\n {[name for name, nprior in zip(model.par_names, no_priors) if nprior]}\nCan't run MCMC! Moving on..."
-        )
-        return model
-
+    print_once("Running MCMC") 
     init_pars = np.array(model.pars.copy())
     t1 = time.time()
     model, samples = run_mcmc(
