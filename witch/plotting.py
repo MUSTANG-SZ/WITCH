@@ -107,9 +107,9 @@ def plot_cluster(
 
     fits_path = os.path.abspath(fits_path)
     if root is None:
-        root = os.path.split(os.path.split(fits_path)[0])[0]
+        root = os.path.split(os.path.split(os.path.split(fits_path)[0])[0])[0] #TODO: There's gotta be a better way!
 
-    cfg_path = os.path.split(root)[0] + "/" + "config.yaml"
+    cfg_path = root + "/" + "config.yaml"
     cfg = load_config({}, cfg_path)
     # Do imports
     for module, name in cfg.get("imports", {}).items():
@@ -122,14 +122,15 @@ def plot_cluster(
         else:
             raise TypeError("Expect import name to be a string or a list")
 
+    res_path = (
+        root 
+        + "/"
+        + str(sorted([file for file in os.listdir(root) if ".dill" in file])[-1])
+    )
+    with open(res_path, "rb") as f:
+        results = pk.load(f)
+
     if pix_size is None:
-        res_path = (
-            root
-            + "/"
-            + str(sorted([file for file in os.listdir(root) if ".dill" in file])[-1])
-        )
-        with open(res_path, "rb") as f:
-            results = pk.load(f)
         pix_size = results.pix_size * rad_to_arcsec
 
     if ra is None or dec is None:
@@ -239,31 +240,44 @@ def plot_cluster(
             mod_type = "a10"
         elif "ea10" in cfg["model"]["structures"].keys():
             mod_type = "ea10"
+        elif "gnfw_rs" in cfg["model"]["structures"].keys():
+            mod_type = "gnfw_rs"
         else:
-            raise ModelError("For R500, must have structure type A10 or EA10")
+            raise ValueError("For R500, must have structure type gnfw_rs, A10, or EA10")
 
+        # Get index of structure of interest. TODO: currently only plots first
         for i in range(len(results.structures)):
             if str(results.structures[i].name) == mod_type:
                 break
 
-        for parameter in results.structures[i].parameters:
-            if str(parameter.name.lower()) == "m500":
-                m500 = parameter.val
-                break
+        if mod_type == "ea10" or mod_type == "a10":
+            for parameter in results.structures[i].parameters:
+                if str(parameter.name.lower()) == "m500":
+                    m500 = parameter.val
+                    break
 
-        z = float(cfg["constants"]["z"])
-        nz = get_nz(z)
+            z = float(cfg["constants"]["z"])
+            nz = get_nz(z)
 
-        r500 = (m500 / (4.00 * np.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
-        da = get_da(z)
-        r500 /= da
-        if plot_r == "rs":
-            r500 /= float(
-                cfg["model"]["structures"][mod_type]["parameters"]["c500"]["value"]
-            )  # Convert to rs
-        img.show_circles(
-            ra, dec, radius=r500 / 3600, coords_frame="world", color="green"
-        )
+            r500 = (m500 / (4.00 * np.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
+            da = get_da(z)
+            r500 /= da
+            if plot_r == "rs":
+                r500 /= float(
+                    cfg["model"]["structures"][mod_type]["parameters"]["c500"]["value"]
+                )  # Convert to rs
+            img.show_circles(
+                ra, dec, radius=r500 / 3600, coords_frame="world", color="green"
+            )
+
+        elif mod_type == "gnfw_rs":
+            for parameter in results.structures[i].parameters:
+                if str(parameter.name.lower()) == "rs" or str(parameter.name.lower()) == "r_s":
+                    rs = parameter.val
+                    break
+            img.show_circles(
+                ra, dec, radius=rs / 3600, coords_frame="world", color="green"
+            )
 
     return img
 
