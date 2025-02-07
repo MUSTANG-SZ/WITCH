@@ -678,7 +678,7 @@ def run_mcmc(
         comm=todvec.comm,
         key=key,
     )
-    flat_samples = chain.at[:].multiply(scale.at[to_fit].get())
+    flat_samples = chain.at[:,to_fit].multiply(scale.at[to_fit].get())
     if rank == 0:
         final_pars = final_pars.at[to_fit].set(jnp.median(flat_samples, axis=0).ravel())
         final_errs = final_errs.at[to_fit].set(jnp.std(flat_samples, axis=0).ravel())

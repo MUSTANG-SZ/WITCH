@@ -12,7 +12,7 @@ sim: True # If True use TODs to make noise and add a simulated cluster
 
 mcmc:
   run: True
-  num_steps: 1000
+  num_steps: 100
   sample_which: -1
 
 model:
@@ -73,5 +73,5 @@ model:
           priors: [1, 10]
         amp_g:
           value: 0.002
-          to_fit: True #[True, False, True, False]
+          to_fit: False #[True, False, True, False]
           priors: [0, .005]
