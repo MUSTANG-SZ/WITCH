@@ -23,15 +23,20 @@ from .utils import from_minkasi, from_minkasi_noise, from_minkasi_tod, to_minkas
 def load_tods(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> TODVec:
     rank = comm.Get_rank()
     nproc = comm.Get_size()
-    todroot = cfg["paths"]["tods"]
+    todroot = cfg.get("data", cfg["paths"]["tods"])
     if not os.path.isabs(todroot):
         todroot = os.path.join(
-            os.environ.get("MJ_TODROOT", os.environ["HOME"]), todroot
+            os.environ.get("WITCH_DATROOT", os.environ["HOME"]), todroot
         )
     todroot_dset = os.path.join(todroot, dset_name)
     if os.path.isdir(todroot_dset):
         todroot = todroot_dset
-    tod_names = glob.glob(os.path.join(todroot, cfg["paths"]["glob"]))
+    tod_names = glob.glob(
+        os.path.join(
+            todroot,
+            cfg["datasets"][dset_name].get("glob", cfg["paths"].get("glob", "*.fits")),
+        )
+    )
     bad_tod, _ = pbs.get_bad_tods(
         cfg["name"], ndo=cfg["paths"]["ndo"], odo=cfg["paths"]["odo"]
     )
@@ -77,6 +82,7 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
     skymap = minkasi.maps.SkyMap(lims, pixsize)
 
     return {
+        "mode": "tod",
         "lims": lims,
         "pixsize": pixsize,
         "skymap": skymap,
