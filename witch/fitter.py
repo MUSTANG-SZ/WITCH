@@ -208,7 +208,7 @@ def _run_fit(cfg, model, todvec, outdir, r, noise_class, noise_args, noise_kwarg
 
 
 def _run_mcmc(cfg, model, todvec, outdir, noise_class, noise_args, noise_kwargs):
-    print_once("Running MCMC") 
+    print_once("Running MCMC")
     init_pars = np.array(model.pars.copy())
     t1 = time.time()
     model, samples = run_mcmc(
