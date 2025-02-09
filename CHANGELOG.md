@@ -1,3 +1,14 @@
+## 8.5.0 (2025-02-09)
+
+### Feat
+
+- removing prior check
+
+### Fix
+
+- handle unfit params properly
+- wrong grad shape in _not_inf_grad
+
 ## 8.4.1 (2025-02-06)
 
 ### Fix
