@@ -107,7 +107,9 @@ def plot_cluster(
 
     fits_path = os.path.abspath(fits_path)
     if root is None:
-        root = os.path.split(os.path.split(os.path.split(fits_path)[0])[0])[0] #TODO: There's gotta be a better way!
+        root = os.path.split(os.path.split(os.path.split(fits_path)[0])[0])[
+            0
+        ]  # TODO: There's gotta be a better way!
 
     cfg_path = root + "/" + "config.yaml"
     cfg = load_config({}, cfg_path)
@@ -123,7 +125,7 @@ def plot_cluster(
             raise TypeError("Expect import name to be a string or a list")
 
     res_path = (
-        root 
+        root
         + "/"
         + str(sorted([file for file in os.listdir(root) if ".dill" in file])[-1])
     )
@@ -272,7 +274,10 @@ def plot_cluster(
 
         elif mod_type == "gnfw_rs":
             for parameter in results.structures[i].parameters:
-                if str(parameter.name.lower()) == "rs" or str(parameter.name.lower()) == "r_s":
+                if (
+                    str(parameter.name.lower()) == "rs"
+                    or str(parameter.name.lower()) == "r_s"
+                ):
                     rs = parameter.val
                     break
             img.show_circles(

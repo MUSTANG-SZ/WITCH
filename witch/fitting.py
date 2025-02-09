@@ -571,14 +571,6 @@ def run_mcmc(
         This also has the chi-squared of the estimated parameters.
     flat_samples : jax.Array
         Array of samples from running MCMC.
-        This has some samples discarded to account for burn in,
-        we either discard `int(2*tau_max)` samples where `tau_max` is
-        the autocorrelation time for the variable with the longest
-        autocorrelation time or `int(num_steps/25)` if there is an error
-        when estimating autocorrelation. We also thin by a a factor of
-        `int(tau_max/2)` or `int(num_steps/100)`.
-        This array has shape `(npar, nsamps)` where the rows are in
-        the same order as `model.pars`.
 
     """
     token = mpi4jax.barrier(comm=todvec.comm)
@@ -600,68 +592,61 @@ def run_mcmc(
     init_errs = jnp.zeros_like(model.pars)
     final_pars = init_pars.copy()
     final_errs = init_errs.copy()
-    npar = int(jnp.sum(jnp.array(to_fit)))
 
     prior_l, prior_u = model.priors
     scale = (jnp.abs(prior_l) + jnp.abs(prior_u)) / 2.0
     scale = jnp.where(scale == 0, 1, scale)
     init_pars = init_pars.at[:].multiply(1.0 / scale)
+    npar = jnp.sum(to_fit)
 
-    def _is_inf(pars, token, model, scale):
-        _ = (pars, token, model, scale, to_fit)
+    def _is_inf(pars, model):
+        _ = (pars, model)
         return -1 * jnp.inf
 
-    def _not_inf(pars, token, model, scale):
-        pars, token = mpi4jax.bcast(pars, 0, comm=todvec.comm, token=token)
+    def _not_inf(pars, model):
+        pars, _ = mpi4jax.bcast(pars, 0, comm=todvec.comm)
         temp_model = model.update(pars, init_errs, model.chisq)
         log_like = -0.5 * get_chisq(temp_model, todvec)
         return log_like
 
     @jax.jit
     def _log_prob(pars, model=model, init_pars=init_pars, scale=scale):
-        full_pars = init_pars.at[model.to_fit].set(pars)
+        full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)
         _, in_bounds = _prior_pars_fit(model.priors, full_pars, jnp.array(model.to_fit))
         log_prior = jnp.sum(
             jnp.where(in_bounds.at[model.to_fit].get(), 0, -1 * jnp.inf)
         )
-        token = 0
         return jax.lax.cond(
             jnp.isfinite(log_prior),
             _not_inf,
             _is_inf,
             full_pars,
-            token,
             model,
-            scale,
         )
 
-    def _is_inf_grad(pars, token, model, scale):
-        _ = (pars, token, model, scale, to_fit)
-        return jnp.inf * jnp.ones_like(pars)
+    def _is_inf_grad(pars, model, scale):
+        _ = (pars, model, scale)
+        return jnp.inf * jnp.ones(npar)
 
-    def _not_inf_grad(pars, token, model, scale):
-        pars, token = mpi4jax.bcast(pars, 0, comm=todvec.comm, token=token)
+    def _not_inf_grad(pars, model, scale):
+        pars, _ = mpi4jax.bcast(pars, 0, comm=todvec.comm)
         temp_model = model.update(pars, init_errs, model.chisq)
         grad = get_grad(temp_model, todvec)
         grad = grad.at[:].multiply(scale)
-        return grad.at[model.to_fit].get().ravel()
+        return grad.at[to_fit].get().ravel()
 
     @jax.jit
     def _log_prob_grad(pars, model=model, init_pars=init_pars, scale=scale):
-        full_pars = init_pars.at[model.to_fit].set(pars)
+        full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)
         _, in_bounds = _prior_pars_fit(model.priors, full_pars, jnp.array(model.to_fit))
-        log_prior = jnp.sum(
-            jnp.where(in_bounds.at[model.to_fit].get(), 0, -1 * jnp.inf)
-        )
-        token = 0
+        log_prior = jnp.sum(jnp.where(in_bounds.at[to_fit].get(), 0, -1 * jnp.inf))
         return jax.lax.cond(
             jnp.isfinite(log_prior),
             _not_inf_grad,
             _is_inf_grad,
             full_pars,
-            token,
             model,
             scale,
         )
@@ -669,7 +654,7 @@ def run_mcmc(
     key = jax.random.PRNGKey(0)
     key, token = mpi4jax.bcast(key, 0, comm=todvec.comm, token=token)
     chain = hmc(
-        init_pars,
+        init_pars.at[to_fit].get().ravel(),
         _log_prob,
         _log_prob_grad,
         num_steps=num_steps,
