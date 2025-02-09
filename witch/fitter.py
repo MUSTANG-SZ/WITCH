@@ -285,7 +285,12 @@ def _run_mcmc(cfg, model, dataset, outdir, noise_class, noise_args, noise_kwargs
         print_once("Saving samples to", samps_path)
         np.savez_compressed(samps_path, samples=samples)
         try:
-            corner.corner(samples, labels=model.par_names, truths=init_pars)
+            to_fit = np.array(model.to_fit)
+            corner.corner(
+                samples,
+                labels=np.array(model.par_names)[to_fit],
+                truths=init_pars[to_fit],
+            )
             plt.savefig(os.path.join(outdir, "corner.png"))
         except Exception as e:
             print_once(f"Failed to make corner plot with error: {str(e)}")
