@@ -65,8 +65,10 @@ def load_maps(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> SolutionSet:
 
 def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
     _ = (dset_name, cfg, mapset)
+    prefactor = eval(str(cfg["datasets"][dset_name]["prefactor"]))
     return {
         "mode": "map",
+        "prefactor", prefactor,
     }
 
 

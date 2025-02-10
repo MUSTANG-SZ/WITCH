@@ -81,6 +81,8 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
     pixsize = cfg.get("pix_size", 2.0 / wu.rad_to_arcsec)
     skymap = minkasi.maps.SkyMap(lims, pixsize)
 
+    prefactor = eval(str(cfg["datasets"][dset_name]["prefactor"]))
+
     return {
         "mode": "tod",
         "lims": lims,
@@ -91,6 +93,7 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
         "minkasi_noise_kwargs": noise_kwargs,
         "copy_noise": cfg["datasets"][dset_name]["copy_noise"],
         "xfer": cfg["datasets"][dset_name].get("xfer", ""),
+        "prefactor": prefactor,
     }
 
 

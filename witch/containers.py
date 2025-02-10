@@ -710,7 +710,7 @@ class Model:
             return dill.load(f)
 
     @classmethod
-    def from_cfg(cls, cfg: dict, beam: Optional[jax.Array] = None) -> Self:
+    def from_cfg(cls, cfg: dict, beam: Optional[jax.Array] = None, prefactor: Optional[float] = 1) -> Self:
         """
         Create an instance of model from a witcher config.
 
@@ -719,6 +719,9 @@ class Model:
         cfg : dict
             The config loaded into a dict.
         beam : Optional[Array], default: None
+            The beam of the experiment
+        prefactor : Optional[float], default: 1
+            Prefactor which accounts for unit conversions
 
         Returns
         -------
@@ -768,7 +771,7 @@ class Model:
             raise ValueError("Beam somehow still None!")
 
         n_rounds = cfg.get("n_rounds", 1)
-        dz = dz * eval(str(cfg["model"]["unit_conversion"]))
+        dz = dz * prefactor 
 
         structures = []
         for name, structure in cfg["model"]["structures"].items():

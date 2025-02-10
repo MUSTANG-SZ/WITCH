@@ -229,18 +229,19 @@ def _reestimate_noise(model, dataset, noise_class, noise_args, noise_kwargs, mod
 
 
 def _run_fit(
-    cfg, model, dataset, outdir, r, noise_class, noise_args, noise_kwargs, mode
+    cfgs, infos, models, datasets, outdir, r,
 ):
     model.cur_round = r
     to_fit = np.array(model.to_fit)
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
-    model, i, delta_chisq = fit_dataset(
-        model,
-        dataset,
+    #TODO: Modify this to account for fit_dataset changes
+    models, i, delta_chisq = fit_dataset(
+        models,
+        datasets,
         eval(str(cfg["fitting"].get("maxiter", "10"))),
         eval(str(cfg["fitting"].get("chitol", "1e-5"))),
-        mode,
+        infos,
     )
     _ = mpi4jax.barrier(comm=comm)
     t2 = time.time()
@@ -248,14 +249,15 @@ def _run_fit(
         f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}"
     )
 
+    #TODO: Modify to save all models
     print_once(model)
     _save_model(cfg, model, outdir, f"fit{r}")
 
+    #TODO: Modify to loop over all models
     dataset = _reestimate_noise(
-        model, dataset, noise_class, noise_args, noise_kwargs, mode
+        model, dataset, info["noise_class"], info["noise_args"], info["noise_kwargs"], info["mode"]
     )
     return model, dataset
-
 
 def _run_mcmc(cfg, model, dataset, outdir, noise_class, noise_args, noise_kwargs, mode):
     print_once("Running MCMC")
@@ -393,83 +395,101 @@ def main():
 
     # Get the functions needed to work with out dataset
     # TODO: make protocols for these and check them
-    dset_name = list(cfg["datasets"].keys())[0]
-    if "load_tods" in cfg["datasets"][dset_name]["funcs"]:
-        cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
-            "funcs"
-        ]["load_tods"]
-    elif "load_maps" in cfg["datasets"][dset_name]["funcs"]:
-        cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
-            "funcs"
-        ]["load_maps"]
-    load = eval(cfg["datasets"][dset_name]["funcs"]["load"])
-    get_info = eval(cfg["datasets"][dset_name]["funcs"]["get_info"])
-    make_beam = eval(cfg["datasets"][dset_name]["funcs"]["make_beam"])
-    preproc = eval(cfg["datasets"][dset_name]["funcs"]["preproc"])
-    postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
-    postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
+    dset_names = list(cfg["datasets"].keys())
+    models = []
+    datasets = []
+    cfgs = []
+    infos = []
+    for dset_name in dset_names:
+        if "load_tods" in cfg["datasets"][dset_name]["funcs"]:
+            cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
+                "funcs"
+            ]["load_tods"]
+        elif "load_maps" in cfg["datasets"][dset_name]["funcs"]:
+            cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
+                "funcs"
+            ]["load_maps"]
+        load = eval(cfg["datasets"][dset_name]["funcs"]["load"])
+        get_info = eval(cfg["datasets"][dset_name]["funcs"]["get_info"])
+        make_beam = eval(cfg["datasets"][dset_name]["funcs"]["make_beam"])
+        preproc = eval(cfg["datasets"][dset_name]["funcs"]["preproc"])
+        postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
+        postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
+    
+        # Get data
+        dataset = load(dset_name, cfg, comm)
+    
+        # Get any info we need specific to an expiriment
+        info = get_info(dset_name, cfg, dataset)
+    
+        # Get the beam
+        beam = make_beam(dset_name, cfg, info)
+    
+        # Define the model and get stuff setup fitting
+        if "model" in cfg:
+            model = Model.from_cfg(cfg, beam, info["prefactor"])
+        else:
+            model = None
+            print_once("No model defined, setting fit, sim, and sub to False")
+            cfg["fit"] = False
+            cfg["sim"] = False
+            cfg["sub"] = False
+    
+        # Setup noise
+        noise_class = eval(str(cfg["datasets"][dset_name]["noise"]["class"]))
+        noise_args = tuple(eval(str(cfg["datasets"][dset_name]["noise"]["args"])))
+        noise_kwargs = eval(str(cfg["datasets"][dset_name]["noise"]["kwargs"]))
+        info["noise_class"] = noise_class
+        info["noise_args"] = noise_args
+        info["noise_kwargs"] = noise_kwargs
 
-    # Get data
-    dataset = load(dset_name, cfg, comm)
+        if "base" in cfg.keys():
+            del cfg["base"]  # We've collated to the cfg files so no need to keep the base
 
-    # Get any info we need specific to an expiriment
-    info = get_info(dset_name, cfg, dataset)
+        # Process the data
+        preproc(dset_name, cfg, dataset, model, info)
+        if info["mode"] == "tod":
+            dataset = process_tods(
+                cfg,
+                dataset,
+                noise_class,
+                noise_args,
+                noise_kwargs,
+                model,
+                info.get("xfer", ""),
+            )
+        elif info["mode"] == "map":
+            dataset = process_maps(
+                cfg,
+                dataset,
+                noise_class,
+                noise_args,
+                noise_kwargs,
+                model,
+                info.get("xfer", ""),
+            )
+        dataset = jax.block_until_ready(dataset)
+        postproc(dset_name, cfg, dataset, model, info)
+        models.append(model)
+        datasets.append(dataset)
+        cfgs.append(cfg)
+        infos.append(info)
 
-    # Get the beam
-    beam = make_beam(dset_name, cfg, info)
+    #TODO: How to deal with multiple datasets/models here
+    outdir = get_outdir(cfgs[0], models[0])
+    os.makedirs(os.path.join(outdir, dset_names[0]), exist_ok=True)
+    for info in infos:
+        info["outdir"] = outdir
 
-    # Define the model and get stuff setup fitting
-    if "model" in cfg:
-        model = Model.from_cfg(cfg, beam)
-    else:
-        model = None
-        print_once("No model defined, setting fit, sim, and sub to False")
-        cfg["fit"] = False
-        cfg["sim"] = False
-        cfg["sub"] = False
-
-    # Setup noise
-    noise_class = eval(str(cfg["datasets"][dset_name]["noise"]["class"]))
-    noise_args = tuple(eval(str(cfg["datasets"][dset_name]["noise"]["args"])))
-    noise_kwargs = eval(str(cfg["datasets"][dset_name]["noise"]["kwargs"]))
-    info["noise_class"] = noise_class
-    info["noise_args"] = noise_args
-    info["noise_kwargs"] = noise_kwargs
-
-    # Get output
-    if "base" in cfg.keys():
-        del cfg["base"]  # We've collated to the cfg files so no need to keep the base
-    outdir = get_outdir(cfg, model)
-    os.makedirs(os.path.join(outdir, dset_name), exist_ok=True)
-    info["outdir"] = outdir
-
-    # Process the data
-    preproc(dset_name, cfg, dataset, model, info)
-    if info["mode"] == "tod":
-        dataset = process_tods(
-            cfg,
-            dataset,
-            noise_class,
-            noise_args,
-            noise_kwargs,
-            model,
-            info.get("xfer", ""),
-        )
-    elif info["mode"] == "map":
-        dataset = process_maps(
-            cfg,
-            dataset,
-            noise_class,
-            noise_args,
-            noise_kwargs,
-            model,
-            info.get("xfer", ""),
-        )
-    dataset = jax.block_until_ready(dataset)
-    postproc(dset_name, cfg, dataset, model, info)
 
     # Now we fit
-    if cfg["fit"]:
+    to_fit = False #TODO: More elegant way?
+    for cfg in cfgs:
+        if cfg["fit"]:
+            to_fit = True
+            break
+
+    if to_fit:
         if model is None:
             raise ValueError("Can't fit without a model defined!")
         if cfg["sim"]:
@@ -496,14 +516,11 @@ def main():
         for r in range(model.n_rounds):
             model, dataset = _run_fit(
                 cfg,
+                info
                 model,
                 dataset,
                 outdir,
-                r,
-                noise_class,
-                noise_args,
-                noise_kwargs,
-                info["mode"],
+                r, 
             )
             _ = mpi4jax.barrier(comm=comm)
 
