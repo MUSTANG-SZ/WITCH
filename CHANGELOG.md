@@ -1,3 +1,13 @@
+## 9.0.0 (2025-02-10)
+
+### Feat
+
+- add map based fitting
+
+### Fix
+
+- fix corner plot when mcmc is run with a subset of params
+
 ## 8.5.0 (2025-02-09)
 
 ### Feat
