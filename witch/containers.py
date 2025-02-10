@@ -12,6 +12,7 @@ import dill
 import jax
 import jax.numpy as jnp
 import numpy as np
+from astropy.wcs import WCS
 from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
 from scipy import interpolate
@@ -519,6 +520,72 @@ class Model:
         )
 
         return tod, grad_tod
+
+    def to_map(self, x: jax.Array, y: jax.Array) -> jax.Array:
+        """
+        Project the model into a map.
+
+        Parameters
+        ----------
+        x : jax.Array
+            The RA of the map at each pixel.
+        y : jax.Array
+            Th Dec of the map at each pixel.
+
+        Returns
+        -------
+        omap : jax.Array
+            The model projected onto a map.
+            Same shape as x.
+        """
+        omap = wu.bilinear_interp(
+            x.ravel(), y.ravel(), self.xyz[0].ravel(), self.xyz[1].ravel(), self.model
+        ).reshape(x.shape)
+        omap = omap - jnp.mean(omap)
+        return omap
+
+    def to_map_grad(self, x: jax.Array, y: jax.Array) -> tuple[jax.Array, jax.Array]:
+        """
+        Project the model into a map.
+
+        Parameters
+        ----------
+        x : jax.Array
+            The RA of the map at each pixel.
+        y : jax.Array
+            Th Dec of the map at each pixel.
+
+        Returns
+        -------
+        omap : jax.Array
+            The model projected onto a map.
+            Same shape as x.
+        grad_map : jax.Array
+            The gradient of each parameter projected onto a map.
+            Has shape `(npar,) + x.shape`.
+        """
+        model, grad = self.model_grad
+        omap = wu.bilinear_interp(
+            x.ravel(), y.ravel(), self.xyz[0].ravel(), self.xyz[1].ravel(), model
+        ).reshape(x.shape)
+        omap = omap - jnp.mean(omap)
+        grad_map = jnp.array(
+            [
+                (
+                    wu.bilinear_interp(
+                        x.ravel(),
+                        y.ravel(),
+                        self.xyz[0].ravel(),
+                        self.xyz[1].ravel(),
+                        _grad,
+                    ).reshape(x.shape)
+                    if _fit
+                    else jnp.zeros_like(omap)
+                )
+                for _grad, _fit in zip(grad, self.to_fit)
+            ]
+        )
+        return omap, grad_map
 
     def update(self, vals: jax.Array, errs: jax.Array, chisq: jax.Array) -> Self:
         """

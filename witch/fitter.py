@@ -24,7 +24,7 @@ from typing_extensions import Any, Unpack
 
 from . import utils as wu
 from .containers import Model, Model_xfer
-from .fitting import fit_tods, objective, run_mcmc
+from .fitting import fit_dataset, objective, run_mcmc
 
 comm = MPI.COMM_WORLD.Clone()
 
@@ -113,6 +113,47 @@ def process_tods(cfg, todvec, noise_class, noise_args, noise_kwargs, model, xfer
     return todvec
 
 
+def process_maps(cfg, mapset, noise_class, noise_args, noise_kwargs, model, xfer=""):
+    sim = cfg.get("sim", False)
+    if model is None and sim:
+        raise ValueError("model cannot be None when simming!")
+    model_cur = model
+    if xfer:
+        model_cur = Model_xfer.from_parent(model, xfer)
+
+    for imap in mapset:
+        if sim:
+            if jnp.all(imap.ivar == 0):
+                print_once(
+                    f"ivar for map {imap.name} is all 0! Filling with a dummy value but you should check your maps!"
+                )
+                imap.ivar = imap.ivar.at[:].set(cfg.get("default_ivar", 1e8))
+            scale = 1.0 / jnp.sqrt(imap.ivar)
+            avg_scale = np.nanmean(scale)
+            scale = jnp.nan_to_num(
+                scale, nan=avg_scale, posinf=avg_scale, neginf=avg_scale
+            )
+            imap.data = (
+                jax.random.normal(
+                    jax.random.key(0), shape=imap.data.shape, dtype=imap.data.dtype
+                )
+                * scale
+            )
+            if not cfg["wnoise"]:
+                print_once(
+                    "Only white noise currently supported for map sims... simming map with white noise"
+                )
+
+            x, y = imap.xy
+            pred = model_cur.to_map(
+                x * wu.rad_to_arcsec, y * wu.rad_to_arcsec
+            ).block_until_ready()
+            imap.data = imap.data + pred
+        imap.data = imap.data - jnp.mean(imap.data)
+        imap.compute_noise(noise_class, None, *noise_args, **noise_kwargs)
+    return mapset
+
+
 def get_outdir(cfg, model):
     outroot = cfg["paths"]["outroot"]
     if not os.path.isabs(outroot):
@@ -174,25 +215,32 @@ def _save_model(cfg, model, outdir, desc_str):
         yaml.dump(final, file)
 
 
-def _reestimate_noise(model, todvec, noise_class, noise_args, noise_kwargs):
-    for tod in todvec:
-        pred = model.to_tod(
-            tod.x * wu.rad_to_arcsec, tod.y * wu.rad_to_arcsec
-        ).block_until_ready()
-        tod.compute_noise(noise_class, tod.data - pred, *noise_args, **noise_kwargs)
-    return todvec
+def _reestimate_noise(model, dataset, noise_class, noise_args, noise_kwargs, mode):
+    for data in dataset:
+        if mode == "tod":
+            pred = model.to_tod(
+                data.x * wu.rad_to_arcsec, data.y * wu.rad_to_arcsec
+            ).block_until_ready()
+        else:
+            x, y = data.xy
+            pred = model.to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
+        data.compute_noise(noise_class, data.data - pred, *noise_args, **noise_kwargs)
+    return dataset
 
 
-def _run_fit(cfg, model, todvec, outdir, r, noise_class, noise_args, noise_kwargs):
+def _run_fit(
+    cfg, model, dataset, outdir, r, noise_class, noise_args, noise_kwargs, mode
+):
     model.cur_round = r
     to_fit = np.array(model.to_fit)
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
-    model, i, delta_chisq = fit_tods(
+    model, i, delta_chisq = fit_dataset(
         model,
-        todvec,
+        dataset,
         eval(str(cfg["fitting"].get("maxiter", "10"))),
         eval(str(cfg["fitting"].get("chitol", "1e-5"))),
+        mode,
     )
     _ = mpi4jax.barrier(comm=comm)
     t2 = time.time()
@@ -203,21 +251,24 @@ def _run_fit(cfg, model, todvec, outdir, r, noise_class, noise_args, noise_kwarg
     print_once(model)
     _save_model(cfg, model, outdir, f"fit{r}")
 
-    todvec = _reestimate_noise(model, todvec, noise_class, noise_args, noise_kwargs)
-    return model, todvec
+    dataset = _reestimate_noise(
+        model, dataset, noise_class, noise_args, noise_kwargs, mode
+    )
+    return model, dataset
 
 
-def _run_mcmc(cfg, model, todvec, outdir, noise_class, noise_args, noise_kwargs):
+def _run_mcmc(cfg, model, dataset, outdir, noise_class, noise_args, noise_kwargs, mode):
     print_once("Running MCMC")
     init_pars = np.array(model.pars.copy())
     t1 = time.time()
     model, samples = run_mcmc(
         model,
-        todvec,
+        dataset,
         num_steps=int(cfg["mcmc"].get("num_steps", 5000)),
         num_leaps=int(cfg["mcmc"].get("num_leaps", 10)),
         step_size=float(cfg["mcmc"].get("step_size", 0.02)),
         sample_which=int(cfg["mcmc"].get("sample_which", -1)),
+        mode=mode,
     )
     _ = mpi4jax.barrier(comm=comm)
     t2 = time.time()
@@ -234,7 +285,12 @@ def _run_mcmc(cfg, model, todvec, outdir, noise_class, noise_args, noise_kwargs)
         print_once("Saving samples to", samps_path)
         np.savez_compressed(samps_path, samples=samples)
         try:
-            corner.corner(samples, labels=model.par_names, truths=init_pars)
+            to_fit = np.array(model.to_fit)
+            corner.corner(
+                samples,
+                labels=np.array(model.par_names)[to_fit],
+                truths=init_pars[to_fit],
+            )
             plt.savefig(os.path.join(outdir, "corner.png"))
         except Exception as e:
             print_once(f"Failed to make corner plot with error: {str(e)}")
@@ -242,8 +298,10 @@ def _run_mcmc(cfg, model, todvec, outdir, noise_class, noise_args, noise_kwargs)
         # samples are incomplete on non root procs
         del samples
 
-    todvec = _reestimate_noise(model, todvec, noise_class, noise_args, noise_kwargs)
-    return model, todvec
+    dataset = _reestimate_noise(
+        model, dataset, noise_class, noise_args, noise_kwargs, mode
+    )
+    return model, dataset
 
 
 def deep_merge(a: dict, b: dict) -> dict:
@@ -279,6 +337,28 @@ def load_config(start_cfg, cfg_path):
 
 
 def main():
+    if "MJ_TODROOT" in os.environ:
+        if "WITCH_DATROOT" not in os.environ:
+            print_once(
+                "You are using MJ_TODROOT, this is depreciated in favor of WITCH_DATROOT. Setting WITCH_DATROOT to the value of MJ_TODROOT..."
+            )
+            os.environ["WITCH_DATROOT"] = os.environ["MJ_TODROOT"]
+        else:
+            print_once(
+                "Both WITCH_DATROOT and MJ_TODROOT provided! MJ_TODROOT is depreciated, using WITCH_DATROOT..."
+            )
+
+    if "MJ_OUTROOT" in os.environ:
+        if "WITCH_OUTROOT" not in os.environ:
+            print_once(
+                "You are using MJ_OUTROOT, this is depreciated in favor of WITCH_OUTROOT. Setting WITCH_OUTROOT to the value of MJ_OUTROOT..."
+            )
+            os.environ["WITCH_OUTROOT"] = os.environ["MJ_OUTROOT"]
+        else:
+            print_once(
+                "Both WITCH_OUTROOT and MJ_OUTROOT provided! MJ_OUTROOT is depreciated, using WITCH_OUTROOT..."
+            )
+
     parser = _make_parser()
     args = parser.parse_args()
 
@@ -314,18 +394,26 @@ def main():
     # Get the functions needed to work with out dataset
     # TODO: make protocols for these and check them
     dset_name = list(cfg["datasets"].keys())[0]
-    load_tods = eval(cfg["datasets"][dset_name]["funcs"]["load_tods"])
+    if "load_tods" in cfg["datasets"][dset_name]["funcs"]:
+        cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
+            "funcs"
+        ]["load_tods"]
+    elif "load_maps" in cfg["datasets"][dset_name]["funcs"]:
+        cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
+            "funcs"
+        ]["load_maps"]
+    load = eval(cfg["datasets"][dset_name]["funcs"]["load"])
     get_info = eval(cfg["datasets"][dset_name]["funcs"]["get_info"])
     make_beam = eval(cfg["datasets"][dset_name]["funcs"]["make_beam"])
     preproc = eval(cfg["datasets"][dset_name]["funcs"]["preproc"])
     postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
     postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
 
-    # Get TODs
-    todvec = load_tods(dset_name, cfg, comm)
+    # Get data
+    dataset = load(dset_name, cfg, comm)
 
     # Get any info we need specific to an expiriment
-    info = get_info(dset_name, cfg, todvec)
+    info = get_info(dset_name, cfg, dataset)
 
     # Get the beam
     beam = make_beam(dset_name, cfg, info)
@@ -352,15 +440,33 @@ def main():
     if "base" in cfg.keys():
         del cfg["base"]  # We've collated to the cfg files so no need to keep the base
     outdir = get_outdir(cfg, model)
+    os.makedirs(os.path.join(outdir, dset_name), exist_ok=True)
     info["outdir"] = outdir
 
-    # Process the TODs
-    preproc(dset_name, cfg, todvec, model, info)
-    todvec = process_tods(
-        cfg, todvec, noise_class, noise_args, noise_kwargs, model, info["xfer"]
-    )
-    todvec = jax.block_until_ready(todvec)
-    postproc(dset_name, cfg, todvec, model, info)
+    # Process the data
+    preproc(dset_name, cfg, dataset, model, info)
+    if info["mode"] == "tod":
+        dataset = process_tods(
+            cfg,
+            dataset,
+            noise_class,
+            noise_args,
+            noise_kwargs,
+            model,
+            info.get("xfer", ""),
+        )
+    elif info["mode"] == "map":
+        dataset = process_maps(
+            cfg,
+            dataset,
+            noise_class,
+            noise_args,
+            noise_kwargs,
+            model,
+            info.get("xfer", ""),
+        )
+    dataset = jax.block_until_ready(dataset)
+    postproc(dset_name, cfg, dataset, model, info)
 
     # Now we fit
     if cfg["fit"]:
@@ -380,21 +486,37 @@ def main():
 
         print_once("Compiling objective function")
         t0 = time.time()
-        model, *_ = objective(model.pars, model, todvec, model.errs)
+        model, *_ = objective(model.pars, model, dataset, model.errs, info["mode"])
         print_once(f"Took {time.time() - t0} s to compile")
+        # import ipdb; ipdb.set_trace()
 
         message = str(model).split("\n")
         message[1] = "Starting pars:"
         print_once("\n".join(message))
         for r in range(model.n_rounds):
-            model, todvec = _run_fit(
-                cfg, model, todvec, outdir, r, noise_class, noise_args, noise_kwargs
+            model, dataset = _run_fit(
+                cfg,
+                model,
+                dataset,
+                outdir,
+                r,
+                noise_class,
+                noise_args,
+                noise_kwargs,
+                info["mode"],
             )
             _ = mpi4jax.barrier(comm=comm)
 
         if "mcmc" in cfg and cfg["mcmc"].get("run", True):
-            model, todvec = _run_mcmc(
-                cfg, model, todvec, outdir, noise_class, noise_args, noise_kwargs
+            model, dataset = _run_mcmc(
+                cfg,
+                model,
+                dataset,
+                outdir,
+                noise_class,
+                noise_args,
+                noise_kwargs,
+                info["mode"],
             )
             _ = mpi4jax.barrier(comm=comm)
         # Save final pars
@@ -412,6 +534,6 @@ def main():
         with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
             yaml.dump(final, file)
 
-    postfit(dset_name, cfg, todvec, model, info)
+    postfit(dset_name, cfg, dataset, model, info)
 
     print_once("Outputs can be found in", outdir)
