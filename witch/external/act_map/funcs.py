@@ -69,7 +69,7 @@ def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
     prefactor = eval(str(cfg["datasets"][dset_name]["prefactor"]))
     return {
         "mode": "map",
-        "prefactor", prefactor,
+        "prefactor": prefactor,
     }
 
 
