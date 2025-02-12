@@ -1,11 +1,11 @@
 # Base config to merge into
 # If an absolute path is given then it is used
 # Otherwise it is assumed to me reative to the directory of this file
-base: "base_unit.yaml"
+base: "base_joint_unit.yaml"
 
 # Cluster name
 # Used both for the output path as well as to load presets
-name: "SIM"
+name: "SIM_JOINT"
 sim: True # If True use TODs to make noise and add a simulated cluster
 
 # Define the model
