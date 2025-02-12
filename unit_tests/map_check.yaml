@@ -55,6 +55,8 @@ datasets:
       amp1: 0.9808 # Amplitude of the first gaussian
       fwhm2: "90" # FWHM in arcseconds of the second gaussian
       amp2: 0.0192 # Amplitude of the second gaussian
+    prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_RJ(97e9, cfg['constants']['Te'])*wu.XMpc/wu.me)"
+         
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "SIM_MCMC"
