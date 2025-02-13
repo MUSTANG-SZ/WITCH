@@ -1,3 +1,9 @@
+## 9.0.1 (2025-02-13)
+
+### Fix
+
+- properly exit excess mpi procs and abstract out file list in prep for mpi planning when joint fitting
+
 ## 9.0.0 (2025-02-10)
 
 ### Feat
