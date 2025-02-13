@@ -78,6 +78,22 @@ def _make_parser() -> argp.ArgumentParser:
     return parser
 
 
+def _mpi_fsplit(fnames, comm):
+    rank = comm.Get_rank()
+    nproc = comm.Get_size()
+    if nproc > len(fnames):
+        nproc = len(fnames)
+        group = comm.Get_group()
+        new_group = group.Incl(list(range(nproc)))
+        new_comm = comm.Create(new_group)
+        if rank >= len(fnames):
+            print(f"More procs than files!, exiting process {rank}")
+            MPI.Finalize()
+            sys.exit(0)
+        comm = new_comm
+    return fnames[rank::nproc], comm
+
+
 def process_tods(cfg, todvec, noise_class, noise_args, noise_kwargs, model, xfer=""):
     rank = todvec.comm.Get_rank()
     nproc = todvec.comm.Get_size()
@@ -402,6 +418,7 @@ def main():
         cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
             "funcs"
         ]["load_maps"]
+    get_files = eval(cfg["datasets"][dset_name]["funcs"]["get_files"])
     load = eval(cfg["datasets"][dset_name]["funcs"]["load"])
     get_info = eval(cfg["datasets"][dset_name]["funcs"]["get_info"])
     make_beam = eval(cfg["datasets"][dset_name]["funcs"]["make_beam"])
@@ -410,7 +427,10 @@ def main():
     postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
 
     # Get data
-    dataset = load(dset_name, cfg, comm)
+    fnames = get_files(dset_name, cfg)
+    global comm
+    fnames, comm = _mpi_fsplit(fnames, comm)
+    dataset = load(dset_name, cfg, fnames, comm)
 
     # Get any info we need specific to an expiriment
     info = get_info(dset_name, cfg, dataset)

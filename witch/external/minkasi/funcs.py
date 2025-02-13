@@ -20,9 +20,7 @@ from . import mapmaking as mm
 from .utils import from_minkasi, from_minkasi_noise, from_minkasi_tod, to_minkasi
 
 
-def load_tods(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> TODVec:
-    rank = comm.Get_rank()
-    nproc = comm.Get_size()
+def get_files(dset_name: str, cfg: dict) -> list:
     todroot = cfg.get("data", cfg["paths"]["tods"])
     if not os.path.isabs(todroot):
         todroot = os.path.join(
@@ -46,16 +44,13 @@ def load_tods(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> TODVec:
     tod_names.sort()
     ntods = cfg["datasets"][dset_name].get("ntods", None)
     tod_names = tod_names[:ntods]
-    if nproc > len(tod_names):
-        minkasi.nproc = len(tod_names)
-        nproc = len(tod_names)
-    if rank >= len(tod_names):
-        print(f"More procs than TODs!, exiting process {rank}")
-        sys.exit(0)
-    tod_names = tod_names[rank::nproc]
 
+    return tod_names
+
+
+def load_tods(dset_name: str, cfg: dict, fnames: list, comm: MPI.Intracomm) -> TODVec:
     tods = []
-    for fname in tod_names:
+    for fname in fnames:
         dat = minkasi.tods.io.read_tod_from_fits(fname)
         minkasi.tods.processing.truncate_tod(dat)
         minkasi.tods.processing.downsample_tod(dat)

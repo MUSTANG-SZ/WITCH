@@ -14,9 +14,7 @@ from witch.containers import Model
 from witch.fitter import print_once
 
 
-def load_maps(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> SolutionSet:
-    rank = comm.Get_rank()
-    nproc = comm.Get_size()
+def get_files(dset_name: str, cfg: dict) -> list:
     maproot = cfg.get("data", cfg["paths"]["maps"])
     if not os.path.isabs(maproot):
         maproot = os.path.join(
@@ -37,16 +35,19 @@ def load_maps(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> SolutionSet:
     nmaps = cfg["datasets"][dset_name].get("nmaps", None)
     map_names = map_names[:nmaps]
     ivar_names = ivar_names[:nmaps]
-    if nproc > len(map_names):
-        nproc = len(map_names)
-    if rank >= len(map_names):
-        print(f"More procs than maps!, exiting process {rank}")
-        sys.exit(0)
-    map_names = map_names[rank::nproc]
-    ivar_names = ivar_names[rank::nproc]
+    fnames = [(m, i) for m, i in zip(map_names, ivar_names)]
+    return fnames
+
+
+def load_maps(
+    dset_name: str, cfg: dict, fnames: list, comm: MPI.Intracomm
+) -> SolutionSet:
+    map_names = [f[0] for f in fnames]
+    ivar_names = [f[1] for f in fnames]
+    map_glob = cfg["datasets"][dset_name].get("glob", "*_map.fits")
 
     imaps = []
-    for fname in map_names:
+    for fname, iname in zip(map_names, ivar_names):
         name = os.path.basename(fname)[: (1 - len(map_glob))]
         # The actual map
         f: fits.HDUList = fits.open(fname)
@@ -54,7 +55,7 @@ def load_maps(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> SolutionSet:
         dat = jnp.array(f[0].data.copy().T)  # type: ignore
         f.close()
         # The ivar map
-        f: fits.HDUList = fits.open(fname)
+        f: fits.HDUList = fits.open(iname)
         ivar = jnp.array(f[0].data.copy().T)  # type: ignore
         f.close()
         imaps += [maps.WCSMap(name, dat, comm, wcs, "nn", ivar=ivar)]
