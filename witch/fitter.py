@@ -270,8 +270,7 @@ def _run_fit(
     #TODO: Modify to save all models
     print_once(models[0])
     _save_model(cfgs[0], models[0], outdir, f"fit{r}")
-
-    #TODO: Modify to loop over all models
+    
     dataset = _reestimate_noise(
         models, datasets, infos, modes,
     )
