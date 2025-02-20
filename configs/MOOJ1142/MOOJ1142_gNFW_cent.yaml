@@ -2,6 +2,8 @@
 # If an absolute path is given then it is used
 # Otherwise it is assumed to me reative to the directory of this file
 base: "MOOJ1142_base.yaml"
+n_rounds: 1
+n_tods: 10
 
 # Cluster name
 # Used both for the output path as well as to load presets
@@ -9,7 +11,16 @@ name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
 paths:
-  subdir: "xray_cent" # Subdirectory to use
+  subdir: "xray_cent_mcmc" # Subdirectory to use
+
+datasets:
+  mustang2:
+   ntods: 10 
+
+mcmc:
+  run: True
+  num_steps: 1000
+  sample_which: -1
 
 coords:
   x0: "Angle('11 42 46.82 hours').to(u.radian).value" #centroid
@@ -29,39 +40,64 @@ model:
       parameters:
         dx_1: # Name of the first parameter
           value: 0.0 # Value to use/start at, will be evaled
+          to_fit: True
+          priors: [-9., 9.]
         dy_1:
           value: 0.0
+          to_fit: True
+          priors: [-9., 9.]
         dz_1:
           value: 0.0
+          to_fit: True
+          priors: [-9., 9.]
         r1:
           value: 90.0
           to_fit: True
           priors: [0.,300.]
         P0:
           value: 3.202
+          to_fit: True
+          priors: [3., 4.]
         c500:
           value: 1.083
+          to_fit: True
+          priors: [0., 2.]
         m500:
           value: "8.4e14"
           to_fit: True
+          priors: ["1e14", "4e15"]
         gamma:
           value: 0.3798
           to_fit: True
           priors: [0., 2.] 
         alpha:
           value: 1.4063
+          to_fit: True
+          priors: [0., 3.]
         beta:
           value: 5.4905
+          to_fit: True
+          priors: [4., 7.]
         z:
           value: 1.19
+          to_fit: True
+          priors: [1.18, 1.20]
     ps_gauss:
       structure: "gaussian"
       parameters:
         dx_g:
-          value: 11.06 
+          value: 11.06
+          to_fit: True
+          priors: [2.06, 20.06]
         dy_g:
           value: -5.98
+          to_fit: True
+          priors: [-14.98, 4.98]
         sigma:
           value: 4.0
+          to_fit: True
+          priors: [2.0, 6.0]
         amp_g:
           value: 0.00128582673
+          to_fit: True
+          priors: [0., 0.1]

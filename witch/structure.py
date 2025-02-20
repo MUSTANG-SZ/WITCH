@@ -230,8 +230,7 @@ def egnfw(
     r"""
     Elliptical gNFW pressure profile in 3d.
     This function does not include smoothing or declination stretch
-    which should be applied at the end.
-    TODO: Add units to add parameters!
+    which should be applied at the end. 
 
     Once the grid is transformed the profile is computed as:
 
