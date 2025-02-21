@@ -412,6 +412,9 @@ def main():
         else:
             raise TypeError("Expect import name to be a string or a list")
 
+
+    # Get the functions needed to work with out dataset
+    # TODO: make protocols for these and check them
     dset_names = list(cfg["datasets"].keys())
     models = []
     datasets = []
@@ -435,6 +438,7 @@ def main():
         postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
     
         # Get data
+
         global comm
         fnames, comm = _mpi_fsplit(fnames, comm)
         dataset = load(dset_name, cfg, fnames, comm)
