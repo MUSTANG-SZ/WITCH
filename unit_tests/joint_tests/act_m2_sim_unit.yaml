@@ -25,12 +25,12 @@ model:
           # Set to True for the rounds where we want to fit this param
           # If you set it to just True of False it will be that for all rounds
           # If not provided assumed to be False
-          to_fit: [True, True, False, True] 
+          to_fit: True 
           # Range to prior to, will be evaled
           priors: [-9.0, 9.0]
         dy_1:
           value: 0.0
-          to_fit: [True, True, False, True]
+          to_fit: True 
           priors: [-9.0, 9.0]
         dz_1:
           value: 0.0 
@@ -51,15 +51,15 @@ model:
         gamma:
           value: .3081 
           priors: [.05, 1]
-          to_fit: True
+          to_fit: True 
         alpha:
           value: 1.551 
           priors: [.05, 3]
-          to_fit: True 
+          to_fit: False 
         beta:
           value: 5.4905 
           priors: [.05, 10]
-          to_fit: True 
+          to_fit: False 
         z:
           value: 0.97 
           priors: [.9, 1]

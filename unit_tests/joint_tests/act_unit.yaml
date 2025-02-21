@@ -77,7 +77,7 @@ datasets:
       amp1: 0.9808 # Amplitude of the first gaussian
       fwhm2: "270" # FWHM in arcseconds of the second gaussian
       amp2: 0.0192 # Amplitude of the second gaussian
-    prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_CMB(97e9, cfg['constants']['Te'])*wu.XMpc/wu.me)"
+    prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_CMB(97e9, cfg['constants']['Te'])*wu.XMpc/wu.me)*1e6"
 
 # Setting for the fitter
 fitting:

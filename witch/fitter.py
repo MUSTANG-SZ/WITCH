@@ -320,7 +320,7 @@ def _run_mcmc(cfg, model, dataset, outdir, noise_class, noise_args, noise_kwargs
         del samples
 
     dataset = _reestimate_noise(
-        model, dataset, noise_class, noise_args, noise_kwargs, mode
+        models, datasets, infos, modes,
     )
     return model, dataset
 
