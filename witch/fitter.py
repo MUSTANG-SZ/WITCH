@@ -438,7 +438,7 @@ def main():
         postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
     
         # Get data
-
+        fnames = get_files(dset_name, cfg)
         global comm
         fnames, comm = _mpi_fsplit(fnames, comm)
         dataset = load(dset_name, cfg, fnames, comm)
