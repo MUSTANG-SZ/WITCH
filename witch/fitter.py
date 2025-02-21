@@ -430,6 +430,7 @@ def main():
             cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
                 "funcs"
             ]["load_maps"]
+        get_files = eval(cfg["datasets"][dset_name]["funcs"]["get_files"])
         load = eval(cfg["datasets"][dset_name]["funcs"]["load"])
         get_info = eval(cfg["datasets"][dset_name]["funcs"]["get_info"])
         make_beam = eval(cfg["datasets"][dset_name]["funcs"]["make_beam"])
