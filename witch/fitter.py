@@ -144,8 +144,9 @@ def process_maps(cfg, mapset, noise_class, noise_args, noise_kwargs, model, xfer
                     f"ivar for map {imap.name} is all 0! Filling with a dummy value but you should check your maps!"
                 )
                 imap.ivar = imap.ivar.at[:].set(cfg.get("default_ivar", 1e8))
-            scale = 1.0 / jnp.sqrt(imap.ivar)
+            scale = 1.0 / jnp.sqrt(imap.ivar) 
             avg_scale = np.nanmean(scale)
+            print("Map noise: ", avg_scale)
             scale = jnp.nan_to_num(
                 scale, nan=avg_scale, posinf=avg_scale, neginf=avg_scale
             )
@@ -165,6 +166,7 @@ def process_maps(cfg, mapset, noise_class, noise_args, noise_kwargs, model, xfer
                 x * wu.rad_to_arcsec, y * wu.rad_to_arcsec
             ).block_until_ready()
             imap.data = imap.data + pred
+        print("Map scale: ", jnp.mean(jnp.abs(imap.data)))
         imap.data = imap.data - jnp.mean(imap.data)
         imap.compute_noise(noise_class, None, *noise_args, **noise_kwargs)
     return mapset

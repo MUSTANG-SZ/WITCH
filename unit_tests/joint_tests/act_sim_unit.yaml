@@ -1,11 +1,11 @@
 # Base config to merge into
 # If an absolute path is given then it is used
 # Otherwise it is assumed to me reative to the directory of this file
-base: "act_m2_unit.yaml"
+base: "act_unit.yaml"
 
 # Cluster name
 # Used both for the output path as well as to load presets
-name: "SIM_JOINT"
+name: "SIM_ACT"
 sim: True # If True use TODs to make noise and add a simulated cluster
 
 # Define the model
@@ -51,11 +51,11 @@ model:
         gamma:
           value: .3081 
           priors: [.05, 1]
-          to_fit: True
+          to_fit: False 
         alpha:
           value: 1.551 
           priors: [.05, 3]
-          to_fit: True 
+          to_fit: False
         beta:
           value: 5.4905 
           priors: [.05, 10]
