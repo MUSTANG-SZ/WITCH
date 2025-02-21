@@ -1,0 +1,92 @@
+fit: True # If True fit the cluster, overridden by command line
+sub: True # If True the cluster before mapmaking, overridden by command line
+n_rounds: 4 # How many rounds of fitting to try
+
+# Constants for use in the model and grid construction
+# Can be used as a dict ie: constants['z']
+# All are passed through eval
+constants:
+  Te: 5.0
+  freq: "90e9"
+  z: 0.451
+
+paths:
+  # Location of TOD files
+  # If an absolute path then that is used directly
+  # If a relative path taken relative to MJ_TODROOT
+  maps: "ACT1407"
+  tods: "ACT1407"
+  glob: "Signal_TOD*.fits" # Pattern to search for TODs with
+  ndo: False # ?
+  odo: False # ?
+  # Directory to use as root for outputs
+  # If an absolute path then that is used directly
+  # If a relative path taken relative to MJ_OUTROOT
+  outroot: ""
+  subdir: "" # Subdirectory to use
+  # Final outdir will be something like: outroot/name/model_name/subdir
+
+# Defines the grid
+# All are passed through eval
+# A word on the grid: the grid is the set of points
+# at which the model is evaluated. This is not the same as
+# the map. The model called anywhere outside the grid will 
+# evaluate to 0, so make sure the grid covers the model
+# where there is significant power. Smaller grids have the
+# advantage of better performance. dr sets the x/y gird
+# size and should not be smaller than 1/2 the pixel size
+# to avoid sub-pixel interpolation errors. dz is the 
+# LoS spacing and only needs to be set small enough
+# to avoid excess uncertainty in the numerical integration.
+# x0/y0 should be set to the center of the cluster (or
+# other feature of interest) and defines the grid center.
+# All pixel space references will be made wrt this point.
+coords:
+  r_map: "5.0*60" # Radial size of grid in arcseconds 
+  dr: "2.0" # Pixel size of grid in x and y in arcseconds
+  dz: 2.0 # Pixel size along the LOS, if not provided dr is used
+  x0: "Angle('14:07:06.0 hours').to(u.radian).value"
+  y0: "Angle('10:48:30.00 degrees').to(u.radian).value"
+
+# Settings that define the datasets we are working with 
+# For now you can only have one, but this structure is in prep for the future
+datasets:
+  act:
+    # These fields need to be set regardless of the dataset
+    # This can rely on the imports section
+    noise: # Noise to use while fitting
+      class: "jm.NoiseWhite"
+      args: "['self.ivar']"
+      kwargs: "{}"
+    funcs: # Functions needed to interact with your dataset
+      # All of these need to exist and be importable
+      # If you don't have them in a library add the relevant file to your $PYTHONPATH
+      # Check docs for the needed signatures
+      load: "amf.load_maps"
+      get_info: "amf.get_info"
+      make_beam: "amf.make_beam"
+      preproc: "amf.preproc"
+      postproc: "amf.postproc"
+      postfit: "amf.postfit"
+    # Defines the beam
+    # All are passed through eval
+    # Note that these define a double gaussian
+    beam:
+      fwhm1: "180" # FWHM in arcseconds of the first gaussian
+      amp1: 0.9808 # Amplitude of the first gaussian
+      fwhm2: "270" # FWHM in arcseconds of the second gaussian
+      amp2: 0.0192 # Amplitude of the second gaussian
+    prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_CMB(97e9, cfg['constants']['Te'])*wu.XMpc/wu.me)"
+
+# Setting for the fitter
+fitting:
+  maxiter: 10 # Maximum fit iterations per round
+  chitol: 1e-5 # Change in chisq that we consider to be converged
+
+imports:
+  astropy.units: u
+  astropy.coordinates: [Angle]
+  witch.external.minkasi.funcs: mf
+  jitkasi.noise: jn
+  jitkasi.solutions.maps: jm
+  witch.external.act_map.funcs: amf

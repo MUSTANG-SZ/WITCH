@@ -434,7 +434,7 @@ def fit_datasets(
 
     return models, i, delta_chisq
 
-@partial(jax.jit, static_argnums=(2, 3, 4))
+#@partial(jax.jit, static_argnums=(2, 3, 4))
 def fit_dataset(
     model: Model,
     dataset: TODVec | SolutionSet,

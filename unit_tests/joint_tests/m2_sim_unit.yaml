@@ -55,11 +55,11 @@ model:
         alpha:
           value: 1.551 
           priors: [.05, 3]
-          to_fit: True
+          to_fit: False 
         beta:
           value: 5.4905 
           priors: [.05, 10]
-          to_fit: False 
+          to_fit: True 
         z:
           value: 0.97 
           priors: [.9, 1]
