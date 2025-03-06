@@ -16,6 +16,7 @@ from witch import grid
 from witch.containers import Model
 from witch.fitter import print_once, process_tods
 
+from ...objective import chisq_objective
 from . import mapmaking as mm
 from .utils import from_minkasi, from_minkasi_noise, from_minkasi_tod, to_minkasi
 
@@ -78,6 +79,7 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
 
     return {
         "mode": "tod",
+        "objective": chisq_objective,
         "lims": lims,
         "pixsize": pixsize,
         "skymap": skymap,

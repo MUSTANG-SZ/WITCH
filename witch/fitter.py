@@ -17,14 +17,12 @@ import matplotlib.pyplot as plt
 import mpi4jax
 import numpy as np
 import yaml
-from astropy.convolution import Gaussian2DKernel, convolve
-from minkasi.tools import presets_by_source as pbs
 from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
 from . import utils as wu
 from .containers import Model, Model_xfer
-from .fitting import fit_dataset, objective, run_mcmc
+from .fitting import fit_dataset, run_mcmc
 
 comm = MPI.COMM_WORLD.Clone()
 
@@ -245,7 +243,16 @@ def _reestimate_noise(model, dataset, noise_class, noise_args, noise_kwargs, mod
 
 
 def _run_fit(
-    cfg, model, dataset, outdir, r, noise_class, noise_args, noise_kwargs, mode
+    cfg,
+    model,
+    dataset,
+    outdir,
+    r,
+    noise_class,
+    noise_args,
+    noise_kwargs,
+    mode,
+    objective,
 ):
     model.cur_round = r
     to_fit = np.array(model.to_fit)
@@ -254,6 +261,7 @@ def _run_fit(
     model, i, delta_chisq = fit_dataset(
         model,
         dataset,
+        objective,
         eval(str(cfg["fitting"].get("maxiter", "10"))),
         eval(str(cfg["fitting"].get("chitol", "1e-5"))),
         mode,
@@ -273,13 +281,16 @@ def _run_fit(
     return model, dataset
 
 
-def _run_mcmc(cfg, model, dataset, outdir, noise_class, noise_args, noise_kwargs, mode):
+def _run_mcmc(
+    cfg, model, dataset, outdir, noise_class, noise_args, noise_kwargs, mode, objective
+):
     print_once("Running MCMC")
     init_pars = np.array(model.pars.copy())
     t1 = time.time()
     model, samples = run_mcmc(
         model,
         dataset,
+        objective,
         num_steps=int(cfg["mcmc"].get("num_steps", 5000)),
         num_leaps=int(cfg["mcmc"].get("num_leaps", 10)),
         step_size=float(cfg["mcmc"].get("step_size", 0.02)),
@@ -506,9 +517,9 @@ def main():
 
         print_once("Compiling objective function")
         t0 = time.time()
-        model, *_ = objective(model.pars, model, dataset, model.errs, info["mode"])
+        chisq, *_ = info["objective"](model, dataset, info["mode"])
+        model = model.update(model.pars, model.errs, chisq)
         print_once(f"Took {time.time() - t0} s to compile")
-        # import ipdb; ipdb.set_trace()
 
         message = str(model).split("\n")
         message[1] = "Starting pars:"
@@ -524,6 +535,7 @@ def main():
                 noise_args,
                 noise_kwargs,
                 info["mode"],
+                info["objective"],
             )
             _ = mpi4jax.barrier(comm=comm)
 
@@ -537,6 +549,7 @@ def main():
                 noise_args,
                 noise_kwargs,
                 info["mode"],
+                info["objective"],
             )
             _ = mpi4jax.barrier(comm=comm)
         # Save final pars
