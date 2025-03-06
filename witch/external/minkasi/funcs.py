@@ -21,7 +21,7 @@ from .utils import from_minkasi, from_minkasi_noise, from_minkasi_tod, to_minkas
 
 
 def get_files(dset_name: str, cfg: dict) -> list:
-    todroot = cfg.get("data", cfg["paths"]["tods"])
+    todroot = cfg["paths"].get("data", cfg["paths"]["tods"])
     if not os.path.isabs(todroot):
         todroot = os.path.join(
             os.environ.get("WITCH_DATROOT", os.environ["HOME"]), todroot
