@@ -1007,14 +1007,14 @@ but there are a two key points that make it nice to use:</p>
 <p>For the most part the config files are easy to make by using one of the files in the <code>configs</code> folder as a base.
 However there are some subtleties and advanced configurations that will eventually get documented properly.</p>
 <h2 id="installation">Installation</h2>
-<p>To install the <code>WITCH</code> library first clone this repository and from within it run:</p>
-<pre><code>pip install .
-</code></pre>
-<p>Note that this will only install <code>WITCH</code> and its dependencies,
-to also install dependencies for <code>fitter.py</code> do:</p>
-<pre><code>pip install .[fitter]
-</code></pre>
-<p>If you are going to be actively working on the <code>WITCH</code> library you probably want to include the <code>-e</code> flag.</p>
+<p>To install the <code>WITCH</code> library first clone this repository and from within it run:
+<div class="highlight"><pre><span></span><code>pip install .
+</code></pre></div>
+Note that this will only install <code>WITCH</code> and its dependencies,
+to also install dependencies for <code>fitter.py</code> do:
+<div class="highlight"><pre><span></span><code>pip install .[fitter]
+</code></pre></div>
+If you are going to be actively working on the <code>WITCH</code> library you probably want to include the <code>-e</code> flag.</p>
 <p>All the dependencies should be installed by <code>pip</code> with the one exception being <code>minkasi</code> itself (only needed for <code>fitter.py</code>).
 Instructions on installing <code>minkasi</code> can be found <a href="https://github.com/sievers/minkasi#installation">here</a>.</p>
 <h2 id="contributing">Contributing</h2>
@@ -1058,9 +1058,9 @@ It outputs a trace file understandable <a href="https://ui.perfetto.dev/">perfet
 metadata about the software and hardware used while profiling.
 To use non default settings use <code>python profile.py --help</code> but in most cases the default settings are fine.</p>
 <p>The profiling script has some additional dependencies.
-To install them run:</p>
-<pre><code>pip install .[profile]
-</code></pre>
+To install them run:
+<div class="highlight"><pre><span></span><code>pip install .[profile]
+</code></pre></div></p>
 
 
 
