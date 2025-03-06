@@ -895,7 +895,7 @@ even easier down the line.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>There is some backwards compatibility for older file organization schemes
-in parts of <code>WITCH</code> they wil not be covered here and are not reccomended
+in parts of <code>WITCH</code>, they wil not be covered here and are not reccomended
 going forward.</p>
 </div>
 <p>Technically you can organize your files however you like and provide <code>WITCH</code>
@@ -1215,16 +1215,15 @@ at Stage 3.</p>
 </code></pre></div>
 <p>depending on your dataset the outputs will vary but the key things to look out for is the fit parameters after each
 round of fitting. For example below is the output from fitting a simple gaussian:</p>
-<p>```
-ps_gauss:
+<div class="highlight"><pre><span></span><code>ps_gauss:
 Round 1 out of 1
         ps_gauss:
-                dx_g<em> [-9.0, 9.0] = [-0.09016553] ± [0.12899712] ([0.69897324] σ)
-                dy_g</em> [-9.0, 9.0] = [-0.14666429] ± [0.12809413] ([1.1449728] σ)
+                dx_g* [-9.0, 9.0] = [-0.09016553] ± [0.12899712] ([0.69897324] σ)
+                dy_g* [-9.0, 9.0] = [-0.14666429] ± [0.12809413] ([1.1449728] σ)
                 sigma* [1.0, 10.0] = [4.03847427] ± [0.06408161] ([63.02080388] σ)
                 amp_g [0.0, 0.005] = [0.002] ± [0.] ([inf] σ)
 chisq is 3578656.971706165
-````</p>
+</code></pre></div>
 <p>After each round of fitting the model will be saved using <a href="https://pypi.org/project/dill/"><code>dill</code></a> and
 can be loaded with <a href="https://mustang-sz.github.io/WITCH/latest/reference/containers/#witch.containers.Model.load"><code>Model.load</code></a>,
 the path to each file will be printed after each round. A <code>yaml</code> file with the fit model parameters will also be saved
