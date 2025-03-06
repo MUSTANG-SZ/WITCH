@@ -26,7 +26,7 @@ even easier down the line.
 !!! warning
 
     There is some backwards compatibility for older file organization schemes
-    in parts of `WITCH` they wil not be covered here and are not reccomended
+    in parts of `WITCH`, they wil not be covered here and are not reccomended
     going forward.
 
 Technically you can organize your files however you like and provide `WITCH`
@@ -407,7 +407,7 @@ Round 1 out of 1
                 sigma* [1.0, 10.0] = [4.03847427] ± [0.06408161] ([63.02080388] σ)
                 amp_g [0.0, 0.005] = [0.002] ± [0.] ([inf] σ)
 chisq is 3578656.971706165
-````
+```
 
 After each round of fitting the model will be saved using [`dill`](https://pypi.org/project/dill/) and
 can be loaded with [`Model.load`](https://mustang-sz.github.io/WITCH/latest/reference/containers/#witch.containers.Model.load),
