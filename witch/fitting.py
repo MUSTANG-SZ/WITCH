@@ -368,7 +368,7 @@ def _success(
     lmd = jnp.where(lmd < 0.2, 0, lmd / jnp.sqrt(2))
     return new_model, new_grad, new_curve, new_delta_chisq, lmd
 
-@partial(jax.jit, static_argnums=(2, 3, 4))
+#@partial(jax.jit, static_argnums=(2, 3, 4))
 def fit_datasets(
     models: tuple[Model],
     datasets: tuple[TODVec] | tuple[SolutionSet], #TODO: not sure typing is right on this, should be tuple[TODVec | SolutionSet]?
