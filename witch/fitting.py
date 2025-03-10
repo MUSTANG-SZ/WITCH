@@ -122,7 +122,7 @@ def _success(
     return new_model, new_grad, new_curve, new_delta_chisq, lmd
 
 
-# @partial(jax.jit, static_argnums=(2, 3))
+@partial(jax.jit, static_argnums=(2, 3))
 def fit_dataset(
     model: Model,
     dataset: DataSet,
@@ -155,12 +155,7 @@ def fit_dataset(
     delta_chisq : float
         The final delta chisq.
     """
-    # TODO: make DataSet a pytree to it can go into jitting funcs properly
-    mode = dataset.mode
-    datavec = dataset.datavec
-    objective = dataset.objective
-
-    if mode not in ["tod", "map"]:
+    if dataset.mode not in ["tod", "map"]:
         raise ValueError("Invalid mode")
     zero = jnp.array(0.0)
 
@@ -182,8 +177,8 @@ def fit_dataset(
         errs = jnp.where(to_fit, jnp.sqrt(jnp.diag(invscale(curve_use))), 0)
         # Now lets get an updated model
         new_model = deepcopy(model).update(new_pars, model.errs, model.chisq)
-        new_chisq, new_grad, new_curve = objective(
-            new_model, datavec, mode, True, True, True
+        new_chisq, new_grad, new_curve = dataset.objective(
+            new_model, dataset.datavec, dataset.mode, True, True, True
         )
         new_model = new_model.update(new_pars, errs, new_chisq)
 
@@ -207,7 +202,9 @@ def fit_dataset(
 
     pars, _ = _prior_pars_fit(model.priors, model.pars, jnp.array(model.to_fit))
     model = model.update(pars, model.errs, model.chisq)
-    chisq, grad, curve = objective(model, datavec, mode, True, True, True)
+    chisq, grad, curve = dataset.objective(
+        model, dataset.datavec, dataset.mode, True, True, True
+    )
     model = model.update(pars, model.errs, chisq)
     i, delta_chisq, _, model, *_ = jax.lax.while_loop(
         _cond_func, _body_func, (0, jnp.inf, zero, model, curve, grad)
@@ -384,13 +381,8 @@ def run_mcmc(
         Array of samples from running MCMC.
 
     """
-    # TODO: make DataSet a pytree to it can go into jitting funcs properly
-    mode = dataset.mode
-    datavec = dataset.datavec
-    objective = dataset.objective
-
-    token = mpi4jax.barrier(comm=datavec.comm)
-    rank = datavec.comm.Get_rank()
+    token = mpi4jax.barrier(comm=dataset.datavec.comm)
+    rank = dataset.datavec.comm.Get_rank()
 
     if sample_which >= 0 and sample_which < model.n_rounds:
         model.cur_round = sample_which
@@ -420,9 +412,11 @@ def run_mcmc(
         return -1 * jnp.inf
 
     def _not_inf(pars, model):
-        pars, _ = mpi4jax.bcast(pars, 0, comm=datavec.comm)
+        pars, _ = mpi4jax.bcast(pars, 0, comm=dataset.datavec.comm)
         temp_model = model.update(pars, init_errs, model.chisq)
-        chisq, *_ = objective(temp_model, datavec, mode, True, False, False)
+        chisq, *_ = dataset.objective(
+            temp_model, dataset.datavec, dataset.mode, True, False, False
+        )
         log_like = -0.5 * chisq
         return log_like
 
@@ -447,9 +441,11 @@ def run_mcmc(
         return jnp.inf * jnp.ones(npar)
 
     def _not_inf_grad(pars, model, scale):
-        pars, _ = mpi4jax.bcast(pars, 0, comm=datavec.comm)
+        pars, _ = mpi4jax.bcast(pars, 0, comm=dataset.datavec.comm)
         temp_model = model.update(pars, init_errs, model.chisq)
-        _, grad, _ = objective(temp_model, datavec, mode, False, True, False)
+        _, grad, _ = dataset.objective(
+            temp_model, dataset.datavec, dataset.mode, False, True, False
+        )
         grad = grad.at[:].multiply(scale)
         return grad.at[to_fit].get().ravel()
 
@@ -469,7 +465,7 @@ def run_mcmc(
         )
 
     key = jax.random.PRNGKey(0)
-    key, token = mpi4jax.bcast(key, 0, comm=datavec.comm, token=token)
+    key, token = mpi4jax.bcast(key, 0, comm=dataset.datavec.comm, token=token)
     chain = hmc(
         init_pars.at[to_fit].get().ravel(),
         _log_prob,
@@ -477,19 +473,23 @@ def run_mcmc(
         num_steps=num_steps,
         num_leaps=num_leaps,
         step_size=step_size,
-        comm=datavec.comm,
+        comm=dataset.datavec.comm,
         key=key,
     )
     flat_samples = chain.at[:].multiply(scale.at[to_fit].get())
     if rank == 0:
         final_pars = final_pars.at[to_fit].set(jnp.median(flat_samples, axis=0).ravel())
         final_errs = final_errs.at[to_fit].set(jnp.std(flat_samples, axis=0).ravel())
-    final_pars, token = mpi4jax.bcast(final_pars, 0, comm=datavec.comm, token=token)
-    final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=datavec.comm, token=token)
+    final_pars, token = mpi4jax.bcast(
+        final_pars, 0, comm=dataset.datavec.comm, token=token
+    )
+    final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=dataset.datavec.comm, token=token)
     model = model.update(
         final_pars.block_until_ready(), final_errs.block_until_ready(), model.chisq
     )
-    chisq, *_ = objective(model, datavec, mode, True, False, False)
+    chisq, *_ = dataset.objective(
+        model, dataset.datavec, dataset.mode, True, False, False
+    )
     model = model.update(final_pars, final_errs, chisq)
 
     return model, flat_samples

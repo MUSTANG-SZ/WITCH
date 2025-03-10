@@ -455,12 +455,15 @@ def main():
         cfg["sub"] = False
 
     # Setup noise
-    dataset.noise_class = eval(str(cfg["datasets"][dset_name]["noise"]["class"]))
-    dataset.noise_args = tuple(eval(str(cfg["datasets"][dset_name]["noise"]["args"])))
-    dataset.noise_kwargs = eval(str(cfg["datasets"][dset_name]["noise"]["kwargs"]))
-    dataset.info["noise_class"] = dataset.noise_class
-    dataset.info["noise_args"] = dataset.noise_args
-    dataset.info["noise_kwargs"] = dataset.noise_kwargs
+    dataset.info["noise_class"] = eval(
+        str(cfg["datasets"][dset_name]["noise"]["class"])
+    )
+    dataset.info["noise_args"] = tuple(
+        eval(str(cfg["datasets"][dset_name]["noise"]["args"]))
+    )
+    dataset.info["noise_kwargs"] = eval(
+        str(cfg["datasets"][dset_name]["noise"]["kwargs"])
+    )
 
     # Make sure we have the dataset set up properly
     dataset.check_completeness()

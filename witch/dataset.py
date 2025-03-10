@@ -8,6 +8,7 @@ from typing import Protocol, Self, runtime_checkable
 
 import numpy as np
 from jax import Array
+from jax.tree_util import register_pytree_node_class
 from jitkasi.noise import NoiseModel
 from jitkasi.solutions import SolutionSet
 from jitkasi.tod import TODVec
@@ -260,6 +261,7 @@ class PostFit(Protocol):
         ...
 
 
+@register_pytree_node_class
 @dataclass
 class DataSet:
     """
@@ -290,15 +292,6 @@ class DataSet:
         The data vector for this data.
         This will be a `jitkasi` container class.
         This field is not part of the initialization function.
-    noise_class : NoiseModel
-        The class of the noise model that will be used for this dataset.
-        This field is not part of the initialization function.
-    noise_args : tuple
-        Positional arguments to be used by the noise model.
-        This field is not part of the initialization function.
-    noise_kwargs : dict
-        Keyword arguments to be used by the noise model.
-        This field is not part of the initialization function.
     """
 
     name: str
@@ -311,9 +304,6 @@ class DataSet:
     postfit: PostFit
     info: dict = field(init=False)
     datavec: DataVec = field(init=False)
-    noise_class: NoiseModel = field(init=False)
-    noise_args: tuple = field(init=False)
-    noise_kwargs: dict = field(init=False)
 
     def __post_init__(self: Self):
         assert isinstance(self.get_files, GetFiles)
@@ -361,6 +351,45 @@ class DataSet:
         """
         return self.info["objective"]
 
+    @property
+    def noise_class(self: Self) -> NoiseModel:
+        """
+        Get the noise class for this dataset.
+
+        Returns
+        -------
+        noise_class : NoiseModel
+            The class of the noise model that will be used for this dataset.
+            This field is not part of the initialization function.
+        """
+        return self.info["noise_class"]
+
+    @property
+    def noise_args(self: Self) -> tuple:
+        """
+        Get the noise arguments for this dataset.
+
+        Returns
+        -------
+        noise_args : tuple
+            Positional arguments to be used by the noise model.
+            This field is not part of the initialization function.
+        """
+        return self.info["noise_args"]
+
+    @property
+    def noise_kwargs(self: Self) -> tuple:
+        """
+        Get the noise keyword arguments for this dataset.
+
+        Returns
+        -------
+        noise_kwargs : dict
+            Keyword arguments to be used by the noise model.
+            This field is not part of the initialization function.
+        """
+        return self.info["noise_kwargs"]
+
     def check_completeness(self: Self):
         """
         Check if all fields are actually populated and raise an error if not.
@@ -395,3 +424,40 @@ class DataSet:
             raise ValueError("Dataset info contained invalid mode")
         if not isinstance(self.info["objective"], ObjectiveFunc):
             raise ValueError("Dataset info contained invalid objective function")
+
+    # Functions for making this a pytree
+    # Don't call this on your own
+    def tree_flatten(self) -> tuple[tuple, tuple]:
+        if "datavec" in self.__dict__:
+            children = (self.datavec,)
+        else:
+            children = (None,)
+        aux_data = (
+            self.name,
+            self.get_files,
+            self.load,
+            self.get_info,
+            self.make_beam,
+            self.preproc,
+            self.postproc,
+            self.postfit,
+        )
+        if "info" in self.__dict__:
+            aux_data += (self.info,)
+        else:
+            aux_data += (None,)
+
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children) -> Self:
+        (datavec,) = children
+        name = aux_data[0]
+        funcs = aux_data[1:8]
+        info = aux_data[8]
+        dataset = cls(name, *funcs)
+        if datavec is not None:
+            dataset.datavec = datavec
+        if info is not None:
+            dataset.info = info
+        return dataset
