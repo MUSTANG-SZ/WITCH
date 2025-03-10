@@ -4,6 +4,7 @@ import os
 import jax.numpy as jnp
 from astropy.io import fits
 from astropy.wcs import WCS
+from jax import Array
 from jitkasi.solutions import SolutionSet, maps
 from mpi4py import MPI
 
@@ -72,7 +73,7 @@ def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
     }
 
 
-def make_beam(dset_name: str, cfg: dict, info: dict):
+def make_beam(dset_name: str, cfg: dict, info: dict) -> Array:
     # TODO: Maybe just load from a file?
     _ = info
     dr = eval(str(cfg["coords"]["dr"]))
