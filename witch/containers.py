@@ -670,11 +670,13 @@ class Model:
         else:
             raise ValueError("Error: {} not in structure names".format(struct_name))
 
-        self.__dict__.pop("to_fit_ever")
-        self.__dict__.pop("n_struct")
-        self.__dict__.pop("priors")
-        self.__dict__.pop("par_names")
-        self.__dict__.pop("model")
+        to_pop = ["to_fit_ever", "n_struct", "priors", "par_names"]
+        for key in self.__dict__.keys():
+            if key in to_pop: #Pop keys if they are in dict
+                self.__dict__.pop(key)
+
+        self.__dict__.pop("model", None)
+        self.__dict__.pop("model_grad", None)
         self.__post_init__()
 
     def save(self, path: str):
