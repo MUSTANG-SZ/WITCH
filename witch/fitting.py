@@ -6,14 +6,11 @@ from typing import Callable
 import jax
 import jax.numpy as jnp
 import mpi4jax
-from jitkasi.solutions import SolutionSet
-from jitkasi.tod import TODVec
 from mpi4py import MPI
 from tqdm import tqdm
 
 from .containers import Model
 from .dataset import DataSet
-from .objective import ObjectiveFunc
 
 
 @jax.jit
