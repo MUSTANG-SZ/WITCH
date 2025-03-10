@@ -82,7 +82,7 @@ starting with some very basic information that we can can use as defaults for th
 ```yaml
 name: "RXJ1347" # The name of the cluster/project
 fit: True # If True fit the cluster, overridden by command line
-sub: True # If True the cluster before mapmaking, overridden by command line
+sub: True # If True subtract the model in the posfit stage 
 n_rounds: 4 # How many rounds of fitting to try
 sim: False # Set to True of we are running a simulation
 ```
