@@ -11,8 +11,8 @@ from jitkasi.tod import TODVec
 from mpi4py import MPI
 from tqdm import tqdm
 
-from . import utils as wu
 from .containers import Model
+from .dataset import DataSet
 from .objective import ObjectiveFunc
 
 
@@ -125,14 +125,12 @@ def _success(
     return new_model, new_grad, new_curve, new_delta_chisq, lmd
 
 
-@partial(jax.jit, static_argnums=(2, 3, 4, 5))
+# @partial(jax.jit, static_argnums=(2, 3))
 def fit_dataset(
     model: Model,
-    dataset: TODVec | SolutionSet,
-    objective: ObjectiveFunc,
+    dataset: DataSet,
     maxiter: int = 10,
     chitol: float = 1e-5,
-    mode: str = "tod",
 ) -> tuple[Model, int, float]:
     """
     Fit a model to TODs.
@@ -143,19 +141,13 @@ def fit_dataset(
     ----------
     model : Model
         The model object that defines the model and grid we are fitting with.
-    dataset : TODVec | SolutionSet
-        The data to fit.
-        The `dataset.comm` object is used to fit in an MPI aware way.
-    objective : ObjectiveFunc
-        The objective function to use.
-        See the `ObjectiveFunc` protocol for required signature.
+    dataset : DataSet
+        The dataset to fit.
+        The `dataset.datavec.comm` object is used to fit in an MPI aware way.
     maxiter : int, default: 10
         The maximum number of iterations to fit.
     chitol : float, default: 1e-5
         The delta chisq to use as the convergence criteria.
-    mode : str, default: "tod"
-        The type of data we compile this function for.
-        Should be either "tod" or "map".
 
     Returns
     -------
@@ -166,6 +158,11 @@ def fit_dataset(
     delta_chisq : float
         The final delta chisq.
     """
+    # TODO: make DataSet a pytree to it can go into jitting funcs properly
+    mode = dataset.mode
+    datavec = dataset.datavec
+    objective = dataset.objective
+
     if mode not in ["tod", "map"]:
         raise ValueError("Invalid mode")
     zero = jnp.array(0.0)
@@ -189,7 +186,7 @@ def fit_dataset(
         # Now lets get an updated model
         new_model = deepcopy(model).update(new_pars, model.errs, model.chisq)
         new_chisq, new_grad, new_curve = objective(
-            new_model, dataset, mode, True, True, True
+            new_model, datavec, mode, True, True, True
         )
         new_model = new_model.update(new_pars, errs, new_chisq)
 
@@ -213,7 +210,7 @@ def fit_dataset(
 
     pars, _ = _prior_pars_fit(model.priors, model.pars, jnp.array(model.to_fit))
     model = model.update(pars, model.errs, model.chisq)
-    chisq, grad, curve = objective(model, dataset, mode, True, True, True)
+    chisq, grad, curve = objective(model, datavec, mode, True, True, True)
     model = model.update(pars, model.errs, chisq)
     i, delta_chisq, _, model, *_ = jax.lax.while_loop(
         _cond_func, _body_func, (0, jnp.inf, zero, model, curve, grad)
@@ -339,13 +336,11 @@ def hmc(
 
 def run_mcmc(
     model: Model,
-    dataset: TODVec | SolutionSet,
-    objective: ObjectiveFunc,
+    dataset: DataSet,
     num_steps: int = 5000,
     num_leaps: int = 10,
     step_size: float = 0.02,
     sample_which: int = -1,
-    mode: str = "tod",
 ) -> tuple[Model, jax.Array]:
     """
     Run MCMC using the `emcee` package to estimate the posterior for our model.
@@ -362,11 +357,9 @@ def run_mcmc(
     model : Model
         The model to run MCMC on.
         We expect that all parameters in this model have priors defined.
-    dataset : TODVec | SolutionSet
-        The data to compute the likelihood of the model with.
-    objective : ObjectiveFunc
-        The objective function to use.
-        See the `ObjectiveFunc` protocol for required signature.
+    dataset : DataSet
+        The dataset to compute the model posterior with.
+        The `dataset.datavec.comm` object is used to fit in an MPI aware way.
     num_steps : int, default: 5000
         The number of steps to run MCMC for.
     num_leaps: int, default: 10
@@ -382,9 +375,6 @@ def run_mcmc(
         in the last round of fitting.
         If this is -2 then any parameters that were ever fit will be sampled.
         If this is <= -3 or >= `model.n_rounds` then all parameters are sampled.
-    mode : str, default: "tod"
-        The type of data to run this function on.
-        Should be either "tod" or "map".
 
     Returns
     -------
@@ -397,8 +387,13 @@ def run_mcmc(
         Array of samples from running MCMC.
 
     """
-    token = mpi4jax.barrier(comm=dataset.comm)
-    rank = dataset.comm.Get_rank()
+    # TODO: make DataSet a pytree to it can go into jitting funcs properly
+    mode = dataset.mode
+    datavec = dataset.datavec
+    objective = dataset.objective
+
+    token = mpi4jax.barrier(comm=datavec.comm)
+    rank = datavec.comm.Get_rank()
 
     if sample_which >= 0 and sample_which < model.n_rounds:
         model.cur_round = sample_which
@@ -428,9 +423,9 @@ def run_mcmc(
         return -1 * jnp.inf
 
     def _not_inf(pars, model):
-        pars, _ = mpi4jax.bcast(pars, 0, comm=dataset.comm)
+        pars, _ = mpi4jax.bcast(pars, 0, comm=datavec.comm)
         temp_model = model.update(pars, init_errs, model.chisq)
-        chisq, *_ = objective(temp_model, dataset, mode, True, False, False)
+        chisq, *_ = objective(temp_model, datavec, mode, True, False, False)
         log_like = -0.5 * chisq
         return log_like
 
@@ -455,9 +450,9 @@ def run_mcmc(
         return jnp.inf * jnp.ones(npar)
 
     def _not_inf_grad(pars, model, scale):
-        pars, _ = mpi4jax.bcast(pars, 0, comm=dataset.comm)
+        pars, _ = mpi4jax.bcast(pars, 0, comm=datavec.comm)
         temp_model = model.update(pars, init_errs, model.chisq)
-        _, grad, _ = objective(temp_model, dataset, mode, False, True, False)
+        _, grad, _ = objective(temp_model, datavec, mode, False, True, False)
         grad = grad.at[:].multiply(scale)
         return grad.at[to_fit].get().ravel()
 
@@ -477,7 +472,7 @@ def run_mcmc(
         )
 
     key = jax.random.PRNGKey(0)
-    key, token = mpi4jax.bcast(key, 0, comm=dataset.comm, token=token)
+    key, token = mpi4jax.bcast(key, 0, comm=datavec.comm, token=token)
     chain = hmc(
         init_pars.at[to_fit].get().ravel(),
         _log_prob,
@@ -485,19 +480,19 @@ def run_mcmc(
         num_steps=num_steps,
         num_leaps=num_leaps,
         step_size=step_size,
-        comm=dataset.comm,
+        comm=datavec.comm,
         key=key,
     )
     flat_samples = chain.at[:].multiply(scale.at[to_fit].get())
     if rank == 0:
         final_pars = final_pars.at[to_fit].set(jnp.median(flat_samples, axis=0).ravel())
         final_errs = final_errs.at[to_fit].set(jnp.std(flat_samples, axis=0).ravel())
-    final_pars, token = mpi4jax.bcast(final_pars, 0, comm=dataset.comm, token=token)
-    final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=dataset.comm, token=token)
+    final_pars, token = mpi4jax.bcast(final_pars, 0, comm=datavec.comm, token=token)
+    final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=datavec.comm, token=token)
     model = model.update(
         final_pars.block_until_ready(), final_errs.block_until_ready(), model.chisq
     )
-    chisq, *_ = objective(model, dataset, mode, True, False, False)
+    chisq, *_ = objective(model, datavec, mode, True, False, False)
     model = model.update(final_pars, final_errs, chisq)
 
     return model, flat_samples

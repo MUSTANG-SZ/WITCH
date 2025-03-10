@@ -1,15 +1,19 @@
 """
-Protocols that define the spec for external functions.
+Module for dataset container and protocols for defining
+the spec of the required functions for all datasets.
 """
 
-from typing import Protocol, Self, runtime_checkable
+from dataclasses import dataclass, field
+from typing import Optional, Protocol, Self, runtime_checkable
 
 from jax import Array
+from jitkasi.noise import NoiseModel
 from jitkasi.solutions import SolutionSet
 from jitkasi.tod import TODVec
 from mpi4py import MPI
 
 from .containers import Model
+from .objective import ObjectiveFunc
 
 DataVec = TODVec | SolutionSet
 
@@ -253,3 +257,105 @@ class PostFit(Protocol):
             Dictionairy containing dataset information.
         """
         ...
+
+
+@dataclass
+class DataSet:
+    """
+    Class for storing a dataset.
+
+    Attributes
+    ----------
+    name : str
+        The name of the dataset.
+    get_files : GetFiles
+        The function to get the file list for this dataset.
+    load : Load
+        The function to load data for this dataset.
+    get_info : GetInfo
+        The function to get the info dict for this dataset.
+    make_beam : MakeBeam
+        The function to make the beam for this dataset.
+    preproc : PreProc
+        The function to run preprocessing for this dataset.
+    postproc : PostProc
+        The function to run postprocessing for this dataset.
+    postfit : PostFit
+        The function to run after fitting this dataset.
+    info : dict
+        The info dict for this dataset.
+        This field is not part of the initialization function.
+    datavec : DataVec
+        The data vector for this data.
+        This will be a `jitkasi` container class.
+        This field is not part of the initialization function.
+    noise_class : NoiseModel
+        The class of the noise model that will be used for this dataset.
+        This field is not part of the initialization function.
+    noise_args : tuple
+        Positional arguments to be used by the noise model.
+        This field is not part of the initialization function.
+    noise_kwargs : dict
+        Keyword arguments to be used by the noise model.
+        This field is not part of the initialization function.
+    """
+
+    name: str
+    get_files: GetFiles
+    load: Load
+    get_info: GetInfo
+    make_beam: MakeBeam
+    preproc: PreProc
+    postproc: PostProc
+    postfit: PostFit
+    info: dict = field(init=False)
+    datavec: DataVec = field(init=False)
+    noise_class: NoiseModel = field(init=False)
+    noise_args: tuple = field(init=False)
+    noise_kwargs: dict = field(init=False)
+
+    def __post_init__(self: Self):
+        assert isinstance(self.get_files, GetFiles)
+        assert isinstance(self.load, Load)
+        assert isinstance(self.get_info, GetInfo)
+        assert isinstance(self.make_beam, MakeBeam)
+        assert isinstance(self.preproc, PreProc)
+        assert isinstance(self.postproc, PostProc)
+        assert isinstance(self.postfit, PostFit)
+
+    def __setattr__(self, name, value):
+        if name == "info":
+            if "mode" not in value:
+                raise ValueError("Cannot set dataset info without a 'mode' field")
+            if value["mode"] not in ["tod", "map"]:
+                raise ValueError("Dataset info contained invalid mode")
+            if "objective" not in value:
+                raise ValueError("Cannot set dataset info without an 'objective' field")
+            if not isinstance(value["objective"], ObjectiveFunc):
+                raise ValueError("Dataset info contained invalid objective function")
+        return super().__setattr__(name, value)
+
+    @property
+    def mode(self: Self) -> str:
+        """
+        Get the mode for this dataset.
+        Will be `tod` or `map`.
+
+        Returns
+        -------
+        mode : str
+            The dataset mode.
+        """
+        return self.info["mode"]
+
+    @property
+    def objective(self: Self) -> ObjectiveFunc:
+        """
+        Get the objective function for this dataset.
+
+        Returns
+        -------
+        objective : ObjectiveFunc
+            The objective function.
+        """
+        return self.info["objective"]

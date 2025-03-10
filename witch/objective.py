@@ -9,7 +9,7 @@ applied as needed to the non chi-squared distributions.
 """
 
 from functools import partial
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 import jax
 import jax.numpy as jnp
@@ -23,12 +23,12 @@ from . import utils as wu
 from .containers import Model
 
 
-# TODO: make runtime_checkable and add safety checks?
+@runtime_checkable
 class ObjectiveFunc(Protocol):
     def __call__(
         self,
         model: Model,
-        dataset: TODVec | SolutionSet,
+        datavec: TODVec | SolutionSet,
         mode: str = ...,
         do_chisq: bool = ...,
         do_grad: bool = ...,
@@ -39,7 +39,7 @@ class ObjectiveFunc(Protocol):
 @partial(jax.jit, static_argnames=("mode", "do_loglike", "do_grad", "do_curve"))
 def chisq_objective(
     model: Model,
-    dataset: TODVec | SolutionSet,
+    datavec: TODVec | SolutionSet,
     mode: str = "tod",
     do_loglike: bool = True,
     do_grad: bool = True,
@@ -53,7 +53,7 @@ def chisq_objective(
     ----------
     model : Model
         The model object we are using to fit.
-    dataset: TODVec | SolutionSet
+    datavec: TODVec | SolutionSet
         The data to fit against.
         This is what we use to compute our fit residuals.
     mode : str, default: "tod"
@@ -93,7 +93,7 @@ def chisq_objective(
     zero = jnp.zeros((1, 1))
     only_chisq = not (do_grad or do_curve)
 
-    for data in dataset:
+    for data in datavec:
         if mode == "tod":
             x = data.x * wu.rad_to_arcsec
             y = data.y * wu.rad_to_arcsec
@@ -134,13 +134,13 @@ def chisq_objective(
         if do_curve:
             curve = curve.at[:].add(jnp.dot(grad_filt, jnp.transpose(grad_dat)))
 
-    token = mpi4jax.barrier(comm=dataset.comm)
+    token = mpi4jax.barrier(comm=datavec.comm)
     if do_loglike:
-        chisq, token = mpi4jax.allreduce(chisq, MPI.SUM, comm=dataset.comm, token=token)
+        chisq, token = mpi4jax.allreduce(chisq, MPI.SUM, comm=datavec.comm, token=token)
     if do_grad:
-        grad, token = mpi4jax.allreduce(grad, MPI.SUM, comm=dataset.comm, token=token)
+        grad, token = mpi4jax.allreduce(grad, MPI.SUM, comm=datavec.comm, token=token)
     if do_curve:
-        curve, token = mpi4jax.allreduce(curve, MPI.SUM, comm=dataset.comm, token=token)
+        curve, token = mpi4jax.allreduce(curve, MPI.SUM, comm=datavec.comm, token=token)
     _ = token
 
     return chisq, grad, curve
@@ -149,7 +149,7 @@ def chisq_objective(
 @partial(jax.jit, static_argnames=("mode", "do_loglike", "do_grad", "do_curve"))
 def poisson_objective(
     model: Model,
-    dataset: TODVec | SolutionSet,
+    datavec: TODVec | SolutionSet,
     mode: str = "tod",
     do_loglike: bool = True,
     do_grad: bool = True,
@@ -163,7 +163,7 @@ def poisson_objective(
     ----------
     model : Model
         The model object we are using to fit.
-    dataset: TODVec | SolutionSet
+    datavec: TODVec | SolutionSet
         The data to fit against.
         This is what we use to compute our fit residuals.
     mode : str, default: "tod"
@@ -206,7 +206,7 @@ def poisson_objective(
     zero = jnp.zeros((1, 1))
     only_loglike = not (do_grad or do_curve)
 
-    for data in dataset:
+    for data in datavec:
         if mode == "tod":
             x = data.x * wu.rad_to_arcsec
             y = data.y * wu.rad_to_arcsec
@@ -254,15 +254,15 @@ def poisson_objective(
                 )
             )
 
-    token = mpi4jax.barrier(comm=dataset.comm)
+    token = mpi4jax.barrier(comm=datavec.comm)
     if do_loglike:
         loglike, token = mpi4jax.allreduce(
-            loglike, MPI.SUM, comm=dataset.comm, token=token
+            loglike, MPI.SUM, comm=datavec.comm, token=token
         )
     if do_grad:
-        grad, token = mpi4jax.allreduce(grad, MPI.SUM, comm=dataset.comm, token=token)
+        grad, token = mpi4jax.allreduce(grad, MPI.SUM, comm=datavec.comm, token=token)
     if do_curve:
-        curve, token = mpi4jax.allreduce(curve, MPI.SUM, comm=dataset.comm, token=token)
+        curve, token = mpi4jax.allreduce(curve, MPI.SUM, comm=datavec.comm, token=token)
     _ = token
 
     return -2 * loglike, -2 * grad, -2 * curve
