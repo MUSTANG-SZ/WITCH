@@ -462,6 +462,9 @@ def main():
     dataset.info["noise_args"] = dataset.noise_args
     dataset.info["noise_kwargs"] = dataset.noise_kwargs
 
+    # Make sure we have the dataset set up properly
+    dataset.check_completeness()
+
     # Get output
     if "base" in cfg.keys():
         del cfg["base"]  # We've collated to the cfg files so no need to keep the base

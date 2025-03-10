@@ -4,8 +4,9 @@ the spec of the required functions for all datasets.
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, Protocol, Self, runtime_checkable
+from typing import Protocol, Self, runtime_checkable
 
+import numpy as np
 from jax import Array
 from jitkasi.noise import NoiseModel
 from jitkasi.solutions import SolutionSet
@@ -359,3 +360,38 @@ class DataSet:
             The objective function.
         """
         return self.info["objective"]
+
+    def check_completeness(self: Self):
+        """
+        Check if all fields are actually populated and raise an error if not.
+
+        Raises
+        ------
+        ValueError
+            If the dataset is missing some fields.
+            If `self.info` is missing some required info.
+            If `self.mode` is not a valid mode.
+            If `self.objective` is not a valid objective function.
+        """
+        missing = [
+            fname
+            for fname in self.__dataclass_fields__.keys()
+            if fname not in self.__dict__
+        ]
+        if len(missing) > 0:
+            raise ValueError(f"Datset is missing the following fields: {missing}")
+
+        required_info = np.array(
+            ["mode", "objective", "noise_class", "noise_args", "noise_kwargs"]
+        )
+        contained_info = list(self.info.keys())
+        missing_info = required_info[~np.isin(required_info, contained_info)]
+        if len(missing_info) > 0:
+            raise ValueError(
+                f"(Dataset info is missing the following fields: {missing_info}"
+            )
+
+        if self.info["mode"] not in ["tod", "map"]:
+            raise ValueError("Dataset info contained invalid mode")
+        if not isinstance(self.info["objective"], ObjectiveFunc):
+            raise ValueError("Dataset info contained invalid objective function")
