@@ -18,7 +18,7 @@ from jax.typing import ArrayLike
 from scipy import interpolate
 from typing_extensions import Self
 
-from . import core
+from . import core, nonparametric
 from . import grid as wg
 from . import utils as wu
 from .structure import STRUCT_N_PAR
@@ -678,6 +678,54 @@ class Model:
         self.__dict__.pop("model", None)
         self.__dict__.pop("model_grad", None)
         self.__post_init__()
+
+    def para_to_non_para(self, to_copy: list[str] = ["gnfw", "gnfw_rs", "a10", "isobeta", "uniform"]):
+        cur_model = deepcopy(self) #Make a copy of model, we don't want to lose structures
+        i = 0 #Make sure we keep at least one struct
+        for structure in cur_model.structures:
+            if structure.structure not in to_copy:
+                cur_model.remove_struct(structure.name)
+            else:
+                i += 1
+        if i == 0:
+            raise ValueError("Error: no model structures in {}".format(to_copy))
+        params = jnp.array(cur_model.pars)
+        params = jnp.ravel(params)
+        pressure, _ = core.model3D(cur_model.xyz, tuple(cur_model.n_struct), tuple(cur_model.n_rbins), params) 
+        pressure = pressure[...,int(pressure.shape[2]/2)] #Take middle slice. Close enough is good enough here, dont care about rounding
+
+        pixsize = np.abs(cur_model.xyz[1][0][1] - cur_model.xyz[1][0][0]) #TODO: binmap should be it's own function
+        x = np.linspace(-cur_model.model.shape[1] / 2 * pixsize, cur_model.model.shape[1] / 2 * pixsize, cur_model.model.shape[1])
+        y = np.linspace(-cur_model.model.shape[0] / 2 * pixsize, cur_model.model.shape[0] / 2 * pixsize, cur_model.model.shape[0])
+
+        X, Y = np.meshgrid(x, y)
+        R = np.sqrt(X**2 + Y**2) #TODO: miscentering?
+
+        rs = np.linspace(0, np.amax(R), 100)
+        rs = np.append(rs, 999999)
+        bin1d = np.zeros(len(rs) - 1)
+        var1d = np.zeros(len(rs) - 1)
+
+        for k in range(len(rs) - 1):
+            pixels = [
+                pressure[i, j]
+                for i in range(len(y))
+                for j in range(len(x))
+                if rs[k] < R[i, j] <= rs[k + 1]
+            ]
+            bin1d[k] = np.mean(pixels)
+            var1d[k] = np.var(pixels)
+        rs = rs[:-1]    
+
+        rbins = nonparametric.getrbins()
+        rbins = np.append(rbins, np.array([np.amax(rs)]))
+        condlist = [
+            np.array((rbins[i] <= rs) & (rs < rbins[i + 1]))
+            for i in range(len(rbins) - 2, -1, -1)
+        ]
+
+        new_amps, new_pows = nonparametric.profile_to_broken_power(rs, bin1d, condlist, rbins)
+
 
     def save(self, path: str):
         """
