@@ -4,6 +4,7 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 import numpy as np
+from scipy.optimize import curve_fit
 
 from . import utils as wu
 from .grid import transform_grid
@@ -173,3 +174,26 @@ def broken_power(
         )
         cur_c += amps[i] * (rbins[i] ** pows[i] - rbins[i + 1] ** pows[i])
     return jnp.piecewise(rs, condlist, funclist)
+
+def profile_to_broken_power(rs, ys, condlist, rbins):
+    rs = jnp.array([x if x!=0 else 1e-6 for x in rs]) #Dont blow up
+
+    rbins = jnp.array([x if x!=0 else jnp.amin(rs) for x in rbins]) #Dont blow up 2.0
+
+    amps = np.zeros(len(condlist))
+    pows = np.zeros(len(condlist))
+
+    for i in range(len(condlist)):
+        xdata = rs[condlist[i]]
+        ydata = ys[condlist[i]]
+        popt, pcov = curve_fit(power, xdata, ydata, method = "trf", p0=[rbins[::-1][i+1], 1e-4, -4., 0.])
+
+        amps[i] = popt[1]
+        pows[i] = popt[2]
+
+    return amps, pows
+
+def getrbins():
+    return (0,30,60, 120, 180)
+
+
