@@ -184,6 +184,8 @@ def model3D(
     """
     pressure = jnp.zeros((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
     start = 0
+    
+    print(params)
 
     for i, (n_struct, struct) in enumerate(zip(n_structs, ORDER)):
         if STRUCT_STAGE[struct] != -1:
@@ -213,6 +215,7 @@ def model3D(
                 for k in range(STRUCT_N_PAR[struct] - STRUCT_N_NONPARA[struct])
             ]
             # pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*nonpara_struct_pars, *struct_pars, xyz))
+            print(cur_pars)
             pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*cur_pars, xyz))
 
     # Stage 0, add to the 3d grid
