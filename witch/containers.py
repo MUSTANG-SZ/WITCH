@@ -724,8 +724,71 @@ class Model:
             for i in range(len(rbins) - 2, -1, -1)
         ]
 
-        new_amps, new_pows = nonparametric.profile_to_broken_power(rs, bin1d, condlist, rbins)
+        amps, pows = nonparametric.profile_to_broken_power(rs, bin1d, condlist, rbins)
 
+        for structure in cur_model.structures: #Remove old structs
+            self.remove_struct(structure.name)
+        
+        priors = (-1 * np.inf, np.inf)
+
+        parameters = [
+                Parameter(
+                    "rbins",
+                    tuple([False] * self.n_rounds),
+                    jnp.atleast_1d(jnp.array(rbins[:-1], dtype=float)), #Drop last bin
+                    jnp.zeros_like(jnp.atleast_1d(jnp.array(rbins[:-1])), dtype=float),
+                    jnp.array(priors, dtype=float),
+                    ),
+                Parameter(
+                    "amps",
+                    tuple([True] * self.n_rounds),
+                    jnp.atleast_1d(jnp.array(amps, dtype=float)),
+                    jnp.zeros_like(jnp.atleast_1d(jnp.array(amps)), dtype=float),
+                    jnp.array(priors, dtype=float),
+                    ),
+                Parameter(
+                    "pows",
+                    tuple([True] * self.n_rounds),
+                    jnp.atleast_1d(jnp.array(pows, dtype=float)),
+                    jnp.zeros_like(jnp.atleast_1d(jnp.array(pows)), dtype=float),
+                    jnp.array(priors, dtype=float),
+                    ),
+                Parameter(
+                    "dx", #TODO: miscentering
+                    tuple([False] * self.n_rounds),
+                    jnp.atleast_1d(jnp.array(0, dtype=float)),
+                    jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
+                    jnp.array(priors, dtype=float),
+                    ),
+                Parameter(
+                    "dy", #TODO: miscentering
+                    tuple([False] * self.n_rounds),
+                    jnp.atleast_1d(jnp.array(0, dtype=float)),
+                    jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
+                    jnp.array(priors, dtype=float),
+                    ),
+                Parameter(
+                    "dz", #TODO: miscentering
+                    tuple([False] * self.n_rounds),
+                    jnp.atleast_1d(jnp.array(0, dtype=float)),
+                    jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
+                    jnp.array(priors, dtype=float),
+                    ),
+                Parameter(
+                    "c",
+                    tuple([True] * self.n_rounds),
+                    jnp.atleast_1d(jnp.array(0, dtype=float)),
+                    jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
+                    jnp.array(priors, dtype=float),
+                    ),
+                ]
+
+        self.structures.append(
+            Structure("nonpara_power", "nonpara_power", parameters, n_rbins=len(rbins)-1)
+        )
+
+        self.__dict__.pop("model", None)
+        self.__dict__.pop("model_grad", None)
 
     def save(self, path: str):
         """
