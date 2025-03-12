@@ -12,8 +12,8 @@ path:
   subdir: "nonpara"
 
 coords:
-  x0: "Angle('11 42 46.82 hours').to(u.radian).value" #centroid
-  y0: "Angle('15:27:15.70 degrees').to(u.radian).value" #centroid
+  x0: "Angle('11 42 47.44 hours').to(u.radian).value" #peak
+  y0: "Angle('15:27:13.10 degrees').to(u.radian).value" #peak
 
 # Define the model
 model:
@@ -32,10 +32,10 @@ model:
           #value: "(0, 30, 60, 90, 120, 180, 300)"
           value: "(0,30,60, 120, 180)"
         amps:
-          value: "jnp.array([5.0, 2., 0.01, 0.01, 0.01])"
+          value: "jnp.array([8.387e5, 4.099e4, 1.233e2, 1.39, 0.0])"
           to_fit: True
         pows:
-          value: "jnp.array([-0.4, -0.4, -0.4, -1. , -2.5])"
+          value: "jnp.array([-4.27, -3.65, -2.31, -1.01, -4])"
           to_fit: True
         dx_1: # Name of the first parameter
           value: 0.0 # Value to use/start at, will be evaled
@@ -49,22 +49,19 @@ model:
         c:
           value: 0
           to_fit: True
-        z:
-          value: 0.25
-          to_fit: False
     ps_gauss:
       structure: "gaussian"
       parameters:
         dx_g:
-          value: 19.0
+          value: 1.838875992189231
           to_fit: True
-          priors: [10.0, 28.0]
+          priors: [-10.0, 10.0]
         dy_g:
-          value: -4.0
+          value: -3.8776721594142134
           to_fit: True
           priors: [-13.0, 5.0]
         sigma:
-          value: 4.0
+          value: 5.096751126087345 
         amp_g:
-          value: 0.1
+          value: 0.001305594365157566
           to_fit: True
