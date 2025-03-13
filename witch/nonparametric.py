@@ -8,6 +8,7 @@ from scipy.optimize import curve_fit
 
 from . import utils as wu
 from .grid import transform_grid
+from .containers import Model
 
 
 def array_to_tuple(arr):
@@ -175,10 +176,13 @@ def broken_power(
         cur_c += amps[i] * (rbins[i] ** pows[i] - rbins[i + 1] ** pows[i])
     return jnp.piecewise(rs, condlist, funclist)
 
-def profile_to_broken_power(rs, ys, condlist, rbins):
-    rs = jnp.array([x if x!=0 else 1e-6 for x in rs]) #Dont blow up
 
-    rbins = jnp.array([x if x!=0 else jnp.amin(rs) for x in rbins]) #Dont blow up 2.0
+def profile_to_broken_power(rs, ys, condlist, rbins):
+    rs = jnp.array([x if x != 0 else 1e-1 for x in rs])  # Dont blow up
+
+    rbins = jnp.array(
+        [x if x != 0 else jnp.amin(rs) for x in rbins]
+    )  # Dont blow up 2.0
 
     amps = np.zeros(len(condlist))
     pows = np.zeros(len(condlist))
@@ -186,14 +190,86 @@ def profile_to_broken_power(rs, ys, condlist, rbins):
     for i in range(len(condlist)):
         xdata = rs[condlist[i]]
         ydata = ys[condlist[i]]
-        popt, pcov = curve_fit(power, xdata, ydata, method = "trf", p0=[rbins[::-1][i+1], 1e-4, -4., 0.])
-
+        if i == len(condlist) - 1:
+            popt, pcov = curve_fit(power, xdata, ydata, method="trf")
+        else:
+            popt, pcov = curve_fit(
+                power, xdata, ydata, method="trf", p0=[rbins[::-1][i], 1e-4, -4.0, 0.0]
+            )
+        if i == 0:
+            c = popt[3]
         amps[i] = popt[1]
         pows[i] = popt[2]
 
-    return amps, pows
-
-def getrbins():
-    return (0,30,60, 120, 180)
+    return amps[::-1], pows[::-1], c
 
 
+def get_rbins(
+    model: Model,
+    rmax: float = 3.0 * 60.0,
+    struct_num: int = 0,
+    sig_params: list[str] = ["amp", "P0"],
+    default: tuple[int] = (0, 10, 20, 30, 50, 80, 120, 180),
+) -> tuple[int]:
+    """
+    Function which returns a good set of rbins for a non-parametric fit given the significance of the underlying parametric model.
+
+    Parameters
+    ----------
+    model : container.Model
+        Parametric model to calculate rbins on
+    rmax : float, default: 180
+        Maximum radius of the rbins
+    struct_num : int, defualt: 0
+        Structure within model to calculate rbins on
+    sig_params: list[str], default: ["amp", "P0"]
+        Parameters to consider for computing significance.
+        Only first match will be used.
+    default: tuple[int], default: (0, 10, 20, 30, 50, 80, 120, 180)
+        Default rbins to be returned if generation fails.
+
+    Returns
+    -------
+    rbins: tuple[int]
+        rbins for nonparametric fit
+    """
+    sig = 0
+    for par in model.structures[struct_num].parameters:
+        if par.name == "amp" or par.name == "P0":
+            sig = par.val / par.err
+            break
+    if sig == 0:
+        warnings.warn(
+            "Warning: model does not contain any valid significance parameters {}. Returning default bins.".format(
+                sig_params
+            )
+        )
+        return default
+
+    if sig < 10:
+        warnings.warn(
+            "Warning, significance {} too low to calculate bins. Returning default bins.".format(
+                sig
+            )
+        )
+        return default
+
+    rbins = [0, 10, 20]
+    rmin = 30
+    nrbins = int(np.floor(sig / 5)[0] - 3)
+    step = (
+        np.logspace(np.log10(rmin), np.log10(rmax), nrbins)[1]
+        - np.logspace(np.log10(rmin), np.log10(rmax), nrbins)[0]
+    )
+    while step < 10:
+        rbins.append(rmin)
+        rmin += 10
+        nrbins -= 1
+        logrange = np.logspace(np.log10(rmin), np.log10(rmax), nrbins)
+        step = logrange[1] - logrange[0]
+        if rmin > rmax or nrbins < 1:
+            break
+    rbins = np.array(rbins)
+    rbins = np.append(rbins, logrange)
+
+    return tuple(rbins)
