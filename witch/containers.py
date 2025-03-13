@@ -6,7 +6,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import import_module
-from typing import Optional
+from typing import Optional, Self
 
 import dill
 import jax
@@ -679,7 +679,26 @@ class Model:
         self.__dict__.pop("model_grad", None)
         self.__post_init__()
 
-    def para_to_non_para(self, to_copy: list[str] = ["gnfw", "gnfw_rs", "a10", "isobeta", "uniform"]):
+    def para_to_non_para(self, n_rounds: Optional[int]=None, to_copy: list[str]=["gnfw", "gnfw_rs", "a10", "isobeta", "uniform"]) -> Self:
+        """
+        Function which approximately converts cluster profiles into a non-parametric form. Note this is
+        only approximate and should be fit afterwords.
+
+        Parameters
+        ----------
+        to_copy : list[str]
+            List of structures, by name, to copy
+        n_rounds: int | None
+            Number of rounds to fit for output model. If none, copy from self
+        Returns
+        -------
+        Model : Model
+            Model with a non-parametric representation of input model
+        Raises
+        ------
+        ValueError
+            If there are no models to copy
+        """
         cur_model = deepcopy(self) #Make a copy of model, we don't want to lose structures
         i = 0 #Make sure we keep at least one struct
         for structure in cur_model.structures:
@@ -695,100 +714,80 @@ class Model:
         pressure = pressure[...,int(pressure.shape[2]/2)] #Take middle slice. Close enough is good enough here, dont care about rounding
 
         pixsize = np.abs(cur_model.xyz[1][0][1] - cur_model.xyz[1][0][0]) #TODO: binmap should be it's own function
-        x = np.linspace(-cur_model.model.shape[1] / 2 * pixsize, cur_model.model.shape[1] / 2 * pixsize, cur_model.model.shape[1])
-        y = np.linspace(-cur_model.model.shape[0] / 2 * pixsize, cur_model.model.shape[0] / 2 * pixsize, cur_model.model.shape[0])
+        
+        rs, bin1d, var1d = wu.bin_map(pressure, pixsize)
 
-        X, Y = np.meshgrid(x, y)
-        R = np.sqrt(X**2 + Y**2) #TODO: miscentering?
-
-        rs = np.linspace(0, np.amax(R), 100)
-        rs = np.append(rs, 999999)
-        bin1d = np.zeros(len(rs) - 1)
-        var1d = np.zeros(len(rs) - 1)
-
-        for k in range(len(rs) - 1):
-            pixels = [
-                pressure[i, j]
-                for i in range(len(y))
-                for j in range(len(x))
-                if rs[k] < R[i, j] <= rs[k + 1]
-            ]
-            bin1d[k] = np.mean(pixels)
-            var1d[k] = np.var(pixels)
-        rs = rs[:-1]    
-
-        rbins = nonparametric.getrbins()
+        rbins = nonparametric.get_rbins(cur_model)
         rbins = np.append(rbins, np.array([np.amax(rs)]))
+
         condlist = [
             np.array((rbins[i] <= rs) & (rs < rbins[i + 1]))
             for i in range(len(rbins) - 2, -1, -1)
         ]
 
-        amps, pows = nonparametric.profile_to_broken_power(rs, bin1d, condlist, rbins)
+        amps, pows, c = nonparametric.profile_to_broken_power(rs, bin1d, condlist, rbins)
 
-        for structure in cur_model.structures: #Remove old structs
-            self.remove_struct(structure.name)
-        
         priors = (-1 * np.inf, np.inf)
-
+        if n_rounds is None:
+            n_rounds = self.n_rounds
         parameters = [
                 Parameter(
                     "rbins",
-                    tuple([False] * self.n_rounds),
+                    tuple([False] * n_rounds),
                     jnp.atleast_1d(jnp.array(rbins[:-1], dtype=float)), #Drop last bin
                     jnp.zeros_like(jnp.atleast_1d(jnp.array(rbins[:-1])), dtype=float),
                     jnp.array(priors, dtype=float),
                     ),
                 Parameter(
                     "amps",
-                    tuple([True] * self.n_rounds),
+                    tuple([True] * n_rounds),
                     jnp.atleast_1d(jnp.array(amps, dtype=float)),
                     jnp.zeros_like(jnp.atleast_1d(jnp.array(amps)), dtype=float),
                     jnp.array(priors, dtype=float),
                     ),
                 Parameter(
                     "pows",
-                    tuple([True] * self.n_rounds),
+                    tuple([True] * n_rounds),
                     jnp.atleast_1d(jnp.array(pows, dtype=float)),
                     jnp.zeros_like(jnp.atleast_1d(jnp.array(pows)), dtype=float),
                     jnp.array(priors, dtype=float),
                     ),
                 Parameter(
                     "dx", #TODO: miscentering
-                    tuple([False] * self.n_rounds),
+                    tuple([False] * n_rounds),
                     jnp.atleast_1d(jnp.array(0, dtype=float)),
                     jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
                     jnp.array(priors, dtype=float),
                     ),
                 Parameter(
                     "dy", #TODO: miscentering
-                    tuple([False] * self.n_rounds),
+                    tuple([False] * n_rounds),
                     jnp.atleast_1d(jnp.array(0, dtype=float)),
                     jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
                     jnp.array(priors, dtype=float),
                     ),
                 Parameter(
                     "dz", #TODO: miscentering
-                    tuple([False] * self.n_rounds),
+                    tuple([False] * n_rounds),
                     jnp.atleast_1d(jnp.array(0, dtype=float)),
                     jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
                     jnp.array(priors, dtype=float),
                     ),
                 Parameter(
                     "c",
-                    tuple([True] * self.n_rounds),
-                    jnp.atleast_1d(jnp.array(0, dtype=float)),
+                    tuple([True] * n_rounds),
+                    jnp.atleast_1d(jnp.array(c, dtype=float)),
                     jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
                     jnp.array(priors, dtype=float),
                     ),
                 ]
 
-        self.structures.append(
-            Structure("nonpara_power", "nonpara_power", parameters, n_rbins=len(rbins)-1)
-        )
+        structures = [Structure("nonpara_power", "nonpara_power", parameters, n_rbins=len(rbins)-1)]
+        for structure in self.structures:
+            if structure.name not in to_copy:
+                structures.append(structure)
 
-        self.__dict__.pop("model", None)
-        self.__dict__.pop("model_grad", None)
+        return Model(name="test", structures=structures, xyz=self.xyz, dz=self.dz, beam=self.beam, n_rounds=n_rounds, cur_round=0)
 
     def save(self, path: str):
         """
