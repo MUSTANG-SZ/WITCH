@@ -183,9 +183,7 @@ def model3D(
         Current Total npar. 
     """
     pressure = jnp.zeros((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
-    start = 0
-    
-    print(params)
+    start = 0 
 
     for i, (n_struct, struct) in enumerate(zip(n_structs, ORDER)):
         if STRUCT_STAGE[struct] != -1:
@@ -214,8 +212,7 @@ def model3D(
                 cur_struct_pars[k]
                 for k in range(STRUCT_N_PAR[struct] - STRUCT_N_NONPARA[struct])
             ]
-            # pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*nonpara_struct_pars, *struct_pars, xyz))
-            print(cur_pars)
+            # pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*nonpara_struct_pars, *struct_pars, xyz)) 
             pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*cur_pars, xyz))
 
     # Stage 0, add to the 3d grid
@@ -399,5 +396,5 @@ model_static = _get_static(model_sig)
 model_grad_static = _get_static(model_grad_sig)
 
 # Now JIT
-# model = jax.jit(model, static_argnums=model_static)
+model = jax.jit(model, static_argnums=model_static)
 model_grad = jax.jit(model_grad, static_argnums=model_grad_static)
