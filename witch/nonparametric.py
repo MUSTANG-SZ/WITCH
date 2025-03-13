@@ -8,7 +8,6 @@ from scipy.optimize import curve_fit
 
 from . import utils as wu
 from .grid import transform_grid
-from .containers import Model
 
 
 def array_to_tuple(arr):
@@ -205,7 +204,7 @@ def profile_to_broken_power(rs, ys, condlist, rbins):
 
 
 def get_rbins(
-    model: Model,
+    model,
     rmax: float = 3.0 * 60.0,
     struct_num: int = 0,
     sig_params: list[str] = ["amp", "P0"],
