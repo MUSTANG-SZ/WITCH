@@ -320,6 +320,76 @@ def _run_mcmc(cfg, model, dataset, outdir, noise_class, noise_args, noise_kwargs
     return model, dataset
 
 
+def fit_loop(
+    model, cfg, dataset, outdir, noise_class, noise_args, noise_kwargs, info, comm
+):
+    if model is None:
+        raise ValueError("Can't fit without a model defined!")
+    if cfg["sim"]:
+        # Remove structs we deliberately want to leave out of model
+        for struct_name in cfg["model"]["structures"]:
+            if cfg["model"]["structures"][struct_name].get("to_remove", False):
+                model.remove_struct(struct_name)
+        params = jnp.array(model.pars)
+        par_offset = cfg.get("par_offset", 1.1)
+        params = params.at[model.to_fit_ever].multiply(
+            par_offset
+        )  # Don't start at exactly the right value
+        model.update(params, model.errs, model.chisq)
+
+    print_once("Compiling objective function")
+    t0 = time.time()
+    model, *_ = objective(model.pars, model, dataset, model.errs, info["mode"])
+    print_once(f"Took {time.time() - t0} s to compile")
+    # import ipdb; ipdb.set_trace()
+
+    message = str(model).split("\n")
+    message[1] = "Starting pars:"
+    print_once("\n".join(message))
+    for r in range(model.n_rounds):
+        model, dataset = _run_fit(
+            cfg,
+            model,
+            dataset,
+            outdir,
+            r,
+            noise_class,
+            noise_args,
+            noise_kwargs,
+            info["mode"],
+        )
+        _ = mpi4jax.barrier(comm=comm)
+
+    if "mcmc" in cfg and cfg["mcmc"].get("run", True):
+        model, dataset = _run_mcmc(
+            cfg,
+            model,
+            dataset,
+            outdir,
+            noise_class,
+            noise_args,
+            noise_kwargs,
+            info["mode"],
+        )
+        _ = mpi4jax.barrier(comm=comm)
+    # Save final pars
+    final = {"model": cfg["model"]}
+    for i, (struct_name, structure) in zip(
+        model.original_order, cfg["model"]["structures"].items()
+    ):
+        model_struct = model.structures[i]
+        for par, par_name in zip(
+            model_struct.parameters, structure["parameters"].keys()
+        ):
+            final["model"]["structures"][struct_name]["parameters"][par_name][
+                "value"
+            ] = par.val
+    with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
+        yaml.dump(final, file)
+
+    return model
+
+
 def deep_merge(a: dict, b: dict) -> dict:
     """
     Based on https://gist.github.com/angstwad/bf22d1822c38a92ec0a9?permalink_comment_id=3517209
@@ -490,70 +560,39 @@ def main():
 
     # Now we fit
     if cfg["fit"]:
-        if model is None:
-            raise ValueError("Can't fit without a model defined!")
-        if cfg["sim"]:
-            # Remove structs we deliberately want to leave out of model
-            for struct_name in cfg["model"]["structures"]:
-                if cfg["model"]["structures"][struct_name].get("to_remove", False):
-                    model.remove_struct(struct_name)
-            params = jnp.array(model.pars)
-            par_offset = cfg.get("par_offset", 1.1)
-            params = params.at[model.to_fit_ever].multiply(
-                par_offset
-            )  # Don't start at exactly the right value
-            model.update(params, model.errs, model.chisq)
-
-        print_once("Compiling objective function")
-        t0 = time.time()
-        model, *_ = objective(model.pars, model, dataset, model.errs, info["mode"])
-        print_once(f"Took {time.time() - t0} s to compile")
-        # import ipdb; ipdb.set_trace()
-
-        message = str(model).split("\n")
-        message[1] = "Starting pars:"
-        print_once("\n".join(message))
-        for r in range(model.n_rounds):
-            model, dataset = _run_fit(
-                cfg,
-                model,
-                dataset,
-                outdir,
-                r,
-                noise_class,
-                noise_args,
-                noise_kwargs,
-                info["mode"],
-            )
-            _ = mpi4jax.barrier(comm=comm)
-
-        if "mcmc" in cfg and cfg["mcmc"].get("run", True):
-            model, dataset = _run_mcmc(
-                cfg,
-                model,
-                dataset,
-                outdir,
-                noise_class,
-                noise_args,
-                noise_kwargs,
-                info["mode"],
-            )
-            _ = mpi4jax.barrier(comm=comm)
-        # Save final pars
-        final = {"model": cfg["model"]}
-        for i, (struct_name, structure) in zip(
-            model.original_order, cfg["model"]["structures"].items()
-        ):
-            model_struct = model.structures[i]
-            for par, par_name in zip(
-                model_struct.parameters, structure["parameters"].keys()
-            ):
-                final["model"]["structures"][struct_name]["parameters"][par_name][
-                    "value"
-                ] = par.val
-        with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
-            yaml.dump(final, file)
+        fit_loop(
+            model,
+            cfg,
+            dataset,
+            outdir,
+            noise_class,
+            noise_args,
+            noise_kwargs,
+            info,
+            comm,
+        )
 
     postfit(dset_name, cfg, dataset, model, info)
+
+    if cfg["nonpara"]:
+        nonpara_model = model.para_to_non_para()
+        to_copy = cfg["nonpara"].get("to_copy", "")
+        n_rounds = cfg["nonpara"].get("n_rounds", None)
+        if to_copy == "":
+            raise ValueError("To copy must be specified")
+        nonpara_model = model.para_to_non_para(n_rounds=n_rounds, to_copy=to_copy)
+        oudir = get_outdir(cfg, model)
+        fit_loop(
+            nonpara_model,
+            cfg,
+            dataset,
+            outdir,
+            noise_class,
+            noise_args,
+            noise_kwargs,
+            info,
+            comm,
+        )
+        postfit(dset_name, cfg, dataset, nonpara_model, info)
 
     print_once("Outputs can be found in", outdir)
