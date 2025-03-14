@@ -363,7 +363,26 @@ def get_radial_mask(data, pix_size, radius):
     return dist < radius
 
 
-def bin_map(data: ArrayLike, pixsize: float): 
+def bin_map(data: ArrayLike, pixsize: float) -> Tuple[np.array, np.array, np.array]:
+    """
+    Bins data radially.
+
+    Parameters
+    ----------
+    data : ArrayLike
+        Data to be radially binned
+    pixsize : float
+        Pixel spacing for data
+
+    Returns
+    -------
+    rs : np.array
+        Left bin edges 
+    bin1d : np.array
+        Mean of pixels in bin
+    var1d : np.array
+        Variance of pixels in bin
+    """
     x = np.linspace(
         -data.shape[1] / 2 * pixsize, data.shape[1] / 2 * pixsize, data.shape[1]
     )
@@ -374,7 +393,7 @@ def bin_map(data: ArrayLike, pixsize: float):
     X, Y = np.meshgrid(x, y)
     R = np.sqrt(X**2 + Y**2)  # TODO: miscentering?
 
-    rs = np.arange(0, np.amax(R), 2)
+    rs = np.arange(0, np.amax(R), pixsize)
     rs = np.append(rs, 999999)
     bin1d = np.zeros(len(rs) - 1)
     var1d = np.zeros(len(rs) - 1)

@@ -114,7 +114,7 @@ def bin_map(hdu, rbins, x0=None, y0=None, cunit=None):
 
 
 @jax.jit
-def power(x, rbin, cur_amp, cur_pow, c):
+def power(x: float, rbin: float, cur_amp: float, cur_pow: float, c: float):
     """
     Function which returns the powerlaw, given the bin-edge constraints. Exists to be partialed.
 
@@ -176,15 +176,41 @@ def broken_power(
     return jnp.piecewise(rs, condlist, funclist)
 
 
-def profile_to_broken_power(rs, ys, condlist, rbins):
+def profile_to_broken_power(rs: ArrayLike, ys: ArrayLike, condlist: list[ArrayLike], rbins: ArrayLike) -> Tuple[jnp.array, jnp.array, float]:
+    """
+    Estimates a non-parametric broken power profile from a generic profile.
+    Note this is an estimation only; in partciular since we fit piece-wise
+    the c's get messed up. This broken powerlaw should then be fit to the 
+    data.
+
+    Parameters
+    ----------
+    rs : ArrayLike
+        Array of radius values for the profile
+    ys : ArrayLike
+        Profile y values
+    condlist : list[ArrayLike]
+        List which defines which powerlaws map to which radii. See broken_power
+    rbins : ArrayLike
+        Array of bin edges defining the broken powerlaws
+    
+    Returns
+    -------
+    amps : jnp.array
+        Best fit amps for the powerlaws
+    pows : jnp.array
+        Best fit powers for the powerlaws
+    c : float
+        Best fit c for only the outermost powerlaw
+    """
     rs = jnp.array([x if x != 0 else 1e-1 for x in rs])  # Dont blow up
 
     rbins = jnp.array(
         [x if x != 0 else jnp.amin(rs) for x in rbins]
     )  # Dont blow up 2.0
 
-    amps = np.zeros(len(condlist))
-    pows = np.zeros(len(condlist))
+    amps = jnp.zeros(len(condlist))
+    pows = jnp.zeros(len(condlist))
 
     for i in range(len(condlist)):
         xdata = rs[condlist[i]]
@@ -197,8 +223,8 @@ def profile_to_broken_power(rs, ys, condlist, rbins):
             )
         if i == 0:
             c = popt[3]
-        amps[i] = popt[1]
-        pows[i] = popt[2]
+        amps.at[i].set(popt[1])
+        pows.at[i].set(popt[2])
 
     return amps[::-1], pows[::-1], c
 

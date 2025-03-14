@@ -686,10 +686,10 @@ class Model:
 
         Parameters
         ----------
-        to_copy : list[str]
-            List of structures, by name, to copy
-        n_rounds: int | None
+        n_rounds: Optional int | None, default: None
             Number of rounds to fit for output model. If none, copy from self
+        to_copy : list[str], default: gnfw, gnfw_rs, a10, isobeta, uniform
+            List of structures, by name, to copy.
         Returns
         -------
         Model : Model
@@ -713,7 +713,7 @@ class Model:
         pressure, _ = core.model3D(cur_model.xyz, tuple(cur_model.n_struct), tuple(cur_model.n_rbins), params) 
         pressure = pressure[...,int(pressure.shape[2]/2)] #Take middle slice. Close enough is good enough here, dont care about rounding
 
-        pixsize = np.abs(cur_model.xyz[1][0][1] - cur_model.xyz[1][0][0]) #TODO: binmap should be it's own function
+        pixsize = np.abs(cur_model.xyz[1][0][1] - cur_model.xyz[1][0][0]) 
         
         rs, bin1d, var1d = wu.bin_map(pressure, pixsize)
 
