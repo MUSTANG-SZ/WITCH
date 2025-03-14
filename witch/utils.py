@@ -363,7 +363,7 @@ def get_radial_mask(data, pix_size, radius):
     return dist < radius
 
 
-def bin_map(data: ArrayLike, pixsize: float) -> Tuple[np.array, np.array, np.array]:
+def bin_map(data: ArrayLike, pixsize: float) -> tuple[np.array, np.array, np.array]:
     """
     Bins data radially.
 

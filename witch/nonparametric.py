@@ -176,7 +176,7 @@ def broken_power(
     return jnp.piecewise(rs, condlist, funclist)
 
 
-def profile_to_broken_power(rs: ArrayLike, ys: ArrayLike, condlist: list[ArrayLike], rbins: ArrayLike) -> Tuple[jnp.array, jnp.array, float]:
+def profile_to_broken_power(rs: ArrayLike, ys: ArrayLike, condlist: list[ArrayLike], rbins: ArrayLike) -> tuple[jnp.array, jnp.array, float]:
     """
     Estimates a non-parametric broken power profile from a generic profile.
     Note this is an estimation only; in partciular since we fit piece-wise
