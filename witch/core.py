@@ -152,12 +152,14 @@ def stage2_model(
     ip = fft_conv(ip, beam)
 
     return ip
-#TODO: Jit?
+
+
+# TODO: Jit?
 def model3D(
-        xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
-        n_structs: tuple[int, ...],
-        n_rbins: tuple[int],
-        params: tuple[float, ...], #TODO: not sure this is a tuple
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    n_structs: tuple[int, ...],
+    n_rbins: tuple[int],
+    params: tuple[float, ...],  # TODO: not sure this is a tuple
 ) -> jax.Array:
     """
     Generate a 3D profile from params on xyz.
@@ -180,10 +182,10 @@ def model3D(
     pressure : jax.Array
         The 3D model with the specified substructure evaluated on the grid.
     start : int
-        Current Total npar. 
+        Current Total npar.
     """
     pressure = jnp.zeros((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
-    start = 0 
+    start = 0
 
     for i, (n_struct, struct) in enumerate(zip(n_structs, ORDER)):
         if STRUCT_STAGE[struct] != -1:
@@ -212,7 +214,7 @@ def model3D(
                 cur_struct_pars[k]
                 for k in range(STRUCT_N_PAR[struct] - STRUCT_N_NONPARA[struct])
             ]
-            # pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*nonpara_struct_pars, *struct_pars, xyz)) 
+            # pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*nonpara_struct_pars, *struct_pars, xyz))
             pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*cur_pars, xyz))
 
     # Stage 0, add to the 3d grid
@@ -244,6 +246,7 @@ def model3D(
             pressure = STRUCT_FUNCS[struct](pressure, xyz, *struct_pars[i])
 
     return pressure, start
+
 
 def model(
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
@@ -282,7 +285,7 @@ def model(
     params = jnp.array(pars)
     params = jnp.ravel(params)  # Fixes strange bug with params having dim (1,n)
 
-    pressure, start = model3D(xyz, n_structs, n_rbins, params) 
+    pressure, start = model3D(xyz, n_structs, n_rbins, params)
 
     # Integrate along line of site
     ip = trapz(pressure, dx=dz, axis=-1)

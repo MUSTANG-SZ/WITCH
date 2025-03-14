@@ -377,7 +377,7 @@ def bin_map(data: ArrayLike, pixsize: float) -> tuple[np.array, np.array, np.arr
     Returns
     -------
     rs : np.array
-        Left bin edges 
+        Left bin edges
     bin1d : np.array
         Mean of pixels in bin
     var1d : np.array

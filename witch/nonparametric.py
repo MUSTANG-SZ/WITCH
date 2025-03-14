@@ -3,6 +3,8 @@ from functools import partial
 
 import jax
 import jax.numpy as jnp
+from jax.typing import ArrayLike
+
 import numpy as np
 from scipy.optimize import curve_fit
 
@@ -176,11 +178,13 @@ def broken_power(
     return jnp.piecewise(rs, condlist, funclist)
 
 
-def profile_to_broken_power(rs: ArrayLike, ys: ArrayLike, condlist: list[ArrayLike], rbins: ArrayLike) -> tuple[jnp.array, jnp.array, float]:
+def profile_to_broken_power(
+    rs: ArrayLike, ys: ArrayLike, condlist: list[ArrayLike], rbins: ArrayLike
+) -> tuple[jnp.array, jnp.array, float]:
     """
     Estimates a non-parametric broken power profile from a generic profile.
     Note this is an estimation only; in partciular since we fit piece-wise
-    the c's get messed up. This broken powerlaw should then be fit to the 
+    the c's get messed up. This broken powerlaw should then be fit to the
     data.
 
     Parameters
@@ -193,7 +197,7 @@ def profile_to_broken_power(rs: ArrayLike, ys: ArrayLike, condlist: list[ArrayLi
         List which defines which powerlaws map to which radii. See broken_power
     rbins : ArrayLike
         Array of bin edges defining the broken powerlaws
-    
+
     Returns
     -------
     amps : jnp.array
