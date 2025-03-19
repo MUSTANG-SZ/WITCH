@@ -1,6 +1,6 @@
 fit: True # If True fit the cluster, overridden by command line
 sub: True # If True the cluster before mapmaking, overridden by command line
-n_rounds: 4 # How many rounds of fitting to try
+n_rounds: 1 # How many rounds of fitting to try
 model_map: True
 
 # Constants for use in the model and grid construction
@@ -45,6 +45,7 @@ datasets:
       # All of these need to exist and be importable
       # If you don't have them in a library add the relevant file to your $PYTHONPATH
       # Check docs for the needed signatures
+      get_files: "mf.get_files"
       load_tods: "mf.load_tods"
       get_info: "mf.get_info"
       make_beam: "mf.make_beam"
