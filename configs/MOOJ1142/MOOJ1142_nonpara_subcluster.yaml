@@ -1,0 +1,97 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "MOOJ1142_base.yaml"
+model_map: True
+# Cluster name
+# Used both for the output path as well as to load presets
+name: "MOOJ1142"
+sim: False
+
+path:
+  subdir: "nonpara"
+
+coords:
+  x0: "Angle('11 42 47.44 hours').to(u.radian).value" #peak
+  y0: "Angle('15:27:13.10 degrees').to(u.radian).value" #peak
+
+    #datasets:
+    #  mustang2:
+    #    ntods: 40
+
+# Define the model
+model:
+  # Unit conversion to apply at the end
+  # Will be evaled
+  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+  # Structure to include in the model
+  structures:
+    # Name of the first structure
+    nonpara:
+    # Name of the first structure
+      structure: "nonpara_power"
+      n_rbins: 5
+      parameters:
+        rbins:
+          value: "(0,30,60, 120, 180)"
+        amps:
+          value: "jnp.array([-52.85021330896318, 3316.315270652032, 1908.3392679045662, 6.2703775538022475, 877998.320985086])"
+          to_fit: False
+        pows:
+          value: "jnp.array([-7.960811631433394, -3.3591887428541667, -2.9945374620768535, -1.6850931486281393, -3.990659782959991])"
+          to_fit: False
+        dx_1: # Name of the first parameter
+          value: 0.0 # Value to use/start at, will be evaled
+          to_fit: False
+        dy_1:
+          value: 0.0
+          to_fit: False
+        dz_1:
+          value: 0.0
+          to_fit: False
+        c:
+          value: -0.00041803185284836227
+          to_fit: False
+    isobeta:
+      structure: "isobeta"
+      parameters:
+        x0:
+          value: -32.45823544
+          priors: [-25., -65.]
+        y0: 
+          value: 7.92494073
+          priors: [0., 20.]
+        z0:
+          value: 0.0
+        r_1:
+          value: 20.0
+        r_2:
+          value: 20.0
+        r_3:
+          value: 20.0
+        theta:
+          value: 0.0
+        beta:
+          value: 0.66
+          to_fit: True
+          priors: [-1.0, 5.0]
+        amp:
+          value: 0.05
+          to_fit: True
+          priors: [0.0, 10.0]
+    ps_gauss:
+      structure: "gaussian"
+      parameters:
+        dx_g:
+          value: 2.0346427516410253
+          to_fit: False
+          priors: [-10.0, 10.0]
+        dy_g:
+          value: -4.352054099664136
+          to_fit: False
+          priors: [-13.0, 5.0]
+        sigma:
+          value: 5.096751126087345 
+        amp_g:
+          value: 0.0010726474079250888 
+          to_fit: False
