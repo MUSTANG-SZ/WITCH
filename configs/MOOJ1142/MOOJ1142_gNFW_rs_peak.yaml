@@ -9,34 +9,54 @@ name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
 paths:
-  subdir: "PS_sub"
+  subdir: "xray_peak_rs" # Subdirectory to use
 
 coords:
   x0: "Angle('11 42 47.44 hours').to(u.radian).value" #peak
   y0: "Angle('15:27:13.10 degrees').to(u.radian).value" #peak
-    
-# Define the model
+
 model:
-  # Unit conversion to apply at the end
-  # Will be evaled
   unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
-  # Structure to include in the model
   structures:
-    # Name of the first structure
+    gnfw_rs:
+      structure: "gnfw_rs"
+      parameters:
+        dx_1:
+          value: 0.0
+        dy_1:
+          value: 0.0
+        dz_1:
+          value: 0.0
+        P0:
+          value: 0.103
+          to_fit: True
+        r_s:
+          value: 100.
+          to_fit: True
+        gamma:
+          value: .3081
+          to_fit: True
+          priors: [0., 5.]
+        alpha:
+          value: 1.551
+          to_fit: True
+        beta:
+          value: 5.4905
+          to_fit: True
+        z:
+          value: 1.19
     ps_gauss:
       structure: "gaussian"
       parameters:
         dx_g:
-          value: 1.838
-          to_fit: False
-          priors: [10.0, 28.0]
+          value: 1.78
+          to_fit: True
         dy_g:
-          value: -3.877
-          to_fit: False
-          priors: [-13.0, 5.0]
+          value: -3.38
+          to_fit: True
         sigma:
-          value: 5.09
-          to_fit: False
+          value: 4.0
+          to_fit: True
         amp_g:
-          value: 0.00115
+          value: 0.00128582673
           to_fit: True

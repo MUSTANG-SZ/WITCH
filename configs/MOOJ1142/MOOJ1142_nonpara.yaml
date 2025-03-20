@@ -49,6 +49,31 @@ model:
         c:
           value: 0
           to_fit: True
+            #    isobeta:
+            #      structure: "isobeta"
+            #      parameters:
+            #        x0:
+            #          value: -32.45823544
+            #        y0: 
+            #          value: 7.92494073
+            #        z0:
+            #          value: 0.0
+            #        r_1:
+            #          value: 20.0
+            #        r_2:
+            #          value: 20.0
+            #        r_3:
+            #          value: 20.0
+            #        theta:
+            #          value: 0.0
+            #        beta:
+            #          value: 0.66
+            #          to_fit: True
+            #          priors: [-1.0, 5.0]
+            #        amp:
+            #          value: 0.01
+            #          to_fit: True
+            #          priors: [0.0, 10.0]
     ps_gauss:
       structure: "gaussian"
       parameters:
