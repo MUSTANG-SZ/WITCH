@@ -174,7 +174,7 @@ def get_outdir(cfg, model):
     outroot = cfg["paths"]["outroot"]
     if not os.path.isabs(outroot):
         outroot = os.path.join(
-            os.environ.get("MJ_OUTROOT", os.environ["HOME"]), outroot
+            os.environ.get("WITCH_OUTROOT", os.environ["HOME"]), outroot
         )
 
     name = ""
