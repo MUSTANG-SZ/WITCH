@@ -574,7 +574,7 @@ def main():
 
     postfit(dset_name, cfg, dataset, model, info)
 
-    if cfg["nonpara"]:
+    if "nonpara" in cfg:
         nonpara_model = model.para_to_non_para()
         to_copy = cfg["nonpara"].get("to_copy", "")
         n_rounds = cfg["nonpara"].get("n_rounds", None)
