@@ -15,9 +15,9 @@ coords:
   x0: "Angle('11 42 47.44 hours').to(u.radian).value" #peak
   y0: "Angle('15:27:13.10 degrees').to(u.radian).value" #peak
 
-    #datasets:
-    #  mustang2:
-    #    ntods: 40
+datasets:
+  mustang2:
+    ntods: 60
 
 # Define the model
 model:
@@ -36,10 +36,10 @@ model:
           value: "(0,30,60, 120, 180)"
         amps:
           value: "jnp.array([-52.85021330896318, 3316.315270652032, 1908.3392679045662, 6.2703775538022475, 877998.320985086])"
-          to_fit: False
+          to_fit: True 
         pows:
           value: "jnp.array([-7.960811631433394, -3.3591887428541667, -2.9945374620768535, -1.6850931486281393, -3.990659782959991])"
-          to_fit: False
+          to_fit: True
         dx_1: # Name of the first parameter
           value: 0.0 # Value to use/start at, will be evaled
           to_fit: False
@@ -51,7 +51,7 @@ model:
           to_fit: False
         c:
           value: -0.00041803185284836227
-          to_fit: False
+          to_fit: True
     isobeta:
       structure: "isobeta"
       parameters:

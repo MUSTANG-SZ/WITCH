@@ -1277,7 +1277,7 @@ def add_powerlaw_cos(
     return new_pressure
 
 
-# @jax.jit
+@jax.jit
 def nonpara_power(
     nonpara_rbins: jax.Array,
     nonpara_amps: jax.Array,
