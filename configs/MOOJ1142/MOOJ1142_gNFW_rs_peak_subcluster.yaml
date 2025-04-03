@@ -50,11 +50,11 @@ model:
       parameters:
         x0:
           value: -32.45823544
-          priors: [-25., -65.]
-          to_fit: False
+            #priors: [-25., -65.]
+          to_fit: False 
         y0:
           value: 7.92494073
-          priors: [0., 20.]
+            #priors: [0., 20.]
           to_fit: False
         z0:
           value: 0.0
