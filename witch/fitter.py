@@ -560,7 +560,7 @@ def main():
 
     # Now we fit
     if cfg["fit"]:
-        fit_loop(
+        model = fit_loop(
             model,
             cfg,
             dataset,
