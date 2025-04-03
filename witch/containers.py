@@ -18,8 +18,9 @@ from jax.typing import ArrayLike
 from scipy import interpolate
 from typing_extensions import Self
 
-from . import core, nonparametric
+from . import core
 from . import grid as wg
+from . import nonparametric
 from . import utils as wu
 from .structure import STRUCT_N_PAR
 

@@ -3,9 +3,8 @@ from functools import partial
 
 import jax
 import jax.numpy as jnp
-from jax.typing import ArrayLike
-
 import numpy as np
+from jax.typing import ArrayLike
 from scipy.optimize import curve_fit
 
 from . import utils as wu

@@ -1285,7 +1285,7 @@ def nonpara_power(
     dx: float,
     dy: float,
     dz: float,
-    c: float, 
+    c: float,
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
 ) -> jax.Array:
     """
