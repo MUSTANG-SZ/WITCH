@@ -1,3 +1,35 @@
+## 9.1.0 (2025-04-07)
+
+### Feat
+
+- nonpara unit
+- working gnfw+isobeta subcluster
+- more yamls
+- subcluster
+- nonpara support
+- type hinting and doc strings
+- add bin map
+- add bin map. fix: reorder amps and pows
+- deprint and rejit
+- move binmap to its own function and add docs
+- continuing work on para_to_non_para
+- adding profile to broken power, which fits broken power to arbitrary profile
+- spinout 3d pressure model as its own function as its useful elsewhere. May have to fix jitting
+- adding para to non-para method
+- fixed bug with remove_struct where certaint keys werent available
+
+### Fix
+
+- re-jitting non-para
+- Still using MJ_OUTROOT for outdir
+- correctly look for nonpara
+- adding get_files
+- black
+- wrong tuple
+- circular import
+- remove z
+- z unused in nonpara
+
 ## 9.0.2 (2025-03-06)
 
 ### Fix
