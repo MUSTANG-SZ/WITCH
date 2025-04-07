@@ -217,16 +217,20 @@ def _save_model(cfg, model, outdir, desc_str):
     model.save(res_path)
 
     final = {"model": cfg["model"]}
-    for i, (struct_name, structure) in zip(
-        model.original_order, cfg["model"]["structures"].items()
-    ):
-        model_struct = model.structures[i]
-        for par, par_name in zip(
-            model_struct.parameters, structure["parameters"].keys()
-        ):
-            final["model"]["structures"][struct_name]["parameters"][par_name][
-                "value"
-            ] = [float(cur_par) for cur_par in par.val]
+    for structure in final["model"]["structures"]:
+        model_idx = None
+        for i, struct in enumerate(model.structures):
+            if struct.name == str(structure):
+                model_idx = i
+        if model_idx is None: raise ValueError("Error: structure {} not in model".format(structure))
+        for parameter in final["model"]["structures"][structure]["parameters"]:
+            par_idx = None
+            for i, par in enumerate(model.structures[model_idx].parameters):
+                if par.name == parameter:
+                    par_idx = i
+            if par_idx is None: raise ValueError("Error: parameter {} not in {}".format(parameter, structure))
+    
+            final["model"]["structures"][structure]["parameters"][parameter]["value"] = [float(cur_par) for cur_par in model.structures[model_idx].parameters[par_idx].val]
     with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
         yaml.dump(final, file)
 
