@@ -154,16 +154,15 @@ def stage2_model(
     return ip
 
 
-def model(
+# TODO: Jit?
+def model3D(
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
     n_structs: tuple[int, ...],
     n_rbins: tuple[int],
-    dz: float,
-    beam: jax.Array,
-    *pars: Unpack[tuple[float, ...]],
-):
+    params: tuple[float, ...],  # TODO: not sure this is a tuple
+) -> jax.Array:
     """
-    Generically create models with substructure.
+    Generate a 3D profile from params on xyz.
 
     Parameters
     ----------
@@ -173,22 +172,18 @@ def model(
     n_structs : tuple[int, ...]
         Number of each structure to use.
         Should be in the same order as `order`.
-    dz : float
-        Factor to scale by while integrating.
-        Should at least include the pixel size along the LOS.
-    beam : jax.Array
-        Beam to convolve by, should be a 2d array.
-    *pars : Unpack[tuple[float,...]]
+    n_rbins : tuple[int]
+        Number of rbins for each non-parametric model
+    params : tuple[float,...]
         1D container of model parameters.
 
     Returns
     -------
-    model : jax.Array
-        The model with the specified substructure evaluated on the grid.
+    pressure : jax.Array
+        The 3D model with the specified substructure evaluated on the grid.
+    start : int
+        Current Total npar.
     """
-    params = jnp.array(pars)
-    params = jnp.ravel(params)  # Fixes strange bug with params having dim (1,n)
-
     pressure = jnp.zeros((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
     start = 0
 
@@ -249,6 +244,48 @@ def model(
         start += delta
         for i in range(n_struct):
             pressure = STRUCT_FUNCS[struct](pressure, xyz, *struct_pars[i])
+
+    return pressure, start
+
+
+def model(
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    n_structs: tuple[int, ...],
+    n_rbins: tuple[int],
+    dz: float,
+    beam: jax.Array,
+    *pars: Unpack[tuple[float, ...]],
+):
+    """
+    Generically create models with substructure.
+
+    Parameters
+    ----------
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Grid to compute model on.
+        See `containers.Model.xyz` for details.
+    n_structs : tuple[int, ...]
+        Number of each structure to use.
+        Should be in the same order as `order`.
+    n_rbins : tuple[int]
+        Number of rbins for each non-parametric model
+    dz : float
+        Factor to scale by while integrating.
+        Should at least include the pixel size along the LOS.
+    beam : jax.Array
+        Beam to convolve by, should be a 2d array.
+    *pars : Unpack[tuple[float,...]]
+        1D container of model parameters.
+
+    Returns
+    -------
+    model : jax.Array
+        The model with the specified substructure evaluated on the grid.
+    """
+    params = jnp.array(pars)
+    params = jnp.ravel(params)  # Fixes strange bug with params having dim (1,n)
+
+    pressure, start = model3D(xyz, n_structs, n_rbins, params)
 
     # Integrate along line of site
     ip = trapz(pressure, dx=dz, axis=-1)
@@ -362,5 +399,5 @@ model_static = _get_static(model_sig)
 model_grad_static = _get_static(model_grad_sig)
 
 # Now JIT
-# model = jax.jit(model, static_argnums=model_static)
+model = jax.jit(model, static_argnums=model_static)
 model_grad = jax.jit(model_grad, static_argnums=model_grad_static)
