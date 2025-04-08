@@ -381,7 +381,7 @@ def fit_loop(
                 "value"
             ] = par.val
     with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
-        yaml.dump(final, file)  
+        yaml.dump(final, file)
 
     return model
 
