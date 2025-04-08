@@ -1,6 +1,5 @@
 import glob
 import os
-import sys
 
 import jax.numpy as jnp
 from astropy.io import fits
@@ -9,9 +8,10 @@ from jitkasi.solutions import SolutionSet, maps
 from mpi4py import MPI
 
 import witch.utils as wu
-from witch import grid
 from witch.containers import Model
 from witch.fitter import print_once
+
+from ...objective import chisq_objective
 
 
 def get_files(dset_name: str, cfg: dict) -> list:
@@ -68,6 +68,7 @@ def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
     _ = (dset_name, cfg, mapset)
     return {
         "mode": "map",
+        "objective": chisq_objective,
     }
 
 
