@@ -12,7 +12,6 @@ import dill
 import jax
 import jax.numpy as jnp
 import numpy as np
-from astropy.wcs import WCS
 from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
 from scipy import interpolate

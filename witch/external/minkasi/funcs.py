@@ -1,12 +1,12 @@
 import glob
 import os
-import sys
 from copy import deepcopy
 
 import jax.numpy as jnp
 import minkasi
 import numpy as np
 from astropy.convolution import Gaussian2DKernel, convolve
+from jax import Array
 from jitkasi.tod import TODVec
 from minkasi.tools import presets_by_source as pbs
 from mpi4py import MPI
@@ -91,7 +91,7 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
     }
 
 
-def make_beam(dset_name: str, cfg: dict, info: dict):
+def make_beam(dset_name: str, cfg: dict, info: dict) -> Array:
     _ = info
     dr = eval(str(cfg["coords"]["dr"]))
     beam = wu.beam_double_gauss(
