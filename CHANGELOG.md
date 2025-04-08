@@ -1,3 +1,9 @@
+## 9.0.2 (2025-03-06)
+
+### Fix
+
+- put data path in paths section
+
 ## 9.0.1 (2025-02-13)
 
 ### Fix

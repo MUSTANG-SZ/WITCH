@@ -1277,7 +1277,7 @@ def add_powerlaw_cos(
     return new_pressure
 
 
-# @jax.jit
+@jax.jit
 def nonpara_power(
     nonpara_rbins: jax.Array,
     nonpara_amps: jax.Array,
@@ -1286,7 +1286,6 @@ def nonpara_power(
     dy: float,
     dz: float,
     c: float,
-    z: float,
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
 ) -> jax.Array:
     """
@@ -1314,13 +1313,10 @@ def nonpara_power(
         Exponents of power laws
     c : float
         Constant offset for powerlaws
-    z : float,
-        Redshift of cluster
     xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
         Coordinte grid to calculate model on.
         See `containers.Model.xyz` for details.
     """
-    print(dz)
     x, y, z, *_ = transform_grid(dx, dy, dz, 1.0, 1.0, 1.0, 0.0, xyz)
     r = jnp.sqrt(x**2 + y**2 + z**2)
     nonpara_rbins = jnp.append(nonpara_rbins, jnp.array([jnp.amax(r)]))

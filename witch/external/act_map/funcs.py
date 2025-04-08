@@ -16,7 +16,7 @@ from ...objective import chisq_objective
 
 
 def get_files(dset_name: str, cfg: dict) -> list:
-    maproot = cfg.get("data", cfg["paths"]["maps"])
+    maproot = cfg["paths"].get("data", cfg["paths"]["maps"])
     if not os.path.isabs(maproot):
         maproot = os.path.join(
             os.environ.get("WITCH_DATROOT", os.environ["HOME"]), maproot
