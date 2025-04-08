@@ -256,7 +256,7 @@ def _reestimate_noise(model, dataset):
     return dataset
 
 
-def _run_fit(cfg, model, dataset, outdir, r):
+def _run_fit(cfg, model, dataset, r):
     model.cur_round = r
     to_fit = np.array(model.to_fit)
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
@@ -274,13 +274,13 @@ def _run_fit(cfg, model, dataset, outdir, r):
     )
 
     print_once(model)
-    _save_model(cfg, model, outdir, f"fit{r}")
+    _save_model(cfg, model, dataset.info["outdir"], f"fit{r}")
 
     dataset = _reestimate_noise(model, dataset)
     return model, dataset
 
 
-def _run_mcmc(cfg, model, dataset, outdir):
+def _run_mcmc(cfg, model, dataset):
     print_once("Running MCMC")
     init_pars = np.array(model.pars.copy())
     t1 = time.time()
@@ -300,10 +300,10 @@ def _run_mcmc(cfg, model, dataset, outdir):
     message[1] = "MCMC estimated pars:"
     print_once("\n".join(message))
 
-    _save_model(cfg, model, outdir, "mcmc")
+    _save_model(cfg, model, dataset.info["outdir"], "mcmc")
     if comm.Get_rank() == 0:
         samples = np.array(samples)
-        samps_path = os.path.join(outdir, f"samples_mcmc.npz")
+        samps_path = os.path.join(dataset.info["outdir"], f"samples_mcmc.npz")
         print_once("Saving samples to", samps_path)
         np.savez_compressed(samps_path, samples=samples)
         try:
@@ -313,7 +313,7 @@ def _run_mcmc(cfg, model, dataset, outdir):
                 labels=np.array(model.par_names)[to_fit],
                 truths=init_pars[to_fit],
             )
-            plt.savefig(os.path.join(outdir, "corner.png"))
+            plt.savefig(os.path.join(dataset.info["outdir"], "corner.png"))
         except Exception as e:
             print_once(f"Failed to make corner plot with error: {str(e)}")
     else:
@@ -325,7 +325,7 @@ def _run_mcmc(cfg, model, dataset, outdir):
 
 
 def fit_loop(
-    model, cfg, dataset, outdir, noise_class, noise_args, noise_kwargs, info, comm
+    model, cfg, dataset, comm
 ):
     if model is None:
         raise ValueError("Can't fit without a model defined!")
@@ -355,7 +355,6 @@ def fit_loop(
             cfg,
             model,
             dataset,
-            outdir,
             r,
         )
         _ = mpi4jax.barrier(comm=comm)
@@ -365,7 +364,6 @@ def fit_loop(
             cfg,
             model,
             dataset,
-            outdir,
         )
         _ = mpi4jax.barrier(comm=comm)
     # Save final pars
@@ -380,7 +378,7 @@ def fit_loop(
             final["model"]["structures"][struct_name]["parameters"][par_name][
                 "value"
             ] = par.val
-    with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
+    with open(os.path.join(dataset.info["outdir"], "fit_params.yaml"), "w") as file:
         yaml.dump(final, file)
 
     return model
@@ -560,11 +558,6 @@ def main():
             model,
             cfg,
             dataset,
-            outdir,
-            noise_class,
-            noise_args,
-            noise_kwargs,
-            info,
             comm,
         )
 
@@ -578,15 +571,11 @@ def main():
             raise ValueError("To copy must be specified")
         nonpara_model = model.para_to_non_para(n_rounds=n_rounds, to_copy=to_copy)
         oudir = get_outdir(cfg, model)
+        dataset.info["outdir"] = outdir
         fit_loop(
             nonpara_model,
             cfg,
             dataset,
-            outdir,
-            noise_class,
-            noise_args,
-            noise_kwargs,
-            info,
             comm,
         )
         postfit(dset_name, cfg, dataset, nonpara_model, info)
