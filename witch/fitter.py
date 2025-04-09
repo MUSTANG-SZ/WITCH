@@ -93,15 +93,17 @@ def _mpi_fsplit(fnames, comm):
     return fnames[rank::nproc], comm
 
 
-def process_tods(cfg, dataset, model):
-    todvec = dataset.datavec
+def process_tods(cfg, todvec, info, model):
     rank = todvec.comm.Get_rank()
     nproc = todvec.comm.Get_size()
+    noise_class = info["noise_class"]
+    noise_args = info["noise_args"]
+    noise_kwargs = info["noise_kwargs"]
     sim = cfg.get("sim", False)
     if model is None and sim:
         raise ValueError("model cannot be None when simming!")
     model_cur = model
-    xfer = dataset.info.get("info", "")
+    xfer = info.get("info", "")
     if xfer:
         model_cur = Model_xfer.from_parent(model, xfer)
 
@@ -126,9 +128,7 @@ def process_tods(cfg, dataset, model):
             ).block_until_ready()
             tod.data = tod.data + pred
         tod.data = tod.data - jnp.mean(tod.data, axis=-1)[..., None]
-        tod.compute_noise(
-            dataset.noise_class, None, *dataset.noise_args, **dataset.noise_kwargs
-        )
+        tod.compute_noise(noise_class, None, *noise_args, **noise_kwargs)
     return todvec
 
 
@@ -324,9 +324,7 @@ def _run_mcmc(cfg, model, dataset):
     return model, dataset
 
 
-def fit_loop(
-    model, cfg, dataset, comm
-):
+def fit_loop(model, cfg, dataset, comm):
     if model is None:
         raise ValueError("Can't fit without a model defined!")
     if cfg["sim"]:
@@ -540,7 +538,8 @@ def main():
     if dataset.mode == "tod":
         dataset.datavec = process_tods(
             cfg,
-            dataset,
+            dataset.datavec,
+            dataset.info,
             model,
         )
     elif dataset.mode == "map":

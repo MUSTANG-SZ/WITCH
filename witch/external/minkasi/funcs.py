@@ -263,9 +263,7 @@ def postfit(dset_name: str, cfg: dict, todvec: TODVec, model: Model, info: dict)
         model_skymap = minkasi.maps.SkyMap(lims, pixsize)
         model_cfg = deepcopy(cfg)
         model_cfg["sim"] = True
-        model_todvec = process_tods(
-            cfg, model_todvec, noise_class, noise_args, noise_kwargs, model
-        )
+        model_todvec = process_tods(cfg, model_todvec, info, model)
         model_todvec = to_minkasi(model_todvec, False)
         mm.make_maps(
             model_todvec,
