@@ -4,7 +4,7 @@ n_rounds: 4 # How many rounds of fitting to try
 
 # Constants for use in the model and grid construction
 # Can be used as a dict ie: constants['z']
-# All are passed through eval
+# All are passed through eval, so expresions like `np.sin(np.pi)` will evaluate
 constants:
   Te: 5.0
   freq: "90e9"
@@ -13,17 +13,17 @@ constants:
 paths:
   # Location of TOD files
   # If an absolute path then that is used directly
-  # If a relative path taken relative to MJ_TODROOT
-  tods: "RXJ1347"
+  # If a relative path taken relative to WITCH_DATAROOT
+  tods: "RXJ1347" # Name of the cluster data directory
   glob: "Signal_TOD*.fits" # Pattern to search for TODs with
-  ndo: False # ?
-  odo: False # ?
+  ndo: False # Ignore, leave set to false 
+  odo: False # Ignore
   # Directory to use as root for outputs
   # If an absolute path then that is used directly
-  # If a relative path taken relative to MJ_OUTROOT
+  # If a relative path taken relative to WITCH_OUTROOT
   outroot: ""
   subdir: "" # Subdirectory to use
-  # Final outdir will be something like: outroot/name/model_name/subdir
+  # Final outdir will be something like: WITCH_OUTROOT/name/model_name/subdir
 
 # Defines the grid
 # All are passed through eval
