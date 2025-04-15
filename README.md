@@ -5,9 +5,7 @@ While this code was originally written for [MUSTANG-2](https://greenbankobservat
 
 ## The `WITCH` Library
 
-The core of this repository is the `WITCH` library.
-While the name contains `minkasi` it does not actually require the `minkasi` mapmaker to be used;
-rather, it produces models of galaxy clusters and their gradients in a format that can be consumed by `minkasi`'s fitting code.
+The core of this repository is the `WITCH` library. `WITCH` produces models of galaxy clusters and their gradients in a format that can be consumed by [`minkasi`](https://github.com/sievers/minkasi)'s fitting code.
 
 The core concept of `WITCH` is to model the cluster as a 3D pressure profile and then apply modifications to that profile to represent substructure.
 For example, a cavity can be modeled as a multiplicative suppression of the pressure within a certain region.
@@ -16,28 +14,40 @@ To produce gradients of the clusters and JIT expensive computations we employ [`
 
 This framework makes it very easy to add new types of models, see the [Contributing](#contributing) section for more.
 
-## The `fitter.py` Script
+## End Users and the `fitter.py` Script
 
-The other main part of this repository is the `fitter.py` script.
-It is generically a script to perform fit models and make maps using [`minkasi`](https://github.com/sievers/minkasi),
-but there are a two key points that make it nice to use:
+End users (i.e., users who will not be developing `WITCH`) should interact with the software entirely by writing configs yamls.
+Once `WITCH` is built, the command line executable `witcher` will be made available, which basically wraps `fitter.py`. 
+This fitter injests config files and performs the fitting. The usage is
+```
+mpirun -n N witcher /PATH/TO/my_config.yaml
+```
+where the `mpirun` call is optional and will automatically run the code in parallel. The screen output can of course optionally
+be pipped to an output file, but necessary outputs (model parameters, uncertainties, etc.) will be saved as part of the `witcher` call.
 
-1. A flexible configuration system that allows the user to control mapmaking and fitting parameters, model specification, IO, etc. via yaml files.
-2. First class support for models from the `WITCH` library.
 
-For the most part the config files are easy to make by using one of the files in the `configs` folder as a base.
-However there are some subtleties and advanced configurations that will eventually get documented properly.
+## Writing Config Files
+
+For end users, config files are the only thing you need to change to run `WITCH`. In these files, you specify what data you would like to fit,
+how you would like to fit it, and what model you would like to fit to that data. Config files can refer to other config files, in which case they
+will be collated into one config before execution. This makes it easy to fit your data to many different models, by specifying one `_base.yaml` which
+defines the data processing, and a series of `_model.yaml`s which specify the model to be fit and refer back to `_base.yaml`.
+
+We will use the `yaml` files `RXJ1347_a10.yaml` and `base_unit.yaml`, both found in the `unit_tests` directory as examples. These files are well commented
+and should be read through in addition to reading this section. Starting with `base_unit.yaml`, this file defines the data used in the fit and which data 
+processing routines to use. Firstly, `fit` and `sub` tell the script to fit the model to the data and to make residuals of the model to the data. `nrounds` 
+tells the script how many rounds of fitting to perform. `contstants` defines a number of constants used in the fitting, including `Te` the electron 
+temperature, `freq`, the frequency of observation, and `z`, the redshift of the cluster. `paths` specifies the path `witcher` should search to obtain data to fit, as
+well as the outroot to save the data to. All paths are relative to the global environmental variables `WITCH_DATAROOT` (for data) and `WITCH_OUTROOT` (for outputs),
+which you should set in your `.bashrc`.
+
+
 
 ## Installation
 
 To install the `WITCH` library first clone this repository and from within it run:
 ```
 pip install .
-```
-Note that this will only install `WITCH` and its dependencies,
-to also install dependencies for `fitter.py` do:
-```
-pip install .[fitter]
 ```
 If you are going to be actively working on the `WITCH` library you probably want to include the `-e` flag.
 
