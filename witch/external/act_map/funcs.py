@@ -1,21 +1,22 @@
 import glob
 import os
-import sys
 
 import jax.numpy as jnp
 from astropy.io import fits
 from astropy.wcs import WCS
+from jax import Array
 from jitkasi.solutions import SolutionSet, maps
 from mpi4py import MPI
 
 import witch.utils as wu
-from witch import grid
 from witch.containers import Model
 from witch.fitter import print_once
 
+from ...objective import chisq_objective
+
 
 def get_files(dset_name: str, cfg: dict) -> list:
-    maproot = cfg.get("data", cfg["paths"]["maps"])
+    maproot = cfg["paths"].get("data", cfg["paths"]["maps"])
     if not os.path.isabs(maproot):
         maproot = os.path.join(
             os.environ.get("WITCH_DATROOT", os.environ["HOME"]), maproot
@@ -70,10 +71,11 @@ def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
     return {
         "mode": "map",
         "prefactor": prefactor,
+        "objective": chisq_objective,
     }
 
 
-def make_beam(dset_name: str, cfg: dict, info: dict):
+def make_beam(dset_name: str, cfg: dict, info: dict) -> Array:
     # TODO: Maybe just load from a file?
     _ = info
     dr = eval(str(cfg["coords"]["dr"]))

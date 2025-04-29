@@ -221,6 +221,30 @@ def fft_conv(image: ArrayLike, kernel: ArrayLike) -> jax.Array:
     return convolved_map
 
 
+@jax.jit
+def fft_deconv(image: ArrayLike, kernel: ArrayLike) -> jax.Array:
+    """
+    Perform a convolution using FFTs for speed with jax.
+
+    Parameters
+    ----------
+    image : ArrayLike
+        Data to be convolved.
+    kernel : ArrayLike
+        Convolution kernel.
+
+    Returns
+    -------
+    convolved_map : jax.Array
+        Image convolved with kernel.
+    """
+    Fmap = jnp.fft.fft2(jnp.fft.fftshift(image))
+    Fkernel = jnp.fft.fft2(jnp.fft.fftshift(kernel))
+    convolved_map = jnp.fft.fftshift(jnp.real(jnp.fft.ifft2(Fmap / Fkernel)))
+
+    return convolved_map
+
+
 @partial(jax.jit, static_argnums=(1,))
 def tod_hi_pass(tod: jax.Array, N_filt: int) -> jax.Array:
     """
@@ -361,3 +385,56 @@ def get_radial_mask(data, pix_size, radius):
     dist = np.sqrt((XX - x0) ** 2 + (YY - y0) ** 2) * pix_size
 
     return dist < radius
+
+
+def bin_map(data: ArrayLike, pixsize: float) -> tuple[np.array, np.array, np.array]:
+    """
+    Bins data radially.
+
+    Parameters
+    ----------
+    data : ArrayLike
+        Data to be radially binned
+    pixsize : float
+        Pixel spacing for data
+
+    Returns
+    -------
+    rs : np.array
+        Left bin edges
+    bin1d : np.array
+        Mean of pixels in bin
+    var1d : np.array
+        Variance of pixels in bin
+    """
+    x = np.linspace(
+        -data.shape[1] / 2 * pixsize, data.shape[1] / 2 * pixsize, data.shape[1]
+    )
+    y = np.linspace(
+        -data.shape[0] / 2 * pixsize, data.shape[0] / 2 * pixsize, data.shape[0]
+    )
+
+    X, Y = np.meshgrid(x, y)
+    R = np.sqrt(X**2 + Y**2)  # TODO: miscentering?
+
+    rs = np.arange(0, np.amax(R), pixsize)
+    rs = np.append(rs, 999999)
+    bin1d = np.zeros(len(rs) - 1)
+    var1d = np.zeros(len(rs) - 1)
+
+    for k in range(len(rs) - 1):
+        pixels = [
+            data[i, j]
+            for i in range(len(y))
+            for j in range(len(x))
+            if rs[k] < R[i, j] <= rs[k + 1]
+        ]
+        if len(pixels) == 0:
+            bin1d[k] = 0
+            var1d[k] = 0
+        else:
+            bin1d[k] = np.mean(pixels)
+            var1d[k] = np.var(pixels)
+    rs = rs[:-1]
+
+    return rs, bin1d, var1d

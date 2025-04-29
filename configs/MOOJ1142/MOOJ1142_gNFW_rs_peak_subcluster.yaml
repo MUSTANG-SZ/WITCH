@@ -1,0 +1,91 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "MOOJ1142_base.yaml"
+
+# Cluster name
+# Used both for the output path as well as to load presets
+name: "MOOJ1142"
+sim: False # If True use TODs to make noise and add a simulated cluster
+
+paths:
+  subdir: "xray_peak_rs" # Subdirectory to use
+
+coords:
+  x0: "Angle('11 42 47.44 hours').to(u.radian).value" #peak
+  y0: "Angle('15:27:13.10 degrees').to(u.radian).value" #peak
+
+model:
+  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+  structures:
+    gnfw_rs:
+      structure: "gnfw_rs"
+      parameters:
+        dx_1:
+          value: 0.0
+        dy_1:
+          value: 0.0
+        dz_1:
+          value: 0.0
+        P0:
+          value: 0.103
+          to_fit: True
+        r_s:
+          value: 100.
+          to_fit: True
+        gamma:
+          value: .3081
+          to_fit: True
+          priors: [0., 5.]
+        alpha:
+          value: 1.551
+          to_fit: True
+        beta:
+          value: 5.4905
+          to_fit: True
+        z:
+          value: 1.19
+    isobeta:
+      structure: "isobeta"
+      parameters:
+        x0:
+          value: -32.45823544
+            #priors: [-25., -65.]
+          to_fit: False 
+        y0:
+          value: 7.92494073
+            #priors: [0., 20.]
+          to_fit: False
+        z0:
+          value: 0.0
+        r_1:
+          value: 20.0
+        r_2:
+          value: 20.0
+        r_3:
+          value: 20.0
+        theta:
+          value: 0.0
+        beta:
+          value: 0.66
+          to_fit: True
+          priors: [-1.0, 5.0]
+        amp:
+          value: 0.05
+          to_fit: True
+          priors: [0.0, 10.0]
+    ps_gauss:
+      structure: "gaussian"
+      parameters:
+        dx_g:
+          value: 1.78
+          to_fit: True
+        dy_g:
+          value: -3.38
+          to_fit: True
+        sigma:
+          value: 4.0
+          to_fit: True
+        amp_g:
+          value: 0.00128582673
+          to_fit: True

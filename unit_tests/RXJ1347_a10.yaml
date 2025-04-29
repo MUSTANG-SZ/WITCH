@@ -1,53 +1,56 @@
-base: "base_unit.yaml"
-name: "RXJ1347"
-noise_map: True
-model_map: True
+base: "base_unit.yaml" #Specifies the config this file is based on
+name: "RXJ1347" # Name of the cluster
+noise_map: True # Whether to make the noise map
+model_map: True # Whether to make a map of just the model
 model:
+  # Unit conversion converts from the model units (integrated pressure) to the map units (K_RJ)
   unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   structures:
+    #The first structure is called a10
     a10:
+      # The first structure is witch.structures.a10
       structure: "a10"
       parameters:
         dx_1:
-          value: 0.0
-          to_fit: [True, True, False, True] 
-          priors: [-9.0, 9.0]
+          value: 0.0 # Units: arcsec, defined as an offset from x0 as set in base_unit.yaml
+          to_fit: [True, True, False, True] # Fit on all but the third rounds
+          priors: [-9.0, 9.0] 
         dy_1:
-          value: 0.0
+          value: 0.0 # Units: arcsec, defined as an offset from y0 as set in base_unit.yaml
           to_fit: [True, True, False, True]
           priors: [-9.0, 9.0]
-        dz_1:
+        dz_1: # Line of sight offset. This is typically unconstrained so generally should be fixed to 0
           value: 0.0 
-        theta:
+        theta: # Rotation of the model with respect to the positive y axis
           value: 0.0
-        P0:
+        P0: # Central pressure in units of keV / cm^3
           value: 8.403
-        c500:
+        c500: # Central concentration
           value: 1.177 
-        m500:
+        m500: # Cluster mass in M_solar
           value: "1.5e15"
           to_fit: [True, False, True, True] 
-        gamma:
+        gamma: # Inner profile slope
           value: .3081 
-        alpha:
+        alpha: # Mid profile slope
           value: 1.551 
-        beta:
+        beta: # Outer profile slope
           value: 5.4905 
         z:
           value: 0.97 
     ps_gauss:
       structure: "gaussian"
       parameters:
-        dx_g:
+        dx_g: # Units: arcsec, defined as an offset from x0 as set in base_unit.yaml
           value: 0.0
           to_fit: [True, True, False, True]
           priors: [-9.0, 9.0]
-        dy_g:
+        dy_g: # Units: arcsec, defined as an offset from y0 as set in base_unit.yaml
           value: 0.0
           to_fit: [True, True, False, True]
           priors: [-9.0, 9.0]
-        sigma:
+        sigma: # FWHM of the gaussian in arcsec
           value: 4
-        amp_g:
+        amp_g: # Amplitude in map units (K_RJ)
           value: 0.002
           to_fit: [True, False, True, True]

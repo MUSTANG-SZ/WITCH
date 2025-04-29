@@ -1,12 +1,12 @@
 import glob
 import os
-import sys
 from copy import deepcopy
 
 import jax.numpy as jnp
 import minkasi
 import numpy as np
 from astropy.convolution import Gaussian2DKernel, convolve
+from jax import Array
 from jitkasi.tod import TODVec
 from minkasi.tools import presets_by_source as pbs
 from mpi4py import MPI
@@ -16,12 +16,13 @@ from witch import grid
 from witch.containers import Model
 from witch.fitter import print_once, process_tods
 
+from ...objective import chisq_objective
 from . import mapmaking as mm
 from .utils import from_minkasi, from_minkasi_noise, from_minkasi_tod, to_minkasi
 
 
 def get_files(dset_name: str, cfg: dict) -> list:
-    todroot = cfg.get("data", cfg["paths"]["tods"])
+    todroot = cfg["paths"].get("data", cfg["paths"]["tods"])
     if not os.path.isabs(todroot):
         todroot = os.path.join(
             os.environ.get("WITCH_DATROOT", os.environ["HOME"]), todroot
@@ -80,6 +81,7 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
 
     return {
         "mode": "tod",
+        "objective": chisq_objective,
         "lims": lims,
         "pixsize": pixsize,
         "skymap": skymap,
@@ -92,7 +94,7 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
     }
 
 
-def make_beam(dset_name: str, cfg: dict, info: dict):
+def make_beam(dset_name: str, cfg: dict, info: dict) -> Array:
     _ = info
     dr = eval(str(cfg["coords"]["dr"]))
     beam = wu.beam_double_gauss(
@@ -264,9 +266,7 @@ def postfit(dset_name: str, cfg: dict, todvec: TODVec, model: Model, info: dict)
         model_skymap = minkasi.maps.SkyMap(lims, pixsize)
         model_cfg = deepcopy(cfg)
         model_cfg["sim"] = True
-        model_todvec = process_tods(
-            cfg, model_todvec, noise_class, noise_args, noise_kwargs, model
-        )
+        model_todvec = process_tods(cfg, model_todvec, info, model)
         model_todvec = to_minkasi(model_todvec, False)
         mm.make_maps(
             model_todvec,

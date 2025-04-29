@@ -5,9 +5,7 @@ While this code was originally written for [MUSTANG-2](https://greenbankobservat
 
 ## The `WITCH` Library
 
-The core of this repository is the `WITCH` library.
-While the name contains `minkasi` it does not actually require the `minkasi` mapmaker to be used;
-rather, it produces models of galaxy clusters and their gradients in a format that can be consumed by `minkasi`'s fitting code.
+The core of this repository is the `WITCH` library. `WITCH` produces models of galaxy clusters and their gradients in a format that can be consumed by [`minkasi`](https://github.com/sievers/minkasi)'s fitting code.
 
 The core concept of `WITCH` is to model the cluster as a 3D pressure profile and then apply modifications to that profile to represent substructure.
 For example, a cavity can be modeled as a multiplicative suppression of the pressure within a certain region.
@@ -16,28 +14,103 @@ To produce gradients of the clusters and JIT expensive computations we employ [`
 
 This framework makes it very easy to add new types of models, see the [Contributing](#contributing) section for more.
 
-## The `fitter.py` Script
+## End Users and the `fitter.py` Script
 
-The other main part of this repository is the `fitter.py` script.
-It is generically a script to perform fit models and make maps using [`minkasi`](https://github.com/sievers/minkasi),
-but there are a two key points that make it nice to use:
+End users (i.e., users who will not be developing `WITCH`) should interact with the software entirely by writing configs yamls.
+Once `WITCH` is built, the command line executable `witcher` will be made available, which basically wraps `fitter.py`. 
+This fitter injests config files and performs the fitting. The usage is
+```
+mpirun -n N witcher /PATH/TO/my_config.yaml
+```
+where the `mpirun` call is optional and will automatically run the code in parallel. The screen output can of course optionally
+be pipped to an output file, but necessary outputs (model parameters, uncertainties, etc.) will be saved as part of the `witcher` call.
 
-1. A flexible configuration system that allows the user to control mapmaking and fitting parameters, model specification, IO, etc. via yaml files.
-2. First class support for models from the `WITCH` library.
 
-For the most part the config files are easy to make by using one of the files in the `configs` folder as a base.
-However there are some subtleties and advanced configurations that will eventually get documented properly.
+## Writing Config Files
+
+This section is an abreviation of the more extensive documentation available [here](https://mustang-sz.github.io/WITCH/latest/getting_started/).
+
+For end users, config files are the only thing you need to change to run `WITCH`. In these files, you specify what data you would like to fit,
+how you would like to fit it, and what model you would like to fit to that data. Config files can refer to other config files, in which case they
+will be collated into one config before execution. This makes it easy to fit your data to many different models, by specifying one `_base.yaml` which
+defines the data processing, and a series of `_model.yaml`s which specify the model to be fit and refer back to `_base.yaml`. When running `witcher`,
+the highest level yaml should be passed as a commandline argument; in the example below, that is `RXJ1347_a10.yaml`. 
+
+We will use the `yaml` files `RXJ1347_a10.yaml` and `base_unit.yaml`, both found in the `unit_tests` directory as examples. These files are well commented
+and should be read through in addition to reading this section. Starting with `base_unit.yaml`, this file defines the data used in the fit and which data 
+processing routines to use. These configs are a good place to start for writing your own configs, especially if you are fitting MUSTANG-2 data.
+
+Firstly, `fit` and `sub` tell the script to fit the model to the data and to make residuals of the model to the data. `nrounds` 
+tells the script how many rounds of fitting to perform. `contstants` defines a number of constants used in the fitting, including `Te` the electron 
+temperature, `freq`, the frequency of observation, and `z`, the redshift of the cluster. `paths` specifies the path `witcher` should search to obtain data to fit, as
+well as the outroot to save the data to. All paths are relative to the global environmental variables `WITCH_DATAROOT` (for data) and `WITCH_OUTROOT` (for outputs),
+which you should set in your `.bashrc`.
+
+`coords` defines the grid on which the model will be built. The larger and higher resolution the grid, the more accurate the results will be,
+at the cost of computation time. In general, `r_map` should be larger than the largest scale in your model you are interested in. 
+Keep in mind atmospheric effects restrict MUSTANG-2 to recover scales of 2.5' radisu and smaller. `dr` should be a few times smaller than
+the instrument beam, which is 9" for MUSTANG-2. `dz` is the line-of-sight (LoS) resolution and is to integrate the model along the LoS. 
+Generally the accuracy is less sensitive to `dz`, which can be set somewhat higher than `dr`. If you're unsure what to do for `grid`,
+the defaults in `base_config.yaml` should be safe.
+
+`datasets` defines the functions which load, process, and apply noise to the data used by `WITCH`. These are defined on a per-instrument basis 
+for the purposes of joint fitting; if you are only fitting one data set, only one sub-header should be defined. The `noise` field defines what noise model
+to use when fitting. `funcs` defines the experiment-specific functions which are used to load the data, perform preprocessing, etc.
+These are defined in the `WITCH/external` submodule. `beam` defines the beam parameters, while `dograd` and `npass` are options for mapmakting
+which can be left to their defaults. If you are only working with MUSTANG-2 data, all these values can be left at their defaults
+from `base_config.yaml`.
+
+`fitter` sets hyper-parameters for the fitting routine, specifically the maximum number of interations to take per step
+and the `chitol` which sets delta-chi-squared minimum for a step to be considered converged. Finally, `imports` defines additional
+packages to be loaded into the script at runtime. Again, these can all be left at their default values.
+
+`RXJ1347_a10` defines a specific [Arnaud 2010](https://arxiv.org/abs/0910.1234) model which will be fit to the data loaded in `base_unit.yaml`. 
+First, the `base` header tells `witcher` to load the config specified in `base` as part of the full config. `name` is self explanatory, although
+note this has to match the name used for the TOD directory. `noise_map` and `model_map` tell `witcher` to make maps of just the noise and of
+the model, respectively. 
+
+The `model` contains the actual specification for the model that will be fit to the data. At the top, `unit_conversion` defines the conversion
+from the units of the model (typically pressure in something like keV / cm^3) to map units (K Rayleigh–Jeans for MUSTANG-2). If you are
+only fitting MUSTANG-2, you should stick to using the default specified in `RXJ1347_a10`. This unit conversion,
+```
+float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)
+```
+first gets the angular dymeter distance to convert from radians to Mpc, then multiplies by the conversion from Compton-y to K RJ, then finally
+multiplies by the Thompson scattering cross section divided by the mass of the elctron, which is the conversion from integrated pressure
+to Compton-y (see [Mroczkowski 2019, eqn. 5](https://arxiv.org/abs/1811.02310). 
+
+Next the various model componants are specified. In this case, we are fitting an A10 model plus a point source. `structures` indicates
+that we have moved on to specifying the model components, while `a10` names the first component. Under `a10`, `structure: a10` specifies that
+this component is a `class a10` from `witch.structures`. Note the `a10` header is the name of the component, which is only used to refer to 
+this particular componant, while `structure: a10` actually defines what structure it is. This is useful if you have, say, 2 A10s, in which case
+you could have 
+```
+a10_1:
+  structure: 10
+  ...
+a10_2:
+  structure: 10
+  ...
+```
+All available structures are defined in [`witch.structure`](https://mustang-sz.github.io/WITCH/latest/reference/structure/). The 
+documenation available at that link specifies what arguments, units, etc are expected by each type of structure. After the type of
+structure is defined, the `parameters` header indicates that each parameter will now be defined. Taking as an example `dx_1`:, the 
+`value` header indicates the inital value. The `to_fit` header can be either a list of booleans of exactly `n_rounds` length or a boolean. 
+If it is a list, for each round the parameter will either be fit or held constant at its last value depending on the value of the list
+at that index. If it is a boolean, than it will either always be fit or always be held constant. `True` indicates fit while `False` indicates
+held constant. Ffinally, the `priors` header is a list of two float, which define the lower and upper limits for a flat prior for that parameter.
+Currently only flat priors supported. After `dx_1`, each parameter is specified in turn. Note `dx_1` is just the name of the paramter, and 
+does not need to match the parameter of `a10`; the parameters will be fed as arguments to `a10` in the order they are specified.
+
+Finally, we then specify another structural component, called `ps_gaus` is defined, this time a `structure: gaussian`. Again, all the paramters of
+the component are specified. Note that the order of structures is unimportant; they can be specified in any order in the configuration file.
+`RXJ1347_a0.yaml` can be run via `witcher RXJ1347_a0.yaml`; it should produce the results stored in `RXJ1347_unit.zip`.
 
 ## Installation
 
 To install the `WITCH` library first clone this repository and from within it run:
 ```
 pip install .
-```
-Note that this will only install `WITCH` and its dependencies,
-to also install dependencies for `fitter.py` do:
-```
-pip install .[fitter]
 ```
 If you are going to be actively working on the `WITCH` library you probably want to include the `-e` flag.
 

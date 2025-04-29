@@ -6,13 +6,12 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import import_module
-from typing import Optional
+from typing import Optional, Self
 
 import dill
 import jax
 import jax.numpy as jnp
 import numpy as np
-from astropy.wcs import WCS
 from jax.tree_util import register_pytree_node_class
 from jax.typing import ArrayLike
 from scipy import interpolate
@@ -20,6 +19,7 @@ from typing_extensions import Self
 
 from . import core
 from . import grid as wg
+from . import nonparametric
 from . import utils as wu
 from .structure import STRUCT_N_PAR
 
@@ -670,12 +670,148 @@ class Model:
         else:
             raise ValueError("Error: {} not in structure names".format(struct_name))
 
-        self.__dict__.pop("to_fit_ever")
-        self.__dict__.pop("n_struct")
-        self.__dict__.pop("priors")
-        self.__dict__.pop("par_names")
-        self.__dict__.pop("model")
+        to_pop = ["to_fit_ever", "n_struct", "priors", "par_names"]
+        for key in self.__dict__.keys():
+            if key in to_pop:  # Pop keys if they are in dict
+                self.__dict__.pop(key)
+
+        self.__dict__.pop("model", None)
+        self.__dict__.pop("model_grad", None)
         self.__post_init__()
+
+    def para_to_non_para(
+        self,
+        n_rounds: Optional[int] = None,
+        to_copy: list[str] = ["gnfw", "gnfw_rs", "a10", "isobeta", "uniform"],
+    ) -> Self:
+        """
+        Function which approximately converts cluster profiles into a non-parametric form. Note this is
+        only approximate and should be fit afterwords.
+
+        Parameters
+        ----------
+        n_rounds: Optional int | None, default: None
+            Number of rounds to fit for output model. If none, copy from self
+        to_copy : list[str], default: gnfw, gnfw_rs, a10, isobeta, uniform
+            List of structures, by name, to copy.
+        Returns
+        -------
+        Model : Model
+            Model with a non-parametric representation of input model
+        Raises
+        ------
+        ValueError
+            If there are no models to copy
+        """
+        cur_model = deepcopy(
+            self
+        )  # Make a copy of model, we don't want to lose structures
+        i = 0  # Make sure we keep at least one struct
+        for structure in cur_model.structures:
+            if structure.structure not in to_copy:
+                cur_model.remove_struct(structure.name)
+            else:
+                i += 1
+        if i == 0:
+            raise ValueError("Error: no model structures in {}".format(to_copy))
+        params = jnp.array(cur_model.pars)
+        params = jnp.ravel(params)
+        pressure, _ = core.model3D(
+            cur_model.xyz, tuple(cur_model.n_struct), tuple(cur_model.n_rbins), params
+        )
+        pressure = pressure[
+            ..., int(pressure.shape[2] / 2)
+        ]  # Take middle slice. Close enough is good enough here, dont care about rounding
+
+        pixsize = np.abs(cur_model.xyz[1][0][1] - cur_model.xyz[1][0][0])
+
+        rs, bin1d, var1d = wu.bin_map(pressure, pixsize)
+
+        rbins = nonparametric.get_rbins(cur_model)
+        rbins = np.append(rbins, np.array([np.amax(rs)]))
+
+        condlist = [
+            np.array((rbins[i] <= rs) & (rs < rbins[i + 1]))
+            for i in range(len(rbins) - 2, -1, -1)
+        ]
+
+        amps, pows, c = nonparametric.profile_to_broken_power(
+            rs, bin1d, condlist, rbins
+        )
+
+        priors = (-1 * np.inf, np.inf)
+        if n_rounds is None:
+            n_rounds = self.n_rounds
+        parameters = [
+            Parameter(
+                "rbins",
+                tuple([False] * n_rounds),
+                jnp.atleast_1d(jnp.array(rbins[:-1], dtype=float)),  # Drop last bin
+                jnp.zeros_like(jnp.atleast_1d(jnp.array(rbins[:-1])), dtype=float),
+                jnp.array(priors, dtype=float),
+            ),
+            Parameter(
+                "amps",
+                tuple([True] * n_rounds),
+                jnp.atleast_1d(jnp.array(amps, dtype=float)),
+                jnp.zeros_like(jnp.atleast_1d(jnp.array(amps)), dtype=float),
+                jnp.array(priors, dtype=float),
+            ),
+            Parameter(
+                "pows",
+                tuple([True] * n_rounds),
+                jnp.atleast_1d(jnp.array(pows, dtype=float)),
+                jnp.zeros_like(jnp.atleast_1d(jnp.array(pows)), dtype=float),
+                jnp.array(priors, dtype=float),
+            ),
+            Parameter(
+                "dx",  # TODO: miscentering
+                tuple([False] * n_rounds),
+                jnp.atleast_1d(jnp.array(0, dtype=float)),
+                jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
+                jnp.array(priors, dtype=float),
+            ),
+            Parameter(
+                "dy",  # TODO: miscentering
+                tuple([False] * n_rounds),
+                jnp.atleast_1d(jnp.array(0, dtype=float)),
+                jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
+                jnp.array(priors, dtype=float),
+            ),
+            Parameter(
+                "dz",  # TODO: miscentering
+                tuple([False] * n_rounds),
+                jnp.atleast_1d(jnp.array(0, dtype=float)),
+                jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
+                jnp.array(priors, dtype=float),
+            ),
+            Parameter(
+                "c",
+                tuple([True] * n_rounds),
+                jnp.atleast_1d(jnp.array(c, dtype=float)),
+                jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
+                jnp.array(priors, dtype=float),
+            ),
+        ]
+
+        structures = [
+            Structure(
+                "nonpara_power", "nonpara_power", parameters, n_rbins=len(rbins) - 1
+            )
+        ]
+        for structure in self.structures:
+            if structure.name not in to_copy:
+                structures.append(structure)
+
+        return Model(
+            name="test",
+            structures=structures,
+            xyz=self.xyz,
+            dz=self.dz,
+            beam=self.beam,
+            n_rounds=n_rounds,
+            cur_round=0,
+        )
 
     def save(self, path: str):
         """
@@ -710,7 +846,9 @@ class Model:
             return dill.load(f)
 
     @classmethod
-    def from_cfg(cls, cfg: dict, beam: Optional[jax.Array] = None, prefactor: Optional[float] = 1) -> Self:
+    def from_cfg(
+        cls, cfg: dict, beam: Optional[jax.Array] = None, prefactor: Optional[float] = 1
+    ) -> Self:
         """
         Create an instance of model from a witcher config.
 
@@ -771,7 +909,7 @@ class Model:
             raise ValueError("Beam somehow still None!")
 
         n_rounds = cfg.get("n_rounds", 1)
-        dz = dz * prefactor 
+        dz = dz * prefactor
 
         structures = []
         for name, structure in cfg["model"]["structures"].items():

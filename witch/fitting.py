@@ -1,17 +1,16 @@
 import time
+from copy import deepcopy
 from functools import partial
 from typing import Callable
 
 import jax
 import jax.numpy as jnp
 import mpi4jax
-from jitkasi.solutions import SolutionSet
-from jitkasi.tod import TODVec
 from mpi4py import MPI
 from tqdm import tqdm
 
-from . import utils as wu
 from .containers import Model
+from .dataset import DataSet
 
 
 @jax.jit
@@ -70,6 +69,7 @@ def invscale(matrix: jax.Array, thresh: float = 1e-14) -> jax.Array:
 
     return mm * invsafe(mm * matrix, thresh)
 
+
 @partial(jax.jit, static_argnames=("modes",))
 def objective_joint(
     pars: jax.Array,
@@ -86,7 +86,7 @@ def objective_joint(
     for i, model in enumerate(models):
         mode = modes[i]
         if mode not in ["tod", "map"]:
-            raise ValueError("Invalid mode") 
+            raise ValueError("Invalid mode")
         new_model = model.update(pars, errs, model.chisq)
         new_models.append(new_model)
         for data in datasets[i]:
@@ -99,11 +99,11 @@ def objective_joint(
                 pred_dat, grad_dat = new_model.to_map_grad(
                     x * wu.rad_to_arcsec, y * wu.rad_to_arcsec
                 )
-    
+
             resid = data.data - pred_dat
             resid_filt = data.noise.apply_noise(resid)
             chisq += jnp.sum(resid * resid_filt)
-    
+
             grad_filt = jnp.zeros_like(grad_dat)
             for j in range(npar):
                 grad_filt = grad_filt.at[j].set(
@@ -112,209 +112,21 @@ def objective_joint(
             grad_filt = jnp.reshape(grad_filt, (npar, -1))
             grad_dat = jnp.reshape(grad_dat, (npar, -1))
             resid = resid.ravel()
-    
+
             grad = grad.at[:].add(jnp.dot(grad_filt, jnp.transpose(resid)))
             curve = curve.at[:].add(jnp.dot(grad_filt, jnp.transpose(grad_dat)))
 
-    chisq, token = mpi4jax.allreduce(chisq, MPI.SUM, comm=datasets[0].comm) #TODO: is the all reduce correct?
+    chisq, token = mpi4jax.allreduce(
+        chisq, MPI.SUM, comm=datasets[0].comm
+    )  # TODO: is the all reduce correct?
     grad, token = mpi4jax.allreduce(grad, MPI.SUM, comm=datasets[0].comm, token=token)
     curve, _ = mpi4jax.allreduce(curve, MPI.SUM, comm=datasets[0].comm, token=token)
 
     for i, new_model in enumerate(new_models):
         new_model = new_model.update(pars, errs, chisq)
-        new_models[i] = new_model #TODO: Is this neccesary? 
+        new_models[i] = new_model  # TODO: Is this neccesary?
     new_models = tuple(new_models)
     return new_models, grad, curve
-
-@partial(jax.jit, static_argnames=("mode",))
-def objective(
-    pars: jax.Array,
-    model: Model,
-    dataset: TODVec | SolutionSet,
-    errs: jax.Array,
-    mode: str = "tod",
-) -> tuple[Model, jax.Array, jax.Array]:
-    """
-    Objective function to minimize when fitting.
-    This is also responsible for updating our model with the current guess.
-    This is an MPI aware function.
-
-    Parameters
-    ----------
-    pars : jax.Array
-        New parameters for our model.
-    model : Model
-        The model object we are using to fit.
-    dataset: TODVec | SolutionSet
-        The data to fit against.
-        This is what we use to compute our fit residuals.
-    errs : jax.Array
-        The error on `pars`, used to update the model state.
-    mode : str, default: "tod"
-        The type of data we compile this function for.
-        Should be either "tod" or "map".
-
-    Returns
-    -------
-    new_model : Model
-        An updated model object.
-        This contains the newly computed `chisq` for the input `pars`.
-        Also is updated with input `pars` and `errs`.
-    grad : jax.Array
-        The gradient of the parameters at there current values.
-        This is a `(npar,)` array.
-    curve : jax.Array
-        The curvature of the parameter space at the current values.
-        This is a `(npar, npar)` array.
-    """
-    if mode not in ["tod", "map"]:
-        raise ValueError("Invalid mode")
-    npar = len(pars)
-    new_model = model.update(pars, errs, model.chisq)
-    chisq = jnp.array(0)
-    grad = jnp.zeros(npar)
-    curve = jnp.zeros((npar, npar))
-    for data in dataset:
-        if mode == "tod":
-            x = data.x * wu.rad_to_arcsec
-            y = data.y * wu.rad_to_arcsec
-            pred_dat, grad_dat = new_model.to_tod_grad(x, y)
-        else:
-            x, y = data.xy
-            pred_dat, grad_dat = new_model.to_map_grad(
-                x * wu.rad_to_arcsec, y * wu.rad_to_arcsec
-            )
-
-        resid = data.data - pred_dat
-        resid_filt = data.noise.apply_noise(resid)
-        chisq += jnp.sum(resid * resid_filt)
-
-        grad_filt = jnp.zeros_like(grad_dat)
-        for i in range(npar):
-            grad_filt = grad_filt.at[i].set(
-                data.noise.apply_noise(grad_dat.at[i].get())
-            )
-        grad_filt = jnp.reshape(grad_filt, (npar, -1))
-        grad_dat = jnp.reshape(grad_dat, (npar, -1))
-        resid = resid.ravel()
-
-        grad = grad.at[:].add(jnp.dot(grad_filt, jnp.transpose(resid)))
-        curve = curve.at[:].add(jnp.dot(grad_filt, jnp.transpose(grad_dat)))
-
-    chisq, token = mpi4jax.allreduce(chisq, MPI.SUM, comm=dataset.comm)
-    grad, token = mpi4jax.allreduce(grad, MPI.SUM, comm=dataset.comm, token=token)
-    curve, _ = mpi4jax.allreduce(curve, MPI.SUM, comm=dataset.comm, token=token)
-
-    new_model = new_model.update(pars, errs, chisq)
-
-    return new_model, grad, curve
-
-
-@partial(jax.jit, static_argnames=("mode",))
-def get_chisq(
-    model: Model, dataset: TODVec | SolutionSet, mode: str = "tod"
-) -> jax.Array:
-    """
-    Get the chi-squared of a model given data.
-    This is an MPI aware function.
-
-    Parameters
-    ----------
-    model : Model
-        The model object we are using to fit.
-    dataset : TODVec | SolutionSet
-        The data to fit against.
-        This is what we use to compute our fit residuals.
-    mode : str, default: "tod"
-        The type of data we compile this function for.
-        Should be either "tod" or "map".
-
-    Returns
-    -------
-    chisq : jax.Array
-        The chi-squared of the model.
-    """
-    if mode not in ["tod", "map"]:
-        raise ValueError("Invalid mode")
-    token = mpi4jax.barrier(comm=dataset.comm)
-    if mode not in ["tod", "map"]:
-        raise ValueError("Invalid mode")
-    chisq = jnp.array(0)
-    for data in dataset:
-        if mode == "tod":
-            x = data.x * wu.rad_to_arcsec
-            y = data.y * wu.rad_to_arcsec
-            pred_dat = model.to_tod(x, y)
-        else:
-            x, y = data.xy
-            pred_dat = model.to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
-
-        resid = data.data - pred_dat
-        resid_filt = data.noise.apply_noise(resid)
-        chisq += jnp.sum(resid * resid_filt)
-
-    chisq, token = mpi4jax.allreduce(chisq, MPI.SUM, comm=dataset.comm, token=token)
-    _ = mpi4jax.barrier(comm=dataset.comm, token=token)
-
-    return chisq
-
-
-@partial(jax.jit, static_argnames=("mode",))
-def get_grad(model: Model, dataset: TODVec, mode: str = "tod") -> jax.Array:
-    """
-    Get the gradient of chi-squared of a model given a set of TODs.
-    This is an MPI aware function.
-
-    Parameters
-    ----------
-    model : Model
-        The model object we are using to fit.
-    dataset : TODVec | SolutionSet
-        The data to fit against.
-        This is what we use to compute our fit residuals.
-    mode : str, default: "tod"
-        The type of data we compile this function for.
-        Should be either "tod" or "map".
-
-    Returns
-    -------
-    grad : jax.Array
-        The gradient of the parameters at there current values.
-        This is a `(npar,)` array.
-    """
-    if mode not in ["tod", "map"]:
-        raise ValueError("Invalid mode")
-    token = mpi4jax.barrier(comm=dataset.comm)
-    npar = len(model.pars)
-    grad = jnp.zeros(npar)
-    for data in dataset:
-        if mode == "tod":
-            x = data.x * wu.rad_to_arcsec
-            y = data.y * wu.rad_to_arcsec
-            pred_dat, grad_dat = model.to_tod_grad(x, y)
-        else:
-            x, y = data.xy
-            pred_dat, grad_dat = model.to_map_grad(
-                x * wu.rad_to_arcsec, y * wu.rad_to_arcsec
-            )
-
-        resid = data.data - pred_dat
-
-        grad_filt = jnp.zeros_like(grad_dat)
-        for i in range(npar):
-            grad_filt = grad_filt.at[i].set(
-                data.noise.apply_noise(grad_dat.at[i].get())
-            )
-        grad_filt = jnp.reshape(grad_filt, (npar, -1))
-        grad_dat = jnp.reshape(grad_dat, (npar, -1))
-        resid = resid.ravel()
-
-        grad = grad.at[:].add(jnp.dot(grad_filt, jnp.transpose(resid)))
-
-    grad, token = mpi4jax.allreduce(grad, MPI.SUM, comm=dataset.comm, token=token)
-    _ = mpi4jax.barrier(comm=dataset.comm, token=token)
-
-    return grad
 
 
 @jax.jit
@@ -368,10 +180,13 @@ def _success(
     lmd = jnp.where(lmd < 0.2, 0, lmd / jnp.sqrt(2))
     return new_model, new_grad, new_curve, new_delta_chisq, lmd
 
-#@partial(jax.jit, static_argnums=(2, 3, 4))
+
+# @partial(jax.jit, static_argnums=(2, 3, 4))
 def fit_datasets(
     models: tuple[Model],
-    datasets: tuple[TODVec] | tuple[SolutionSet], #TODO: not sure typing is right on this, should be tuple[TODVec | SolutionSet]?
+    datasets: (
+        tuple[TODVec] | tuple[SolutionSet]
+    ),  # TODO: not sure typing is right on this, should be tuple[TODVec | SolutionSet]?
     modes: tuple[str],
     maxiter: int = 10,
     chitol: float = 1e-5,
@@ -386,9 +201,9 @@ def fit_datasets(
         iterbool = jax.lax.lt(i, maxiter)
         chisqbool = jax.lax.ge(delta_chisq, chitol) + jax.lax.gt(lmd, zero)
         return iterbool * chisqbool
-  
+
     def _chisq_func(val):
-        #TODO: Does this work?
+        # TODO: Does this work?
         i, delta_chisq, new_models, models = val
         return delta_chisq + (models[i].chisq - new_models[i].chisq)
 
@@ -397,15 +212,21 @@ def fit_datasets(
         curve_use = curve.at[:].add(lmd * jnp.diag(jnp.diag(curve)))
         # Get the step
         step = jnp.dot(invscale(curve_use), grad)
-        new_pars, to_fit = _prior_pars_fit( #TODO: potential issue here if models don't have same priors/to_fit but this shouldn't be fixed here
-            models[0].priors, models[0].pars.at[:].add(step), jnp.array(models[0].to_fit)
+        new_pars, to_fit = (
+            _prior_pars_fit(  # TODO: potential issue here if models don't have same priors/to_fit but this shouldn't be fixed here
+                models[0].priors,
+                models[0].pars.at[:].add(step),
+                jnp.array(models[0].to_fit),
+            )
         )
         # Get errs
         errs = jnp.where(to_fit, jnp.sqrt(jnp.diag(invscale(curve_use))), 0)
         # Now lets get an updated model
-        new_models, new_grad, new_curve = objective_joint(new_pars, models, datasets, errs, modes)
+        new_models, new_grad, new_curve = objective_joint(
+            new_pars, models, datasets, errs, modes
+        )
 
-        #new_delta_chisq = jax.lax.fori_loop(0, len(models), _chisq_func, (0, 0, new_models, models)) #Does this work?
+        # new_delta_chisq = jax.lax.fori_loop(0, len(models), _chisq_func, (0, 0, new_models, models)) #Does this work?
         new_delta_chisq = 0
         for i in range(len(models)):
             new_delta_chisq += models[i].chisq - new_models[i].chisq
@@ -424,9 +245,11 @@ def fit_datasets(
             lmd,
         )
 
-        return (i+1, delta_chisq, lmd, models, curve, grad)
+        return (i + 1, delta_chisq, lmd, models, curve, grad)
 
-    pars, _ = _prior_pars_fit(models[0].priors, models[0].pars, jnp.array(models[0].to_fit))
+    pars, _ = _prior_pars_fit(
+        models[0].priors, models[0].pars, jnp.array(models[0].to_fit)
+    )
     models, grad, curve = objective_joint(pars, models, datasets, models[0].errs, modes)
     i, delta_chisq, _, models, *_ = jax.lax.while_loop(
         _cond_func, _body_func, (0, jnp.inf, zero, models, curve, grad)
@@ -434,13 +257,13 @@ def fit_datasets(
 
     return models, i, delta_chisq
 
-#@partial(jax.jit, static_argnums=(2, 3, 4))
+
+@partial(jax.jit, static_argnums=(2, 3))
 def fit_dataset(
     model: Model,
-    dataset: TODVec | SolutionSet,
+    dataset: DataSet,
     maxiter: int = 10,
     chitol: float = 1e-5,
-    mode: str = "tod",
 ) -> tuple[Model, int, float]:
     """
     Fit a model to TODs.
@@ -451,16 +274,13 @@ def fit_dataset(
     ----------
     model : Model
         The model object that defines the model and grid we are fitting with.
-    dataset : TODVec | SolutionSet
-        The data to fit.
-        The `dataset.comm` object is used to fit in an MPI aware way.
+    dataset : DataSet
+        The dataset to fit.
+        The `dataset.datavec.comm` object is used to fit in an MPI aware way.
     maxiter : int, default: 10
         The maximum number of iterations to fit.
     chitol : float, default: 1e-5
         The delta chisq to use as the convergence criteria.
-    mode : str, default: "tod"
-        The type of data we compile this function for.
-        Should be either "tod" or "map".
 
     Returns
     -------
@@ -471,7 +291,7 @@ def fit_dataset(
     delta_chisq : float
         The final delta chisq.
     """
-    if mode not in ["tod", "map"]:
+    if dataset.mode not in ["tod", "map"]:
         raise ValueError("Invalid mode")
     zero = jnp.array(0.0)
 
@@ -492,7 +312,11 @@ def fit_dataset(
         # Get errs
         errs = jnp.where(to_fit, jnp.sqrt(jnp.diag(invscale(curve_use))), 0)
         # Now lets get an updated model
-        new_model, new_grad, new_curve = objective(new_pars, model, dataset, errs, mode)
+        new_model = deepcopy(model).update(new_pars, model.errs, model.chisq)
+        new_chisq, new_grad, new_curve = dataset.objective(
+            new_model, dataset.datavec, dataset.mode, True, True, True
+        )
+        new_model = new_model.update(new_pars, errs, new_chisq)
 
         new_delta_chisq = model.chisq - new_model.chisq
         model, grad, curve, delta_chisq, lmd = jax.lax.cond(
@@ -513,7 +337,11 @@ def fit_dataset(
         return (i + 1, delta_chisq, lmd, model, curve, grad)
 
     pars, _ = _prior_pars_fit(model.priors, model.pars, jnp.array(model.to_fit))
-    model, grad, curve = objective(pars, model, dataset, model.errs, mode)
+    model = model.update(pars, model.errs, model.chisq)
+    chisq, grad, curve = dataset.objective(
+        model, dataset.datavec, dataset.mode, True, True, True
+    )
+    model = model.update(pars, model.errs, chisq)
     i, delta_chisq, _, model, *_ = jax.lax.while_loop(
         _cond_func, _body_func, (0, jnp.inf, zero, model, curve, grad)
     )
@@ -638,12 +466,11 @@ def hmc(
 
 def run_mcmc(
     model: Model,
-    dataset: TODVec | SolutionSet,
+    dataset: DataSet,
     num_steps: int = 5000,
     num_leaps: int = 10,
     step_size: float = 0.02,
     sample_which: int = -1,
-    mode: str = "tod",
 ) -> tuple[Model, jax.Array]:
     """
     Run MCMC using the `emcee` package to estimate the posterior for our model.
@@ -660,8 +487,9 @@ def run_mcmc(
     model : Model
         The model to run MCMC on.
         We expect that all parameters in this model have priors defined.
-    dataset : TODVec | SolutionSet
-        The data to compute the likelihood of the model with.
+    dataset : DataSet
+        The dataset to compute the model posterior with.
+        The `dataset.datavec.comm` object is used to fit in an MPI aware way.
     num_steps : int, default: 5000
         The number of steps to run MCMC for.
     num_leaps: int, default: 10
@@ -677,9 +505,6 @@ def run_mcmc(
         in the last round of fitting.
         If this is -2 then any parameters that were ever fit will be sampled.
         If this is <= -3 or >= `model.n_rounds` then all parameters are sampled.
-    mode : str, default: "tod"
-        The type of data to run this function on.
-        Should be either "tod" or "map".
 
     Returns
     -------
@@ -692,8 +517,8 @@ def run_mcmc(
         Array of samples from running MCMC.
 
     """
-    token = mpi4jax.barrier(comm=dataset.comm)
-    rank = dataset.comm.Get_rank()
+    token = mpi4jax.barrier(comm=dataset.datavec.comm)
+    rank = dataset.datavec.comm.Get_rank()
 
     if sample_which >= 0 and sample_which < model.n_rounds:
         model.cur_round = sample_which
@@ -723,9 +548,12 @@ def run_mcmc(
         return -1 * jnp.inf
 
     def _not_inf(pars, model):
-        pars, _ = mpi4jax.bcast(pars, 0, comm=dataset.comm)
+        pars, _ = mpi4jax.bcast(pars, 0, comm=dataset.datavec.comm)
         temp_model = model.update(pars, init_errs, model.chisq)
-        log_like = -0.5 * get_chisq(temp_model, dataset, mode)
+        chisq, *_ = dataset.objective(
+            temp_model, dataset.datavec, dataset.mode, True, False, False
+        )
+        log_like = -0.5 * chisq
         return log_like
 
     @jax.jit
@@ -749,9 +577,11 @@ def run_mcmc(
         return jnp.inf * jnp.ones(npar)
 
     def _not_inf_grad(pars, model, scale):
-        pars, _ = mpi4jax.bcast(pars, 0, comm=dataset.comm)
+        pars, _ = mpi4jax.bcast(pars, 0, comm=dataset.datavec.comm)
         temp_model = model.update(pars, init_errs, model.chisq)
-        grad = get_grad(temp_model, dataset, mode)
+        _, grad, _ = dataset.objective(
+            temp_model, dataset.datavec, dataset.mode, False, True, False
+        )
         grad = grad.at[:].multiply(scale)
         return grad.at[to_fit].get().ravel()
 
@@ -771,7 +601,7 @@ def run_mcmc(
         )
 
     key = jax.random.PRNGKey(0)
-    key, token = mpi4jax.bcast(key, 0, comm=dataset.comm, token=token)
+    key, token = mpi4jax.bcast(key, 0, comm=dataset.datavec.comm, token=token)
     chain = hmc(
         init_pars.at[to_fit].get().ravel(),
         _log_prob,
@@ -779,19 +609,23 @@ def run_mcmc(
         num_steps=num_steps,
         num_leaps=num_leaps,
         step_size=step_size,
-        comm=dataset.comm,
+        comm=dataset.datavec.comm,
         key=key,
     )
     flat_samples = chain.at[:].multiply(scale.at[to_fit].get())
     if rank == 0:
         final_pars = final_pars.at[to_fit].set(jnp.median(flat_samples, axis=0).ravel())
         final_errs = final_errs.at[to_fit].set(jnp.std(flat_samples, axis=0).ravel())
-    final_pars, token = mpi4jax.bcast(final_pars, 0, comm=dataset.comm, token=token)
-    final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=dataset.comm, token=token)
+    final_pars, token = mpi4jax.bcast(
+        final_pars, 0, comm=dataset.datavec.comm, token=token
+    )
+    final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=dataset.datavec.comm, token=token)
     model = model.update(
         final_pars.block_until_ready(), final_errs.block_until_ready(), model.chisq
     )
-    chisq = get_chisq(model, dataset, mode)
+    chisq, *_ = dataset.objective(
+        model, dataset.datavec, dataset.mode, True, False, False
+    )
     model = model.update(final_pars, final_errs, chisq)
 
     return model, flat_samples
