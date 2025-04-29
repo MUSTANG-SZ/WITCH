@@ -221,6 +221,30 @@ def fft_conv(image: ArrayLike, kernel: ArrayLike) -> jax.Array:
     return convolved_map
 
 
+@jax.jit
+def fft_deconv(image: ArrayLike, kernel: ArrayLike) -> jax.Array:
+    """
+    Perform a convolution using FFTs for speed with jax.
+
+    Parameters
+    ----------
+    image : ArrayLike
+        Data to be convolved.
+    kernel : ArrayLike
+        Convolution kernel.
+
+    Returns
+    -------
+    convolved_map : jax.Array
+        Image convolved with kernel.
+    """
+    Fmap = jnp.fft.fft2(jnp.fft.fftshift(image))
+    Fkernel = jnp.fft.fft2(jnp.fft.fftshift(kernel))
+    convolved_map = jnp.fft.fftshift(jnp.real(jnp.fft.ifft2(Fmap / Fkernel)))
+
+    return convolved_map
+
+
 @partial(jax.jit, static_argnums=(1,))
 def tod_hi_pass(tod: jax.Array, N_filt: int) -> jax.Array:
     """
