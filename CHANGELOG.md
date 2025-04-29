@@ -1,3 +1,47 @@
+## 9.2.0 (2025-04-29)
+
+### Feat
+
+- add fft deconv
+- Updating README and unit_test yamls to better describe witcher usage
+- nonpara unit
+- working gnfw+isobeta subcluster
+- more yamls
+- subcluster
+- nonpara support
+- type hinting and doc strings
+- add bin map
+- add bin map. fix: reorder amps and pows
+- deprint and rejit
+- move binmap to its own function and add docs
+- continuing work on para_to_non_para
+- adding profile to broken power, which fits broken power to arbitrary profile
+- spinout 3d pressure model as its own function as its useful elsewhere. May have to fix jitting
+- adding para to non-para method
+- fixed bug with remove_struct where certaint keys werent available
+- maka DataSet a pytree
+- add check that dataset is complete before starting any actual computations
+- add dataclass to make dataset handling smoother
+- add specification for datasets
+- add objective for poisson dist
+- add interface to have flexibility in the objective function
+
+### Fix
+
+- issue with process_tod args not matching postfit
+- fit loop with objective functions
+- re-jitting non-para
+- Still using MJ_OUTROOT for outdir
+- correctly look for nonpara
+- adding get_files
+- black
+- wrong tuple
+- circular import
+- remove z
+- z unused in nonpara
+- cleanup imports
+- some typing and import fixes
+
 ## 9.0.2 (2025-03-06)
 
 ### Fix
