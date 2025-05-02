@@ -19,7 +19,7 @@ def _get_nonpara(signature, prefix_list=["nonpara_"]):
     static_msk = np.zeros_like(par_names, dtype=bool)
     for prefix in prefix_list:
         static_msk += np.char.startswith(par_names, prefix)
-    return np.sum(static_msk)
+    return int(np.sum(static_msk))
 
 
 @jax.jit
