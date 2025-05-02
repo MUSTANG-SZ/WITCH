@@ -70,65 +70,6 @@ def invscale(matrix: jax.Array, thresh: float = 1e-14) -> jax.Array:
     return mm * invsafe(mm * matrix, thresh)
 
 
-@partial(jax.jit, static_argnames=("modes",))
-def objective_joint(
-    pars: jax.Array,
-    models: tuple[Model],
-    datasets: tuple[TODVec] | tuple[SolutionSet],
-    errs: jax.Array,
-    modes: tuple[str],
-) -> tuple[tuple[Model], jax.Array, jax.Array]:
-    new_models = []
-    npar = len(pars)
-    chisq = jnp.array(0)
-    grad = jnp.zeros(npar)
-    curve = jnp.zeros((npar, npar))
-    for i, model in enumerate(models):
-        mode = modes[i]
-        if mode not in ["tod", "map"]:
-            raise ValueError("Invalid mode")
-        new_model = model.update(pars, errs, model.chisq)
-        new_models.append(new_model)
-        for data in datasets[i]:
-            if mode == "tod":
-                x = data.x * wu.rad_to_arcsec
-                y = data.y * wu.rad_to_arcsec
-                pred_dat, grad_dat = new_model.to_tod_grad(x, y)
-            else:
-                x, y = data.xy
-                pred_dat, grad_dat = new_model.to_map_grad(
-                    x * wu.rad_to_arcsec, y * wu.rad_to_arcsec
-                )
-
-            resid = data.data - pred_dat
-            resid_filt = data.noise.apply_noise(resid)
-            chisq += jnp.sum(resid * resid_filt)
-
-            grad_filt = jnp.zeros_like(grad_dat)
-            for j in range(npar):
-                grad_filt = grad_filt.at[j].set(
-                    data.noise.apply_noise(grad_dat.at[j].get())
-                )
-            grad_filt = jnp.reshape(grad_filt, (npar, -1))
-            grad_dat = jnp.reshape(grad_dat, (npar, -1))
-            resid = resid.ravel()
-
-            grad = grad.at[:].add(jnp.dot(grad_filt, jnp.transpose(resid)))
-            curve = curve.at[:].add(jnp.dot(grad_filt, jnp.transpose(grad_dat)))
-
-    chisq, token = mpi4jax.allreduce(
-        chisq, MPI.SUM, comm=datasets[0].comm
-    )  # TODO: is the all reduce correct?
-    grad, token = mpi4jax.allreduce(grad, MPI.SUM, comm=datasets[0].comm, token=token)
-    curve, _ = mpi4jax.allreduce(curve, MPI.SUM, comm=datasets[0].comm, token=token)
-
-    for i, new_model in enumerate(new_models):
-        new_model = new_model.update(pars, errs, chisq)
-        new_models[i] = new_model  # TODO: Is this neccesary?
-    new_models = tuple(new_models)
-    return new_models, grad, curve
-
-
 @jax.jit
 def _prior_pars_fit(
     priors: tuple[jax.Array, jax.Array], pars: jax.Array, to_fit: jax.Array
@@ -144,8 +85,8 @@ def _prior_pars_fit(
 
 
 def _failure(
-    model,
-    new_model,
+    models,
+    new_models,
     grad,
     new_grad,
     curve,
@@ -154,17 +95,17 @@ def _failure(
     new_delta_chisq,
     lmd,
 ):
-    del new_model
+    del new_models
     del new_grad
     del new_curve
     del new_delta_chisq
     lmd = jnp.where(lmd == 0, 1, 2 * lmd)
-    return model, grad, curve, delta_chisq, lmd
+    return models, grad, curve, delta_chisq, lmd
 
 
 def _success(
-    model,
-    new_model,
+    models,
+    new_models,
     grad,
     new_grad,
     curve,
@@ -173,28 +114,51 @@ def _success(
     new_delta_chisq,
     lmd,
 ):
-    del model
+    del models
     del grad
     del curve
     del delta_chisq
     lmd = jnp.where(lmd < 0.2, 0, lmd / jnp.sqrt(2))
-    return new_model, new_grad, new_curve, new_delta_chisq, lmd
+    return new_models, new_grad, new_curve, new_delta_chisq, lmd
 
 
-# @partial(jax.jit, static_argnums=(2, 3, 4))
-def fit_datasets(
-    models: tuple[Model],
-    datasets: (
-        tuple[TODVec] | tuple[SolutionSet]
-    ),  # TODO: not sure typing is right on this, should be tuple[TODVec | SolutionSet]?
-    modes: tuple[str],
+@partial(jax.jit, static_argnums=(2, 3))
+def run_lmfit(
+    models: tuple[Model, ...],
+    datasets: tuple[DataSet, ...],
     maxiter: int = 10,
     chitol: float = 1e-5,
-) -> tuple[tuple[Model], int, float]:
-    for mode in modes:
-        if mode not in ["tod", "map"]:
-            raise ValueError("Invalid mode")
+) -> tuple[tuple[Model, ...], int, float]:
+    """
+    Fit a set of models to datasets jointly.
+    This uses a modified Levenberg–Marquardt fitter with flat priors.
+    This function is MPI aware.
+
+    Parameters
+    ----------
+    models : tuple[Model, ...]
+        The model objects that defines the model and grid we are fitting with.
+        Right now we assume that these are all identical but with different prefactors.
+    datasets : tuple[DataSet, ...]
+        The datasets to fit.
+        The `dataset.datavec.comm` object is used to fit in an MPI aware way.
+    maxiter : int, default: 10
+        The maximum number of iterations to fit.
+    chitol : float, default: 1e-5
+        The delta chisq to use as the convergence criteria.
+
+    Returns
+    -------
+    models : tuple[Model, ...]
+        Model with the final set of fit parameters, errors, and chisq.
+    final_iter : int
+        The number of iterations the fitter ran for.
+    delta_chisq : float
+        The final delta chisq.
+    """
     zero = jnp.array(0.0)
+    grad_zero = jnp.zeros(len(models[0].pars))
+    curve_zero = jnp.zeros((len(models[0].pars), len(models[0].pars)))
 
     def _cond_func(val):
         i, delta_chisq, lmd, *_ = val
@@ -202,35 +166,39 @@ def fit_datasets(
         chisqbool = jax.lax.ge(delta_chisq, chitol) + jax.lax.gt(lmd, zero)
         return iterbool * chisqbool
 
-    def _chisq_func(val):
-        # TODO: Does this work?
-        i, delta_chisq, new_models, models = val
-        return delta_chisq + (models[i].chisq - new_models[i].chisq)
-
     def _body_func(val):
-        i, delta_chisq, lmd, models, curve, grad = val
+        i, delta_chisq, lmd, model, curve, grad = val
         curve_use = curve.at[:].add(lmd * jnp.diag(jnp.diag(curve)))
         # Get the step
         step = jnp.dot(invscale(curve_use), grad)
-        new_pars, to_fit = (
-            _prior_pars_fit(  # TODO: potential issue here if models don't have same priors/to_fit but this shouldn't be fixed here
-                models[0].priors,
-                models[0].pars.at[:].add(step),
-                jnp.array(models[0].to_fit),
-            )
+        new_pars, to_fit = _prior_pars_fit(
+            model[0].priors, model[0].pars.at[:].add(step), jnp.array(model.to_fit)
         )
         # Get errs
         errs = jnp.where(to_fit, jnp.sqrt(jnp.diag(invscale(curve_use))), 0)
         # Now lets get an updated model
-        new_models, new_grad, new_curve = objective_joint(
-            new_pars, models, datasets, errs, modes
+        new_models = tuple(
+            deepcopy(model).update(new_pars, model.errs, model.chisq)
+            for model in models
+        )
+        new_chisq, new_grad, new_curve = (
+            zero.copy(),
+            grad_zero.copy(),
+            curve_zero.copy(),
+        )
+        for dataset, new_model in zip(datasets, new_models):
+            _chisq, _grad, _curve = dataset.objective(
+                new_model, dataset.datavec, dataset.mode, True, True, True
+            )
+            new_chisq = new_chisq.at[:].add(_chisq)
+            new_grad = new_grad.at[:].add(_grad)
+            new_curve = new_curve.at[:].add(_curve)
+        new_models = tuple(
+            new_model.update(new_pars, errs, new_chisq) for new_model in new_models
         )
 
-        # new_delta_chisq = jax.lax.fori_loop(0, len(models), _chisq_func, (0, 0, new_models, models)) #Does this work?
-        new_delta_chisq = 0
-        for i in range(len(models)):
-            new_delta_chisq += models[i].chisq - new_models[i].chisq
-        models, grad, curve, delta_chisq, lmd = jax.lax.cond(
+        new_delta_chisq = models[0].chisq - new_models[0].chisq
+        model, grad, curve, delta_chisq, lmd = jax.lax.cond(
             new_delta_chisq > 0,
             _success,
             _failure,
@@ -245,108 +213,25 @@ def fit_datasets(
             lmd,
         )
 
-        return (i + 1, delta_chisq, lmd, models, curve, grad)
+        return (i + 1, delta_chisq, lmd, model, curve, grad)
 
     pars, _ = _prior_pars_fit(
         models[0].priors, models[0].pars, jnp.array(models[0].to_fit)
     )
-    models, grad, curve = objective_joint(pars, models, datasets, models[0].errs, modes)
+    models = tuple(model.update(pars, model.errs, model.chisq) for model in models)
+    chisq, grad, curve = zero.copy(), grad_zero.copy(), curve_zero.copy()
+    for dataset, model in zip(datasets, models):
+        _chisq, _grad, _curve = dataset.objective(
+            model, dataset.datavec, dataset.mode, True, True, True
+        )
+        chisq = chisq.at[:].add(_chisq)
+        grad = grad.at[:].add(_grad)
+        curve = curve.at[:].add(_curve)
     i, delta_chisq, _, models, *_ = jax.lax.while_loop(
         _cond_func, _body_func, (0, jnp.inf, zero, models, curve, grad)
     )
 
     return models, i, delta_chisq
-
-
-@partial(jax.jit, static_argnums=(2, 3))
-def fit_dataset(
-    model: Model,
-    dataset: DataSet,
-    maxiter: int = 10,
-    chitol: float = 1e-5,
-) -> tuple[Model, int, float]:
-    """
-    Fit a model to TODs.
-    This uses a modified Levenberg–Marquardt fitter with flat priors.
-    This function is MPI aware.
-
-    Parameters
-    ----------
-    model : Model
-        The model object that defines the model and grid we are fitting with.
-    dataset : DataSet
-        The dataset to fit.
-        The `dataset.datavec.comm` object is used to fit in an MPI aware way.
-    maxiter : int, default: 10
-        The maximum number of iterations to fit.
-    chitol : float, default: 1e-5
-        The delta chisq to use as the convergence criteria.
-
-    Returns
-    -------
-    model : Model
-        Model with the final set of fit parameters, errors, and chisq.
-    final_iter : int
-        The number of iterations the fitter ran for.
-    delta_chisq : float
-        The final delta chisq.
-    """
-    if dataset.mode not in ["tod", "map"]:
-        raise ValueError("Invalid mode")
-    zero = jnp.array(0.0)
-
-    def _cond_func(val):
-        i, delta_chisq, lmd, *_ = val
-        iterbool = jax.lax.lt(i, maxiter)
-        chisqbool = jax.lax.ge(delta_chisq, chitol) + jax.lax.gt(lmd, zero)
-        return iterbool * chisqbool
-
-    def _body_func(val):
-        i, delta_chisq, lmd, model, curve, grad = val
-        curve_use = curve.at[:].add(lmd * jnp.diag(jnp.diag(curve)))
-        # Get the step
-        step = jnp.dot(invscale(curve_use), grad)
-        new_pars, to_fit = _prior_pars_fit(
-            model.priors, model.pars.at[:].add(step), jnp.array(model.to_fit)
-        )
-        # Get errs
-        errs = jnp.where(to_fit, jnp.sqrt(jnp.diag(invscale(curve_use))), 0)
-        # Now lets get an updated model
-        new_model = deepcopy(model).update(new_pars, model.errs, model.chisq)
-        new_chisq, new_grad, new_curve = dataset.objective(
-            new_model, dataset.datavec, dataset.mode, True, True, True
-        )
-        new_model = new_model.update(new_pars, errs, new_chisq)
-
-        new_delta_chisq = model.chisq - new_model.chisq
-        model, grad, curve, delta_chisq, lmd = jax.lax.cond(
-            new_delta_chisq > 0,
-            _success,
-            _failure,
-            model,
-            new_model,
-            grad,
-            new_grad,
-            curve,
-            new_curve,
-            delta_chisq,
-            new_delta_chisq,
-            lmd,
-        )
-
-        return (i + 1, delta_chisq, lmd, model, curve, grad)
-
-    pars, _ = _prior_pars_fit(model.priors, model.pars, jnp.array(model.to_fit))
-    model = model.update(pars, model.errs, model.chisq)
-    chisq, grad, curve = dataset.objective(
-        model, dataset.datavec, dataset.mode, True, True, True
-    )
-    model = model.update(pars, model.errs, chisq)
-    i, delta_chisq, _, model, *_ = jax.lax.while_loop(
-        _cond_func, _body_func, (0, jnp.inf, zero, model, curve, grad)
-    )
-
-    return model, i, delta_chisq
 
 
 def hmc(

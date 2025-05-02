@@ -9,7 +9,7 @@ applied as needed to the non chi-squared distributions.
 """
 
 from functools import partial
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 import jax
 import jax.numpy as jnp
@@ -21,6 +21,9 @@ from mpi4py import MPI
 
 from . import utils as wu
 from .containers import Model
+
+if TYPE_CHECKING:
+    from .dataset import DataSet
 
 
 @runtime_checkable

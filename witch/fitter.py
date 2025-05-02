@@ -23,7 +23,7 @@ from typing_extensions import Any, Unpack
 from . import utils as wu
 from .containers import Model, Model_xfer
 from .dataset import DataSet
-from .fitting import fit_dataset, fit_datasets, objective, objective_joint, run_mcmc
+from .fitting import run_lmfit, run_mcmc
 
 comm = MPI.COMM_WORLD.Clone()
 
@@ -93,7 +93,9 @@ def _mpi_fsplit(fnames, comm):
     return fnames[rank::nproc], comm
 
 
-def process_tods(cfg, todvec, info, model):
+def process_tods(cfg, dataset, model):
+    todvec = dataset.datavec
+    info = dataset.info
     rank = todvec.comm.Get_rank()
     nproc = todvec.comm.Get_size()
     noise_class = info["noise_class"]
@@ -240,10 +242,10 @@ def _save_model(cfg, model, outdir, desc_str):
         yaml.dump(final, file)
 
 
-def _reestimate_noise(models, datasets, infos, modes):
+def _reestimate_noise(models, datasets):
     for i, dataset in enumerate(datasets):
         for data in dataset:
-            if modes[i] == "tod":
+            if dataset.mode == "tod":
                 pred = (
                     models[i]
                     .to_tod(data.x * wu.rad_to_arcsec, data.y * wu.rad_to_arcsec)
@@ -253,22 +255,20 @@ def _reestimate_noise(models, datasets, infos, modes):
                 x, y = data.xy
                 pred = models[i].to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
             data.compute_noise(
-                infos[i]["noise_class"],
+                dataset.info["noise_class"],
                 data.data - pred,
-                *infos[i]["noise_args"],
-                **infos[i]["noise_kwargs"],
+                *dataset.info["noise_args"],
+                **dataset.info["noise_kwargs"],
             )
     return datasets
 
 
 def _run_fit(
-    cfgs,
-    infos,
+    cfg,
     models,
     datasets,
     outdir,
     r,
-    modes,
 ):
     for model in models:
         model.cur_round = r
@@ -276,14 +276,11 @@ def _run_fit(
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
     # TODO: Modify this to account for fit_dataset changes
-    models, i, delta_chisq = fit_datasets(
+    models, i, delta_chisq = run_lmfit(
         models,
         datasets,
-        modes,
-        eval(
-            str(cfgs[0]["fitting"].get("maxiter", "10"))
-        ),  # TODO: enforce all cfgs have same fitting hyper parameters
-        eval(str(cfgs[0]["fitting"].get("chitol", "1e-5"))),
+        eval(str(cfg["fitting"].get("maxiter", "10"))),
+        eval(str(cfg["fitting"].get("chitol", "1e-5"))),
     )
     _ = mpi4jax.barrier(comm=comm)
     t2 = time.time()
@@ -293,13 +290,11 @@ def _run_fit(
 
     # TODO: Modify to save all models
     print_once(models[0])
-    _save_model(cfgs[0], models[0], outdir, f"fit{r}")
+    _save_model(cfg, models[0], outdir, f"fit{r}")
 
-    dataset = _reestimate_noise(
+    datasets = _reestimate_noise(
         models,
         datasets,
-        infos,
-        modes,
     )
     return models, datasets
 
@@ -353,48 +348,62 @@ def _run_mcmc(cfg, model, dataset):
     return model, dataset
 
 
-def fit_loop(model, cfg, dataset, comm):
-    if model is None:
-        raise ValueError("Can't fit without a model defined!")
+def fit_loop(models, cfg, datasets, comm, outdir):
+    for model in models:
+        if models is None:
+            raise ValueError("Can't fit without a model defined!")
     if cfg["sim"]:
+        models = list(models)
         # Remove structs we deliberately want to leave out of model
         for struct_name in cfg["model"]["structures"]:
             if cfg["model"]["structures"][struct_name].get("to_remove", False):
-                model.remove_struct(struct_name)
-        params = jnp.array(model.pars)
-        par_offset = cfg.get("par_offset", 1.1)
-        params = params.at[model.to_fit_ever].multiply(
-            par_offset
-        )  # Don't start at exactly the right value
-        model.update(params, model.errs, model.chisq)
+                for i, model in models:
+                    model.remove_struct(struct_name)
+        for i, model in enumerate(models):
+            params = jnp.array(model.pars)
+            par_offset = cfg.get("par_offset", 1.1)
+            params = params.at[model.to_fit_ever].multiply(
+                par_offset
+            )  # Don't start at exactly the right value
+            models[i] = model.update(params, model.errs, model.chisq)
 
     print_once("Compiling objective function")
     t0 = time.time()
-    chisq, *_ = dataset.objective(model, dataset.datavec, dataset.mode)
-    model = model.update(model.pars, model.errs, chisq)
+    for i, (dataset, model) in enumerate(zip(datasets, models)):
+        chisq, *_ = dataset.objective(model, dataset.DataVec, dataset.mode)
+        models[i] = model.update(model.pars, model.errs, chisq)
     print_once(f"Took {time.time() - t0} s to compile")
 
-    message = str(model).split("\n")
+    models = tuple(models)
+    message = str(models[0]).split("\n")
     message[1] = "Starting pars:"
     print_once("\n".join(message))
-    for r in range(model.n_rounds):
-        model, dataset = _run_fit(
+    for r in range(models[0].n_rounds):  # TODO: enforce n_rounds same for all models
+        models, datasets = _run_fit(
             cfg,
-            model,
-            dataset,
+            models,
+            datasets,
+            outdir,
             r,
         )
         _ = mpi4jax.barrier(comm=comm)
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
-        model, dataset = _run_mcmc(
-            cfg,
-            model,
-            dataset,
-        )
+        print_once("No mcmc yet!")
+        # model, dataset = _run_mcmc(
+        #     cfg,
+        #     model,
+        #     dataset,
+        #     outdir,
+        #     noise_class,
+        #     noise_args,
+        #     noise_kwargs,
+        #     info["mode"],
+        # )
         _ = mpi4jax.barrier(comm=comm)
     # Save final pars
     final = {"model": cfg["model"]}
+    model = models[0]  # TEMP
     for i, (struct_name, structure) in zip(
         model.original_order, cfg["model"]["structures"].items()
     ):
@@ -405,10 +414,10 @@ def fit_loop(model, cfg, dataset, comm):
             final["model"]["structures"][struct_name]["parameters"][par_name][
                 "value"
             ] = par.val
-    with open(os.path.join(dataset.info["outdir"], "fit_params.yaml"), "w") as file:
+    with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
         yaml.dump(final, file)
 
-    return model
+    return models
 
 
 def deep_merge(a: dict, b: dict) -> dict:
@@ -502,9 +511,6 @@ def main():
     dset_names = list(cfg["datasets"].keys())
     models = []
     datasets = []
-    cfgs = []
-    infos = []
-    modes = []
     outdir = None
     for dset_name in dset_names:
         dset_name = list(cfg["datasets"].keys())[0]
@@ -531,17 +537,17 @@ def main():
         fnames = get_files(dset_name, cfg)
         global comm
         fnames, comm = _mpi_fsplit(fnames, comm)
-        dataset = load(dset_name, cfg, fnames, comm)
+        dataset.datavec = load(dset_name, cfg, fnames, comm)
 
         # Get any info we need specific to an expiriment
-        info = get_info(dset_name, cfg, dataset)
+        dataset.info = get_info(dset_name, cfg, dataset)
 
         # Get the beam
-        beam = make_beam(dset_name, cfg, info)
+        beam = make_beam(dset_name, cfg, dataset.info)
 
         # Define the model and get stuff setup fitting
         if "model" in cfg:
-            model = Model.from_cfg(cfg, beam, info["prefactor"])
+            model = Model.from_cfg(cfg, beam, dataset.info["prefactor"])
         else:
             model = None
             print_once("No model defined, setting fit, sim, and sub to False")
@@ -553,9 +559,9 @@ def main():
         noise_class = eval(str(cfg["datasets"][dset_name]["noise"]["class"]))
         noise_args = tuple(eval(str(cfg["datasets"][dset_name]["noise"]["args"])))
         noise_kwargs = eval(str(cfg["datasets"][dset_name]["noise"]["kwargs"]))
-        info["noise_class"] = noise_class
-        info["noise_args"] = noise_args
-        info["noise_kwargs"] = noise_kwargs
+        dataset.info["noise_class"] = noise_class
+        dataset.info["noise_args"] = noise_args
+        dataset.info["noise_kwargs"] = noise_kwargs
 
         if "base" in cfg.keys():
             del cfg[
@@ -564,108 +570,26 @@ def main():
 
         outdir = get_outdir(cfg, model)
         os.makedirs(os.path.join(outdir, dset_name), exist_ok=True)
-        info["outdir"] = outdir
+        dataset.info["outdir"] = outdir
 
         # Process the data
-        preproc(dset_name, cfg, dataset, model, info)
-        if info["mode"] == "tod":
-            dataset.datavec = process_tods(cfg, dataset.datavec, dataset.info, model)
-        elif info["mode"] == "map":
+        preproc(dset_name, cfg, dataset, model, dataset.info)
+        if dataset.mode == "tod":
+            dataset.datavec = process_tods(cfg, dataset, model)
+        elif dataset.mode == "map":
             dataset.datavec = process_maps(cfg, dataset, model)
         dataset = jax.block_until_ready(dataset)
-        postproc(dset_name, cfg, dataset, model, info)
+        postproc(dset_name, cfg, dataset, model, dataset.info)
         models.append(model)
         datasets.append(dataset)
-        cfgs.append(cfg)
-        infos.append(info)
-        modes.append(info["mode"])
 
-    models = tuple(models)
     datasets = tuple(datasets)
-    cfgs = tuple(cfgs)
-    infos = tuple(infos)
-    modes = tuple(modes)
 
     # Now we fit
-    to_fit = False  # TODO: More elegant way?
-    for cfg in cfgs:
-        if cfg["fit"]:
-            to_fit = True
-            break
-
+    to_fit = cfg.get("fit", True)
     if to_fit and outdir is not None:
-        for model in models:
-            if models is None:
-                raise ValueError("Can't fit without a model defined!")
-        if cfgs[0]["sim"]:  # TODO: enforce sim the same across all cfgs
-            # Remove structs we deliberately want to leave out of model
-            for i, cfg in enumerate(cfgs):
-                for struct_name in cfg["model"]["structures"]:
-                    if cfg["model"]["structures"][struct_name].get("to_remove", False):
-                        models[i].remove_struct(struct_name)
-                params = jnp.array(models[i].pars)
-                par_offset = cfg.get("par_offset", 1.1)
-                params = params.at[models[i].to_fit_ever].multiply(
-                    par_offset
-                )  # Don't start at exactly the right value
-                models[i].update(params, models[i].errs, models[i].chisq)
+        models = fit_loop(models, cfg, datasets, comm, outdir)
+        for dset_name, dataset, model in zip(dset_names, datasets, models):
+            dataset.postfit(dset_name, cfg, dataset, model, dataset.info)
 
-        print_once("Compiling objective function")
-        t0 = time.time()
-        models, *_ = objective_joint(
-            models[0].pars, models, datasets, models[0].errs, modes
-        )  # I think it's fine to initialize with just model[0].pars here but should think
-        print_once(f"Took {time.time() - t0} s to compile")
-        # import ipdb; ipdb.set_trace()
-
-        message = str(models[0]).split("\n")
-        message[1] = "Starting pars:"
-        print_once("\n".join(message))
-        for r in range(
-            models[0].n_rounds
-        ):  # TODO: enforce n_rounds same for all models
-            models, datasets = _run_fit(
-                cfgs,
-                infos,
-                models,
-                datasets,
-                outdir,
-                r,
-                modes,
-            )
-            _ = mpi4jax.barrier(comm=comm)
-
-        if "mcmc" in cfg and cfg["mcmc"].get("run", True):
-            print_once("No mcmc yet!")
-            # model, dataset = _run_mcmc(
-            #     cfg,
-            #     model,
-            #     dataset,
-            #     outdir,
-            #     noise_class,
-            #     noise_args,
-            #     noise_kwargs,
-            #     info["mode"],
-            # )
-            _ = mpi4jax.barrier(comm=comm)
-        # Save final pars
-        final = {"model": cfg["model"]}
-        model = models[0]  # TEMP
-        for i, (struct_name, structure) in zip(
-            model.original_order, cfg["model"]["structures"].items()
-        ):
-            model_struct = model.structures[i]
-            for par, par_name in zip(
-                model_struct.parameters, structure["parameters"].keys()
-            ):
-                final["model"]["structures"][struct_name]["parameters"][par_name][
-                    "value"
-                ] = par.val
-        with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
-            yaml.dump(final, file)
-
-    for dset_name, dataset, model, info in zip(dset_names, datasets, models, infos):
-        dataset.postfit(dset_name, cfg, dataset, model, info)
-
-    print_once("Outputs can be found in", outdir)
     print_once("Outputs can be found in", outdir)
