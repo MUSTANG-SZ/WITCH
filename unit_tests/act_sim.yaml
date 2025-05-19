@@ -9,9 +9,9 @@ constants:
   z: 0.451
 
 coords:
-  r_map: "3.0*60" # Radial size of grid in arcseconds 
-  dr: "1.0" # Pixel size of grid in x and y in arcseconds
-  dz: 1.0 # Pixel size along the LOS, if not provided dr is used
+  r_map: "10.0*60" # Radial size of grid in arcseconds
+  dr: "20.0" # Pixel size of grid in x and y in arcseconds
+  dz: 20.0 # Pixel size along the LOS, if not provided dr is used
   x0: "(206.8776*u.degree).to(u.radian).value" # RA of grid origin in radians
   y0: "(-11.7528*u.degree).to(u.radian).value" # Dec of grid origin in radian 
 
@@ -71,7 +71,7 @@ mcmc:
 model:
   # Unit conversion to apply at the end
   # Will be evaled
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2uK_CMB(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   # Structure to include in the model
   structures:
     a10:
