@@ -1,3 +1,14 @@
+## 9.4.0 (2025-05-19)
+
+### Feat
+
+- adding y2uK_CMB
+- adding ACT data fit and fixing units and grid for all act tests
+
+### Fix
+
+- removing ranges from corner
+
 ## 9.3.0 (2025-05-19)
 
 ### Feat
