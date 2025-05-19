@@ -308,10 +308,11 @@ def _run_mcmc(cfg, model, dataset):
         np.savez_compressed(samps_path, samples=samples)
         try:
             to_fit = np.array(model.to_fit)
+            #ranges = [prior if prior is not None else [0.5 * model.params[i], 2 * model.params[i]] for i, prior in enumerate(model.priors)]
             corner.corner(
                 samples,
                 labels=np.array(model.par_names)[to_fit],
-                truths=init_pars[to_fit],
+                truths=init_pars[to_fit], 
             )
             plt.savefig(os.path.join(dataset.info["outdir"], "corner.png"))
         except Exception as e:

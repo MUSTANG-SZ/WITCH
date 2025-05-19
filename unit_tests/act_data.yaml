@@ -1,25 +1,25 @@
 fit: True # If True fit the cluster, overridden by command line
 sub: True # If True the cluster before mapmaking, overridden by command line
-n_rounds: 3
+n_rounds: 4
 wnoise: True
 
 constants:
   Te: 5.0
   freq: "90e9"
-  z: 0.451
+  z: 0.2
 
 coords:
-  r_map: "10.0*60" # Radial size of grid in arcseconds
+  r_map: "10.0*60" # Radial size of grid in arcseconds 
   dr: "20.0" # Pixel size of grid in x and y in arcseconds
   dz: 20.0 # Pixel size along the LOS, if not provided dr is used
-  x0: "(206.8776*u.degree).to(u.radian).value" # RA of grid origin in radians
-  y0: "(-11.7528*u.degree).to(u.radian).value" # Dec of grid origin in radian 
+  x0: "(73.579167*u.degree).to(u.radian).value" # RA of grid origin in radians
+  y0: "(2.946944*u.degree).to(u.radian).value" # Dec of grid origin in radian 
 
 paths:
   # Location of TOD files
   # If an absolute path then that is used directly
   # If a relative path taken relative to MJ_TODROOT
-  maps: "RXJ1347"
+  maps: "Abel520"
   # Directory to use as root for outputs
   # If an absolute path then that is used directly
   # If a relative path taken relative to MJ_OUTROOT
@@ -52,14 +52,14 @@ datasets:
     # All are passed through eval
     # Note that these define a double gaussian
     beam:
-      fwhm1: "60" # FWHM in arcseconds of the first gaussian
-      amp1: 0.9808 # Amplitude of the first gaussian
+      fwhm1: "180" # FWHM in arcseconds of the first gaussian
+      amp1: 1.0 # Amplitude of the first gaussian
       fwhm2: "90" # FWHM in arcseconds of the second gaussian
-      amp2: 0.0192 # Amplitude of the second gaussian
+      amp2: 0.0 # Amplitude of the second gaussian
 # Cluster name
 # Used both for the output path as well as to load presets
-name: "SIM_MCMC"
-sim: True # If True use TODs to make noise and add a simulated cluster
+name: "MCMC"
+sim: False # If True use TODs to make noise and add a simulated cluster
 
 mcmc:
   run: True
@@ -74,26 +74,43 @@ model:
   unit_conversion: "float(wu.get_da(constants['z'])*wu.y2uK_CMB(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   # Structure to include in the model
   structures:
-    ps_gauss:
-      structure: "gaussian"
+    a10:
+      # The first structure is witch.structures.a10
+      structure: "a10"
       parameters:
-        dx_g:
+        dx_1:
+          value: 0.0 # Units: arcsec, defined as an offset from x0 as set in base_unit.yaml
+          to_fit: True 
+            #priors: [-9.0, 9.0]
+        dy_1:
+          value: 0.0 # Units: arcsec, defined as an offset from y0 as set in base_unit.yaml
+          to_fit: True 
+            #priors: [-9.0, 9.0]
+        dz_1: # Line of sight offset. This is typically unconstrained so generally should be fixed to 0
           value: 0.0
-          to_fit: True #[True, True, False, True]
-          priors: [-90.0, 90.0]
-        dy_g:
+        theta: # Rotation of the model with respect to the positive y axis
           value: 0.0
-          to_fit: True #[True, True, False, True]
-          priors: [-90.0, 90.0]
-        sigma:
-          value: 60
-          to_fit: True #[False, True, False, True]
-          priors: [1, 100]
-        amp_g:
-          value: 0.002
-          to_fit: True #[True, False, True, False]
-          priors: [0, .005]
-
+        P0: # Central pressure in units of keV / cm^3
+          value: 8.403
+          to_fit: True
+        c500: # Central concentration
+          value: 1.177
+          to_fit: True
+        m500: # Cluster mass in M_solar
+          value: "1.1e15"
+          to_fit: True 
+        gamma: # Inner profile slope
+          value: .3081
+          to_fit: True
+        alpha: # Mid profile slope
+          value: 1.551
+          to_fit: True
+        beta: # Outer profile slope
+          value: 5.4905
+          to_fit: True
+        z:
+          value: 0.2
+   
 # Setting for the fitter
 fitting:
   maxiter: 10 # Maximum fit iterations per round
