@@ -337,7 +337,7 @@ def model(
 def model_grad(
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
     n_structs: tuple[int, ...],
-    n_rbins: tuple[int],
+    n_rbins: tuple[int, ...],
     dz: float,
     beam: jax.Array,
     argnums: tuple[int, ...],
