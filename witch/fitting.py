@@ -403,6 +403,7 @@ def run_mcmc(
 
     prior_l, prior_u = model.priors
     scale = (jnp.abs(prior_l) + jnp.abs(prior_u)) / 2.0
+    scale = jnp.where(jnp.isfinite(scale), scale, init_pars)
     scale = jnp.where(scale == 0, 1, scale)
     init_pars = init_pars.at[:].multiply(1.0 / scale)
     npar = jnp.sum(to_fit)
