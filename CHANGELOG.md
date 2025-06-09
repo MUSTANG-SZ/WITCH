@@ -1,3 +1,9 @@
+## 9.5.0 (2025-06-09)
+
+### Feat
+
+- adding spherical isobeta
+
 ## 9.4.0 (2025-05-19)
 
 ### Feat
