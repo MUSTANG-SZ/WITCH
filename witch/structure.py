@@ -538,6 +538,74 @@ def ea10(
 
     return P500 * P0 / denominator
 
+@jax.jit
+def sph_isobeta(
+    dx: float,
+    dy: float,
+    dz: float,
+    r: float,
+    theta: float,
+    beta: float,
+    amp: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
+    r"""
+    Spherical isobeta pressure profile in 3d.
+    This function does not include smoothing or declination stretch
+    which should be applied at the end.
+
+    Once the grid is transformed the profile is computed as:
+
+    $$
+    P_{0}\left( 1 + r**2 \right)^{-1.5\beta}
+    $$
+
+    where $P_{0}$ is `amp`.
+
+    Parameters
+    ----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    r_1 : float
+        Amount to scale along all three axes.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    theta : float
+        Angle to rotate in xy-plane.
+        Passed to `grid.transform_grid`.
+        Units: radians
+    beta : float
+        Beta value of isobeta model.
+        Units: unitless
+    amp : float
+        Amplitude of isobeta model.
+        Units: Matches unit conversion implicitly.
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+
+    Returns
+    -------
+    model : Array
+        The jax.sph_isobeta model evaluated on the grid.
+    """
+    x, y, z, *_ = transform_grid(dx, dy, dz, r, r, r, theta, xyz)
+
+    rr = 1 + x**2 + y**2 + z**2
+    power = -1.5 * beta
+    rrpow = rr**power
+
+    return amp * rrpow
 
 @jax.jit
 def isobeta(
@@ -1338,6 +1406,7 @@ def nonpara_power(
 # -2 for Uniform, expo, and power as they also take a pressure arg that doesn't count
 # For now a line needs to be added for each new model but this could be more magic down the line
 N_PAR_ISOBETA = len(inspect.signature(isobeta).parameters) - 1
+N_PAR_SPH_ISOBETA = len(inspect.signature(sph_isobeta).parameters) -1
 N_PAR_GNFW = len(inspect.signature(gnfw).parameters) - 1
 N_PAR_GNFW_RS = len(inspect.signature(gnfw_rs).parameters) - 1
 N_PAR_EGNFW = len(inspect.signature(egnfw).parameters) - 1
@@ -1370,6 +1439,7 @@ STRUCT_FUNCS = {
     "gnfw_rs": gnfw_rs,
     "egnfw": egnfw,
     "isobeta": isobeta,
+    "sph_isobeta": sph_isobeta,
     "nonpara_power": nonpara_power,
 }
 STRUCT_N_PAR = {
@@ -1387,6 +1457,7 @@ STRUCT_N_PAR = {
     "gnfw_rs": N_PAR_GNFW_RS,
     "egnfw": N_PAR_EGNFW,
     "isobeta": N_PAR_ISOBETA,
+    "sph_isobeta": N_PAR_SPH_ISOBETA,
     "nonpara_power": N_PAR_NONPARA_POWER,
 }
 STRUCT_N_NONPARA = {
@@ -1407,5 +1478,6 @@ STRUCT_STAGE = {
     "gnfw_rs": 0,
     "egnfw": 0,
     "isobeta": 0,
+    "sph_isobeta": 0,
     "nonpara_power": -1,
 }
