@@ -139,8 +139,9 @@ def y2K_RJ(freq: float, Te: float) -> float:
     factor = y2K_CMB(freq, Te)
     return factor * K_CMB2K_RJ(freq)
 
-@partial(jax.jit, static_argnums=(0,1))
-def y2uK_CMB(freq: float, Te:float) -> float:
+
+@partial(jax.jit, static_argnums=(0, 1))
+def y2uK_CMB(freq: float, Te: float) -> float:
     """
     Convert from compton y to uK_CMB.
 
@@ -158,6 +159,7 @@ def y2uK_CMB(freq: float, Te:float) -> float:
     """
     factor = y2K_CMB(freq, Te)
     return 1e6 * factor
+
 
 @jax.jit
 def get_da(z: ArrayLike) -> jax.Array:
