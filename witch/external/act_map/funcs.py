@@ -106,7 +106,8 @@ def postfit(dset_name: str, cfg: dict, mapset: SolutionSet, model: Model, info: 
                 "Somehow trying to make a residual map with no model defined!"
             )
         for imap in mapset:
-            pred = model.to_map(*imap.xy)
+            x, y = imap.xy
+            pred = model.to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
             imap.data = imap.data - pred
 
             hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
@@ -124,7 +125,8 @@ def postfit(dset_name: str, cfg: dict, mapset: SolutionSet, model: Model, info: 
                 "Somehow trying to make a model map with no model defined!"
             )
         for imap in mapset:
-            pred = model.to_map(*imap.xy)
+            x, y = imap.xy
+            pred = model.to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
             imap.data = pred
 
             hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
