@@ -1,6 +1,6 @@
 fit: True # If True fit the cluster, overridden by command line
 sub: True # If True the cluster before mapmaking, overridden by command line
-n_rounds: 3
+n_rounds: 4
 wnoise: True
 
 constants:
@@ -9,9 +9,9 @@ constants:
   z: 0.451
 
 coords:
-  r_map: "10.0*60" # Radial size of grid in arcseconds
-  dr: "20.0" # Pixel size of grid in x and y in arcseconds
-  dz: 20.0 # Pixel size along the LOS, if not provided dr is used
+  r_map: "20.0*60" # Radial size of grid in arcseconds
+  dr: "40.0" # Pixel size of grid in x and y in arcseconds
+  dz: 40.0 # Pixel size along the LOS, if not provided dr is used
   x0: "(206.8776*u.degree).to(u.radian).value" # RA of grid origin in radians
   y0: "(-11.7528*u.degree).to(u.radian).value" # Dec of grid origin in radian 
 
@@ -52,10 +52,10 @@ datasets:
     # All are passed through eval
     # Note that these define a double gaussian
     beam:
-      fwhm1: "60" # FWHM in arcseconds of the first gaussian
-      amp1: 0.9808 # Amplitude of the first gaussian
+      fwhm1: 122 # FWHM in arcseconds of the first gaussian
+      amp1: 1.0 # Amplitude of the first gaussian
       fwhm2: "90" # FWHM in arcseconds of the second gaussian
-      amp2: 0.0192 # Amplitude of the second gaussian
+      amp2: 0. 
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "SIM_MCMC"
@@ -74,15 +74,44 @@ model:
   unit_conversion: "float(wu.get_da(constants['z'])*wu.y2uK_CMB(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   # Structure to include in the model
   structures:
+    a10:
+      # The first structure is witch.structures.a10
+      structure: "a10"
+      parameters:
+        dx_1:
+          value: 0.0 # Units: arcsec, defined as an offset from x0 as set in base_unit.yaml
+          to_fit: True #[True, True, False, True] # Fit on all but the third rounds 
+        dy_1:
+          value: 0.0 # Units: arcsec, defined as an offset from y0 as set in base_unit.yaml
+          to_fit: True #[True, True, False, True]
+        dz_1: # Line of sight offset. This is typically unconstrained so generally should be fixed to 0
+          value: 0.0
+        theta: # Rotation of the model with respect to the positive y axis
+          value: 0.0
+        P0: # Central pressure in units of keV / cm^3
+          value: 8.403
+        c500: # Central concentration
+          value: 1.177
+        m500: # Cluster mass in M_solar
+          value: "8e14"
+          to_fit: True #[True, False, True, True]
+        gamma: # Inner profile slope
+          value: .3081
+        alpha: # Mid profile slope
+          value: 1.551
+        beta: # Outer profile slope
+          value: 5.4905
+        z:
+          value: 0.97
     ps_gauss:
       structure: "gaussian"
       parameters:
         dx_g:
-          value: 0.0
+          value: 50.0
           to_fit: True #[True, True, False, True]
           priors: [-90.0, 90.0]
         dy_g:
-          value: 0.0
+          value: 50.0
           to_fit: True #[True, True, False, True]
           priors: [-90.0, 90.0]
         sigma:
@@ -90,9 +119,9 @@ model:
           to_fit: True #[False, True, False, True]
           priors: [1, 100]
         amp_g:
-          value: 0.002
+          value: 0.02
           to_fit: True #[True, False, True, False]
-          priors: [0, .005]
+          priors: [0, .5]
 
 # Setting for the fitter
 fitting:
