@@ -95,7 +95,7 @@ model:
           value: 1.177
           to_fit: False
         m500: # Cluster mass in M_solar
-          value: "5.0e14"
+          value: "8.0e14"
           to_fit: True 
         gamma: # Inner profile slope
           value: .3081

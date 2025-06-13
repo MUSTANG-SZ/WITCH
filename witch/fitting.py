@@ -495,7 +495,7 @@ def run_mcmc(
         i = 0
         if prob > 0.8:
             while prob > 0.5:    
-                step_size *= 2
+                step_size *= 1.5
                 chain, probs = hmc(
                     init_pars.at[to_fit].get().ravel(),
                     _log_prob,
@@ -506,17 +506,17 @@ def run_mcmc(
                     comm=dataset.datavec.comm,
                     key=key,
                 )
-                prob=jnp.mean(jnp.array(probs))
+                prob=jnp.nanmean(jnp.array(probs))
                 step_chain.append(step_size)
                 i += 1
                 print(step_size)
-                if 0.5 < prob and prob < 0.8:
+                if 0.5 < prob and prob < 0.8 and not jnp.isnan(prob):
                     return step_size
             low_bound = step_chain[i+1]
             high_bound = step_chain[i]
         else:
             while prob < 0.8:
-                step_size /= 2
+                step_size /= 1.5
                 chain, probs = hmc(
                     init_pars.at[to_fit].get().ravel(),
                     _log_prob,
@@ -527,15 +527,15 @@ def run_mcmc(
                     comm=dataset.datavec.comm,
                     key=key,
                 )
-                prob=jnp.mean(jnp.array(probs))
+                prob=jnp.nanmean(jnp.array(probs))
                 step_chain.append(step_size)
                 i += 1
-                if 0.5 < prob and prob < 0.8:
+                if 0.5 < prob and prob < 0.8 and not jnp.isnan(prob):
                     return step_size
             low_bound = step_chain[i]
             high_bound = step_chain[i+1]
        
-        while 0.5 > prob or 0.8 < prob: 
+        while 0.5 > prob or 0.8 < prob or jnp.isnan(prob): 
             #There's an assumption of convergence by taking the mean here that I'm not sure is true
             step_size = jnp.mean(jnp.array([low_bound, high_bound])) #Get mean of last two steps
             print(i, step_size)
@@ -549,7 +549,7 @@ def run_mcmc(
                 comm=dataset.datavec.comm,
                 key=key,
             )
-            prob=jnp.mean(jnp.array(probs))
+            prob=jnp.nanmean(jnp.array(probs))
             i+=1
             if prob > 0.8:
                 high_bound = step_size
