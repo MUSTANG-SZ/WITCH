@@ -1,6 +1,6 @@
 fit: True # If True fit the cluster, overridden by command line
 sub: True # If True the cluster before mapmaking, overridden by command line
-n_rounds: 4
+n_rounds: 0
 wnoise: True
 
 constants:
@@ -9,9 +9,9 @@ constants:
   z: 0.2
 
 coords:
-  r_map: "10.0*60" # Radial size of grid in arcseconds 
-  dr: "20.0" # Pixel size of grid in x and y in arcseconds
-  dz: 20.0 # Pixel size along the LOS, if not provided dr is used
+  r_map: "20.0*60" # Radial size of grid in arcseconds 
+  dr: "40.0" # Pixel size of grid in x and y in arcseconds
+  dz: 40.0 # Pixel size along the LOS, if not provided dr is used
   x0: "(73.579167*u.degree).to(u.radian).value" # RA of grid origin in radians
   y0: "(2.946944*u.degree).to(u.radian).value" # Dec of grid origin in radian 
 
@@ -52,7 +52,7 @@ datasets:
     # All are passed through eval
     # Note that these define a double gaussian
     beam:
-      fwhm1: "180" # FWHM in arcseconds of the first gaussian
+      fwhm1: "122" # FWHM in arcseconds of the first gaussian
       amp1: 1.0 # Amplitude of the first gaussian
       fwhm2: "90" # FWHM in arcseconds of the second gaussian
       amp2: 0.0 # Amplitude of the second gaussian
@@ -64,8 +64,8 @@ sim: False # If True use TODs to make noise and add a simulated cluster
 mcmc:
   run: True
   num_steps: 1000
-  num_leaps: 10
-  step_size: .013
+  num_leaps: 4
+  step_size: 1.0 
   sample_which: -1
 
 model:
@@ -79,32 +79,30 @@ model:
       structure: "a10"
       parameters:
         dx_1:
-          value: 0.0 # Units: arcsec, defined as an offset from x0 as set in base_unit.yaml
-          to_fit: True 
-            #priors: [-9.0, 9.0]
+          value: -100.0 # Units: arcsec, defined as an offset from x0 as set in base_unit.yaml
+          to_fit: False 
         dy_1:
-          value: 0.0 # Units: arcsec, defined as an offset from y0 as set in base_unit.yaml
-          to_fit: True 
-            #priors: [-9.0, 9.0]
+          value: -90.0 # Units: arcsec, defined as an offset from y0 as set in base_unit.yaml
+          to_fit: False  
         dz_1: # Line of sight offset. This is typically unconstrained so generally should be fixed to 0
           value: 0.0
         theta: # Rotation of the model with respect to the positive y axis
           value: 0.0
         P0: # Central pressure in units of keV / cm^3
           value: 8.403
-          to_fit: True
+          to_fit: False 
         c500: # Central concentration
           value: 1.177
-          to_fit: True
+          to_fit: False
         m500: # Cluster mass in M_solar
-          value: "1.1e15"
+          value: "5.0e14"
           to_fit: True 
         gamma: # Inner profile slope
           value: .3081
-          to_fit: True
+          to_fit: False 
         alpha: # Mid profile slope
           value: 1.551
-          to_fit: True
+          to_fit: True 
         beta: # Outer profile slope
           value: 5.4905
           to_fit: True

@@ -325,7 +325,7 @@ def hmc(
         print(f"Accepted {accept_prob.mean():.2%} of samples")
     else:
         chain = jnp.zeros(0)
-    return chain
+    return chain, accept_prob
 
 
 def run_mcmc(
@@ -471,9 +471,103 @@ def run_mcmc(
             scale,
         )
 
+    def _get_step_size(step_size):
+        prob = 0
+        step_size *= 1e1
+        while 0 == prob or jnp.isinf(prob) or jnp.isnan(prob):
+            step_size /= 1e1
+            chain, probs = hmc(
+                init_pars.at[to_fit].get().ravel(),
+                _log_prob,
+                _log_prob_grad,
+                num_steps=1,
+                num_leaps=num_leaps,
+                step_size=step_size,
+                comm=dataset.datavec.comm,
+                key=key,
+            )
+            prob = probs[0]
+            print(prob, step_size)
+        if 0.5 < prob and prob < 0.8:
+            return step_size 
+        
+        step_chain = [step_size, step_size]
+        i = 0
+        if prob > 0.8:
+            while prob > 0.5:    
+                step_size *= 2
+                chain, probs = hmc(
+                    init_pars.at[to_fit].get().ravel(),
+                    _log_prob,
+                    _log_prob_grad,
+                    num_steps=20,
+                    num_leaps=num_leaps,
+                    step_size=step_size,
+                    comm=dataset.datavec.comm,
+                    key=key,
+                )
+                prob=jnp.mean(jnp.array(probs))
+                step_chain.append(step_size)
+                i += 1
+                print(step_size)
+                if 0.5 < prob and prob < 0.8:
+                    return step_size
+            low_bound = step_chain[i+1]
+            high_bound = step_chain[i]
+        else:
+            while prob < 0.8:
+                step_size /= 2
+                chain, probs = hmc(
+                    init_pars.at[to_fit].get().ravel(),
+                    _log_prob,
+                    _log_prob_grad,
+                    num_steps=20,
+                    num_leaps=num_leaps,
+                    step_size=step_size,
+                    comm=dataset.datavec.comm,
+                    key=key,
+                )
+                prob=jnp.mean(jnp.array(probs))
+                step_chain.append(step_size)
+                i += 1
+                if 0.5 < prob and prob < 0.8:
+                    return step_size
+            low_bound = step_chain[i]
+            high_bound = step_chain[i+1]
+       
+        while 0.5 > prob or 0.8 < prob: 
+            #There's an assumption of convergence by taking the mean here that I'm not sure is true
+            step_size = jnp.mean(jnp.array([low_bound, high_bound])) #Get mean of last two steps
+            print(i, step_size)
+            chain, probs = hmc(
+                init_pars.at[to_fit].get().ravel(),
+                _log_prob,
+                _log_prob_grad,
+                num_steps=20,
+                num_leaps=num_leaps,
+                step_size=step_size,
+                comm=dataset.datavec.comm,
+                key=key,
+            )
+            prob=jnp.mean(jnp.array(probs))
+            i+=1
+            if prob > 0.8:
+                high_bound = step_size
+            else:
+                low_bound = step_size
+
+        if i >= 10:
+            print("Warning: step size failed to converged afer {} steps! Final prob {}.".format(i, prob))
+            return step_size
+        print("Final step size: ", step_size)
+        return step_size
+
     key = jax.random.PRNGKey(0)
     key, token = mpi4jax.bcast(key, 0, comm=dataset.datavec.comm, token=token)
-    chain = hmc(
+
+    step_size = _get_step_size(step_size)
+
+    chain, probs = hmc(
         init_pars.at[to_fit].get().ravel(),
         _log_prob,
         _log_prob_grad,
