@@ -335,6 +335,7 @@ def run_mcmc(
     num_leaps: int = 10,
     step_size: float = 0.02,
     sample_which: int = -1,
+    burn_in: float = 0.1,
 ) -> tuple[Model, jax.Array]:
     """
     Run MCMC using the `emcee` package to estimate the posterior for our model.
@@ -369,6 +370,8 @@ def run_mcmc(
         in the last round of fitting.
         If this is -2 then any parameters that were ever fit will be sampled.
         If this is <= -3 or >= `model.n_rounds` then all parameters are sampled.
+    burn_in : float, default: 0.1
+        Fractional burn-in period of samples to discard
 
     Returns
     -------
@@ -383,6 +386,9 @@ def run_mcmc(
     """
     token = mpi4jax.barrier(comm=dataset.datavec.comm)
     rank = dataset.datavec.comm.Get_rank()
+
+    if burn_in >= 1.0:
+        raise ValueError("Error: burn_in must be < 1")
 
     if sample_which >= 0 and sample_which < model.n_rounds:
         model.cur_round = sample_which
@@ -478,6 +484,9 @@ def run_mcmc(
         key=key,
     )
     flat_samples = chain.at[:].multiply(scale.at[to_fit].get())
+    burn_in = int(num_steps * burn_in)
+    flat_samples = flat_samples[burn_in:]
+     
     if rank == 0:
         final_pars = final_pars.at[to_fit].set(jnp.median(flat_samples, axis=0).ravel())
         final_errs = final_errs.at[to_fit].set(jnp.std(flat_samples, axis=0).ravel())

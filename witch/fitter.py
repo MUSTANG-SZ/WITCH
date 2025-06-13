@@ -291,6 +291,7 @@ def _run_mcmc(cfg, model, dataset):
         num_leaps=int(cfg["mcmc"].get("num_leaps", 10)),
         step_size=float(cfg["mcmc"].get("step_size", 0.02)),
         sample_which=int(cfg["mcmc"].get("sample_which", -1)),
+        burn_in=float(cfg["mcmc"].get("burn_in", 0.1)),
     )
     _ = mpi4jax.barrier(comm=comm)
     t2 = time.time()
