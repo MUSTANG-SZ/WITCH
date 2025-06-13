@@ -2,7 +2,7 @@
 # If an absolute path is given then it is used
 # Otherwise it is assumed to me reative to the directory of this file
 base: "base_unit.yaml"
-n_rounds: 1
+n_rounds: 0
 wnoise: True
 
 # Cluster name
@@ -12,8 +12,10 @@ sim: True # If True use TODs to make noise and add a simulated cluster
 
 mcmc:
   run: True
-  num_steps: 100
+  num_steps: 1000
+  num_leaps: 5
   sample_which: -1
+  step_size: 1e-8 
 
 model:
   # Unit conversion to apply at the end
@@ -21,41 +23,40 @@ model:
   unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   # Structure to include in the model
   structures:
-    # isobeta:
-    #   structure: "isobeta"
-    #   parameters:
-    #     dx_g:
-    #       value: 0.0
-    #       to_fit: True # [True, True, False, True]
-    #       priors: [-9.0, 9.0]
-    #     dy_g:
-    #       value: 0.0
-    #       to_fit: True #[True, True, False, True]
-    #       priors: [-9.0, 9.0]
-    #     dz_g:
-    #       value: 0.0
-    #       to_fit: True #[True, True, False, True]
-    #       priors: [-9.0, 9.0]
-    #     r1_g:
-    #       value: 1.0
-    #       priors: [.1, 9.0]
-    #     r2_g:
-    #       value: 1.0
-    #       priors: [.1, 9.0]
-    #     r3_g:
-    #       value: 1.0
-    #       priors: [.1, 9.0]
-    #     theta:
-    #       value: .0
-    #       priors: [0, 6.29]
-    #     beta_1:
-    #       value: .98
-    #       to_fit: True
-    #       priors: [.1, 2]
-    #     amp_1:
-    #       value: .002
-    #       to_fit: True
-    #       priors: [0, .005]
+    a10:
+      # The first structure is witch.structures.a10
+      structure: "a10"
+      parameters:
+        dx_1:
+          value: -10.0 # Units: arcsec, defined as an offset from x0 as set in base_unit.yaml
+          to_fit: True
+        dy_1:
+          value: -9.0 # Units: arcsec, defined as an offset from y0 as set in base_unit.yaml
+          to_fit: True
+        dz_1: # Line of sight offset. This is typically unconstrained so generally should be fixed to 0
+          value: 0.0
+        theta: # Rotation of the model with respect to the positive y axis
+          value: 0.0
+        P0: # Central pressure in units of keV / cm^3
+          value: 8.403
+          to_fit: False
+        c500: # Central concentration
+          value: 1.177
+          to_fit: False
+        m500: # Cluster mass in M_solar
+          value: "5.0e14"
+          to_fit: True
+        gamma: # Inner profile slope
+          value: .3081
+          to_fit: True
+        alpha: # Mid profile slope
+          value: 1.551
+          to_fit: False
+        beta: # Outer profile slope
+          value: 5.4905
+          to_fit: False
+        z:
+          value: 0.2
     ps_gauss:
       structure: "gaussian"
       parameters:
@@ -72,6 +73,6 @@ model:
           to_fit: True #[False, True, False, True]
           priors: [1, 10]
         amp_g:
-          value: 0.002
-          to_fit: False #[True, False, True, False]
+          value: 0.02
+          to_fit: True #[True, False, True, False]
           priors: [0, .005]

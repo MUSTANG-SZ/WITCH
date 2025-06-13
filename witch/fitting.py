@@ -277,6 +277,7 @@ def hmc(
     @jax.jit
     def _leap(_, args):
         params, momentum = args
+        print(log_prob_grad(params))
         momentum = momentum.at[:].add(0.5 * step_size * log_prob_grad(params))  # kick
         params = params.at[:].add(step_size * momentum)  # drift
         momentum = momentum.at[:].add(0.5 * step_size * log_prob_grad(params))  # kick
@@ -306,6 +307,7 @@ def hmc(
         return key, params, accept_prob
 
     t0 = time.time()
+    print(log_prob_grad(params))
     l_sample = _sample.lower(key, params)
     c_sample = l_sample.compile()
     t1 = time.time()
@@ -471,9 +473,10 @@ def run_mcmc(
             scale,
         )
 
-    def _get_step_size(step_size):
+    def _get_step_size(step_size, key, token, comm):
         prob = 0
         step_size *= 1e1
+        rank = comm.rank
         while 0 == prob or jnp.isinf(prob) or jnp.isnan(prob):
             step_size /= 1e1
             chain, probs = hmc(
@@ -483,11 +486,13 @@ def run_mcmc(
                 num_steps=1,
                 num_leaps=num_leaps,
                 step_size=step_size,
-                comm=dataset.datavec.comm,
+                comm=comm,
                 key=key,
             )
-            prob = probs[0]
-            print(prob, step_size)
+            if rank == 0:
+                prob = probs[0]
+                print(step_size, prob)
+            prob, _ = mpi4jax.bcast(prob, 0, comm=comm, token=token)
         if 0.5 < prob and prob < 0.8:
             return step_size 
         
@@ -565,7 +570,7 @@ def run_mcmc(
     key = jax.random.PRNGKey(0)
     key, token = mpi4jax.bcast(key, 0, comm=dataset.datavec.comm, token=token)
 
-    step_size = _get_step_size(step_size)
+    step_size = _get_step_size(step_size=step_size, key=key, token=token, comm=dataset.datavec.comm)
 
     chain, probs = hmc(
         init_pars.at[to_fit].get().ravel(),
