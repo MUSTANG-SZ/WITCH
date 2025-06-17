@@ -63,8 +63,8 @@ sim: False # If True use TODs to make noise and add a simulated cluster
 
 mcmc:
   run: True
-  num_steps: 1000
-  num_leaps: 4
+  num_steps: 5000
+  num_leaps: 5 
   step_size: 1.0 
   sample_which: -1
 

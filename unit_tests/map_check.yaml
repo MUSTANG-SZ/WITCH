@@ -1,6 +1,6 @@
 fit: True # If True fit the cluster, overridden by command line
 sub: True # If True the cluster before mapmaking, overridden by command line
-n_rounds: 4
+n_rounds: 0
 wnoise: True
 
 constants:
@@ -64,9 +64,10 @@ sim: True # If True use TODs to make noise and add a simulated cluster
 mcmc:
   run: True
   num_steps: 1000
-  num_leaps: 10
-  step_size: .013
+  num_leaps: 5
+  step_size: 6e-9
   sample_which: -1
+  burn_in: 0.2
 
 model:
   # Unit conversion to apply at the end
@@ -79,11 +80,11 @@ model:
       structure: "a10"
       parameters:
         dx_1:
-          value: 0.0 # Units: arcsec, defined as an offset from x0 as set in base_unit.yaml
-          to_fit: True #[True, True, False, True] # Fit on all but the third rounds 
+          value: -50.0 # Units: arcsec, defined as an offset from x0 as set in base_unit.yaml
+          to_fit: False #[True, True, False, True] # Fit on all but the third rounds 
         dy_1:
-          value: 0.0 # Units: arcsec, defined as an offset from y0 as set in base_unit.yaml
-          to_fit: True #[True, True, False, True]
+          value: -50.0 # Units: arcsec, defined as an offset from y0 as set in base_unit.yaml
+          to_fit: False #[True, True, False, True]
         dz_1: # Line of sight offset. This is typically unconstrained so generally should be fixed to 0
           value: 0.0
         theta: # Rotation of the model with respect to the positive y axis
@@ -99,21 +100,23 @@ model:
           value: .3081
         alpha: # Mid profile slope
           value: 1.551
+          to_fit: False 
         beta: # Outer profile slope
           value: 5.4905
+          to_fit: True
         z:
           value: 0.97
     ps_gauss:
       structure: "gaussian"
       parameters:
         dx_g:
-          value: 50.0
+          value: 150.0
           to_fit: True #[True, True, False, True]
-          priors: [-90.0, 90.0]
+          priors: [-900.0, 900.0]
         dy_g:
-          value: 50.0
+          value: 150.0
           to_fit: True #[True, True, False, True]
-          priors: [-90.0, 90.0]
+          priors: [-900.0, 900.0]
         sigma:
           value: 60
           to_fit: True #[False, True, False, True]
