@@ -291,6 +291,7 @@ def _run_mcmc(cfg, model, dataset):
         num_leaps=int(cfg["mcmc"].get("num_leaps", 10)),
         step_size=float(cfg["mcmc"].get("step_size", 0.02)),
         sample_which=int(cfg["mcmc"].get("sample_which", -1)),
+        burn_in=float(cfg["mcmc"].get("burn_in", 0.1)),
     )
     _ = mpi4jax.barrier(comm=comm)
     t2 = time.time()
@@ -308,11 +309,11 @@ def _run_mcmc(cfg, model, dataset):
         np.savez_compressed(samps_path, samples=samples)
         try:
             to_fit = np.array(model.to_fit)
-            #ranges = [prior if prior is not None else [0.5 * model.params[i], 2 * model.params[i]] for i, prior in enumerate(model.priors)]
+            # ranges = [prior if prior is not None else [0.5 * model.params[i], 2 * model.params[i]] for i, prior in enumerate(model.priors)]
             corner.corner(
                 samples,
                 labels=np.array(model.par_names)[to_fit],
-                truths=init_pars[to_fit], 
+                truths=init_pars[to_fit],
             )
             plt.savefig(os.path.join(dataset.info["outdir"], "corner.png"))
         except Exception as e:

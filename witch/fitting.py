@@ -277,6 +277,7 @@ def hmc(
     @jax.jit
     def _leap(_, args):
         params, momentum = args
+        print(log_prob_grad(params))
         momentum = momentum.at[:].add(0.5 * step_size * log_prob_grad(params))  # kick
         params = params.at[:].add(step_size * momentum)  # drift
         momentum = momentum.at[:].add(0.5 * step_size * log_prob_grad(params))  # kick
@@ -306,6 +307,7 @@ def hmc(
         return key, params, accept_prob
 
     t0 = time.time()
+    print(log_prob_grad(params))
     l_sample = _sample.lower(key, params)
     c_sample = l_sample.compile()
     t1 = time.time()
@@ -325,7 +327,7 @@ def hmc(
         print(f"Accepted {accept_prob.mean():.2%} of samples")
     else:
         chain = jnp.zeros(0)
-    return chain
+    return chain, accept_prob
 
 
 def run_mcmc(
@@ -335,6 +337,7 @@ def run_mcmc(
     num_leaps: int = 10,
     step_size: float = 0.02,
     sample_which: int = -1,
+    burn_in: float = 0.1,
 ) -> tuple[Model, jax.Array]:
     """
     Run MCMC using the `emcee` package to estimate the posterior for our model.
@@ -369,6 +372,8 @@ def run_mcmc(
         in the last round of fitting.
         If this is -2 then any parameters that were ever fit will be sampled.
         If this is <= -3 or >= `model.n_rounds` then all parameters are sampled.
+    burn_in : float, default: 0.1
+        Fractional burn-in period of samples to discard
 
     Returns
     -------
@@ -383,6 +388,9 @@ def run_mcmc(
     """
     token = mpi4jax.barrier(comm=dataset.datavec.comm)
     rank = dataset.datavec.comm.Get_rank()
+
+    if burn_in >= 1.0:
+        raise ValueError("Error: burn_in must be < 1")
 
     if sample_which >= 0 and sample_which < model.n_rounds:
         model.cur_round = sample_which
@@ -403,6 +411,7 @@ def run_mcmc(
 
     prior_l, prior_u = model.priors
     scale = (jnp.abs(prior_l) + jnp.abs(prior_u)) / 2.0
+    scale = jnp.where(jnp.isfinite(scale), scale, init_pars)
     scale = jnp.where(scale == 0, 1, scale)
     init_pars = init_pars.at[:].multiply(1.0 / scale)
     npar = jnp.sum(to_fit)
@@ -464,9 +473,106 @@ def run_mcmc(
             scale,
         )
 
+    def _get_step_size(step_size, key, token, comm):
+        prob = 0
+        step_size *= 1e1
+        rank = comm.rank
+        while 0 == prob or jnp.isinf(prob) or jnp.isnan(prob):
+            step_size /= 1e1
+            chain, probs = hmc(
+                init_pars.at[to_fit].get().ravel(),
+                _log_prob,
+                _log_prob_grad,
+                num_steps=1,
+                num_leaps=num_leaps,
+                step_size=step_size,
+                comm=comm,
+                key=key,
+            )
+            if rank == 0:
+                prob = probs[0]
+                print(step_size, prob)
+            prob, _ = mpi4jax.bcast(prob, 0, comm=comm, token=token)
+        if 0.5 < prob and prob < 0.8:
+            return step_size 
+        
+        step_chain = [step_size, step_size]
+        i = 0
+        if prob > 0.8:
+            while prob > 0.5:    
+                step_size *= 1.5
+                chain, probs = hmc(
+                    init_pars.at[to_fit].get().ravel(),
+                    _log_prob,
+                    _log_prob_grad,
+                    num_steps=20,
+                    num_leaps=num_leaps,
+                    step_size=step_size,
+                    comm=dataset.datavec.comm,
+                    key=key,
+                )
+                prob=jnp.nanmean(jnp.array(probs))
+                step_chain.append(step_size)
+                i += 1
+                print(step_size)
+                if 0.5 < prob and prob < 0.8 and not jnp.isnan(prob):
+                    return step_size
+            low_bound = step_chain[i+1]
+            high_bound = step_chain[i]
+        else:
+            while prob < 0.8:
+                step_size /= 1.5
+                chain, probs = hmc(
+                    init_pars.at[to_fit].get().ravel(),
+                    _log_prob,
+                    _log_prob_grad,
+                    num_steps=20,
+                    num_leaps=num_leaps,
+                    step_size=step_size,
+                    comm=dataset.datavec.comm,
+                    key=key,
+                )
+                prob=jnp.nanmean(jnp.array(probs))
+                step_chain.append(step_size)
+                i += 1
+                if 0.5 < prob and prob < 0.8 and not jnp.isnan(prob):
+                    return step_size
+            low_bound = step_chain[i]
+            high_bound = step_chain[i+1]
+       
+        while 0.5 > prob or 0.8 < prob or jnp.isnan(prob): 
+            #There's an assumption of convergence by taking the mean here that I'm not sure is true
+            step_size = jnp.mean(jnp.array([low_bound, high_bound])) #Get mean of last two steps
+            print(i, step_size)
+            chain, probs = hmc(
+                init_pars.at[to_fit].get().ravel(),
+                _log_prob,
+                _log_prob_grad,
+                num_steps=20,
+                num_leaps=num_leaps,
+                step_size=step_size,
+                comm=dataset.datavec.comm,
+                key=key,
+            )
+            prob=jnp.nanmean(jnp.array(probs))
+            i+=1
+            if prob > 0.8:
+                high_bound = step_size
+            else:
+                low_bound = step_size
+
+        if i >= 10:
+            print("Warning: step size failed to converged afer {} steps! Final prob {}.".format(i, prob))
+            return step_size
+        print("Final step size: ", step_size)
+        return step_size
+
     key = jax.random.PRNGKey(0)
     key, token = mpi4jax.bcast(key, 0, comm=dataset.datavec.comm, token=token)
-    chain = hmc(
+
+    step_size = _get_step_size(step_size=step_size, key=key, token=token, comm=dataset.datavec.comm)
+
+    chain, probs = hmc(
         init_pars.at[to_fit].get().ravel(),
         _log_prob,
         _log_prob_grad,
@@ -477,6 +583,9 @@ def run_mcmc(
         key=key,
     )
     flat_samples = chain.at[:].multiply(scale.at[to_fit].get())
+    burn_in = int(num_steps * burn_in)
+    flat_samples = flat_samples[burn_in:]
+     
     if rank == 0:
         final_pars = final_pars.at[to_fit].set(jnp.median(flat_samples, axis=0).ravel())
         final_errs = final_errs.at[to_fit].set(jnp.std(flat_samples, axis=0).ravel())
