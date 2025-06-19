@@ -127,6 +127,12 @@ def gnfw(
 
     return P500 * P0 / denominator
 
+@jax.jit
+def _gnfw_rs_driver(r: jax.Array, P0: float, r_s: float, gamma: float, alpha: float, beta: float):
+    denominator = ((r / r_s) ** gamma) * (1 + (r / r_s) ** alpha) ** (
+        (beta - gamma) / alpha
+    )
+    return P0 /denominator
 
 @jax.jit
 def gnfw_rs(
@@ -200,13 +206,9 @@ def gnfw_rs(
         The gnfw model evaluated on the grid.
     """
     x, y, z, *_ = transform_grid(dx, dy, dz, 1, 1, 1, 0, xyz)
-
     r = jnp.sqrt(x**2 + y**2 + z**2)
-    denominator = ((r / r_s) ** gamma) * (1 + (r / r_s) ** alpha) ** (
-        (beta - gamma) / alpha
-    )
-
-    return P0 / denominator
+    
+    return _gnfw_rs_driver(r, P0, r_s, gamma, alpha, beta) 
 
 
 @jax.jit
