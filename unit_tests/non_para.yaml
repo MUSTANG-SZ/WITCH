@@ -3,6 +3,10 @@
 # Otherwise it is assumed to me reative to the directory of this file
 base: "base_unit.yaml"
 
+nonpara:
+  to_copy: ["a10"]
+  n_rounds: 4
+  sig_params: ["m500"]
 
 
 # Cluster name
@@ -105,7 +109,7 @@ model:
           value: 0
           priors: [0, 6.29]
         b_ne_sup:
-          value: -0.75
+          value: 0.0
           to_fit: [False, True, True, True]
           priors: [-1.0, 0.0]
     bubble_sw:
@@ -133,6 +137,6 @@ model:
           value: 0
           priors: [0, 6.29]
         b_sw_sup:
-          value: -0.75
+          value: 0.0
           to_fit: [False, True, True, True]
           priors: [-1.0, 0.0]
