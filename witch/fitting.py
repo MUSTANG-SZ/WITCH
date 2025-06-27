@@ -1,3 +1,4 @@
+import sys
 import time
 from copy import deepcopy
 from functools import partial
@@ -222,7 +223,7 @@ def hmc(
     step_size: float,
     comm: MPI.Intracomm,
     key: jax.Array,
-) -> jax.Array:
+) -> tuple[jax.Array, jax.Array]:
     """
     Runs Hamilonian Monte Carlo using a leapfrog integrator to approximate Hamilonian dynamics.
     This is a naive implementaion that will be replaced in the future.
@@ -277,7 +278,6 @@ def hmc(
     @jax.jit
     def _leap(_, args):
         params, momentum = args
-        print(log_prob_grad(params))
         momentum = momentum.at[:].add(0.5 * step_size * log_prob_grad(params))  # kick
         params = params.at[:].add(step_size * momentum)  # drift
         momentum = momentum.at[:].add(0.5 * step_size * log_prob_grad(params))  # kick
@@ -307,7 +307,6 @@ def hmc(
         return key, params, accept_prob
 
     t0 = time.time()
-    print(log_prob_grad(params))
     l_sample = _sample.lower(key, params)
     c_sample = l_sample.compile()
     t1 = time.time()
@@ -327,6 +326,7 @@ def hmc(
         print(f"Accepted {accept_prob.mean():.2%} of samples")
     else:
         chain = jnp.zeros(0)
+        accept_prob = jnp.zeros(0)
     return chain, accept_prob
 
 
@@ -455,7 +455,7 @@ def run_mcmc(
         _, grad, _ = dataset.objective(
             temp_model, dataset.datavec, dataset.mode, False, True, False
         )
-        grad = grad.at[:].multiply(scale)
+        grad = grad.at[:].multiply(1.0 / scale)
         return grad.at[to_fit].get().ravel()
 
     @jax.jit
@@ -494,12 +494,12 @@ def run_mcmc(
                 print(step_size, prob)
             prob, _ = mpi4jax.bcast(prob, 0, comm=comm, token=token)
         if 0.5 < prob and prob < 0.8:
-            return step_size 
-        
+            return step_size
+
         step_chain = [step_size, step_size]
         i = 0
         if prob > 0.8:
-            while prob > 0.5:    
+            while prob > 0.5:
                 step_size *= 1.5
                 chain, probs = hmc(
                     init_pars.at[to_fit].get().ravel(),
@@ -511,13 +511,13 @@ def run_mcmc(
                     comm=dataset.datavec.comm,
                     key=key,
                 )
-                prob=jnp.nanmean(jnp.array(probs))
+                prob = jnp.nanmean(jnp.array(probs))
                 step_chain.append(step_size)
                 i += 1
                 print(step_size)
                 if 0.5 < prob and prob < 0.8 and not jnp.isnan(prob):
                     return step_size
-            low_bound = step_chain[i+1]
+            low_bound = step_chain[i + 1]
             high_bound = step_chain[i]
         else:
             while prob < 0.8:
@@ -532,17 +532,19 @@ def run_mcmc(
                     comm=dataset.datavec.comm,
                     key=key,
                 )
-                prob=jnp.nanmean(jnp.array(probs))
+                prob = jnp.nanmean(jnp.array(probs))
                 step_chain.append(step_size)
                 i += 1
                 if 0.5 < prob and prob < 0.8 and not jnp.isnan(prob):
                     return step_size
             low_bound = step_chain[i]
-            high_bound = step_chain[i+1]
-       
-        while 0.5 > prob or 0.8 < prob or jnp.isnan(prob): 
-            #There's an assumption of convergence by taking the mean here that I'm not sure is true
-            step_size = jnp.mean(jnp.array([low_bound, high_bound])) #Get mean of last two steps
+            high_bound = step_chain[i + 1]
+
+        while 0.5 > prob or 0.8 < prob or jnp.isnan(prob):
+            # There's an assumption of convergence by taking the mean here that I'm not sure is true
+            step_size = jnp.mean(
+                jnp.array([low_bound, high_bound])
+            )  # Get mean of last two steps
             print(i, step_size)
             chain, probs = hmc(
                 init_pars.at[to_fit].get().ravel(),
@@ -554,23 +556,30 @@ def run_mcmc(
                 comm=dataset.datavec.comm,
                 key=key,
             )
-            prob=jnp.nanmean(jnp.array(probs))
-            i+=1
+            prob = jnp.nanmean(jnp.array(probs))
+            i += 1
             if prob > 0.8:
                 high_bound = step_size
             else:
                 low_bound = step_size
 
         if i >= 10:
-            print("Warning: step size failed to converged afer {} steps! Final prob {}.".format(i, prob))
+            print(
+                "Warning: step size failed to converged afer {} steps! Final prob {}.".format(
+                    i, prob
+                )
+            )
             return step_size
         print("Final step size: ", step_size)
+        sys.stdout.flush()
         return step_size
 
     key = jax.random.PRNGKey(0)
     key, token = mpi4jax.bcast(key, 0, comm=dataset.datavec.comm, token=token)
 
-    step_size = _get_step_size(step_size=step_size, key=key, token=token, comm=dataset.datavec.comm)
+    step_size = _get_step_size(
+        step_size=step_size, key=key, token=token, comm=dataset.datavec.comm
+    )
 
     chain, probs = hmc(
         init_pars.at[to_fit].get().ravel(),
@@ -585,7 +594,7 @@ def run_mcmc(
     flat_samples = chain.at[:].multiply(scale.at[to_fit].get())
     burn_in = int(num_steps * burn_in)
     flat_samples = flat_samples[burn_in:]
-     
+
     if rank == 0:
         final_pars = final_pars.at[to_fit].set(jnp.median(flat_samples, axis=0).ravel())
         final_errs = final_errs.at[to_fit].set(jnp.std(flat_samples, axis=0).ravel())
