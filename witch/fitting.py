@@ -13,6 +13,8 @@ from tqdm import tqdm
 from .containers import Model
 from .dataset import DataSet
 
+_cache = {}
+
 
 @jax.jit
 def invsafe(matrix: jax.Array, thresh: float = 1e-14) -> jax.Array:
@@ -277,23 +279,23 @@ def hmc(
 
     @jax.jit
     def _leap(_, args):
-        params, momentum = args
+        params, momentum, step_size = args
         momentum = momentum.at[:].add(0.5 * step_size * log_prob_grad(params))  # kick
         params = params.at[:].add(step_size * momentum)  # drift
         momentum = momentum.at[:].add(0.5 * step_size * log_prob_grad(params))  # kick
 
-        return params, momentum
+        return params, momentum, step_size
 
     @jax.jit
-    def _sample(key, params):
+    def _sample(key, params, step_size):
         token = mpi4jax.barrier(comm=comm)
         key, token = mpi4jax.bcast(key, 0, comm=comm, token=token)
         key, uniform_key = jax.random.split(key, 2)
 
         # generate random momentum
         momentum = vnorm(jax.random.split(key, npar))
-        new_params, new_momentum = jax.lax.fori_loop(
-            0, num_leaps, _leap, (params, momentum)
+        new_params, new_momentum, _ = jax.lax.fori_loop(
+            0, num_leaps, _leap, (params, momentum, step_size)
         )
 
         # MH correction
@@ -306,17 +308,23 @@ def hmc(
 
         return key, params, accept_prob
 
-    t0 = time.time()
-    l_sample = _sample.lower(key, params)
-    c_sample = l_sample.compile()
-    t1 = time.time()
-    if rank == 0:
-        print(f"Compiled MC sample function in {t1-t0} s")
+    c_sample = _cache.get("hmc_sample", None)
+    if c_sample is None:
+        t0 = time.time()
+        l_sample = _sample.lower(key, params, step_size)
+        c_sample = l_sample.compile()
+        t1 = time.time()
+        if rank == 0:
+            print(f"Compiled MC sample function in {t1-t0} s")
+        _cache["hmc_sample"] = c_sample
+    else:
+        if rank == 0:
+            print("Using cached sample function")
 
     chain = []
     accept_prob = []
     for _ in tqdm(range(num_steps), disable=(rank != 0)):
-        key, params, prob = c_sample(key, params)
+        key, params, prob = c_sample(key, params, step_size)
         if rank == 0:
             chain += [params]
             accept_prob += [prob]
@@ -324,6 +332,7 @@ def hmc(
         chain = jnp.vstack(chain)
         accept_prob = jnp.array(accept_prob)
         print(f"Accepted {accept_prob.mean():.2%} of samples")
+        sys.stdout.flush()
     else:
         chain = jnp.zeros(0)
         accept_prob = jnp.zeros(0)
@@ -491,7 +500,7 @@ def run_mcmc(
             )
             if rank == 0:
                 prob = probs[0]
-                print(step_size, prob)
+                # print(step_size, prob)
             prob, _ = mpi4jax.bcast(prob, 0, comm=comm, token=token)
         if 0.5 < prob and prob < 0.8:
             return step_size
@@ -514,7 +523,6 @@ def run_mcmc(
                 prob = jnp.nanmean(jnp.array(probs))
                 step_chain.append(step_size)
                 i += 1
-                print(step_size)
                 if 0.5 < prob and prob < 0.8 and not jnp.isnan(prob):
                     return step_size
             low_bound = step_chain[i + 1]
@@ -545,7 +553,7 @@ def run_mcmc(
             step_size = jnp.mean(
                 jnp.array([low_bound, high_bound])
             )  # Get mean of last two steps
-            print(i, step_size)
+            # print(i, step_size)
             chain, probs = hmc(
                 init_pars.at[to_fit].get().ravel(),
                 _log_prob,
