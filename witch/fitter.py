@@ -563,7 +563,7 @@ def main():
 
     postfit(dset_name, cfg, dataset.datavec, model, dataset.info)
 
-    if "nonpara" in cfg: 
+    if "nonpara" in cfg:
         to_copy = cfg["nonpara"].get("to_copy", "")
         n_rounds = cfg["nonpara"].get("n_rounds", None)
         sig_params = cfg["nonpara"].get("sig_params", "")
@@ -572,7 +572,9 @@ def main():
         if sig_params == "":
             raise ValueError("Significance parameter must be specified")
 
-        nonpara_model = model.para_to_non_para(n_rounds=n_rounds, to_copy=to_copy, sig_params=sig_params)
+        nonpara_model = model.para_to_non_para(
+            n_rounds=n_rounds, to_copy=to_copy, sig_params=sig_params
+        )
         outdir = get_outdir(cfg, model)
         dataset.info["outdir"] = outdir
         fit_loop(
