@@ -7,6 +7,7 @@ from typing import Callable
 import jax
 import jax.numpy as jnp
 import mpi4jax
+from jax._src.numpy.ufuncs import isfinite
 from mpi4py import MPI
 from tqdm import tqdm
 
@@ -347,6 +348,7 @@ def run_mcmc(
     step_size: float = 0.02,
     sample_which: int = -1,
     burn_in: float = 0.1,
+    max_tries: int = 20,
 ) -> tuple[Model, jax.Array]:
     """
     Run MCMC using the `emcee` package to estimate the posterior for our model.
@@ -383,6 +385,9 @@ def run_mcmc(
         If this is <= -3 or >= `model.n_rounds` then all parameters are sampled.
     burn_in : float, default: 0.1
         Fractional burn-in period of samples to discard
+    max_tries : int, default: 10
+        Number of tries to tune step size that will be attemted.
+        If 0 no tuning will be run.
 
     Returns
     -------
@@ -482,111 +487,100 @@ def run_mcmc(
             scale,
         )
 
-    def _get_step_size(step_size, key, token, comm):
+    def _get_step_size(step_size, key, token, comm, max_tries):
+        if max_tries == 0:
+            return step_size
         prob = 0
-        step_size *= 1e1
-        rank = comm.rank
-        while 0 == prob or jnp.isinf(prob) or jnp.isnan(prob):
-            step_size /= 1e1
-            chain, probs = hmc(
+        step_fac = 1
+        n_steps = 1
+        i = 0
+        step_sizes = []
+        probs = []
+        min_prob = jnp.inf
+        max_prob = -1 * jnp.inf
+        for i in range(max_tries):
+            step_size *= step_fac
+            _, chain_probs = hmc(
                 init_pars.at[to_fit].get().ravel(),
                 _log_prob,
                 _log_prob_grad,
-                num_steps=1,
+                num_steps=n_steps,
                 num_leaps=num_leaps,
                 step_size=step_size,
                 comm=comm,
                 key=key,
             )
             if rank == 0:
-                prob = probs[0]
-                # print(step_size, prob)
+                prob = jnp.mean(chain_probs)
             prob, _ = mpi4jax.bcast(prob, 0, comm=comm, token=token)
-        if 0.5 < prob and prob < 0.8:
-            return step_size
+            step_sizes += [step_size]
+            probs += [prob]
+            if jnp.isfinite(prob) and prob < min_prob:
+                min_prob = prob
+            elif jnp.isfinite(prob) and prob > min_prob:
+                max_prob = prob
 
-        step_chain = [step_size, step_size]
-        i = 0
-        if prob > 0.8:
-            while prob > 0.5:
-                step_size *= 1.5
-                chain, probs = hmc(
-                    init_pars.at[to_fit].get().ravel(),
-                    _log_prob,
-                    _log_prob_grad,
-                    num_steps=20,
-                    num_leaps=num_leaps,
-                    step_size=step_size,
-                    comm=dataset.datavec.comm,
-                    key=key,
-                )
-                prob = jnp.nanmean(jnp.array(probs))
-                step_chain.append(step_size)
-                i += 1
-                if 0.5 < prob and prob < 0.8 and not jnp.isnan(prob):
-                    return step_size
-            low_bound = step_chain[i + 1]
-            high_bound = step_chain[i]
-        else:
-            while prob < 0.8:
-                step_size /= 1.5
-                chain, probs = hmc(
-                    init_pars.at[to_fit].get().ravel(),
-                    _log_prob,
-                    _log_prob_grad,
-                    num_steps=20,
-                    num_leaps=num_leaps,
-                    step_size=step_size,
-                    comm=dataset.datavec.comm,
-                    key=key,
-                )
-                prob = jnp.nanmean(jnp.array(probs))
-                step_chain.append(step_size)
-                i += 1
-                if 0.5 < prob and prob < 0.8 and not jnp.isnan(prob):
-                    return step_size
-            low_bound = step_chain[i]
-            high_bound = step_chain[i + 1]
-
-        while 0.5 > prob or 0.8 < prob or jnp.isnan(prob):
-            # There's an assumption of convergence by taking the mean here that I'm not sure is true
-            step_size = jnp.mean(
-                jnp.array([low_bound, high_bound])
-            )  # Get mean of last two steps
-            # print(i, step_size)
-            chain, probs = hmc(
-                init_pars.at[to_fit].get().ravel(),
-                _log_prob,
-                _log_prob_grad,
-                num_steps=20,
-                num_leaps=num_leaps,
-                step_size=step_size,
-                comm=dataset.datavec.comm,
-                key=key,
-            )
-            prob = jnp.nanmean(jnp.array(probs))
-            i += 1
-            if prob > 0.8:
-                high_bound = step_size
+            if prob == 0 or not jnp.isfinite(prob):
+                step_fac = 1e-1
+                n_steps = 1
+            elif prob > 0.6 and prob < 0.66:
+                break
+            elif prob <= 0.5:
+                step_fac = 1 / 3
+                n_steps = 5
+            elif prob >= 0.76:
+                step_fac = 3
+                n_steps = 5
+            elif (
+                jnp.isfinite(max_prob)
+                and jnp.isfinite(min_prob)
+                and max_prob >= 0.76
+                and min_prob <= 0.5
+            ):
+                break
+            elif prob > 0.5 and prob < 0.63:
+                step_fac = 1 / 1.5
+                n_steps = 10
+            elif prob < 0.76 and prob > 0.63:
+                step_fac = 1 / 1.5
+                n_steps = 10
             else:
-                low_bound = step_size
-
-        if i >= 10:
-            print(
-                "Warning: step size failed to converged afer {} steps! Final prob {}.".format(
-                    i, prob
+                raise ValueError(f"Unclear what to do with probability {prob}")
+        if prob > 0.60 and prob < 0.66:
+            if rank == 0:
+                print(
+                    f"Final step size of {step_size} with an accept probability of {prob}, took {i} tries to find."
                 )
+                sys.stdout.flush()
+            return step_sizes[-1]
+        probs = jnp.array(probs)
+        step_sizes = jnp.array(step_sizes)
+        msk = jnp.isfinite(probs) + (prob > 0)
+        srt = jnp.argsort(probs[msk])
+        if jnp.sum(msk) == len(probs):
+            raise ValueError(
+                "No finite non-zero step sizes found! Manual intervention is needed!"
             )
-            return step_size
-        print("Final step size: ", step_size)
-        sys.stdout.flush()
-        return step_size
+        step_size_interp = jnp.interp(
+            jnp.array([0.63]), probs[msk][srt], step_sizes[msk][srt]
+        )
+        step_size = step_size_interp[0]
+        if rank == 0:
+            print(
+                "Interpolating to get a step size of {step_size} with an approximate acceptance probability of .63"
+            )
+            sys.stdout.flush()
+        return float(step_size.item())
 
     key = jax.random.PRNGKey(0)
     key, token = mpi4jax.bcast(key, 0, comm=dataset.datavec.comm, token=token)
 
     step_size = _get_step_size(
-        step_size=step_size, key=key, token=token, comm=dataset.datavec.comm
+        step_size=step_size,
+        key=key,
+        token=token,
+        comm=dataset.datavec.comm,
+        max_tries=max_tries,
     )
 
     chain, probs = hmc(
