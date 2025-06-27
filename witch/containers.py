@@ -671,9 +671,8 @@ class Model:
             raise ValueError("Error: {} not in structure names".format(struct_name))
 
         to_pop = ["to_fit_ever", "n_struct", "priors", "par_names"]
-        for key in self.__dict__.keys():
-            if key in to_pop:  # Pop keys if they are in dict
-                self.__dict__.pop(key)
+        for key in to_pop:
+            self.__dict__.pop(key, None)
 
         self.__dict__.pop("model", None)
         self.__dict__.pop("model_grad", None)
@@ -683,6 +682,7 @@ class Model:
         self,
         n_rounds: Optional[int] = None,
         to_copy: list[str] = ["gnfw", "gnfw_rs", "a10", "isobeta", "uniform"],
+        sig_params: list[str] = ["amp", "P0"],
     ) -> Self:
         """
         Function which approximately converts cluster profiles into a non-parametric form. Note this is
@@ -694,6 +694,9 @@ class Model:
             Number of rounds to fit for output model. If none, copy from self
         to_copy : list[str], default: gnfw, gnfw_rs, a10, isobeta, uniform
             List of structures, by name, to copy.
+        sig_params: list[str], default: ["amp", "P0"]
+            Parameters to consider for computing significance.
+            Only first match will be used.
         Returns
         -------
         Model : Model
@@ -706,14 +709,18 @@ class Model:
         cur_model = deepcopy(
             self
         )  # Make a copy of model, we don't want to lose structures
-        i = 0  # Make sure we keep at least one struct
+
+        to_remove = []
+        i = 0
         for structure in cur_model.structures:
-            if structure.structure not in to_copy:
-                cur_model.remove_struct(structure.name)
+            if structure.name not in to_copy:
+                to_remove.append(structure.name)
             else:
                 i += 1
         if i == 0:
             raise ValueError("Error: no model structures in {}".format(to_copy))
+        for name in to_remove:
+            cur_model.remove_struct(name)
         params = jnp.array(cur_model.pars)
         params = jnp.ravel(params)
         pressure, _ = core.model3D(
@@ -727,7 +734,7 @@ class Model:
 
         rs, bin1d, var1d = wu.bin_map(pressure, pixsize)
 
-        rbins = nonparametric.get_rbins(cur_model)
+        rbins = nonparametric.get_rbins(cur_model, sig_params=sig_params)
         rbins = np.append(rbins, np.array([np.amax(rs)]))
 
         condlist = [

@@ -222,12 +222,16 @@ def profile_to_broken_power(
             popt, pcov = curve_fit(power, xdata, ydata, method="trf")
         else:
             popt, pcov = curve_fit(
-                power, xdata, ydata, method="trf", p0=[rbins[::-1][i], 1e-4, -4.0, 0.0]
+                power,
+                xdata,
+                ydata,
+                method="trf",
+                p0=[rbins[::-1][i], np.amax(ydata) * 1e5, -2, 0.0],
             )
         if i == 0:
             c = popt[3]
-        amps.at[i].set(popt[1])
-        pows.at[i].set(popt[2])
+        amps = amps.at[i].set(popt[1])
+        pows = pows.at[i].set(popt[2])
 
     return amps[::-1], pows[::-1], c
 
@@ -263,7 +267,7 @@ def get_rbins(
     """
     sig = 0
     for par in model.structures[struct_num].parameters:
-        if par.name == "amp" or par.name == "P0":
+        if par.name in sig_params:
             sig = par.val / par.err
             break
     if sig == 0:
@@ -285,10 +289,16 @@ def get_rbins(
     rbins = [0, 10, 20]
     rmin = 30
     nrbins = int(np.floor(sig / 5)[0] - 3)
-    step = (
-        np.logspace(np.log10(rmin), np.log10(rmax), nrbins)[1]
-        - np.logspace(np.log10(rmin), np.log10(rmax), nrbins)[0]
-    )
+
+    if nrbins == 1:
+        rbins = np.array(rbins)
+        rbins = np.append(rbins, rmax)
+
+        return rbins
+
+    logrange = np.logspace(np.log10(rmin), np.log10(rmax), nrbins)
+    step = logrange[1] - logrange[0]
+
     while step < 10:
         rbins.append(rmin)
         rmin += 10
@@ -296,7 +306,7 @@ def get_rbins(
         logrange = np.logspace(np.log10(rmin), np.log10(rmax), nrbins)
         step = logrange[1] - logrange[0]
         if rmin > rmax or nrbins < 1:
-            break
+            return np.array(rbins)
     rbins = np.array(rbins)
     rbins = np.append(rbins, logrange)
 
