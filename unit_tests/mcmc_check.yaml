@@ -73,6 +73,6 @@ model:
           to_fit: True #[False, True, False, True]
           priors: [1, 10]
         amp_g:
-          value: 0.02
+          value: 0.002
           to_fit: True #[True, False, True, False]
           priors: [0, .005]
