@@ -222,7 +222,7 @@ def profile_to_broken_power(
             popt, pcov = curve_fit(power, xdata, ydata, method="trf")
         else:
             popt, pcov = curve_fit(
-                power, xdata, ydata, method="trf", p0=[rbins[::-1][i], 1e-4, -4.0, 0.0]
+                power, xdata, ydata, method="trf", p0=[rbins[::-1][i], np.amax(ydata)*1e5, -2, 0.0]
             )
         if i == 0:
             c = popt[3]
