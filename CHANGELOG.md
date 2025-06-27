@@ -1,3 +1,15 @@
+## 9.6.0 (2025-06-27)
+
+### Feat
+
+- update non-para and add sig parameter to config
+
+### Fix
+
+- wrong args for postfit
+- better parameter initialization for para_to_non_para
+- some small bugs
+
 ## 9.5.0 (2025-06-09)
 
 ### Feat
