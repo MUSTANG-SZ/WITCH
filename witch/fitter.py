@@ -569,7 +569,7 @@ def main():
         sig_params = cfg["nonpara"].get("sig_params", "")
         if to_copy == "":
             raise ValueError("To copy must be specified")
-        if sig_param == "":
+        if sig_params == "":
             raise ValueError("Significance parameter must be specified")
 
         nonpara_model = model.para_to_non_para(n_rounds=n_rounds, to_copy=to_copy, sig_params=sig_params)
@@ -581,6 +581,6 @@ def main():
             dataset,
             comm,
         )
-        postfit(dset_name, cfg, dataset, nonpara_model, info)
+        postfit(dset_name, cfg, dataset.datavec, nonpara_model, dataset.info)
 
     print_once("Outputs can be found in", outdir)
