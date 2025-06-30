@@ -278,7 +278,7 @@ def hmc(
     npar = len(params)
     ones = jnp.ones(npar, dtype=bool)
 
-    @jax.jit
+    @partial(jax.jit, inline=True)
     def _leap(_, args):
         params, momentum, step_size = args
         momentum = momentum.at[:].add(0.5 * step_size * log_prob_grad(params))  # kick
@@ -309,6 +309,12 @@ def hmc(
 
         return key, params, accept_prob
 
+    @partial(jax.jit, donate_argnums=(0, 1))
+    def _update(chain, accept_prob, params, prob, i):
+        chain = chain.at[i].set(params)
+        accept_prob = accept_prob.at[i].set(prob)
+        return chain, accept_prob
+
     c_sample = _cache.get("hmc_sample", None)
     if c_sample is None:
         t0 = time.time()
@@ -322,21 +328,19 @@ def hmc(
         if rank == 0:
             print("Using cached sample function")
 
-    chain = []
-    accept_prob = []
-    for _ in tqdm(range(num_steps), disable=(rank != 0)):
-        key, params, prob = c_sample(key, params, step_size)
-        if rank == 0:
-            chain += [params]
-            accept_prob += [prob]
     if rank == 0:
-        chain = jnp.vstack(chain)
-        accept_prob = jnp.array(accept_prob)
-        print(f"Accepted {accept_prob.mean():.2%} of samples")
-        sys.stdout.flush()
+        chain = jnp.zeros((num_steps, len(params)))
+        accept_prob = jnp.zeros(num_steps)
     else:
         chain = jnp.zeros(0)
         accept_prob = jnp.zeros(0)
+    for i in tqdm(range(num_steps), disable=(rank != 0)):
+        key, params, prob = c_sample(key, params, step_size)
+        if rank == 0:
+            chain, accept_prob = _update(chain, accept_prob, params, prob, i)
+    if rank == 0:
+        print(f"Accepted {accept_prob.mean():.2%} of samples")
+        sys.stdout.flush()
     return chain, accept_prob
 
 
@@ -448,11 +452,10 @@ def run_mcmc(
         full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)
         _, in_bounds = _prior_pars_fit(model.priors, full_pars, jnp.array(model.to_fit))
-        log_prior = jnp.sum(
-            jnp.where(in_bounds.at[model.to_fit].get(), 0, -1 * jnp.inf)
-        )
+        # log_prior = jnp.sum( jnp.where(in_bounds.at[model.to_fit].get(), 0, -1 * jnp.inf))
+        log_prior = in_bounds.at[to_fit].get()
         return jax.lax.cond(
-            jnp.isfinite(log_prior),
+            jnp.any(log_prior),
             _not_inf,
             _is_inf,
             full_pars,
@@ -477,9 +480,10 @@ def run_mcmc(
         full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)
         _, in_bounds = _prior_pars_fit(model.priors, full_pars, jnp.array(model.to_fit))
-        log_prior = jnp.sum(jnp.where(in_bounds.at[to_fit].get(), 0, -1 * jnp.inf))
+        # log_prior = jnp.sum(jnp.where(in_bounds.at[to_fit].get(), 0, -1 * jnp.inf))
+        log_prior = in_bounds.at[to_fit].get()
         return jax.lax.cond(
-            jnp.isfinite(log_prior),
+            jnp.any(log_prior),
             _not_inf_grad,
             _is_inf_grad,
             full_pars,
@@ -488,18 +492,22 @@ def run_mcmc(
         )
 
     def _get_step_size(step_size, key, token, comm, max_tries):
-        if max_tries == 0:
-            return step_size
-        prob = 0
-        step_fac = 1
-        n_steps = 1
-        i = 0
-        step_sizes = []
-        probs = []
-        min_prob = jnp.inf
-        max_prob = -1 * jnp.inf
-        for i in range(max_tries):
-            step_size *= step_fac
+        def _can_interp(probs):
+            probs = jnp.array(probs)
+            msk = jnp.isfinite(probs) * probs > 0
+            if jnp.sum(msk) < 2:
+                return False
+            dprob = (probs[msk] - 0.63) / 0.13
+            for n in range(1, 4):
+                upper, lower = (
+                    jnp.sum((dprob <= n) * (dprob >= 0)),
+                    jnp.sum((dprob >= -1 * n) * (dprob < 0)),
+                )
+                if upper >= 1 and lower >= 1 and upper + lower >= n + 1:
+                    return True
+            return False
+
+        def _hmc(n_steps, step_size):
             _, chain_probs = hmc(
                 init_pars.at[to_fit].get().ravel(),
                 _log_prob,
@@ -510,20 +518,34 @@ def run_mcmc(
                 comm=comm,
                 key=key,
             )
+            prob = None
             if rank == 0:
                 prob = jnp.mean(chain_probs)
             prob, _ = mpi4jax.bcast(prob, 0, comm=comm, token=token)
+
+            return prob
+
+        if max_tries == 0:
+            return step_size
+        step_fac = 1
+        n_steps = 1
+        i = 0
+        step_sizes = []
+        probs = []
+        for i in range(max_tries):
+            step_size *= step_fac
+            if rank == 0:
+                print(f"Trying step size {step_size}")
+            prob = _hmc(n_steps, step_size)
             step_sizes += [step_size]
             probs += [prob]
-            if jnp.isfinite(prob) and prob < min_prob:
-                min_prob = prob
-            elif jnp.isfinite(prob) and prob > min_prob:
-                max_prob = prob
 
             if prob == 0 or not jnp.isfinite(prob):
                 step_fac = 1e-1
                 n_steps = 1
             elif prob > 0.6 and prob < 0.66:
+                break
+            elif _can_interp(probs):
                 break
             elif prob <= 0.5:
                 step_fac = 1 / 3
@@ -531,13 +553,6 @@ def run_mcmc(
             elif prob >= 0.76:
                 step_fac = 3
                 n_steps = 5
-            elif (
-                jnp.isfinite(max_prob)
-                and jnp.isfinite(min_prob)
-                and max_prob >= 0.76
-                and min_prob <= 0.5
-            ):
-                break
             elif prob > 0.5 and prob < 0.63:
                 step_fac = 1 / 1.5
                 n_steps = 10
@@ -546,31 +561,32 @@ def run_mcmc(
                 n_steps = 10
             else:
                 raise ValueError(f"Unclear what to do with probability {prob}")
-        if prob > 0.60 and prob < 0.66:
+        if probs[-1] > 0.60 and probs[-1] < 0.66:
             if rank == 0:
                 print(
-                    f"Final step size of {step_size} with an accept probability of {prob}, took {i} tries to find."
+                    f"Final step size of {step_size} with an accept probability of {probs[-1]}, took {i} tries to find."
                 )
                 sys.stdout.flush()
             return step_sizes[-1]
         probs = jnp.array(probs)
         step_sizes = jnp.array(step_sizes)
-        msk = jnp.isfinite(probs) + (prob > 0)
+        msk = jnp.isfinite(probs) + (probs > 0)
         srt = jnp.argsort(probs[msk])
-        if jnp.sum(msk) == len(probs):
+        if jnp.sum(msk) == 0:
             raise ValueError(
                 "No finite non-zero step sizes found! Manual intervention is needed!"
             )
         step_size_interp = jnp.interp(
             jnp.array([0.63]), probs[msk][srt], step_sizes[msk][srt]
         )
-        step_size = step_size_interp[0]
+        step_size = float(step_size_interp[0].item())
+        prob = _hmc(5, step_size)
         if rank == 0:
             print(
-                "Interpolating to get a step size of {step_size} with an approximate acceptance probability of .63"
+                f"Interpolated to get a step size of {step_size} with an acceptance probability {prob:.2%}"
             )
             sys.stdout.flush()
-        return float(step_size.item())
+        return step_size
 
     key = jax.random.PRNGKey(0)
     key, token = mpi4jax.bcast(key, 0, comm=dataset.datavec.comm, token=token)
@@ -583,7 +599,7 @@ def run_mcmc(
         max_tries=max_tries,
     )
 
-    chain, probs = hmc(
+    chain, _ = hmc(
         init_pars.at[to_fit].get().ravel(),
         _log_prob,
         _log_prob_grad,
