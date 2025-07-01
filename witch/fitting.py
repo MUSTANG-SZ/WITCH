@@ -317,6 +317,8 @@ def hmc(
 
     c_sample = _cache.get("hmc_sample", None)
     if c_sample is None:
+        if rank == 0:
+            print(f"Compiling MC sample function. This can take a few minutes!")
         t0 = time.time()
         l_sample = _sample.lower(key, params, step_size)
         c_sample = l_sample.compile()
@@ -434,62 +436,39 @@ def run_mcmc(
     init_pars = init_pars.at[:].multiply(1.0 / scale)
     npar = jnp.sum(to_fit)
 
-    def _is_inf(pars, model):
-        _ = (pars, model)
-        return -1 * jnp.inf
-
-    def _not_inf(pars, model):
-        pars, _ = mpi4jax.bcast(pars, 0, comm=dataset.datavec.comm)
-        temp_model = model.update(pars, init_errs, model.chisq)
-        chisq, *_ = dataset.objective(
-            temp_model, dataset.datavec, dataset.mode, True, False, False
-        )
-        log_like = -0.5 * chisq
-        return log_like
-
     @jax.jit
     def _log_prob(pars, model=model, init_pars=init_pars):
         full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)
         _, in_bounds = _prior_pars_fit(model.priors, full_pars, jnp.array(model.to_fit))
-        # log_prior = jnp.sum( jnp.where(in_bounds.at[model.to_fit].get(), 0, -1 * jnp.inf))
-        log_prior = in_bounds.at[to_fit].get()
-        return jax.lax.cond(
-            jnp.any(log_prior),
-            _not_inf,
-            _is_inf,
-            full_pars,
-            model,
+        log_prior = jnp.sum(
+            jnp.where(in_bounds.at[model.to_fit].get(), 0, -1 * jnp.inf)
         )
-
-    def _is_inf_grad(pars, model, scale):
-        _ = (pars, model, scale)
-        return jnp.inf * jnp.ones(npar)
-
-    def _not_inf_grad(pars, model, scale):
-        pars, _ = mpi4jax.bcast(pars, 0, comm=dataset.datavec.comm)
-        temp_model = model.update(pars, init_errs, model.chisq)
-        _, grad, _ = dataset.objective(
-            temp_model, dataset.datavec, dataset.mode, False, True, False
+        temp_model = model.update(full_pars, init_errs, jnp.array(0))
+        jax.block_until_ready(temp_model)
+        chisq, *_ = dataset.objective(
+            temp_model, dataset.datavec, dataset.mode, True, False, False
         )
-        grad = grad.at[:].multiply(1.0 / scale)
-        return grad.at[to_fit].get().ravel()
+        del temp_model
+        log_like = -0.5 * chisq
+        log_like = log_like + log_prior
+        return log_like
 
     @jax.jit
     def _log_prob_grad(pars, model=model, init_pars=init_pars):
         full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)
         _, in_bounds = _prior_pars_fit(model.priors, full_pars, jnp.array(model.to_fit))
-        # log_prior = jnp.sum(jnp.where(in_bounds.at[to_fit].get(), 0, -1 * jnp.inf))
-        log_prior = in_bounds.at[to_fit].get()
-        return jax.lax.cond(
-            jnp.any(log_prior),
-            _not_inf_grad,
-            _is_inf_grad,
-            full_pars,
-            model,
-            scale,
+        log_prior = jnp.sum(jnp.where(in_bounds.at[to_fit].get(), 0, -1 * jnp.inf))
+        temp_model = model.update(full_pars, init_errs, model.chisq)
+        jax.block_until_ready(temp_model)
+        _, grad, _ = dataset.objective(
+            temp_model, dataset.datavec, dataset.mode, False, True, False
         )
+        grad = grad.at[:].multiply(1.0 / scale)
+        log_like_grad = grad.at[to_fit].get().ravel()
+        log_like_grad = log_like_grad.at[:].add(log_prior)
+        return log_like_grad
 
     def _get_step_size(step_size, key, token, comm, max_tries):
         def _can_interp(probs):
@@ -621,11 +600,15 @@ def run_mcmc(
     )
     final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=dataset.datavec.comm, token=token)
     model = model.update(
-        final_pars.block_until_ready(), final_errs.block_until_ready(), model.chisq
+        final_pars.block_until_ready(),
+        final_errs.block_until_ready(),
+        jnp.array(0).block_until_ready(),  # model.chisq
     )
+    jax.block_until_ready(model)
     chisq, *_ = dataset.objective(
         model, dataset.datavec, dataset.mode, True, False, False
     )
     model = model.update(final_pars, final_errs, chisq)
+    jax.block_until_ready(model)
 
     return model, flat_samples
