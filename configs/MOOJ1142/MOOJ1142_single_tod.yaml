@@ -7,13 +7,14 @@ base: "MOOJ1142_base.yaml"
 # Used both for the output path as well as to load presets
 name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
-
-paths:
-  subdir: "xray_peak_rs" # Subdirectory to use
+ntods_map: 1
+fit: False
+sub: False
+model_map: False
 
 coords:
-  x0: "Angle('11 42 47.44 hours').to(u.radian).value" #peak
-  y0: "Angle('15:27:13.10 degrees').to(u.radian).value" #peak
+  x0: "Angle('11 42 46.82 hours').to(u.radian).value" #centroid
+  y0: "Angle('15:27:15.70 degrees').to(u.radian).value" #centroid
 
 model:
   unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
@@ -28,59 +29,34 @@ model:
         dz_1:
           value: 0.0
         P0:
-          value: 0.373
+          value: 0.370
           to_fit: True
         r_s:
-          value: 26
+          value: 20.
           to_fit: True
         gamma:
-          value: -0.717
+          value: 0.53
           to_fit: True
+          priors: [0.1, 2.0] 
         alpha:
-          value: 1.233
+          value: 1.277
           to_fit: True
         beta:
-          value: 3.377
+          value: 3.924
           to_fit: True
         z:
           value: 1.19
-    sph_isobeta:
-      structure: "sph_isobeta"
-      parameters:
-        x0:
-          value: -32.45823544
-            #priors: [-25., -65.]
-          to_fit: False 
-        y0:
-          value: 7.92494073
-            #priors: [0., 20.]
-          to_fit: False
-        z0:
-          value: 0.0
-        r:
-          value: 10.0
-          to_fit: True
-        theta:
-          value: 0.0
-        beta:
-          value: 3.0
-          to_fit: True
-          priors: [2.0, 10.0]
-        amp:
-          value: 0.05
-          to_fit: True
-          priors: [0.0, 10.0]
     ps_gauss:
       structure: "gaussian"
       parameters:
         dx_g:
-          value: 1.91
+          value: 1.78
           to_fit: True
         dy_g:
-          value: -4.04
+          value: -3.38
           to_fit: True
         sigma:
-          value: 5.1
+          value: 4.0
           to_fit: True
         amp_g:
           value: 0.00128582673

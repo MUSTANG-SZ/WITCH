@@ -28,20 +28,19 @@ model:
         dz_1:
           value: 0.0
         P0:
-          value: 0.103
+          value: 0.370
           to_fit: True
         r_s:
-          value: 100.
+          value: 20.
           to_fit: True
         gamma:
-          value: .3081
-          to_fit: True
-          priors: [0., 5.]
+          value: -0.53
+          to_fit: True 
         alpha:
-          value: 1.551
+          value: 1.277
           to_fit: True
         beta:
-          value: 5.4905
+          value: 3.924
           to_fit: True
         z:
           value: 1.19
