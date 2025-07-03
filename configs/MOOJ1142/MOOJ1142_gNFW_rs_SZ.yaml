@@ -24,26 +24,26 @@ model:
         dx_1:
           value: 0.0
           to_fit: True
-          priors: [-9.0, 9.0]
         dy_1:
           value: 0.0
           to_fit: True
-          priors: [-9.0, 9.0]
         dz_1:
           value: 0.0
         P0:
           value: 0.103
           to_fit: True
         r_s:
-          value: 100.
+          value: 20.
           to_fit: True
         gamma:
           value: .3081
           to_fit: True
         alpha:
           value: 1.551
+          to_fit: True
         beta:
           value: 5.4905
+          to_fit: True
         z:
           value: 1.19 
     ps_gauss:

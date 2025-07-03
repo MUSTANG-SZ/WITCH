@@ -190,7 +190,37 @@ def postproc(dset_name: str, cfg: dict, todvec: TODVec, model: Model, info: dict
                     *info["noise_args"],
                     **info["noise_kwargs"],
                 )
+
+        if cfg.get("ntods_map", False):
+
+            if minkasi.nproc > 1:
+                print(
+                    "Warning: running bunched TOD mapmaking with mpi is not reccomeneded. The bundles will be NPROC x NTODS_MAP and may lead to hanging code."
+                )
+            step = int(cfg.get("ntods_map", 1))
+            todvec_copy = todvec.copy(deep=True)
+            for i in range(int(np.ceil(len(todvec_minkasi.tods) / step))):
+                cur_tods = todvec_copy.tods[i * step : (i + 1) * step]
+                cur_vec = TODVec(cur_tods, todvec_copy.comm)
+                cur_vec = to_minkasi(cur_vec, copy_noise, cfg["mem_starved"])
+                mapset = mm.make_maps(
+                    cur_vec,
+                    skymap,
+                    noise_class,
+                    noise_args,
+                    noise_kwargs,
+                    os.path.join(outdir, dset_name, "signal_{}".format(i)),
+                    cfg["datasets"][dset_name]["npass"],
+                    cfg["datasets"][dset_name]["dograd"],
+                    return_maps=False,
+                )
+            print("DONE INDV TODS")
+            del todvec_copy
+            del cur_tods
+            del cur_vec
+
         del todvec_minkasi
+
     else:
         print_once(
             "Not making signal map, this means that your starting noise may be more off"
