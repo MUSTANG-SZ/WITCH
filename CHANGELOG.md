@@ -1,3 +1,29 @@
+## 9.8.0 (2025-07-11)
+
+### Feat
+
+- streamlined step size tuning
+- update unit tests
+- step_size tuning
+- add burn in
+- adding a10
+
+### Fix
+
+- have update return a copy to avoid tracer leak
+- divide grad by scale
+- mpi issues on get_step_size
+- tuning some hyper parameters for better step tuning
+- wont crash with n_rounds=0
+- not doing radtoarcsec for resid and model
+- make sure scale isnt inf when we have no priors
+
+### Perf
+
+- reduce branching
+- lots of minor optimizations and more clever interpolation criteria
+- cache sample function
+
 ## 9.7.0 (2025-07-03)
 
 ### Feat
