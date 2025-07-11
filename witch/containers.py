@@ -590,8 +590,7 @@ class Model:
     def update(self, vals: jax.Array, errs: jax.Array, chisq: jax.Array) -> Self:
         """
         Update the parameter values and errors as well as the model chi-squared.
-        This also resets the cache on `model` and `model_grad`
-        if `vals` is different than `self.pars`.
+        This also resets the cache on `model` and `model_grad`.
 
         Parameters
         ----------
@@ -608,23 +607,21 @@ class Model:
         Returns
         -------
         updated : Model
-            The updated model.
-            While nominally the model will update in place, returning it
-            alows us to use this function in JITed functions.
+            An updated copy of the model.
         """
-        if not np.array_equal(self.pars, vals):
-            self.__dict__.pop("model", None)
-            self.__dict__.pop("model_grad", None)
+        updated = deepcopy(self)
+        updated.__dict__.pop("model", None)
+        updated.__dict__.pop("model_grad", None)
         n = 0
-        for struct in self.structures:
+        for struct in updated.structures:
             for par in struct.parameters:
                 for i in range(len(par.val)):
                     par.val = par.val.at[i].set(vals[n])
                     par.err = par.err.at[i].set(errs[n])
                     n += 1
-        self.chisq = chisq
+        updated.chisq = chisq
 
-        return self
+        return updated
 
     def add_round(self, to_fit) -> Self:
         """
@@ -919,10 +916,10 @@ class Model:
             parameters = []
             for par_name, param in structure["parameters"].items():
                 val = eval(str(param["value"]))
-                fit = param.get("to_fit", [False] * n_rounds)
+                fit = param.get("to_fit", [False] * max(1, n_rounds))
                 if isinstance(fit, bool):
-                    fit = [fit] * n_rounds
-                if len(fit) != n_rounds:
+                    fit = [fit] * max(1, n_rounds)
+                if len(fit) != n_rounds and n_rounds != 0:
                     raise ValueError(
                         f"to_fit has {len(fit)} entries but we only have {n_rounds} rounds"
                     )
