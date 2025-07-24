@@ -1,7 +1,7 @@
 # Base config to merge into
 # If an absolute path is given then it is used
 # Otherwise it is assumed to me reative to the directory of this file
-base: "MOOJ1142_base.yaml"
+base: "MOOJ1142_mcmc.yaml"
 
 # Cluster name
 # Used both for the output path as well as to load presets
@@ -9,7 +9,7 @@ name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
 paths:
-  subdir: "xray_peak_rs" # Subdirectory to use
+  subdir: "mcmc_xray_peak_rs" # Subdirectory to use
 
 coords:
   x0: "Angle('11 42 47.44 hours').to(u.radian).value" #peak
@@ -44,8 +44,8 @@ model:
           to_fit: True
         z:
           value: 1.19
-    sph_isobeta:
-      structure: "sph_isobeta"
+    isobeta:
+      structure: "isobeta"
       parameters:
         x0:
           value: -32.45823544
@@ -57,15 +57,18 @@ model:
           to_fit: False
         z0:
           value: 0.0
-        r:
-          value: 10.0
-          to_fit: True
+        r_1:
+          value: 20.0
+        r_2:
+          value: 20.0
+        r_3:
+          value: 20.0
         theta:
           value: 0.0
         beta:
-          value: 3.0
+          value: 0.66
           to_fit: True
-          priors: [2.0, 10.0]
+          priors: [-1.0, 5.0]
         amp:
           value: 0.05
           to_fit: True

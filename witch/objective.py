@@ -116,8 +116,8 @@ def chisq_objective(
                 )
 
         resid = data.data - pred_dat
-        resid_filt = data.noise.apply_noise(resid)
         if do_loglike:
+            resid_filt = data.noise.apply_noise(resid)
             chisq += jnp.sum(resid * resid_filt)
 
         if only_chisq:

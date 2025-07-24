@@ -3,6 +3,8 @@
 # Otherwise it is assumed to me reative to the directory of this file
 base: "MOOJ1142_base.yaml"
 
+n_rounds: 2
+
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "MOOJ1142"
@@ -15,6 +17,11 @@ coords:
   x0: "Angle('11 42 47.44 hours').to(u.radian).value" #peak
   y0: "Angle('15:27:13.10 degrees').to(u.radian).value" #peak
 
+mcmc:
+  run: True
+  num_steps: 100
+  n_leaps: 4
+  
 model:
   unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   structures:
@@ -38,14 +45,14 @@ model:
           to_fit: True
         alpha:
           value: 1.233
-          to_fit: True
+          to_fit: False 
         beta:
           value: 3.377
-          to_fit: True
+          to_fit: False
         z:
           value: 1.19
-    sph_isobeta:
-      structure: "sph_isobeta"
+    isobeta:
+      structure: "isobeta"
       parameters:
         x0:
           value: -32.45823544
@@ -57,15 +64,18 @@ model:
           to_fit: False
         z0:
           value: 0.0
-        r:
-          value: 10.0
-          to_fit: True
+        r_1:
+          value: 20.0
+        r_2:
+          value: 20.0
+        r_3:
+          value: 20.0
         theta:
           value: 0.0
         beta:
-          value: 3.0
+          value: 0.66
           to_fit: True
-          priors: [2.0, 10.0]
+          priors: [-1.0, 5.0]
         amp:
           value: 0.05
           to_fit: True
@@ -75,13 +85,13 @@ model:
       parameters:
         dx_g:
           value: 1.91
-          to_fit: True
+          to_fit: False 
         dy_g:
           value: -4.04
-          to_fit: True
+          to_fit: False
         sigma:
           value: 5.1
-          to_fit: True
+          to_fit: [True, False]
         amp_g:
           value: 0.00128582673
-          to_fit: True
+          to_fit: [True, False]

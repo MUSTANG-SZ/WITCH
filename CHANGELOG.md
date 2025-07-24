@@ -1,3 +1,70 @@
+## 9.8.0 (2025-07-11)
+
+### Feat
+
+- streamlined step size tuning
+- update unit tests
+- step_size tuning
+- add burn in
+- adding a10
+
+### Fix
+
+- have update return a copy to avoid tracer leak
+- divide grad by scale
+- mpi issues on get_step_size
+- tuning some hyper parameters for better step tuning
+- wont crash with n_rounds=0
+- not doing radtoarcsec for resid and model
+- make sure scale isnt inf when we have no priors
+
+### Perf
+
+- reduce branching
+- lots of minor optimizations and more clever interpolation criteria
+- cache sample function
+
+## 9.7.0 (2025-07-03)
+
+### Feat
+
+- bunched TOD fitting
+
+## 9.6.0 (2025-06-27)
+
+### Feat
+
+- update non-para and add sig parameter to config
+
+### Fix
+
+- wrong args for postfit
+- better parameter initialization for para_to_non_para
+- some small bugs
+
+## 9.5.0 (2025-06-09)
+
+### Feat
+
+- adding spherical isobeta
+
+## 9.4.0 (2025-05-19)
+
+### Feat
+
+- adding y2uK_CMB
+- adding ACT data fit and fixing units and grid for all act tests
+
+### Fix
+
+- removing ranges from corner
+
+## 9.3.0 (2025-05-19)
+
+### Feat
+
+- more complicated sim with ACT data
+
 ## 9.2.0 (2025-04-29)
 
 ### Feat

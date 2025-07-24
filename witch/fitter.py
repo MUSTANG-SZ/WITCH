@@ -310,6 +310,8 @@ def _run_mcmc(cfg, model, dataset):
         num_leaps=int(cfg["mcmc"].get("num_leaps", 10)),
         step_size=float(cfg["mcmc"].get("step_size", 0.02)),
         sample_which=int(cfg["mcmc"].get("sample_which", -1)),
+        burn_in=float(cfg["mcmc"].get("burn_in", 0.1)),
+        max_tries=int(cfg["mcmc"].get("max_tries", 20)),
     )
     _ = mpi4jax.barrier(comm=comm)
     t2 = time.time()
@@ -327,6 +329,7 @@ def _run_mcmc(cfg, model, dataset):
         np.savez_compressed(samps_path, samples=samples)
         try:
             to_fit = np.array(model.to_fit)
+            # ranges = [prior if prior is not None else [0.5 * model.params[i], 2 * model.params[i]] for i, prior in enumerate(model.priors)]
             corner.corner(
                 samples,
                 labels=np.array(model.par_names)[to_fit],
@@ -591,5 +594,29 @@ def main():
         models = fit_loop(models, cfg, datasets, comm, outdir)
         for dset_name, dataset, model in zip(dset_names, datasets, models):
             dataset.postfit(dset_name, cfg, dataset, model, dataset.info)
+        if "nonpara" in cfg:
+            to_copy = cfg["nonpara"].get("to_copy", "")
+            n_rounds = cfg["nonpara"].get("n_rounds", None)
+            sig_params = cfg["nonpara"].get("sig_params", "")
+            if to_copy == "":
+                raise ValueError("To copy must be specified")
+            if sig_params == "":
+                raise ValueError("Significance parameter must be specified")
+
+            nonpara_models = []
+            for dset_name, dataset, model in zip(dset_names, datasets, models):
+                nonpara_model = model.para_to_non_para(
+                    n_rounds=n_rounds, to_copy=to_copy, sig_params=sig_params
+                )
+                outdir = get_outdir(cfg, model)
+                dataset.info["outdir"] = outdir
+                nonpara_models += [nonpara_model]
+            nonpara_models = fit_loop(nonpara_models, cfg, datasets, comm, outdir)
+            for dset_name, dataset, nonpara_model in zip(
+                dset_names, datasets, nonpara_models
+            ):
+                dataset.postfit(
+                    dset_name, cfg, dataset.datavec, nonpara_model, dataset.info
+                )
 
     print_once("Outputs can be found in", outdir)
