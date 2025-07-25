@@ -176,7 +176,7 @@ def run_lmfit(
         # Get the step
         step = jnp.dot(invscale(curve_use), grad)
         new_pars, to_fit = _prior_pars_fit(
-            model[0].priors, model[0].pars.at[:].add(step), jnp.array(model.to_fit)
+            model[0].priors, model[0].pars.at[:].add(step), jnp.array(model[0].to_fit)
         )
         # Get errs
         errs = jnp.where(to_fit, jnp.sqrt(jnp.diag(invscale(curve_use))), 0)
@@ -194,7 +194,7 @@ def run_lmfit(
             _chisq, _grad, _curve = dataset.objective(
                 new_model, dataset.datavec, dataset.mode, True, True, True
             )
-            new_chisq = new_chisq.at[:].add(_chisq)
+            new_chisq += _chisq
             new_grad = new_grad.at[:].add(_grad)
             new_curve = new_curve.at[:].add(_curve)
         new_models = tuple(
@@ -228,7 +228,7 @@ def run_lmfit(
         _chisq, _grad, _curve = dataset.objective(
             model, dataset.datavec, dataset.mode, True, True, True
         )
-        chisq = chisq.at[:].add(_chisq)
+        chisq += _chisq
         grad = grad.at[:].add(_grad)
         curve = curve.at[:].add(_curve)
     i, delta_chisq, _, models, *_ = jax.lax.while_loop(

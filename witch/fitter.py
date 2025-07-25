@@ -244,7 +244,7 @@ def _save_model(cfg, model, outdir, desc_str):
 
 def _reestimate_noise(models, datasets):
     for i, dataset in enumerate(datasets):
-        for data in dataset:
+        for data in dataset.datavec:
             if dataset.mode == "tod":
                 pred = (
                     models[i]
@@ -373,7 +373,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
     print_once("Compiling objective function")
     t0 = time.time()
     for i, (dataset, model) in enumerate(zip(datasets, models)):
-        chisq, *_ = dataset.objective(model, dataset.DataVec, dataset.mode)
+        chisq, *_ = dataset.objective(model, dataset.datavec, dataset.mode)
         models[i] = model.update(model.pars, model.errs, chisq)
     print_once(f"Took {time.time() - t0} s to compile")
 
@@ -516,7 +516,6 @@ def main():
     datasets = []
     outdir = None
     for dset_name in dset_names:
-        dset_name = list(cfg["datasets"].keys())[0]
         if "load_tods" in cfg["datasets"][dset_name]["funcs"]:
             cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
                 "funcs"
@@ -543,7 +542,7 @@ def main():
         dataset.datavec = load(dset_name, cfg, fnames, comm)
 
         # Get any info we need specific to an expiriment
-        dataset.info = get_info(dset_name, cfg, dataset)
+        dataset.info = get_info(dset_name, cfg, dataset.datavec)
 
         # Get the beam
         beam = make_beam(dset_name, cfg, dataset.info)
@@ -582,7 +581,7 @@ def main():
         elif dataset.mode == "map":
             dataset.datavec = process_maps(cfg, dataset, model)
         dataset = jax.block_until_ready(dataset)
-        postproc(dset_name, cfg, dataset, model, dataset.info)
+        postproc(dset_name, cfg, dataset.datavec, model, dataset.info)
         models.append(model)
         datasets.append(dataset)
 
@@ -593,7 +592,7 @@ def main():
     if to_fit and outdir is not None:
         models = fit_loop(models, cfg, datasets, comm, outdir)
         for dset_name, dataset, model in zip(dset_names, datasets, models):
-            dataset.postfit(dset_name, cfg, dataset, model, dataset.info)
+            dataset.postfit(dset_name, cfg, dataset.datavec, model, dataset.info)
         if "nonpara" in cfg:
             to_copy = cfg["nonpara"].get("to_copy", "")
             n_rounds = cfg["nonpara"].get("n_rounds", None)
