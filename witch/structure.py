@@ -10,7 +10,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from .grid import transform_grid
-from .nonparametric import broken_power
+from .power import broken_power
 from .utils import ap, get_da, get_hz, get_nz, h70
 
 
