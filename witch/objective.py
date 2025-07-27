@@ -28,8 +28,8 @@ if TYPE_CHECKING:
 
 @partial(jax.jit, static_argnames=("n_datasets", "do_loglike", "do_grad", "do_curve"))
 def joint_objective(
-    models: tuple[Model],
-    datasets: tuple["DataSet"],
+    models: tuple[Model, ...],
+    datasets: tuple["DataSet", ...],
     n_datasets: int,
     do_loglike: bool = True,
     do_grad: bool = True,
