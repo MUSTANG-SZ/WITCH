@@ -54,6 +54,8 @@ class GetFiles(Protocol):
 class Load(Protocol):
     """
     Function that loads data into a `jitkasi` container.
+    This function is also responsible for updating the comm object to
+    the local one in any relevant libraries.
     See docstring of `__call__` for details on the parameters and returns.
     """
 
@@ -302,6 +304,7 @@ class DataSet:
     preproc: PreProc
     postproc: PostProc
     postfit: PostFit
+    global_comm: MPI.Intracomm
     info: dict = field(init=False)
     datavec: DataVec = field(init=False)
 
@@ -441,6 +444,7 @@ class DataSet:
             self.preproc,
             self.postproc,
             self.postfit,
+            self.global_comm,
         )
         if "info" in self.__dict__:
             aux_data += (self.info,)
@@ -453,9 +457,9 @@ class DataSet:
     def tree_unflatten(cls, aux_data, children) -> Self:
         (datavec,) = children
         name = aux_data[0]
-        funcs = aux_data[1:8]
-        info = aux_data[8]
-        dataset = cls(name, *funcs)
+        funcs_comm = aux_data[1:9]
+        info = aux_data[9]
+        dataset = cls(name, *funcs_comm)
         if datavec is not None:
             dataset.datavec = datavec
         if info is not None:

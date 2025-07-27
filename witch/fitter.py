@@ -11,6 +11,7 @@ from copy import deepcopy
 from importlib import import_module
 
 import corner
+import iteround
 import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
@@ -24,6 +25,7 @@ from . import utils as wu
 from .containers import Model, Model_xfer
 from .dataset import DataSet
 from .fitting import run_lmfit, run_mcmc
+from .objective import joint_objective
 
 comm = MPI.COMM_WORLD.Clone()
 
@@ -80,17 +82,68 @@ def _make_parser() -> argp.ArgumentParser:
 def _mpi_fsplit(fnames, comm):
     rank = comm.Get_rank()
     nproc = comm.Get_size()
-    if nproc > len(fnames):
-        nproc = len(fnames)
+
+    # Check that we have the minimum number of procs
+    if nproc < len(fnames):
+        raise ValueError("More datasets than procs!")
+
+    # Kill extra procs
+    flat_fnames = [
+        f for fname in [fnames[dset] for dset in fnames.keys()] for f in fname
+    ]
+    if nproc > len(flat_fnames):
+        nproc = len(flat_fnames)
         group = comm.Get_group()
         new_group = group.Incl(list(range(nproc)))
         new_comm = comm.Create(new_group)
-        if rank >= len(fnames):
+        if rank >= len(flat_fnames):
             print(f"More procs than files!, exiting process {rank}")
             MPI.Finalize()
             sys.exit(0)
         comm = new_comm
-    return fnames[rank::nproc], comm
+
+    # Decide the number of procs for each dataset
+    nprocs = {
+        dset: 1
+        + (nproc - len(fnames))
+        * (len(fnames[dset]) - 1)
+        / (len(flat_fnames) - len(fnames))
+        for dset in fnames.keys()
+    }
+    nprocs = iteround.saferound(nprocs, 0)
+    dsets = np.array(
+        [
+            ds
+            for dset in [
+                [dset_name] * int(nprocs[dset_name]) for dset_name in fnames.keys()
+            ]
+            for ds in dset
+        ]
+    )
+
+    # Die if we messed up
+    for dset, f in fnames.items():
+        if len(f) < nprocs[dset]:
+            raise ValueError(
+                f"Too many procs allocated to {dset}! This shouldn't be possible please report it!"
+            )
+
+    # Handle my local case
+    dset_local = dsets[rank]
+    group = comm.Get_group()
+    comms_local = {
+        dset: comm.Create(group.Incl(list(np.where(dsets == dset)[0])))
+        for dset in fnames.keys()
+    }
+    local_rank = comms_local[dset_local].Get_rank()
+    fnames_local = {
+        dset: (
+            fnames[dset][local_rank :: int(nprocs[dset])] if dset == dset_local else []
+        )
+        for dset in fnames.keys()
+    }
+
+    return fnames_local, comm, comms_local
 
 
 def process_tods(cfg, dataset, model):
@@ -279,6 +332,7 @@ def _run_fit(
     models, i, delta_chisq = run_lmfit(
         models,
         datasets,
+        len(datasets),
         eval(str(cfg["fitting"].get("maxiter", "10"))),
         eval(str(cfg["fitting"].get("chitol", "1e-5"))),
     )
@@ -372,8 +426,8 @@ def fit_loop(models, cfg, datasets, comm, outdir):
 
     print_once("Compiling objective function")
     t0 = time.time()
-    for i, (dataset, model) in enumerate(zip(datasets, models)):
-        chisq, *_ = dataset.objective(model, dataset.datavec, dataset.mode)
+    chisq, *_ = joint_objective(models, datasets, len(models))
+    for i, model in enumerate(models):
         models[i] = model.update(model.pars, model.errs, chisq)
     print_once(f"Took {time.time() - t0} s to compile")
 
@@ -515,7 +569,19 @@ def main():
     models = []
     datasets = []
     outdir = None
+    # First lets plan how to split things up among mpi tasks
+    fnames = {}
     for dset_name in dset_names:
+        get_files = eval(cfg["datasets"][dset_name]["funcs"]["get_files"])
+        fnames[dset_name] = get_files(dset_name, cfg)
+    global comm
+    fnames, comm, comms_local = _mpi_fsplit(fnames, comm)
+
+    for dset_name in dset_names:
+        # If this dataset doesn't live in this proc then skip
+        if len(fnames[dset_name]) == 0:
+            continue
+
         if "load_tods" in cfg["datasets"][dset_name]["funcs"]:
             cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
                 "funcs"
@@ -532,14 +598,21 @@ def main():
         postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
         postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
         dataset = DataSet(
-            dset_name, get_files, load, get_info, make_beam, preproc, postproc, postfit
+            dset_name,
+            get_files,
+            load,
+            get_info,
+            make_beam,
+            preproc,
+            postproc,
+            postfit,
+            comm,
         )
 
         # Get data
-        fnames = get_files(dset_name, cfg)
-        global comm
-        fnames, comm = _mpi_fsplit(fnames, comm)
-        dataset.datavec = load(dset_name, cfg, fnames, comm)
+        dataset.datavec = load(
+            dset_name, cfg, fnames[dset_name], comms_local[dset_name]
+        )
 
         # Get any info we need specific to an expiriment
         dataset.info = get_info(dset_name, cfg, dataset.datavec)
@@ -584,7 +657,7 @@ def main():
         postproc(dset_name, cfg, dataset.datavec, model, dataset.info)
         models.append(model)
         datasets.append(dataset)
-
+    models = tuple(models)
     datasets = tuple(datasets)
 
     # Now we fit

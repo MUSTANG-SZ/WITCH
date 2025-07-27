@@ -26,6 +26,86 @@ if TYPE_CHECKING:
     from .dataset import DataSet
 
 
+@partial(jax.jit, static_argnames=("n_datasets", "do_loglike", "do_grad", "do_curve"))
+def joint_objective(
+    models: tuple[Model],
+    datasets: tuple["DataSet"],
+    n_datasets: int,
+    do_loglike: bool = True,
+    do_grad: bool = True,
+    do_curve: bool = True,
+) -> tuple[jax.Array, jax.Array, jax.Array]:
+    """
+    Compute the objective for multiple datasets in an MPI aware way.
+
+
+    Parameters
+    ----------
+    models : tuple[Model]
+        Tuple of `Model` objects we are using to fit.
+        Should be in the same order as `datasets`.
+        All `Model` objects should have the same structures and parameters.
+    datasets : tuple[DataSet]
+        Tuple of `DataSet` objects to fit.
+        Should be in the same order as `models`.
+        All `DataSet` objects should have the same `global_comm`.
+    n_datasets : int
+        The number of datasets to fit.
+    do_loglike : bool, default: True
+        If True then we will compute the log-likelihood between
+        the model and the data.
+    do_grad : bool, default: True
+        If True then compute the gradient of chi-squared with
+        respect to the model parameters.
+    do_curve : bool, default: True
+        If True than compute the curvature of chi-squared with
+        respect to the model parameters.
+
+    Returns
+    -------
+    loglike : jax.Array
+        The log-likelihood between the model and data.
+        If `do_loglike` is `False` then this is `jnp.array(0)`.
+    grad : jax.Array
+        The gradient of the parameters at there current values.
+        If `do_grad` is `False` then this is an array of zeros.
+        This is a `(npar,)` array.
+    curve : jax.Array
+        The curvature of the parameter space at the current values.
+        If `do_curve` is `False` then this is an array of zeros.
+        This is a `(npar, npar)` array.
+    """
+    global_comm = datasets[0].global_comm
+    npar = len(models[0].pars)
+    loglike = jnp.array(0)
+    grad = jnp.zeros(npar)
+    curve = jnp.zeros((npar, npar))
+    for i in range(n_datasets):
+        _loglike, _grad, _curve = datasets[i].objective(
+            models[i],
+            datasets[i].datavec,
+            datasets[i].mode,
+            do_loglike,
+            do_grad,
+            do_curve,
+        )
+        loglike += _loglike
+        grad = grad.at[:].add(_grad)
+        curve = curve.at[:].add(_curve)
+    token = mpi4jax.barrier(comm=global_comm)
+    if do_loglike:
+        loglike, token = mpi4jax.allreduce(
+            loglike, MPI.SUM, comm=global_comm, token=token
+        )
+    if do_grad:
+        grad, token = mpi4jax.allreduce(grad, MPI.SUM, comm=global_comm, token=token)
+    if do_curve:
+        curve, token = mpi4jax.allreduce(curve, MPI.SUM, comm=global_comm, token=token)
+    _ = token
+
+    return loglike, grad, curve
+
+
 @runtime_checkable
 class ObjectiveFunc(Protocol):
     def __call__(
@@ -137,15 +217,6 @@ def chisq_objective(
         if do_curve:
             curve = curve.at[:].add(jnp.dot(grad_filt, jnp.transpose(grad_dat)))
 
-    token = mpi4jax.barrier(comm=datavec.comm)
-    if do_loglike:
-        chisq, token = mpi4jax.allreduce(chisq, MPI.SUM, comm=datavec.comm, token=token)
-    if do_grad:
-        grad, token = mpi4jax.allreduce(grad, MPI.SUM, comm=datavec.comm, token=token)
-    if do_curve:
-        curve, token = mpi4jax.allreduce(curve, MPI.SUM, comm=datavec.comm, token=token)
-    _ = token
-
     return chisq, grad, curve
 
 
@@ -256,16 +327,5 @@ def poisson_objective(
                     jnp.transpose(grad_dat),
                 )
             )
-
-    token = mpi4jax.barrier(comm=datavec.comm)
-    if do_loglike:
-        loglike, token = mpi4jax.allreduce(
-            loglike, MPI.SUM, comm=datavec.comm, token=token
-        )
-    if do_grad:
-        grad, token = mpi4jax.allreduce(grad, MPI.SUM, comm=datavec.comm, token=token)
-    if do_curve:
-        curve, token = mpi4jax.allreduce(curve, MPI.SUM, comm=datavec.comm, token=token)
-    _ = token
 
     return -2 * loglike, -2 * grad, -2 * curve

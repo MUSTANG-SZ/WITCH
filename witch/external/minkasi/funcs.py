@@ -1,4 +1,5 @@
 import glob
+import inspect
 import os
 from copy import deepcopy
 
@@ -49,7 +50,29 @@ def get_files(dset_name: str, cfg: dict) -> list:
     return tod_names
 
 
+def update_minkasi(inst, comm):
+    nproc = comm.Get_size()
+    rank = comm.Get_rank()
+    for attr in dir(inst):
+        if attr == "comm":
+            inst.comm = comm
+        elif attr == "nproc":
+            inst.nproc = nproc
+        elif attr == "myrank":
+            inst.myrank = rank
+        elif attr[0] == "_":
+            continue
+        elif hasattr(inst, "__package__") and "minkasi" in inst.__package__:
+            update_minkasi(getattr(inst, attr), comm)
+    return
+
+
 def load_tods(dset_name: str, cfg: dict, fnames: list, comm: MPI.Intracomm) -> TODVec:
+    # Update the minkasi comm here
+    if minkasi.have_mpi:
+        update_minkasi(minkasi, comm)
+        update_minkasi(mm.minkasi, comm)
+    # Now load
     tods = []
     for fname in fnames:
         dat = minkasi.tods.io.read_tod_from_fits(fname)

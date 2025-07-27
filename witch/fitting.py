@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 from .containers import Model
 from .dataset import DataSet
+from .objective import joint_objective
 
 _cache = {}
 
@@ -126,10 +127,11 @@ def _success(
     return new_models, new_grad, new_curve, new_delta_chisq, lmd
 
 
-@partial(jax.jit, static_argnums=(2, 3))
+@partial(jax.jit, static_argnums=(2, 3, 4))
 def run_lmfit(
     models: tuple[Model, ...],
     datasets: tuple[DataSet, ...],
+    n_datasets: int,
     maxiter: int = 10,
     chitol: float = 1e-5,
 ) -> tuple[tuple[Model, ...], int, float]:
@@ -145,7 +147,9 @@ def run_lmfit(
         Right now we assume that these are all identical but with different prefactors.
     datasets : tuple[DataSet, ...]
         The datasets to fit.
-        The `dataset.datavec.comm` object is used to fit in an MPI aware way.
+        The `dataset.global_comm` object is used to fit in an MPI aware way.
+    n_datasets : int
+        The number of datasets and models we are fitting.
     maxiter : int, default: 10
         The maximum number of iterations to fit.
     chitol : float, default: 1e-5
@@ -171,12 +175,14 @@ def run_lmfit(
         return iterbool * chisqbool
 
     def _body_func(val):
-        i, delta_chisq, lmd, model, curve, grad = val
+        i, delta_chisq, lmd, models, curve, grad = val
         curve_use = curve.at[:].add(lmd * jnp.diag(jnp.diag(curve)))
         # Get the step
         step = jnp.dot(invscale(curve_use), grad)
         new_pars, to_fit = _prior_pars_fit(
-            model[0].priors, model[0].pars.at[:].add(step), jnp.array(model[0].to_fit)
+            models[0].priors,
+            models[0].pars.at[:].add(step),
+            jnp.array(models[0].to_fit),
         )
         # Get errs
         errs = jnp.where(to_fit, jnp.sqrt(jnp.diag(invscale(curve_use))), 0)
@@ -185,24 +191,15 @@ def run_lmfit(
             deepcopy(model).update(new_pars, model.errs, model.chisq)
             for model in models
         )
-        new_chisq, new_grad, new_curve = (
-            zero.copy(),
-            grad_zero.copy(),
-            curve_zero.copy(),
+        new_chisq, new_grad, new_curve = joint_objective(
+            new_models, datasets, n_datasets, True, True, True
         )
-        for dataset, new_model in zip(datasets, new_models):
-            _chisq, _grad, _curve = dataset.objective(
-                new_model, dataset.datavec, dataset.mode, True, True, True
-            )
-            new_chisq += _chisq
-            new_grad = new_grad.at[:].add(_grad)
-            new_curve = new_curve.at[:].add(_curve)
         new_models = tuple(
             new_model.update(new_pars, errs, new_chisq) for new_model in new_models
         )
 
         new_delta_chisq = models[0].chisq - new_models[0].chisq
-        model, grad, curve, delta_chisq, lmd = jax.lax.cond(
+        models, grad, curve, delta_chisq, lmd = jax.lax.cond(
             new_delta_chisq > 0,
             _success,
             _failure,
@@ -217,20 +214,13 @@ def run_lmfit(
             lmd,
         )
 
-        return (i + 1, delta_chisq, lmd, model, curve, grad)
+        return (i + 1, delta_chisq, lmd, models, curve, grad)
 
     pars, _ = _prior_pars_fit(
         models[0].priors, models[0].pars, jnp.array(models[0].to_fit)
     )
     models = tuple(model.update(pars, model.errs, model.chisq) for model in models)
-    chisq, grad, curve = zero.copy(), grad_zero.copy(), curve_zero.copy()
-    for dataset, model in zip(datasets, models):
-        _chisq, _grad, _curve = dataset.objective(
-            model, dataset.datavec, dataset.mode, True, True, True
-        )
-        chisq += _chisq
-        grad = grad.at[:].add(_grad)
-        curve = curve.at[:].add(_curve)
+    _, grad, curve = joint_objective(models, datasets, n_datasets, True, True, True)
     i, delta_chisq, _, models, *_ = jax.lax.while_loop(
         _cond_func, _body_func, (0, jnp.inf, zero, models, curve, grad)
     )

@@ -62,6 +62,7 @@ datasets:
       # All of these need to exist and be importable
       # If you don't have them in a library add the relevant file to your $PYTHONPATH
       # Check docs for the needed signatures
+      get_files: "mf.get_files"
       load_tods: "mf.load_tods"
       get_info: "mf.get_info"
       make_beam: "mf.make_beam"
@@ -101,6 +102,7 @@ datasets:
       # All of these need to exist and be importable
       # If you don't have them in a library add the relevant file to your $PYTHONPATH
       # Check docs for the needed signatures
+      get_files: "amf.get_files"
       load: "amf.load_maps"
       get_info: "amf.get_info"
       make_beam: "amf.make_beam"
