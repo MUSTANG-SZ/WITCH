@@ -320,7 +320,6 @@ def _run_fit(
     cfg,
     models,
     datasets,
-    outdir,
     r,
 ):
     for model in models:
@@ -344,7 +343,8 @@ def _run_fit(
 
     # TODO: Modify to save all models
     print_once(models[0])
-    _save_model(cfg, models[0], outdir, f"fit{r}")
+    for model, dataset in zip(models, datasets):
+        _save_model(cfg, model, dataset.info["outdir"], f"fit{r}")
 
     datasets = _reestimate_noise(
         models,
@@ -353,13 +353,13 @@ def _run_fit(
     return models, datasets
 
 
-def _run_mcmc(cfg, model, dataset):
+def _run_mcmc(cfg, models, datasets):
     print_once("Running MCMC")
-    init_pars = np.array(model.pars.copy())
+    init_pars = np.array(models[0].pars.copy())
     t1 = time.time()
-    model, samples = run_mcmc(
-        model,
-        dataset,
+    models, samples = run_mcmc(
+        models,
+        datasets,
         num_steps=int(cfg["mcmc"].get("num_steps", 5000)),
         num_leaps=int(cfg["mcmc"].get("num_leaps", 10)),
         step_size=float(cfg["mcmc"].get("step_size", 0.02)),
@@ -371,38 +371,37 @@ def _run_mcmc(cfg, model, dataset):
     t2 = time.time()
     print_once(f"Took {t2 - t1} s to run mcmc")
 
-    message = str(model).split("\n")
+    message = str(models[0]).split("\n")
     message[1] = "MCMC estimated pars:"
     print_once("\n".join(message))
 
-    _save_model(cfg, model, dataset.info["outdir"], "mcmc")
+    for model, dataset in zip(models, datasets):
+        _save_model(cfg, model, dataset.info["outdir"], "mcmc")
     if comm.Get_rank() == 0:
         samples = np.array(samples)
-        samps_path = os.path.join(dataset.info["outdir"], f"samples_mcmc.npz")
+        samps_path = os.path.join(datasets[0].info["outdir"], f"samples_mcmc.npz")
         print_once("Saving samples to", samps_path)
         np.savez_compressed(samps_path, samples=samples)
         try:
-            to_fit = np.array(model.to_fit)
+            to_fit = np.array(models[0].to_fit)
             # ranges = [prior if prior is not None else [0.5 * model.params[i], 2 * model.params[i]] for i, prior in enumerate(model.priors)]
             corner.corner(
                 samples,
-                labels=np.array(model.par_names)[to_fit],
+                labels=np.array(models[0].par_names)[to_fit],
                 truths=init_pars[to_fit],
             )
-            plt.savefig(os.path.join(dataset.info["outdir"], "corner.png"))
+            plt.savefig(os.path.join(datasets[0].info["outdir"], "corner.png"))
         except Exception as e:
             print_once(f"Failed to make corner plot with error: {str(e)}")
     else:
         # samples are incomplete on non root procs
         del samples
 
-    dataset = _reestimate_noise(
+    datasets = _reestimate_noise(
         models,
         datasets,
-        infos,
-        modes,
     )
-    return model, dataset
+    return models, datasets
 
 
 def fit_loop(models, cfg, datasets, comm, outdir):
@@ -440,27 +439,21 @@ def fit_loop(models, cfg, datasets, comm, outdir):
             cfg,
             models,
             datasets,
-            outdir,
             r,
         )
         _ = mpi4jax.barrier(comm=comm)
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
         print_once("No mcmc yet!")
-        # model, dataset = _run_mcmc(
-        #     cfg,
-        #     model,
-        #     dataset,
-        #     outdir,
-        #     noise_class,
-        #     noise_args,
-        #     noise_kwargs,
-        #     info["mode"],
-        # )
+        models, datasets = _run_mcmc(
+            cfg,
+            models,
+            datasets,
+        )
         _ = mpi4jax.barrier(comm=comm)
     # Save final pars
     final = {"model": cfg["model"]}
-    model = models[0]  # TEMP
+    model = models[0]  # TODO: TEMP will be fixed with metamodel
     for i, (struct_name, structure) in zip(
         model.original_order, cfg["model"]["structures"].items()
     ):

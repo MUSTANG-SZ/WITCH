@@ -358,15 +358,15 @@ def hmc(
 
 
 def run_mcmc(
-    model: Model,
-    dataset: DataSet,
+    models: tuple[Model, ...],
+    datasets: tuple[DataSet, ...],
     num_steps: int = 5000,
     num_leaps: int = 10,
     step_size: float = 0.02,
     sample_which: int = -1,
     burn_in: float = 0.1,
     max_tries: int = 20,
-) -> tuple[Model, jax.Array]:
+) -> tuple[tuple[Model, ...], jax.Array]:
     """
     Run MCMC using the `emcee` package to estimate the posterior for our model.
     Currently this function only support flat priors, but more will be supported
@@ -379,12 +379,12 @@ def run_mcmc(
 
     Parameters
     ----------
-    model : Model
-        The model to run MCMC on.
-        We expect that all parameters in this model have priors defined.
-    dataset : DataSet
-        The dataset to compute the model posterior with.
-        The `dataset.datavec.comm` object is used to fit in an MPI aware way.
+    models : tuple[Model, ...]
+        The models to run MCMC on.
+        Right now we assume that these are all identical but with different prefactors.
+    datasets : tuple[DataSet, ...]
+        The datasets to compute the model posterior with.
+        The `dataset.global_comm` object is used to fit in an MPI aware way.
     num_steps : int, default: 5000
         The number of steps to run MCMC for.
     num_leaps: int, default: 10
@@ -408,8 +408,8 @@ def run_mcmc(
 
     Returns
     -------
-    model : Model
-        The model with MCMC estimated parameters and errors.
+    models : tuple[Model, ...]
+        The models with MCMC estimated parameters and errors.
         The parameters are estimated as the mean of the samples.
         The errors are estimated as the standard deviation.
         This also has the chi-squared of the estimated parameters.
@@ -417,71 +417,85 @@ def run_mcmc(
         Array of samples from running MCMC.
 
     """
-    token = mpi4jax.barrier(comm=dataset.datavec.comm)
-    rank = dataset.datavec.comm.Get_rank()
+    global_comm = datasets[0].global_comm
+    token = mpi4jax.barrier(comm=global_comm)
+    rank = global_comm.Get_rank()
+    n_datasets = len(datasets)
 
-    if burn_in >= 1.0:
-        raise ValueError("Error: burn_in must be < 1")
+    if burn_in >= 1.0 or burn_in < 0:
+        raise ValueError("Error: burn_in must be in range [0, 1)")
 
-    if sample_which >= 0 and sample_which < model.n_rounds:
-        model.cur_round = sample_which
-        to_fit = model.to_fit
+    if sample_which >= 0 and sample_which < models[0].n_rounds:
+        models[0].cur_round = sample_which
+        to_fit = models[0].to_fit
     elif sample_which == -1:
-        to_fit = model.to_fit
+        to_fit = models[0].to_fit
     elif sample_which == -2:
-        to_fit = model.to_fit_ever
+        to_fit = models[0].to_fit_ever
     else:
-        to_fit = jnp.ones_like(model.to_fit_ever, dtype=bool)
+        to_fit = jnp.ones_like(models[0].to_fit_ever, dtype=bool)
     to_fit = jnp.array(to_fit)
-    model = model.add_round(jnp.array(to_fit))
+    models = tuple([model.add_round(jnp.array(to_fit)) for model in models])
 
-    init_pars = jnp.array(model.pars)
-    init_errs = jnp.zeros_like(model.pars)
+    init_pars = jnp.array(models[0].pars)
+    init_errs = jnp.zeros_like(models[0].pars)
     final_pars = init_pars.copy()
     final_errs = init_errs.copy()
 
-    prior_l, prior_u = model.priors
+    prior_l, prior_u = models[0].priors
     scale = (jnp.abs(prior_l) + jnp.abs(prior_u)) / 2.0
     scale = jnp.where(jnp.isfinite(scale), scale, init_pars)
     scale = jnp.where(scale == 0, 1, scale)
     init_pars = init_pars.at[:].multiply(1.0 / scale)
-    npar = jnp.sum(to_fit)
 
     @jax.jit
-    def _log_prob(pars, model=model, init_pars=init_pars):
+    def _log_prob(pars, models=models, init_pars=init_pars):
         full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)
-        _, in_bounds = _prior_pars_fit(model.priors, full_pars, jnp.array(model.to_fit))
+        _, in_bounds = _prior_pars_fit(
+            models[0].priors, full_pars, jnp.array(models[0].to_fit)
+        )
         log_prior = jnp.sum(
-            jnp.where(in_bounds.at[model.to_fit].get(), 0, -1 * jnp.inf)
+            jnp.where(in_bounds.at[models[0].to_fit].get(), 0, -1 * jnp.inf)
         )
-        temp_model = model.update(full_pars, init_errs, jnp.array(0))
-        jax.block_until_ready(temp_model)
-        chisq, *_ = dataset.objective(
-            temp_model, dataset.datavec, dataset.mode, True, False, False
+        temp_models = tuple(
+            deepcopy(model).update(full_pars, init_errs, jnp.array(0))
+            for model in models
         )
-        del temp_model
+        jax.block_until_ready(temp_models)
+        chisq, *_ = joint_objective(
+            temp_models, datasets, n_datasets, True, False, False
+        )
+        del temp_models
         log_like = -0.5 * chisq
         log_like = log_like + log_prior
         return log_like
 
     @jax.jit
-    def _log_prob_grad(pars, model=model, init_pars=init_pars):
+    def _log_prob_grad(pars, models=models, init_pars=init_pars):
         full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)
-        _, in_bounds = _prior_pars_fit(model.priors, full_pars, jnp.array(model.to_fit))
-        log_prior = jnp.sum(jnp.where(in_bounds.at[to_fit].get(), 0, -1 * jnp.inf))
-        temp_model = model.update(full_pars, init_errs, model.chisq)
-        jax.block_until_ready(temp_model)
-        _, grad, _ = dataset.objective(
-            temp_model, dataset.datavec, dataset.mode, False, True, False
+        _, in_bounds = _prior_pars_fit(
+            models[0].priors, full_pars, jnp.array(models[0].to_fit)
         )
+        log_prior = jnp.sum(jnp.where(in_bounds.at[to_fit].get(), 0, -1 * jnp.inf))
+        temp_models = tuple(
+            deepcopy(model).update(full_pars, init_errs, jnp.array(0))
+            for model in models
+        )
+        jax.block_until_ready(temp_models)
+        _, grad, _ = joint_objective(
+            temp_models, datasets, n_datasets, False, True, False
+        )
+        del temp_models
         grad = grad.at[:].multiply(1.0 / scale)
         log_like_grad = grad.at[to_fit].get().ravel()
         log_like_grad = log_like_grad.at[:].add(log_prior)
         return log_like_grad
 
-    def _get_step_size(step_size, key, token, comm, max_tries):
+    def _get_step_size(step_size, key, comm, max_tries):
+        token = mpi4jax.barrier(comm=global_comm)
+
         def _can_interp(probs):
             probs = jnp.array(probs)
             msk = jnp.isfinite(probs) * probs > 0
@@ -497,7 +511,7 @@ def run_mcmc(
                     return True
             return False
 
-        def _hmc(n_steps, step_size):
+        def _hmc(n_steps, step_size, token):
             _, chain_probs = hmc(
                 init_pars.at[to_fit].get().ravel(),
                 _log_prob,
@@ -508,12 +522,12 @@ def run_mcmc(
                 comm=comm,
                 key=key,
             )
-            prob = None
+            prob = 0.0
             if rank == 0:
                 prob = jnp.mean(chain_probs)
-            prob, _ = mpi4jax.bcast(prob, 0, comm=comm, token=token)
+            prob, token = mpi4jax.bcast(prob, 0, comm=comm, token=token)
 
-            return prob
+            return prob, token
 
         if max_tries == 0:
             return step_size
@@ -523,10 +537,11 @@ def run_mcmc(
         step_sizes = []
         probs = []
         for i in range(max_tries):
+            token = mpi4jax.barrier(comm=global_comm, token=token)
             step_size *= step_fac
             if rank == 0:
                 print(f"Trying step size {step_size}")
-            prob = _hmc(n_steps, step_size)
+            prob, token = _hmc(n_steps, step_size, token)
             step_sizes += [step_size]
             probs += [prob]
 
@@ -537,6 +552,12 @@ def run_mcmc(
                 break
             elif _can_interp(probs):
                 break
+            elif prob <= 0.1:
+                step_fac = 1 / 5
+                n_steps = 3
+            elif prob >= 0.9:
+                step_fac = 5
+                n_steps = 3
             elif prob <= 0.5:
                 step_fac = 1 / 3
                 n_steps = 5
@@ -558,6 +579,7 @@ def run_mcmc(
                 )
                 sys.stdout.flush()
             return step_sizes[-1]
+        token = mpi4jax.barrier(comm=global_comm, token=token)
         probs = jnp.array(probs)
         step_sizes = jnp.array(step_sizes)
         msk = jnp.isfinite(probs) + (probs > 0)
@@ -570,7 +592,7 @@ def run_mcmc(
             jnp.array([0.63]), probs[msk][srt], step_sizes[msk][srt]
         )
         step_size = float(step_size_interp[0].item())
-        prob = _hmc(5, step_size)
+        prob, token = _hmc(5, step_size, token)
         if rank == 0:
             print(
                 f"Interpolated to get a step size of {step_size} with an acceptance probability {prob:.2%}"
@@ -579,13 +601,12 @@ def run_mcmc(
         return step_size
 
     key = jax.random.PRNGKey(0)
-    key, token = mpi4jax.bcast(key, 0, comm=dataset.datavec.comm, token=token)
+    key, token = mpi4jax.bcast(key, 0, comm=global_comm, token=token)
 
     step_size = _get_step_size(
         step_size=step_size,
         key=key,
-        token=token,
-        comm=dataset.datavec.comm,
+        comm=global_comm,
         max_tries=max_tries,
     )
 
@@ -596,30 +617,29 @@ def run_mcmc(
         num_steps=num_steps,
         num_leaps=num_leaps,
         step_size=step_size,
-        comm=dataset.datavec.comm,
+        comm=global_comm,
         key=key,
     )
     flat_samples = chain.at[:].multiply(scale.at[to_fit].get())
-    burn_in = int(num_steps * burn_in)
-    flat_samples = flat_samples[burn_in:]
 
     if rank == 0:
+        burn_in = int(num_steps * burn_in)
+        flat_samples = flat_samples[burn_in:]
         final_pars = final_pars.at[to_fit].set(jnp.median(flat_samples, axis=0).ravel())
         final_errs = final_errs.at[to_fit].set(jnp.std(flat_samples, axis=0).ravel())
-    final_pars, token = mpi4jax.bcast(
-        final_pars, 0, comm=dataset.datavec.comm, token=token
+    final_pars, token = mpi4jax.bcast(final_pars, 0, comm=global_comm, token=token)
+    final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=global_comm, token=token)
+    models = tuple(
+        model.update(
+            final_pars.block_until_ready(),
+            final_errs.block_until_ready(),
+            jnp.array(0).block_until_ready(),
+        )
+        for model in models
     )
-    final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=dataset.datavec.comm, token=token)
-    model = model.update(
-        final_pars.block_until_ready(),
-        final_errs.block_until_ready(),
-        jnp.array(0).block_until_ready(),  # model.chisq
-    )
-    jax.block_until_ready(model)
-    chisq, *_ = dataset.objective(
-        model, dataset.datavec, dataset.mode, True, False, False
-    )
-    model = model.update(final_pars, final_errs, chisq)
-    jax.block_until_ready(model)
+    jax.block_until_ready(models)
+    chisq, *_ = joint_objective(models, datasets, n_datasets, True, False, False)
+    models = tuple(model.update(final_pars, final_errs, chisq) for model in models)
+    jax.block_until_ready(models)
 
-    return model, flat_samples
+    return models, flat_samples

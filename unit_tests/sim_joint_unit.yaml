@@ -8,6 +8,13 @@ base: "base_joint_unit.yaml"
 name: "SIM_JOINT"
 sim: True # If True use TODs to make noise and add a simulated cluster
 
+mcmc:
+  run: True
+  num_steps: 1000
+  num_leaps: 5
+  sample_which: -1
+  step_size: 1e-7 
+
 # Define the model
 model:
   # Unit conversion to apply at the end
