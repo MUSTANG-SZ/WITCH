@@ -445,7 +445,6 @@ def fit_loop(models, cfg, datasets, comm, outdir):
         _ = mpi4jax.barrier(comm=comm)
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
-        print_once("No mcmc yet!")
         models, datasets = _run_mcmc(
             cfg,
             models,
