@@ -600,7 +600,10 @@ class Model:
 
     @classmethod
     def from_cfg(
-        cls, cfg: dict, beam: Optional[jax.Array] = None, prefactor: Optional[float] = 1
+        cls,
+        cfg: dict,
+        beam: Optional[jax.Array] = None,
+        prefactor: Optional[float] = None,
     ) -> Self:
         """
         Create an instance of model from a witcher config.
@@ -619,6 +622,9 @@ class Model:
         model : Model
             The model described by the config.
         """
+        # Check prefactor
+        if prefactor is None:
+            raise ValueError("prefactor not provided!")
         # Do imports
         for module, name in cfg.get("imports", {}).items():
             mod = import_module(module)

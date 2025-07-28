@@ -615,7 +615,7 @@ def main():
 
         # Define the model and get stuff setup fitting
         if "model" in cfg:
-            model = Model.from_cfg(cfg, beam, dataset.info["prefactor"])
+            model = Model.from_cfg(cfg, beam, dataset.info.get("prefactor", None))
         else:
             model = None
             print_once("No model defined, setting fit, sim, and sub to False")
