@@ -8,7 +8,7 @@ import numpy as np
 from . import core
 from . import utils as wu
 from .containers import Model, Parameter, Structure
-from .power import profile_to_broken_power
+from .powerlaw import profile_to_broken_power
 
 
 def array_to_tuple(arr):
