@@ -671,10 +671,10 @@ class Model:
             parameters = []
             for par_name, param in structure["parameters"].items():
                 val = eval(str(param["value"]))
-                fit = param.get("to_fit", [False] * n_rounds)
+                fit = param.get("to_fit", [False] * max(1, n_rounds))
                 if isinstance(fit, bool):
-                    fit = [fit] * n_rounds
-                if len(fit) != n_rounds:
+                    fit = [fit] * max(1, n_rounds)
+                if len(fit) != max(1, n_rounds):
                     raise ValueError(
                         f"to_fit has {len(fit)} entries but we only have {n_rounds} rounds"
                     )
