@@ -25,6 +25,7 @@ from . import utils as wu
 from .containers import Model, Model_xfer
 from .dataset import DataSet
 from .fitting import run_lmfit, run_mcmc
+from .nonpara import para_to_non_para
 from .objective import joint_objective
 
 comm = MPI.COMM_WORLD.Clone()
@@ -670,8 +671,8 @@ def main():
 
             nonpara_models = []
             for dset_name, dataset, model in zip(dset_names, datasets, models):
-                nonpara_model = model.para_to_non_para(
-                    n_rounds=n_rounds, to_copy=to_copy, sig_params=sig_params
+                nonpara_model = para_to_non_para(
+                    model, n_rounds=n_rounds, to_copy=to_copy, sig_params=sig_params
                 )
                 outdir = get_outdir(cfg, model)
                 dataset.info["outdir"] = outdir
