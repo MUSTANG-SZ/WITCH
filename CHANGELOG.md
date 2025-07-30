@@ -1,3 +1,44 @@
+## 9.9.0 (2025-07-30)
+
+### Feat
+
+- add joint fitting to mcmc code and some minor fixes
+- add mpi support when joint fitting and fix reference to wrong model tuple in lmfit
+- move to new dataset class in joint fitting
+- print map noise and unjit fit_dataset for debug
+- adding joint vs m2 only configs
+- MOO1142 MCMC and also removing some TODOS
+- limiting TODs for testing
+- updated yamls for joint fitting
+- Adding fitting over multiple models to _run_fit. Significant cleanup still to do. Known issue: some combintations of round-by-round to_fit will cause hangs. Included sim_unit will induce error
+- moved unit_conversion from model to dataset. Beginning to allow multiple datasets
+- print map noise and unjit fit_dataset for debug
+- adding joint vs m2 only configs
+- MOO1142 MCMC and also removing some TODOS
+- limiting TODs for testing
+- updated yamls for joint fitting
+- Adding fitting over multiple models to _run_fit. Significant cleanup still to do. Known issue: some combintations of round-by-round to_fit will cause hangs. Included sim_unit will induce error
+- merging main changes into joint_fitting. I think comm has been correctly handled
+
+### Fix
+
+- act beam had wrong amp
+- no more default prefac
+- add back in mcmc with no fit lost in merge
+- remove no mcmc print
+- imported nonpara function and fixed some typing
+- rename power to powerlaw
+- adjust type hints to allow for a flexible length tuple
+- several joint fitting fixes, mostly typos and bad loops
+- circular imports
+- some typing fixes
+- some typing fixes
+- still more get_files problems
+- missing get_files
+- merge conflict
+- bad dict
+- bad dict
+
 ## 9.8.0 (2025-07-11)
 
 ### Feat
