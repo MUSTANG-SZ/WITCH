@@ -10,7 +10,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from .grid import transform_grid
-from .nonparametric import broken_power
+from .powerlaw import broken_power
 from .utils import ap, get_da, get_hz, get_nz, h70
 
 
@@ -19,7 +19,7 @@ def _get_nonpara(signature, prefix_list=["nonpara_"]):
     static_msk = np.zeros_like(par_names, dtype=bool)
     for prefix in prefix_list:
         static_msk += np.char.startswith(par_names, prefix)
-    return np.sum(static_msk)
+    return int(np.sum(static_msk))
 
 
 @jax.jit
@@ -237,7 +237,6 @@ def egnfw(
     Elliptical gNFW pressure profile in 3d.
     This function does not include smoothing or declination stretch
     which should be applied at the end.
-    TODO: Add units to add parameters!
 
     Once the grid is transformed the profile is computed as:
 

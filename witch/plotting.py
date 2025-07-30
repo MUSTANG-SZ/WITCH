@@ -107,7 +107,7 @@ def plot_cluster(
 
     fits_path = os.path.abspath(fits_path)
     if root is None:
-        root = os.path.split(os.path.split(os.path.split(fits_path)[0])[0])[
+        root = os.path.split(os.path.split(fits_path)[0])[
             0
         ]  # TODO: There's gotta be a better way!
 

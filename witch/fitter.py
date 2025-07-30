@@ -11,6 +11,7 @@ from copy import deepcopy
 from importlib import import_module
 
 import corner
+import iteround
 import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
@@ -23,7 +24,9 @@ from typing_extensions import Any, Unpack
 from . import utils as wu
 from .containers import Model, Model_xfer
 from .dataset import DataSet
-from .fitting import fit_dataset, run_mcmc
+from .fitting import run_lmfit, run_mcmc
+from .nonpara import para_to_non_para
+from .objective import joint_objective
 
 comm = MPI.COMM_WORLD.Clone()
 
@@ -80,20 +83,73 @@ def _make_parser() -> argp.ArgumentParser:
 def _mpi_fsplit(fnames, comm):
     rank = comm.Get_rank()
     nproc = comm.Get_size()
-    if nproc > len(fnames):
-        nproc = len(fnames)
+
+    # Check that we have the minimum number of procs
+    if nproc < len(fnames):
+        raise ValueError("More datasets than procs!")
+
+    # Kill extra procs
+    flat_fnames = [
+        f for fname in [fnames[dset] for dset in fnames.keys()] for f in fname
+    ]
+    if nproc > len(flat_fnames):
+        nproc = len(flat_fnames)
         group = comm.Get_group()
         new_group = group.Incl(list(range(nproc)))
         new_comm = comm.Create(new_group)
-        if rank >= len(fnames):
+        if rank >= len(flat_fnames):
             print(f"More procs than files!, exiting process {rank}")
             MPI.Finalize()
             sys.exit(0)
         comm = new_comm
-    return fnames[rank::nproc], comm
+
+    # Decide the number of procs for each dataset
+    nprocs = {
+        dset: 1
+        + (nproc - len(fnames))
+        * (len(fnames[dset]) - 1)
+        / (len(flat_fnames) - len(fnames))
+        for dset in fnames.keys()
+    }
+    nprocs = iteround.saferound(nprocs, 0)
+    dsets = np.array(
+        [
+            ds
+            for dset in [
+                [dset_name] * int(nprocs[dset_name]) for dset_name in fnames.keys()
+            ]
+            for ds in dset
+        ]
+    )
+
+    # Die if we messed up
+    for dset, f in fnames.items():
+        if len(f) < nprocs[dset]:
+            raise ValueError(
+                f"Too many procs allocated to {dset}! This shouldn't be possible please report it!"
+            )
+
+    # Handle my local case
+    dset_local = dsets[rank]
+    group = comm.Get_group()
+    comms_local = {
+        dset: comm.Create(group.Incl(list(np.where(dsets == dset)[0])))
+        for dset in fnames.keys()
+    }
+    local_rank = comms_local[dset_local].Get_rank()
+    fnames_local = {
+        dset: (
+            fnames[dset][local_rank :: int(nprocs[dset])] if dset == dset_local else []
+        )
+        for dset in fnames.keys()
+    }
+
+    return fnames_local, comm, comms_local
 
 
-def process_tods(cfg, todvec, info, model):
+def process_tods(cfg, dataset, model):
+    todvec = dataset.datavec
+    info = dataset.info
     rank = todvec.comm.Get_rank()
     nproc = todvec.comm.Get_size()
     noise_class = info["noise_class"]
@@ -151,6 +207,7 @@ def process_maps(cfg, dataset, model):
                 imap.ivar = imap.ivar.at[:].set(cfg.get("default_ivar", 1e8))
             scale = 1.0 / jnp.sqrt(imap.ivar)
             avg_scale = np.nanmean(scale)
+            print("Map noise: ", avg_scale)
             scale = jnp.nan_to_num(
                 scale, nan=avg_scale, posinf=avg_scale, neginf=avg_scale
             )
@@ -170,6 +227,7 @@ def process_maps(cfg, dataset, model):
                 x * wu.rad_to_arcsec, y * wu.rad_to_arcsec
             ).block_until_ready()
             imap.data = imap.data + pred
+        print("Map scale: ", jnp.mean(jnp.abs(imap.data)))
         imap.data = imap.data - jnp.mean(imap.data)
         imap.compute_noise(
             dataset.noise_class, None, *dataset.noise_args, **dataset.noise_kwargs
@@ -238,32 +296,43 @@ def _save_model(cfg, model, outdir, desc_str):
         yaml.dump(final, file)
 
 
-def _reestimate_noise(model, dataset):
-    for data in dataset.datavec:
-        if dataset.mode == "tod":
-            pred = model.to_tod(
-                data.x * wu.rad_to_arcsec, data.y * wu.rad_to_arcsec
-            ).block_until_ready()
-        else:
-            x, y = data.xy
-            pred = model.to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
-        data.compute_noise(
-            dataset.noise_class,
-            data.data - pred,
-            *dataset.noise_args,
-            **dataset.noise_kwargs,
-        )
-    return dataset
+def _reestimate_noise(models, datasets):
+    for i, dataset in enumerate(datasets):
+        for data in dataset.datavec:
+            if dataset.mode == "tod":
+                pred = (
+                    models[i]
+                    .to_tod(data.x * wu.rad_to_arcsec, data.y * wu.rad_to_arcsec)
+                    .block_until_ready()
+                )
+            else:
+                x, y = data.xy
+                pred = models[i].to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
+            data.compute_noise(
+                dataset.info["noise_class"],
+                data.data - pred,
+                *dataset.info["noise_args"],
+                **dataset.info["noise_kwargs"],
+            )
+    return datasets
 
 
-def _run_fit(cfg, model, dataset, r):
-    model.cur_round = r
-    to_fit = np.array(model.to_fit)
+def _run_fit(
+    cfg,
+    models,
+    datasets,
+    r,
+):
+    for model in models:
+        model.cur_round = r
+    to_fit = np.array(models[0].to_fit)
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
-    model, i, delta_chisq = fit_dataset(
-        model,
-        dataset,
+    # TODO: Modify this to account for fit_dataset changes
+    models, i, delta_chisq = run_lmfit(
+        models,
+        datasets,
+        len(datasets),
         eval(str(cfg["fitting"].get("maxiter", "10"))),
         eval(str(cfg["fitting"].get("chitol", "1e-5"))),
     )
@@ -273,20 +342,25 @@ def _run_fit(cfg, model, dataset, r):
         f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}"
     )
 
-    print_once(model)
-    _save_model(cfg, model, dataset.info["outdir"], f"fit{r}")
+    # TODO: Modify to save all models
+    print_once(models[0])
+    for model, dataset in zip(models, datasets):
+        _save_model(cfg, model, dataset.info["outdir"], f"fit{r}")
 
-    dataset = _reestimate_noise(model, dataset)
-    return model, dataset
+    datasets = _reestimate_noise(
+        models,
+        datasets,
+    )
+    return models, datasets
 
 
-def _run_mcmc(cfg, model, dataset):
+def _run_mcmc(cfg, models, datasets):
     print_once("Running MCMC")
-    init_pars = np.array(model.pars.copy())
+    init_pars = np.array(models[0].pars.copy())
     t1 = time.time()
-    model, samples = run_mcmc(
-        model,
-        dataset,
+    models, samples = run_mcmc(
+        models,
+        datasets,
         num_steps=int(cfg["mcmc"].get("num_steps", 5000)),
         num_leaps=int(cfg["mcmc"].get("num_leaps", 10)),
         step_size=float(cfg["mcmc"].get("step_size", 0.02)),
@@ -298,77 +372,88 @@ def _run_mcmc(cfg, model, dataset):
     t2 = time.time()
     print_once(f"Took {t2 - t1} s to run mcmc")
 
-    message = str(model).split("\n")
+    message = str(models[0]).split("\n")
     message[1] = "MCMC estimated pars:"
     print_once("\n".join(message))
 
-    _save_model(cfg, model, dataset.info["outdir"], "mcmc")
+    for model, dataset in zip(models, datasets):
+        _save_model(cfg, model, dataset.info["outdir"], "mcmc")
     if comm.Get_rank() == 0:
         samples = np.array(samples)
-        samps_path = os.path.join(dataset.info["outdir"], f"samples_mcmc.npz")
+        samps_path = os.path.join(datasets[0].info["outdir"], f"samples_mcmc.npz")
         print_once("Saving samples to", samps_path)
         np.savez_compressed(samps_path, samples=samples)
         try:
-            to_fit = np.array(model.to_fit)
+            to_fit = np.array(models[0].to_fit)
             # ranges = [prior if prior is not None else [0.5 * model.params[i], 2 * model.params[i]] for i, prior in enumerate(model.priors)]
             corner.corner(
                 samples,
-                labels=np.array(model.par_names)[to_fit],
+                labels=np.array(models[0].par_names)[to_fit],
                 truths=init_pars[to_fit],
             )
-            plt.savefig(os.path.join(dataset.info["outdir"], "corner.png"))
+            plt.savefig(os.path.join(datasets[0].info["outdir"], "corner.png"))
         except Exception as e:
             print_once(f"Failed to make corner plot with error: {str(e)}")
     else:
         # samples are incomplete on non root procs
         del samples
 
-    dataset = _reestimate_noise(model, dataset)
-    return model, dataset
+    datasets = _reestimate_noise(
+        models,
+        datasets,
+    )
+    return models, datasets
 
 
-def fit_loop(model, cfg, dataset, comm):
-    if model is None:
-        raise ValueError("Can't fit without a model defined!")
+def fit_loop(models, cfg, datasets, comm, outdir):
+    for model in models:
+        if models is None:
+            raise ValueError("Can't fit without a model defined!")
     if cfg["sim"]:
+        models = list(models)
         # Remove structs we deliberately want to leave out of model
         for struct_name in cfg["model"]["structures"]:
             if cfg["model"]["structures"][struct_name].get("to_remove", False):
-                model.remove_struct(struct_name)
-        params = jnp.array(model.pars)
-        par_offset = cfg.get("par_offset", 1.1)
-        params = params.at[model.to_fit_ever].multiply(
-            par_offset
-        )  # Don't start at exactly the right value
-        model.update(params, model.errs, model.chisq)
+                for i, model in models:
+                    model.remove_struct(struct_name)
+        for i, model in enumerate(models):
+            params = jnp.array(model.pars)
+            par_offset = cfg.get("par_offset", 1.1)
+            params = params.at[model.to_fit_ever].multiply(
+                par_offset
+            )  # Don't start at exactly the right value
+            models[i] = model.update(params, model.errs, model.chisq)
 
     print_once("Compiling objective function")
     t0 = time.time()
-    chisq, *_ = dataset.objective(model, dataset.datavec, dataset.mode)
-    model = model.update(model.pars, model.errs, chisq)
+    chisq, *_ = joint_objective(models, datasets, len(models))
+    for i, model in enumerate(models):
+        models[i] = model.update(model.pars, model.errs, chisq)
     print_once(f"Took {time.time() - t0} s to compile")
 
-    message = str(model).split("\n")
+    models = tuple(models)
+    message = str(models[0]).split("\n")
     message[1] = "Starting pars:"
     print_once("\n".join(message))
-    for r in range(model.n_rounds):
-        model, dataset = _run_fit(
+    for r in range(models[0].n_rounds):  # TODO: enforce n_rounds same for all models
+        models, datasets = _run_fit(
             cfg,
-            model,
-            dataset,
+            models,
+            datasets,
             r,
         )
         _ = mpi4jax.barrier(comm=comm)
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
-        model, dataset = _run_mcmc(
+        models, datasets = _run_mcmc(
             cfg,
-            model,
-            dataset,
+            models,
+            datasets,
         )
         _ = mpi4jax.barrier(comm=comm)
     # Save final pars
     final = {"model": cfg["model"]}
+    model = models[0]  # TODO: TEMP will be fixed with metamodel
     for i, (struct_name, structure) in zip(
         model.original_order, cfg["model"]["structures"].items()
     ):
@@ -379,10 +464,10 @@ def fit_loop(model, cfg, dataset, comm):
             final["model"]["structures"][struct_name]["parameters"][par_name][
                 "value"
             ] = par.val
-    with open(os.path.join(dataset.info["outdir"], "fit_params.yaml"), "w") as file:
+    with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
         yaml.dump(final, file)
 
-    return model
+    return models
 
 
 def deep_merge(a: dict, b: dict) -> dict:
@@ -473,118 +558,130 @@ def main():
             raise TypeError("Expect import name to be a string or a list")
 
     # Get the functions needed to work with out dataset
-    dset_name = list(cfg["datasets"].keys())[0]
-    if "load_tods" in cfg["datasets"][dset_name]["funcs"]:
-        cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
-            "funcs"
-        ]["load_tods"]
-    elif "load_maps" in cfg["datasets"][dset_name]["funcs"]:
-        cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
-            "funcs"
-        ]["load_maps"]
-    get_files = eval(cfg["datasets"][dset_name]["funcs"]["get_files"])
-    load = eval(cfg["datasets"][dset_name]["funcs"]["load"])
-    get_info = eval(cfg["datasets"][dset_name]["funcs"]["get_info"])
-    make_beam = eval(cfg["datasets"][dset_name]["funcs"]["make_beam"])
-    preproc = eval(cfg["datasets"][dset_name]["funcs"]["preproc"])
-    postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
-    postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
-    dataset = DataSet(
-        dset_name, get_files, load, get_info, make_beam, preproc, postproc, postfit
-    )
-
-    # Get data
-    fnames = dataset.get_files(dset_name, cfg)
+    dset_names = list(cfg["datasets"].keys())
+    models = []
+    datasets = []
+    outdir = None
+    # First lets plan how to split things up among mpi tasks
+    fnames = {}
+    for dset_name in dset_names:
+        get_files = eval(cfg["datasets"][dset_name]["funcs"]["get_files"])
+        fnames[dset_name] = get_files(dset_name, cfg)
     global comm
-    fnames, comm = _mpi_fsplit(fnames, comm)
-    dataset.datavec = dataset.load(dset_name, cfg, fnames, comm)
+    fnames, comm, comms_local = _mpi_fsplit(fnames, comm)
 
-    # Get any info we need specific to an expiriment
-    dataset.info = dataset.get_info(dset_name, cfg, dataset.datavec)
+    for dset_name in dset_names:
+        # If this dataset doesn't live in this proc then skip
+        if len(fnames[dset_name]) == 0:
+            continue
 
-    # Get the beam
-    beam = dataset.make_beam(dset_name, cfg, dataset.info)
-
-    # Define the model and get stuff setup fitting
-    if "model" in cfg:
-        model = Model.from_cfg(cfg, beam)
-    else:
-        model = None
-        print_once("No model defined, setting fit, sim, and sub to False")
-        cfg["fit"] = False
-        cfg["sim"] = False
-        cfg["sub"] = False
-
-    # Setup noise
-    dataset.info["noise_class"] = eval(
-        str(cfg["datasets"][dset_name]["noise"]["class"])
-    )
-    dataset.info["noise_args"] = tuple(
-        eval(str(cfg["datasets"][dset_name]["noise"]["args"]))
-    )
-    dataset.info["noise_kwargs"] = eval(
-        str(cfg["datasets"][dset_name]["noise"]["kwargs"])
-    )
-
-    # Make sure we have the dataset set up properly
-    dataset.check_completeness()
-
-    # Get output
-    if "base" in cfg.keys():
-        del cfg["base"]  # We've collated to the cfg files so no need to keep the base
-    outdir = get_outdir(cfg, model)
-    os.makedirs(os.path.join(outdir, dset_name), exist_ok=True)
-    dataset.info["outdir"] = outdir
-
-    # Process the data
-    preproc(dset_name, cfg, dataset.datavec, model, dataset.info)
-    if dataset.mode == "tod":
-        dataset.datavec = process_tods(
-            cfg,
-            dataset.datavec,
-            dataset.info,
-            model,
+        if "load_tods" in cfg["datasets"][dset_name]["funcs"]:
+            cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
+                "funcs"
+            ]["load_tods"]
+        elif "load_maps" in cfg["datasets"][dset_name]["funcs"]:
+            cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
+                "funcs"
+            ]["load_maps"]
+        get_files = eval(cfg["datasets"][dset_name]["funcs"]["get_files"])
+        load = eval(cfg["datasets"][dset_name]["funcs"]["load"])
+        get_info = eval(cfg["datasets"][dset_name]["funcs"]["get_info"])
+        make_beam = eval(cfg["datasets"][dset_name]["funcs"]["make_beam"])
+        preproc = eval(cfg["datasets"][dset_name]["funcs"]["preproc"])
+        postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
+        postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
+        dataset = DataSet(
+            dset_name,
+            get_files,
+            load,
+            get_info,
+            make_beam,
+            preproc,
+            postproc,
+            postfit,
+            comm,
         )
-    elif dataset.mode == "map":
-        dataset.datavec = process_maps(
-            cfg,
-            dataset,
-            model,
+
+        # Get data
+        dataset.datavec = load(
+            dset_name, cfg, fnames[dset_name], comms_local[dset_name]
         )
-    dataset.datavec = jax.block_until_ready(dataset.datavec)
-    postproc(dset_name, cfg, dataset.datavec, model, dataset.info)
+
+        # Get any info we need specific to an expiriment
+        dataset.info = get_info(dset_name, cfg, dataset.datavec)
+
+        # Get the beam
+        beam = make_beam(dset_name, cfg, dataset.info)
+
+        # Define the model and get stuff setup fitting
+        if "model" in cfg:
+            model = Model.from_cfg(cfg, beam, dataset.info.get("prefactor", None))
+        else:
+            model = None
+            print_once("No model defined, setting fit, sim, and sub to False")
+            cfg["fit"] = False
+            cfg["sim"] = False
+            cfg["sub"] = False
+
+        # Setup noise
+        noise_class = eval(str(cfg["datasets"][dset_name]["noise"]["class"]))
+        noise_args = tuple(eval(str(cfg["datasets"][dset_name]["noise"]["args"])))
+        noise_kwargs = eval(str(cfg["datasets"][dset_name]["noise"]["kwargs"]))
+        dataset.info["noise_class"] = noise_class
+        dataset.info["noise_args"] = noise_args
+        dataset.info["noise_kwargs"] = noise_kwargs
+
+        if "base" in cfg.keys():
+            del cfg[
+                "base"
+            ]  # We've collated to the cfg files so no need to keep the base
+
+        outdir = get_outdir(cfg, model)
+        os.makedirs(os.path.join(outdir, dset_name), exist_ok=True)
+        dataset.info["outdir"] = outdir
+
+        # Process the data
+        preproc(dset_name, cfg, dataset, model, dataset.info)
+        if dataset.mode == "tod":
+            dataset.datavec = process_tods(cfg, dataset, model)
+        elif dataset.mode == "map":
+            dataset.datavec = process_maps(cfg, dataset, model)
+        dataset = jax.block_until_ready(dataset)
+        postproc(dset_name, cfg, dataset.datavec, model, dataset.info)
+        models.append(model)
+        datasets.append(dataset)
+    models = tuple(models)
+    datasets = tuple(datasets)
 
     # Now we fit
-    if cfg["fit"]:
-        model = fit_loop(
-            model,
-            cfg,
-            dataset,
-            comm,
-        )
+    to_fit = cfg.get("fit", True)
+    if to_fit and outdir is not None:
+        models = fit_loop(models, cfg, datasets, comm, outdir)
+        for dset_name, dataset, model in zip(dset_names, datasets, models):
+            dataset.postfit(dset_name, cfg, dataset.datavec, model, dataset.info)
+        if "nonpara" in cfg:
+            to_copy = cfg["nonpara"].get("to_copy", "")
+            n_rounds = cfg["nonpara"].get("n_rounds", None)
+            sig_params = cfg["nonpara"].get("sig_params", "")
+            if to_copy == "":
+                raise ValueError("To copy must be specified")
+            if sig_params == "":
+                raise ValueError("Significance parameter must be specified")
 
-    postfit(dset_name, cfg, dataset.datavec, model, dataset.info)
-
-    if "nonpara" in cfg:
-        to_copy = cfg["nonpara"].get("to_copy", "")
-        n_rounds = cfg["nonpara"].get("n_rounds", None)
-        sig_params = cfg["nonpara"].get("sig_params", "")
-        if to_copy == "":
-            raise ValueError("To copy must be specified")
-        if sig_params == "":
-            raise ValueError("Significance parameter must be specified")
-
-        nonpara_model = model.para_to_non_para(
-            n_rounds=n_rounds, to_copy=to_copy, sig_params=sig_params
-        )
-        outdir = get_outdir(cfg, model)
-        dataset.info["outdir"] = outdir
-        fit_loop(
-            nonpara_model,
-            cfg,
-            dataset,
-            comm,
-        )
-        postfit(dset_name, cfg, dataset.datavec, nonpara_model, dataset.info)
+            nonpara_models = []
+            for dset_name, dataset, model in zip(dset_names, datasets, models):
+                nonpara_model = para_to_non_para(
+                    model, n_rounds=n_rounds, to_copy=to_copy, sig_params=sig_params
+                )
+                outdir = get_outdir(cfg, model)
+                dataset.info["outdir"] = outdir
+                nonpara_models += [nonpara_model]
+            nonpara_models = fit_loop(nonpara_models, cfg, datasets, comm, outdir)
+            for dset_name, dataset, nonpara_model in zip(
+                dset_names, datasets, nonpara_models
+            ):
+                dataset.postfit(
+                    dset_name, cfg, dataset.datavec, nonpara_model, dataset.info
+                )
 
     print_once("Outputs can be found in", outdir)

@@ -4,7 +4,7 @@ n_rounds: 4 # How many rounds of fitting to try
 
 # Constants for use in the model and grid construction
 # Can be used as a dict ie: constants['z']
-# All are passed through eval, so expresions like `np.sin(np.pi)` will evaluate
+# All are passed through eval
 constants:
   Te: 5.0
   freq: "90e9"
@@ -13,17 +13,18 @@ constants:
 paths:
   # Location of TOD files
   # If an absolute path then that is used directly
-  # If a relative path taken relative to WITCH_DATAROOT
-  tods: "RXJ1347" # Name of the cluster data directory
+  # If a relative path taken relative to MJ_TODROOT
+  maps: "ACT1407"
+  tods: "ACT1407"
   glob: "Signal_TOD*.fits" # Pattern to search for TODs with
-  ndo: False # Ignore, leave set to false 
-  odo: False # Ignore
+  ndo: False # ?
+  odo: False # ?
   # Directory to use as root for outputs
   # If an absolute path then that is used directly
-  # If a relative path taken relative to WITCH_OUTROOT
+  # If a relative path taken relative to MJ_OUTROOT
   outroot: ""
   subdir: "" # Subdirectory to use
-  # Final outdir will be something like: WITCH_OUTROOT/name/model_name/subdir
+  # Final outdir will be something like: outroot/name/model_name/subdir
 
 # Defines the grid
 # All are passed through eval
@@ -41,12 +42,11 @@ paths:
 # other feature of interest) and defines the grid center.
 # All pixel space references will be made wrt this point.
 coords:
-  r_map: "3.0*60" # Radial size of grid in arcseconds 
-  dr: "1.0" # Pixel size of grid in x and y in arcseconds
-  dz: 1.0 # Pixel size along the LOS, if not provided dr is used
-  x0: "(206.8776*u.degree).to(u.radian).value" # RA of grid origin in radians
-  y0: "(-11.7528*u.degree).to(u.radian).value" # Dec of grid origin in radian 
-
+  r_map: "5.0*60" # Radial size of grid in arcseconds 
+  dr: "2.0" # Pixel size of grid in x and y in arcseconds
+  dz: 2.0 # Pixel size along the LOS, if not provided dr is used
+  x0: "Angle('14:07:06.0 hours').to(u.radian).value"
+  y0: "Angle('10:48:30.00 degrees').to(u.radian).value"
 
 # Settings that define the datasets we are working with 
 # For now you can only have one, but this structure is in prep for the future
@@ -90,7 +90,7 @@ datasets:
     npass: 1 # How many passes of mapmaking to run
     freq: "float(90e9)"
     prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_RJ(90e9, cfg['constants']['Te'])*wu.XMpc/wu.me)"
-
+    ntods: 10
 
 # Setting for the fitter
 fitting:
@@ -102,3 +102,5 @@ imports:
   astropy.coordinates: [Angle]
   witch.external.minkasi.funcs: mf
   jitkasi.noise: jn
+  jitkasi.solutions.maps: jm
+

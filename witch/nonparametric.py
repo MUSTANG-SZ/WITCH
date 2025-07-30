@@ -1,14 +1,14 @@
 import warnings
-from functools import partial
+from copy import deepcopy
+from typing import Optional
 
-import jax
 import jax.numpy as jnp
 import numpy as np
-from jax.typing import ArrayLike
-from scipy.optimize import curve_fit
 
+from . import core
 from . import utils as wu
-from .grid import transform_grid
+from .containers import Model, Parameter, Structure
+from .powerlaw import profile_to_broken_power
 
 
 def array_to_tuple(arr):
@@ -114,135 +114,13 @@ def bin_map(hdu, rbins, x0=None, y0=None, cunit=None):
     return bin1d, var1d
 
 
-@jax.jit
-def power(x: float, rbin: float, cur_amp: float, cur_pow: float, c: float):
-    """
-    Function which returns the powerlaw, given the bin-edge constraints. Exists to be partialed.
-
-    Parameters:
-    -----------
-    x : float
-        Dummy variable to be partialed over
-    rbin : float
-        Edge of bin for powerlaw
-    cur_amp : float
-        Amplitude of power law
-    cur_pow : float
-        Power of power law
-    c : float
-        Constant offset
-
-    Returns
-    -------
-    tmp : float
-        Powerlaw evaluated at x
-    """
-    tmp = cur_amp * (x**cur_pow - rbin**cur_pow) + c
-    return tmp
-
-
-@jax.jit
-def broken_power(
-    rs: jax.Array,
-    condlist: tuple,
-    rbins: jax.Array,
-    amps: jax.Array,
-    pows: jax.Array,
-    c: float,
-) -> jax.Array:
-    """
-    Function which returns a broken powerlaw evaluated at rs.
-
-    Parameters:
-    -----------
-    rs : jax.Array
-        Array of rs at which to compute pl.
-    condlist : tuple
-        tuple which enocdes which rs are evaluated by which parametric function
-    rbins : jax.Array
-        Array of bin edges for power laws
-    amps : jax.Array
-        Amplitudes of power laws
-    pows : jax.Array                                                                                                                                                                                                                                                                            Exponents of power laws
-    c : float
-        Constant offset for powerlaws
-    """
-    cur_c = c  # TODO: necessary?
-    funclist = []
-    for i in range(len(condlist) - 1, -1, -1):
-        funclist.append(
-            partial(power, rbin=rbins[i + 1], cur_amp=amps[i], cur_pow=pows[i], c=cur_c)
-        )
-        cur_c += amps[i] * (rbins[i] ** pows[i] - rbins[i + 1] ** pows[i])
-    return jnp.piecewise(rs, condlist, funclist)
-
-
-def profile_to_broken_power(
-    rs: ArrayLike, ys: ArrayLike, condlist: list[ArrayLike], rbins: ArrayLike
-) -> tuple[jnp.array, jnp.array, float]:
-    """
-    Estimates a non-parametric broken power profile from a generic profile.
-    Note this is an estimation only; in partciular since we fit piece-wise
-    the c's get messed up. This broken powerlaw should then be fit to the
-    data.
-
-    Parameters
-    ----------
-    rs : ArrayLike
-        Array of radius values for the profile
-    ys : ArrayLike
-        Profile y values
-    condlist : list[ArrayLike]
-        List which defines which powerlaws map to which radii. See broken_power
-    rbins : ArrayLike
-        Array of bin edges defining the broken powerlaws
-
-    Returns
-    -------
-    amps : jnp.array
-        Best fit amps for the powerlaws
-    pows : jnp.array
-        Best fit powers for the powerlaws
-    c : float
-        Best fit c for only the outermost powerlaw
-    """
-    rs = jnp.array([x if x != 0 else 1e-1 for x in rs])  # Dont blow up
-
-    rbins = jnp.array(
-        [x if x != 0 else jnp.amin(rs) for x in rbins]
-    )  # Dont blow up 2.0
-
-    amps = jnp.zeros(len(condlist))
-    pows = jnp.zeros(len(condlist))
-
-    for i in range(len(condlist)):
-        xdata = rs[condlist[i]]
-        ydata = ys[condlist[i]]
-        if i == len(condlist) - 1:
-            popt, pcov = curve_fit(power, xdata, ydata, method="trf")
-        else:
-            popt, pcov = curve_fit(
-                power,
-                xdata,
-                ydata,
-                method="trf",
-                p0=[rbins[::-1][i], np.amax(ydata) * 1e5, -2, 0.0],
-            )
-        if i == 0:
-            c = popt[3]
-        amps = amps.at[i].set(popt[1])
-        pows = pows.at[i].set(popt[2])
-
-    return amps[::-1], pows[::-1], c
-
-
 def get_rbins(
     model,
     rmax: float = 3.0 * 60.0,
     struct_num: int = 0,
     sig_params: list[str] = ["amp", "P0"],
-    default: tuple[int] = (0, 10, 20, 30, 50, 80, 120, 180),
-) -> tuple[int]:
+    default: tuple[int, ...] = (0, 10, 20, 30, 50, 80, 120, 180),
+) -> tuple[int, ...]:
     """
     Function which returns a good set of rbins for a non-parametric fit given the significance of the underlying parametric model.
 
@@ -257,12 +135,12 @@ def get_rbins(
     sig_params: list[str], default: ["amp", "P0"]
         Parameters to consider for computing significance.
         Only first match will be used.
-    default: tuple[int], default: (0, 10, 20, 30, 50, 80, 120, 180)
+    default: tuple[int, ...], default: (0, 10, 20, 30, 50, 80, 120, 180)
         Default rbins to be returned if generation fails.
 
     Returns
     -------
-    rbins: tuple[int]
+    rbins: tuple[int, ...]
         rbins for nonparametric fit
     """
     sig = 0
@@ -294,7 +172,7 @@ def get_rbins(
         rbins = np.array(rbins)
         rbins = np.append(rbins, rmax)
 
-        return rbins
+        return tuple(rbins.ravel())
 
     logrange = np.logspace(np.log10(rmin), np.log10(rmax), nrbins)
     step = logrange[1] - logrange[0]
@@ -306,8 +184,143 @@ def get_rbins(
         logrange = np.logspace(np.log10(rmin), np.log10(rmax), nrbins)
         step = logrange[1] - logrange[0]
         if rmin > rmax or nrbins < 1:
-            return np.array(rbins)
+            return tuple(rbins)
     rbins = np.array(rbins)
     rbins = np.append(rbins, logrange)
 
     return tuple(rbins)
+
+
+def para_to_non_para(
+    model,
+    n_rounds: Optional[int] = None,
+    to_copy: list[str] = ["gnfw", "gnfw_rs", "a10", "isobeta", "uniform"],
+) -> Model:
+    """
+    Function which approximately converts cluster profiles into a non-parametric form. Note this is
+    only approximate and should be fit afterwords.
+
+    Parameters
+    ----------
+    model : Model
+        The parametric model to start from.
+    n_rounds: Optional int | None, default: None
+        Number of rounds to fit for output model. If none, copy from self
+    to_copy : list[str], default: gnfw, gnfw_rs, a10, isobeta, uniform
+        List of structures, by name, to copy.
+    Returns
+    -------
+    Model : Model
+        Model with a non-parametric representation of input model
+    Raises
+    ------
+    ValueError
+        If there are no models to copy
+    """
+    cur_model = deepcopy(
+        model
+    )  # Make a copy of model, we don't want to lose structures
+    i = 0  # Make sure we keep at least one struct
+    for structure in cur_model.structures:
+        if structure.structure not in to_copy:
+            cur_model.remove_struct(structure.name)
+        else:
+            i += 1
+    if i == 0:
+        raise ValueError("Error: no model structures in {}".format(to_copy))
+    params = jnp.array(cur_model.pars)
+    params = jnp.ravel(params)
+    pressure, _ = core.model3D(
+        cur_model.xyz, tuple(cur_model.n_struct), tuple(cur_model.n_rbins), params
+    )
+    pressure = pressure[
+        ..., int(pressure.shape[2] / 2)
+    ]  # Take middle slice. Close enough is good enough here, dont care about rounding
+
+    pixsize = np.abs(cur_model.xyz[1][0][1] - cur_model.xyz[1][0][0]).item()
+
+    rs, bin1d, _ = wu.bin_map(pressure, pixsize)
+
+    rbins = get_rbins(cur_model)
+    rbins = np.append(rbins, np.array([np.amax(rs)]))
+
+    condlist = [
+        jnp.array((rbins[i] <= rs) & (rs < rbins[i + 1]))
+        for i in range(len(rbins) - 2, -1, -1)
+    ]
+
+    amps, pows, c = profile_to_broken_power(rs, bin1d, condlist, rbins)
+
+    priors = (-1 * np.inf, np.inf)
+    if n_rounds is None:
+        n_rounds = model.n_rounds
+    if not isinstance(n_rounds, int):
+        raise ValueError("Non int n_rounds")
+    parameters = [
+        Parameter(
+            "rbins",
+            tuple([False] * n_rounds),
+            jnp.atleast_1d(jnp.array(rbins[:-1], dtype=float)),  # Drop last bin
+            jnp.zeros_like(jnp.atleast_1d(jnp.array(rbins[:-1])), dtype=float),
+            jnp.array(priors, dtype=float),
+        ),
+        Parameter(
+            "amps",
+            tuple([True] * n_rounds),
+            jnp.atleast_1d(jnp.array(amps, dtype=float)),
+            jnp.zeros_like(jnp.atleast_1d(jnp.array(amps)), dtype=float),
+            jnp.array(priors, dtype=float),
+        ),
+        Parameter(
+            "pows",
+            tuple([True] * n_rounds),
+            jnp.atleast_1d(jnp.array(pows, dtype=float)),
+            jnp.zeros_like(jnp.atleast_1d(jnp.array(pows)), dtype=float),
+            jnp.array(priors, dtype=float),
+        ),
+        Parameter(
+            "dx",  # TODO: miscentering
+            tuple([False] * n_rounds),
+            jnp.atleast_1d(jnp.array(0, dtype=float)),
+            jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
+            jnp.array(priors, dtype=float),
+        ),
+        Parameter(
+            "dy",  # TODO: miscentering
+            tuple([False] * n_rounds),
+            jnp.atleast_1d(jnp.array(0, dtype=float)),
+            jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
+            jnp.array(priors, dtype=float),
+        ),
+        Parameter(
+            "dz",  # TODO: miscentering
+            tuple([False] * n_rounds),
+            jnp.atleast_1d(jnp.array(0, dtype=float)),
+            jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
+            jnp.array(priors, dtype=float),
+        ),
+        Parameter(
+            "c",
+            tuple([True] * n_rounds),
+            jnp.atleast_1d(jnp.array(c, dtype=float)),
+            jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
+            jnp.array(priors, dtype=float),
+        ),
+    ]
+
+    structures = [
+        Structure("nonpara_power", "nonpara_power", parameters, n_rbins=len(rbins) - 1)
+    ]
+    for structure in model.structures:
+        if structure.name not in to_copy:
+            structures.append(structure)
+
+    return Model(
+        name="test",
+        structures=structures,
+        xyz=model.xyz,
+        dz=model.dz,
+        beam=model.beam,
+        n_rounds=n_rounds,
+        cur_round=0,
+    )

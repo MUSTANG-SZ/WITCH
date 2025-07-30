@@ -159,9 +159,9 @@ def stage2_model(
 def model3D(
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
     n_structs: tuple[int, ...],
-    n_rbins: tuple[int],
-    params: tuple[float, ...],  # TODO: not sure this is a tuple
-) -> jax.Array:
+    n_rbins: tuple[int, ...],
+    params: jax.Array,
+) -> tuple[jax.Array, int]:
     """
     Generate a 3D profile from params on xyz.
 
@@ -175,7 +175,7 @@ def model3D(
         Should be in the same order as `order`.
     n_rbins : tuple[int]
         Number of rbins for each non-parametric model
-    params : tuple[float,...]
+    params : jax.Array
         1D container of model parameters.
 
     Returns
@@ -246,13 +246,13 @@ def model3D(
         for i in range(n_struct):
             pressure = STRUCT_FUNCS[struct](pressure, xyz, *struct_pars[i])
 
-    return pressure, start
+    return pressure, int(start)
 
 
 def model(
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
     n_structs: tuple[int, ...],
-    n_rbins: tuple[int],
+    n_rbins: tuple[int, ...],
     dz: float,
     beam: jax.Array,
     *pars: Unpack[tuple[float, ...]],
@@ -338,7 +338,7 @@ def model(
 def model_grad(
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
     n_structs: tuple[int, ...],
-    n_rbins: tuple[int],
+    n_rbins: tuple[int, ...],
     dz: float,
     beam: jax.Array,
     argnums: tuple[int, ...],

@@ -17,11 +17,10 @@ from jax.typing import ArrayLike
 from scipy import interpolate
 from typing_extensions import Self
 
-from . import core
-from . import grid as wg
-from . import nonparametric
-from . import utils as wu
-from .structure import STRUCT_N_PAR
+from .. import core
+from .. import grid as wg
+from .. import utils as wu
+from .base import Parameter, Structure
 
 
 def load_xfer(xfer_str) -> jax.Array:
@@ -43,118 +42,6 @@ def load_xfer(xfer_str) -> jax.Array:
     # print(tab.shape, foo.shape)
     tab = np.concatenate((tab, foo), axis=1)
     return jnp.array(tab)
-
-
-@register_pytree_node_class
-@dataclass
-class Parameter:
-    """
-    Dataclass to represent a single parameter of a model.
-
-    Attributes
-    ----------
-    name : str
-        The name of the parameter.
-        This is used only for display purposes.
-    fit : jax.Array
-        Should be array with length `Model.n_rounds`.
-        `fit[i]` is True if we want to fit this parameter in the `i`'th round.
-    val : float
-        The value of the parameter.
-    err : float
-        The error on the parameter value.
-    prior : tuple[float, float]
-        The prior on this parameter.
-        Should be the tuple `(lower_bound, upper_bound)`.
-    """
-
-    name: str
-    fit: tuple[bool]  # 1d bool array
-    val: jax.Array  # Scalar float array
-    err: jax.Array  # Scalar float array
-    prior: jax.Array  # 2 element float array
-
-    @property
-    def fit_ever(self) -> bool:  # jax.Array:
-        """
-        Check if this parameter is set to ever be fit.
-
-        Returns
-        -------
-        fit_ever : jax.Array
-            Single element jax boolean array.
-            True if this parameter is ever fit.
-        """
-        return np.any(self.fit).item()
-
-    # Functions for making this a pytree
-    # Don't call this on your own
-    def tree_flatten(self) -> tuple[tuple, tuple]:
-        children = (self.val, self.err, self.prior)
-        aux_data = (self.name, self.fit)
-
-        return (children, aux_data)
-
-    @classmethod
-    def tree_unflatten(cls, aux_data, children) -> Self:
-        name, fit = aux_data
-        return cls(name, fit, *children)
-
-
-@register_pytree_node_class
-@dataclass
-class Structure:
-    """
-    Dataclass to represent a structure within the model.
-
-    Attributes
-    ----------
-    name : str
-        The name of the structure.
-        This is used only for display purposes.
-    structure : str
-        The type of structure that this is an instance of.
-        Should be a string that appears in `core.ORDER`
-    parameters : list[Parameter]
-        The model parameters for this structure.
-
-    Raises
-    ------
-    ValueError
-        If `structure` is not a valid structure.
-        If we have the wrong number of parameters.
-    """
-
-    name: str
-    structure: str
-    parameters: list[Parameter]
-    n_rbins: int = 0
-
-    def __post_init__(self):
-        self.structure = self.structure.lower()
-        # Check that this is a valid structure
-        if self.structure not in STRUCT_N_PAR.keys():
-            raise ValueError(f"{self.name} has invalid structure: {self.structure}")
-        # Check that we have the correct number of params
-        if len(self.parameters) != STRUCT_N_PAR[self.structure]:
-            raise ValueError(
-                f"{self.name} has incorrect number of parameters, expected {STRUCT_N_PAR[self.structure]} for {self.structure} but was given {len(self.parameters)}"
-            )
-
-    # Functions for making this a pytree
-    # Don't call this on your own
-    def tree_flatten(self) -> tuple[tuple, tuple]:
-        children = tuple(self.parameters)
-        aux_data = (self.name, self.structure, self.n_rbins)
-
-        return (children, aux_data)
-
-    @classmethod
-    def tree_unflatten(cls, aux_data, children) -> Self:
-        name, structure, n_rbins = aux_data
-        parameters = children
-
-        return cls(name, structure, list(parameters), n_rbins)
 
 
 @register_pytree_node_class
@@ -590,7 +477,8 @@ class Model:
     def update(self, vals: jax.Array, errs: jax.Array, chisq: jax.Array) -> Self:
         """
         Update the parameter values and errors as well as the model chi-squared.
-        This also resets the cache on `model` and `model_grad`.
+        This also resets the cache on `model` and `model_grad`
+        if `vals` is different than `self.pars`.
 
         Parameters
         ----------
@@ -607,21 +495,23 @@ class Model:
         Returns
         -------
         updated : Model
-            An updated copy of the model.
+            The updated model.
+            While nominally the model will update in place, returning it
+            alows us to use this function in JITed functions.
         """
-        updated = deepcopy(self)
-        updated.__dict__.pop("model", None)
-        updated.__dict__.pop("model_grad", None)
+        if not np.array_equal(self.pars, vals):
+            self.__dict__.pop("model", None)
+            self.__dict__.pop("model_grad", None)
         n = 0
-        for struct in updated.structures:
+        for struct in self.structures:
             for par in struct.parameters:
                 for i in range(len(par.val)):
                     par.val = par.val.at[i].set(vals[n])
                     par.err = par.err.at[i].set(errs[n])
                     n += 1
-        updated.chisq = chisq
+        self.chisq = chisq
 
-        return updated
+        return self
 
     def add_round(self, to_fit) -> Self:
         """
@@ -668,154 +558,13 @@ class Model:
             raise ValueError("Error: {} not in structure names".format(struct_name))
 
         to_pop = ["to_fit_ever", "n_struct", "priors", "par_names"]
-        for key in to_pop:
-            self.__dict__.pop(key, None)
+        for key in self.__dict__.keys():
+            if key in to_pop:  # Pop keys if they are in dict
+                self.__dict__.pop(key)
 
         self.__dict__.pop("model", None)
         self.__dict__.pop("model_grad", None)
         self.__post_init__()
-
-    def para_to_non_para(
-        self,
-        n_rounds: Optional[int] = None,
-        to_copy: list[str] = ["gnfw", "gnfw_rs", "a10", "isobeta", "uniform"],
-        sig_params: list[str] = ["amp", "P0"],
-    ) -> Self:
-        """
-        Function which approximately converts cluster profiles into a non-parametric form. Note this is
-        only approximate and should be fit afterwords.
-
-        Parameters
-        ----------
-        n_rounds: Optional int | None, default: None
-            Number of rounds to fit for output model. If none, copy from self
-        to_copy : list[str], default: gnfw, gnfw_rs, a10, isobeta, uniform
-            List of structures, by name, to copy.
-        sig_params: list[str], default: ["amp", "P0"]
-            Parameters to consider for computing significance.
-            Only first match will be used.
-        Returns
-        -------
-        Model : Model
-            Model with a non-parametric representation of input model
-        Raises
-        ------
-        ValueError
-            If there are no models to copy
-        """
-        cur_model = deepcopy(
-            self
-        )  # Make a copy of model, we don't want to lose structures
-
-        to_remove = []
-        i = 0
-        for structure in cur_model.structures:
-            if structure.name not in to_copy:
-                to_remove.append(structure.name)
-            else:
-                i += 1
-        if i == 0:
-            raise ValueError("Error: no model structures in {}".format(to_copy))
-        for name in to_remove:
-            cur_model.remove_struct(name)
-        params = jnp.array(cur_model.pars)
-        params = jnp.ravel(params)
-        pressure, _ = core.model3D(
-            cur_model.xyz, tuple(cur_model.n_struct), tuple(cur_model.n_rbins), params
-        )
-        pressure = pressure[
-            ..., int(pressure.shape[2] / 2)
-        ]  # Take middle slice. Close enough is good enough here, dont care about rounding
-
-        pixsize = np.abs(cur_model.xyz[1][0][1] - cur_model.xyz[1][0][0])
-
-        rs, bin1d, var1d = wu.bin_map(pressure, pixsize)
-
-        rbins = nonparametric.get_rbins(cur_model, sig_params=sig_params)
-        rbins = np.append(rbins, np.array([np.amax(rs)]))
-
-        condlist = [
-            np.array((rbins[i] <= rs) & (rs < rbins[i + 1]))
-            for i in range(len(rbins) - 2, -1, -1)
-        ]
-
-        amps, pows, c = nonparametric.profile_to_broken_power(
-            rs, bin1d, condlist, rbins
-        )
-
-        priors = (-1 * np.inf, np.inf)
-        if n_rounds is None:
-            n_rounds = self.n_rounds
-        parameters = [
-            Parameter(
-                "rbins",
-                tuple([False] * n_rounds),
-                jnp.atleast_1d(jnp.array(rbins[:-1], dtype=float)),  # Drop last bin
-                jnp.zeros_like(jnp.atleast_1d(jnp.array(rbins[:-1])), dtype=float),
-                jnp.array(priors, dtype=float),
-            ),
-            Parameter(
-                "amps",
-                tuple([True] * n_rounds),
-                jnp.atleast_1d(jnp.array(amps, dtype=float)),
-                jnp.zeros_like(jnp.atleast_1d(jnp.array(amps)), dtype=float),
-                jnp.array(priors, dtype=float),
-            ),
-            Parameter(
-                "pows",
-                tuple([True] * n_rounds),
-                jnp.atleast_1d(jnp.array(pows, dtype=float)),
-                jnp.zeros_like(jnp.atleast_1d(jnp.array(pows)), dtype=float),
-                jnp.array(priors, dtype=float),
-            ),
-            Parameter(
-                "dx",  # TODO: miscentering
-                tuple([False] * n_rounds),
-                jnp.atleast_1d(jnp.array(0, dtype=float)),
-                jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
-                jnp.array(priors, dtype=float),
-            ),
-            Parameter(
-                "dy",  # TODO: miscentering
-                tuple([False] * n_rounds),
-                jnp.atleast_1d(jnp.array(0, dtype=float)),
-                jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
-                jnp.array(priors, dtype=float),
-            ),
-            Parameter(
-                "dz",  # TODO: miscentering
-                tuple([False] * n_rounds),
-                jnp.atleast_1d(jnp.array(0, dtype=float)),
-                jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
-                jnp.array(priors, dtype=float),
-            ),
-            Parameter(
-                "c",
-                tuple([True] * n_rounds),
-                jnp.atleast_1d(jnp.array(c, dtype=float)),
-                jnp.zeros_like(jnp.atleast_1d(jnp.array(0)), dtype=float),
-                jnp.array(priors, dtype=float),
-            ),
-        ]
-
-        structures = [
-            Structure(
-                "nonpara_power", "nonpara_power", parameters, n_rbins=len(rbins) - 1
-            )
-        ]
-        for structure in self.structures:
-            if structure.name not in to_copy:
-                structures.append(structure)
-
-        return Model(
-            name="test",
-            structures=structures,
-            xyz=self.xyz,
-            dz=self.dz,
-            beam=self.beam,
-            n_rounds=n_rounds,
-            cur_round=0,
-        )
 
     def save(self, path: str):
         """
@@ -850,7 +599,12 @@ class Model:
             return dill.load(f)
 
     @classmethod
-    def from_cfg(cls, cfg: dict, beam: Optional[jax.Array] = None) -> Self:
+    def from_cfg(
+        cls,
+        cfg: dict,
+        beam: Optional[jax.Array] = None,
+        prefactor: Optional[float] = None,
+    ) -> Self:
         """
         Create an instance of model from a witcher config.
 
@@ -859,12 +613,18 @@ class Model:
         cfg : dict
             The config loaded into a dict.
         beam : Optional[Array], default: None
+            The beam of the experiment
+        prefactor : Optional[float], default: 1
+            Prefactor which accounts for unit conversions
 
         Returns
         -------
         model : Model
             The model described by the config.
         """
+        # Check prefactor
+        if prefactor is None:
+            raise ValueError("prefactor not provided!")
         # Do imports
         for module, name in cfg.get("imports", {}).items():
             mod = import_module(module)
@@ -879,7 +639,8 @@ class Model:
         # Load constants
         constants = {
             name: eval(str(const)) for name, const in cfg.get("constants", {}).items()
-        }  # pyright: ignore [reportUnusedVariable]
+        }
+        constants = constants
 
         # Get jax device
         dev_id = cfg.get("jax_device", 0)
@@ -908,7 +669,7 @@ class Model:
             raise ValueError("Beam somehow still None!")
 
         n_rounds = cfg.get("n_rounds", 1)
-        dz = dz * eval(str(cfg["model"]["unit_conversion"]))
+        dz = dz * prefactor
 
         structures = []
         for name, structure in cfg["model"]["structures"].items():
@@ -919,7 +680,7 @@ class Model:
                 fit = param.get("to_fit", [False] * max(1, n_rounds))
                 if isinstance(fit, bool):
                     fit = [fit] * max(1, n_rounds)
-                if len(fit) != n_rounds and n_rounds != 0:
+                if len(fit) != max(1, n_rounds):
                     raise ValueError(
                         f"to_fit has {len(fit)} entries but we only have {n_rounds} rounds"
                     )
