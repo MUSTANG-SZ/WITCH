@@ -25,7 +25,7 @@ from . import utils as wu
 from .containers import Model, Model_xfer
 from .dataset import DataSet
 from .fitting import run_lmfit, run_mcmc
-from .nonpara import para_to_non_para
+from .nonparametric import para_to_non_para
 from .objective import joint_objective
 
 comm = MPI.COMM_WORLD.Clone()
