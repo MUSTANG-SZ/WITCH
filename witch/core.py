@@ -69,46 +69,55 @@ def _check_order():
         raise ValueError("ORDER seems to have elements with stages out of order")
 
 
-def stage2_model(
+def _stage_m1(
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
     n_structs: tuple[int, ...],
-    dz: float,
-    beam: jax.Array,
-    *pars: Unpack[tuple[float, ...]],
-):
-    """
-    Only returns the second stage of the model. Used for visualizing shocks, etc.
-    that can otherwise be hard to see in a model plot
+    n_rbins: tuple[int, ...],
+    params: jax.Array,
+    start: int,
+    pressure: jax.Array,
+    run: bool = True,
+) -> tuple[jax.Array, int]:
+    for i, (n_struct, struct) in enumerate(zip(n_structs, ORDER)):
+        if STRUCT_STAGE[struct] != -1:
+            continue
+        if not n_struct:
+            continue
+        delta = n_struct * (
+            n_rbins[i] * STRUCT_N_NONPARA[struct]
+            + STRUCT_N_PAR[struct]
+            - STRUCT_N_NONPARA[struct]
+        )
+        struct_pars = params[start : start + delta].reshape(
+            (n_struct, int(delta / n_struct))
+        )
+        start += delta
+        if not run:
+            continue
+        for j in range(n_struct):
+            cur_struct_pars = struct_pars[j]
+            nonpara_struct_pars = cur_struct_pars[
+                : n_rbins[i] * STRUCT_N_NONPARA[struct]
+            ].reshape((STRUCT_N_NONPARA[struct], n_rbins[i]))
+            cur_struct_pars = cur_struct_pars[n_rbins[i] * STRUCT_N_NONPARA[struct] :]
+            cur_pars = [
+                nonpara_struct_pars[k] for k in range(STRUCT_N_NONPARA[struct])
+            ] + [
+                cur_struct_pars[k]
+                for k in range(STRUCT_N_PAR[struct] - STRUCT_N_NONPARA[struct])
+            ]
+            pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*cur_pars, xyz))
+    return pressure, int(start)
 
-    Parameters
-    ----------
-    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
-        Grid to compute model on.
-        See `containers.Model.xyz` for details.
-    n_structs : tuple[int, ...]
-        Number of each structure to use.
-        Should be in the same order as `order`.
-    dz : float
-        Factor to scale by while integrating.
-        Should at least include the pixel size along the LOS.
-    beam : jax.Array
-        Beam to convolve by, should be a 2d array.
-    *pars : Unpack[tuple[float,...]]
-        1D container of model parameters.
 
-    Returns
-    -------
-    model : jax.Array
-        The model with the specified substructure evaluated on the grid.
-        No stage 3 structures are included.
-    """
-    params = jnp.array(pars)
-    params = jnp.ravel(params)  # Fixes strange bug with params having dim (1,n)
-
-    pressure = jnp.ones((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
-    start = 0
-
-    # Stage 0, track delta but don't add anything
+def _stage_0(
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    n_structs: tuple[int, ...],
+    params: jax.Array,
+    start: int,
+    pressure: jax.Array,
+    run: bool = True,
+) -> tuple[jax.Array, int]:
     for n_struct, struct in zip(n_structs, ORDER):
         if STRUCT_STAGE[struct] != 0:
             continue
@@ -119,26 +128,67 @@ def stage2_model(
             (n_struct, STRUCT_N_PAR[struct])
         )
         start += delta
+        if not run:
+            continue
+        for i in range(n_struct):
+            pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*struct_pars[i], xyz))
+    return pressure, int(start)
 
-    # Stage 1, modify the 3d grid
+
+def _stage_1(
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    n_structs: tuple[int, ...],
+    params: jax.Array,
+    start: int,
+    pressure: jax.Array,
+    run: bool = True,
+) -> tuple[jax.Array, int]:
     for n_struct, struct in zip(n_structs, ORDER):
         if STRUCT_STAGE[struct] != 1:
             continue
         if not n_struct:
             continue
-
         delta = n_struct * STRUCT_N_PAR[struct]
         struct_pars = params[start : start + delta].reshape(
             (n_struct, STRUCT_N_PAR[struct])
         )
-
         start += delta
+        if not run:
+            continue
         for i in range(n_struct):
             pressure = STRUCT_FUNCS[struct](pressure, xyz, *struct_pars[i])
+    return pressure, int(start)
 
-    # Integrate along line of site
-    ip = trapz(pressure, dx=dz, axis=-1)
 
+def _stage_2(
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    n_structs: tuple[int, ...],
+    params: jax.Array,
+    start: int,
+    ip: jax.Array,
+    run: bool = True,
+) -> tuple[jax.Array, int]:
+    for n_struct, struct in zip(n_structs, ORDER):
+        if STRUCT_STAGE[struct] != 2:
+            continue
+        if not n_struct:
+            continue
+        delta = n_struct * STRUCT_N_PAR[struct]
+        struct_pars = params[start : start + delta].reshape(
+            (n_struct, STRUCT_N_PAR[struct])
+        )
+        start += delta
+        if not run:
+            continue
+        for i in range(n_struct):
+            ip = jnp.add(ip, STRUCT_FUNCS[struct](*struct_pars[i], xyz))
+    return ip, int(start)
+
+
+def _beam_conv(
+    ip: jax.Array,
+    beam: jax.Array,
+) -> jax.Array:
     bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
         (ip.shape[1] - beam.shape[1]) / 2
     )
@@ -155,7 +205,31 @@ def stage2_model(
     return ip
 
 
-# TODO: Jit?
+def _stage_3(
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    n_structs: tuple[int, ...],
+    params: jax.Array,
+    start: int,
+    ip: jax.Array,
+    run: bool = True,
+) -> tuple[jax.Array, int]:
+    for n_struct, struct in zip(n_structs, ORDER):
+        if STRUCT_STAGE[struct] != 3:
+            continue
+        if not n_struct:
+            continue
+        delta = n_struct * STRUCT_N_PAR[struct]
+        struct_pars = params[start : start + delta].reshape(
+            (n_struct, STRUCT_N_PAR[struct])
+        )
+        start += delta
+        if not run:
+            continue
+        for i in range(n_struct):
+            ip = jnp.add(ip, STRUCT_FUNCS[struct](*struct_pars[i], xyz))
+    return ip, int(start)
+
+
 def model3D(
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
     n_structs: tuple[int, ...],
@@ -188,63 +262,14 @@ def model3D(
     pressure = jnp.zeros((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
     start = 0
 
-    for i, (n_struct, struct) in enumerate(zip(n_structs, ORDER)):
-        if STRUCT_STAGE[struct] != -1:
-            continue
-        if not n_struct:
-            continue
-        delta = n_struct * (
-            n_rbins[i] * STRUCT_N_NONPARA[struct]
-            + STRUCT_N_PAR[struct]
-            - STRUCT_N_NONPARA[struct]
-        )
-        struct_pars = params[start : start + delta].reshape(
-            (n_struct, int(delta / n_struct))
-        )
-        start += delta
-        for j in range(n_struct):
-            cur_struct_pars = struct_pars[j]
-            nonpara_struct_pars = cur_struct_pars[
-                : n_rbins[i] * STRUCT_N_NONPARA[struct]
-            ].reshape((STRUCT_N_NONPARA[struct], n_rbins[i]))
-            cur_struct_pars = cur_struct_pars[n_rbins[i] * STRUCT_N_NONPARA[struct] :]
-            # pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*nonpara_struct_pars, *struct_pars, xyz))
-            cur_pars = [
-                nonpara_struct_pars[k] for k in range(STRUCT_N_NONPARA[struct])
-            ] + [
-                cur_struct_pars[k]
-                for k in range(STRUCT_N_PAR[struct] - STRUCT_N_NONPARA[struct])
-            ]
-            # pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*nonpara_struct_pars, *struct_pars, xyz))
-            pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*cur_pars, xyz))
+    # Stage -1, non para
+    pressure, start = _stage_m1(xyz, n_structs, n_rbins, params, start, pressure)
 
     # Stage 0, add to the 3d grid
-    for n_struct, struct in zip(n_structs, ORDER):
-        if STRUCT_STAGE[struct] != 0:
-            continue
-        if not n_struct:
-            continue
-        delta = n_struct * STRUCT_N_PAR[struct]
-        struct_pars = params[start : start + delta].reshape(
-            (n_struct, STRUCT_N_PAR[struct])
-        )
-        start += delta
-        for i in range(n_struct):
-            pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*struct_pars[i], xyz))
+    pressure, start = _stage_0(xyz, n_structs, params, start, pressure)
 
     # Stage 1, modify the 3d grid
-    for n_struct, struct in zip(n_structs, ORDER):
-        if STRUCT_STAGE[struct] != 1:
-            continue
-        if not n_struct:
-            continue
-        delta = n_struct * STRUCT_N_PAR[struct]
-        struct_pars = params[start : start + delta].reshape(
-            (n_struct, STRUCT_N_PAR[struct])
-        )
-        start += delta
-        for i in range(n_struct):
-            pressure = STRUCT_FUNCS[struct](pressure, xyz, *struct_pars[i])
+    pressure, start = _stage_1(xyz, n_structs, params, start, pressure)
 
     return pressure, int(start)
 
@@ -292,45 +317,13 @@ def model(
     ip = trapz(pressure, dx=dz, axis=-1)
 
     # Stage 2, add non-beam convolved to integrated profile
-    for n_struct, struct in zip(n_structs, ORDER):
-        if STRUCT_STAGE[struct] != 2:
-            continue
-        if not n_struct:
-            continue
-        delta = n_struct * STRUCT_N_PAR[struct]
-        struct_pars = params[start : start + delta].reshape(
-            (n_struct, STRUCT_N_PAR[struct])
-        )
-        start += delta
-        for i in range(n_struct):
-            ip = jnp.add(ip, STRUCT_FUNCS[struct](*struct_pars[i], xyz))
+    ip, start = _stage_2(xyz, n_structs, params, start, ip)
 
-    bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
-        (ip.shape[1] - beam.shape[1]) / 2
-    )
-    beam = jnp.pad(
-        beam,
-        (
-            (bound0, ip.shape[0] - beam.shape[0] - bound0),
-            (bound1, ip.shape[1] - beam.shape[1] - bound1),
-        ),
-    )
-
-    ip = fft_conv(ip, beam)
+    # Beam conv
+    ip = _beam_conv(ip, beam)
 
     # Stage 3, add beam convolved to the integrated profile
-    for n_struct, struct in zip(n_structs, ORDER):
-        if STRUCT_STAGE[struct] != 3:
-            continue
-        if not n_struct:
-            continue
-        delta = n_struct * STRUCT_N_PAR[struct]
-        struct_pars = params[start : start + delta].reshape(
-            (n_struct, STRUCT_N_PAR[struct])
-        )
-        start += delta
-        for i in range(n_struct):
-            ip = jnp.add(ip, STRUCT_FUNCS[struct](*struct_pars[i], xyz))
+    ip, start = _stage_3(xyz, n_structs, params, start, ip)
 
     return ip
 
@@ -383,6 +376,58 @@ def model_grad(
     grad_padded = grad_padded.at[jnp.array(argnums) - ARGNUM_SHIFT].set(jnp.array(grad))
 
     return pred, grad_padded
+
+
+def stage2_model(
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    n_structs: tuple[int, ...],
+    dz: float,
+    beam: jax.Array,
+    *pars: Unpack[tuple[float, ...]],
+):
+    """
+    Only returns the second stage of the model. Used for visualizing shocks, etc.
+    that can otherwise be hard to see in a model plot
+
+    Parameters
+    ----------
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Grid to compute model on.
+        See `containers.Model.xyz` for details.
+    n_structs : tuple[int, ...]
+        Number of each structure to use.
+        Should be in the same order as `order`.
+    dz : float
+        Factor to scale by while integrating.
+        Should at least include the pixel size along the LOS.
+    beam : jax.Array
+        Beam to convolve by, should be a 2d array.
+    *pars : Unpack[tuple[float,...]]
+        1D container of model parameters.
+
+    Returns
+    -------
+    model : jax.Array
+        The model with the specified substructure evaluated on the grid.
+        No stage 3 structures are included.
+    """
+    params = jnp.array(pars)
+    params = jnp.ravel(params)  # Fixes strange bug with params having dim (1,n)
+
+    pressure = jnp.ones((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
+    start = 0
+
+    # Stage 0, but just track param start
+    pressure, start = _stage_0(xyz, n_structs, params, start, pressure, False)
+
+    # Stage 1, modify the 3d grid
+    pressure, start = _stage_1(xyz, n_structs, params, start, pressure)
+
+    # Integrate along line of site
+    ip = trapz(pressure, dx=dz, axis=-1)
+    ip = _beam_conv(ip, beam)
+
+    return ip
 
 
 # Check that ORDER is ok...
