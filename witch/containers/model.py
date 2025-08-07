@@ -316,6 +316,7 @@ class Model:
             tuple(self.n_rbins),
             self.dz,
             self.beam,
+            (True, True, True, True, True, True),
             *self.pars,
         )
 
@@ -341,6 +342,7 @@ class Model:
             tuple(self.n_rbins),
             self.dz,
             self.beam,
+            (True, True, True, True, True, True),
             argnums,
             *self.pars,
         )

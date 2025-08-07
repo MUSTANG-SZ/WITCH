@@ -41,7 +41,7 @@ jax.config.update("jax_enable_x64", True)
 # jax.config.update("jax_platform_name", "gpu")
 
 
-def _get_static(signature, prefix_list=["n_", "argnums"]):
+def _get_static(signature, prefix_list=["n_", "argnums", "to_run"]):
     par_names = np.array(list(signature.parameters.keys()), dtype=str)
     static_msk = np.zeros_like(par_names, dtype=bool)
     for prefix in prefix_list:
@@ -188,7 +188,10 @@ def _stage_2(
 def _beam_conv(
     ip: jax.Array,
     beam: jax.Array,
+    run: bool = True,
 ) -> jax.Array:
+    if not run:
+        return ip
     bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
         (ip.shape[1] - beam.shape[1]) / 2
     )
@@ -235,7 +238,7 @@ def model3D(
     n_structs: tuple[int, ...],
     n_rbins: tuple[int, ...],
     params: jax.Array,
-) -> tuple[jax.Array, int]:
+) -> jax.Array:
     """
     Generate a 3D profile from params on xyz.
 
@@ -256,22 +259,58 @@ def model3D(
     -------
     pressure : jax.Array
         The 3D model with the specified substructure evaluated on the grid.
-    start : int
-        Current Total npar.
     """
-    pressure = jnp.zeros((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
-    start = 0
+    return model(
+        xyz,
+        n_structs,
+        n_rbins,
+        0,
+        jnp.array([1]),
+        (True, True, True, False, False, False),
+        *params,
+    )
 
-    # Stage -1, non para
-    pressure, start = _stage_m1(xyz, n_structs, n_rbins, params, start, pressure)
 
-    # Stage 0, add to the 3d grid
-    pressure, start = _stage_0(xyz, n_structs, params, start, pressure)
+def make_to_run(
+    stage_m1: bool = True,
+    stage_0: bool = True,
+    stage_1: bool = True,
+    stage_2: bool = True,
+    beam_conv: bool = True,
+    stage_3: bool = True,
+) -> tuple[bool, bool, bool, bool, bool, bool]:
+    """
+    Constructs the `to_run` tuple needed for calls to `model` and `model_grad` in the correct order.
+    This is genrally prefered over manual construction, if you need to contsruct manualy the order of parameters in
+    this function is the order of the `to_run` tuple.
+    Any stages that are set to `False` here will not be run when computing the model.
 
-    # Stage 1, modify the 3d grid
-    pressure, start = _stage_1(xyz, n_structs, params, start, pressure)
+    Parameters
+    ----------
+    stage_m1 : bool, default: True
+        If True run stage -1.
+        This is non-parametric models.
+    stage_0 : bool, default: True
+        If True run stage 0.
+        This is 3D parametric models.
+    stage_1 : bool, default: True
+        If True run stage 1.
+        This is 3D sub-structure.
+    stage_2 : bool, default: True
+        If True run stage 2.
+        This is 2D structure added prior to beam convolution.
+    beam_conv : bool, default: True
+        If True apply beam convolution after stage 2.
+    stage_2 : bool, default: True
+        If True run stage 3.
+        This is 2D structure added after beam convolution.
 
-    return pressure, int(start)
+    Returns
+    -------
+    to_run : tuple[bool, bool, bool, bool, bool, bool]
+        Which stages to run in the order needed for `model` and `model_grad`.
+    """
+    return (stage_m1, stage_0, stage_1, stage_2, beam_conv, stage_3)
 
 
 def model(
@@ -280,6 +319,7 @@ def model(
     n_rbins: tuple[int, ...],
     dz: float,
     beam: jax.Array,
+    to_run: tuple[bool, bool, bool, bool, bool, bool],
     *pars: Unpack[tuple[float, ...]],
 ):
     """
@@ -300,6 +340,9 @@ def model(
         Should at least include the pixel size along the LOS.
     beam : jax.Array
         Beam to convolve by, should be a 2d array.
+    to_run : tuple[bool, bool, bool, bool, bool, bool]
+        Which stages to run.
+        Should be a 6 element tuple of bools, see `make_to_run` for details.
     *pars : Unpack[tuple[float,...]]
         1D container of model parameters.
 
@@ -311,19 +354,31 @@ def model(
     params = jnp.array(pars)
     params = jnp.ravel(params)  # Fixes strange bug with params having dim (1,n)
 
-    pressure, start = model3D(xyz, n_structs, n_rbins, params)
+    pressure = jnp.zeros((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
+    start = 0
+
+    # Stage -1, non para
+    pressure, start = _stage_m1(
+        xyz, n_structs, n_rbins, params, start, pressure, to_run[0]
+    )
+
+    # Stage 0, add to the 3d grid
+    pressure, start = _stage_0(xyz, n_structs, params, start, pressure, to_run[1])
+
+    # Stage 1, modify the 3d grid
+    pressure, start = _stage_1(xyz, n_structs, params, start, pressure, to_run[2])
 
     # Integrate along line of site
     ip = trapz(pressure, dx=dz, axis=-1)
 
     # Stage 2, add non-beam convolved to integrated profile
-    ip, start = _stage_2(xyz, n_structs, params, start, ip)
+    ip, start = _stage_2(xyz, n_structs, params, start, ip, to_run[3])
 
     # Beam conv
-    ip = _beam_conv(ip, beam)
+    ip = _beam_conv(ip, beam, to_run[4])
 
     # Stage 3, add beam convolved to the integrated profile
-    ip, start = _stage_3(xyz, n_structs, params, start, ip)
+    ip, start = _stage_3(xyz, n_structs, params, start, ip, to_run[5])
 
     return ip
 
@@ -334,6 +389,7 @@ def model_grad(
     n_rbins: tuple[int, ...],
     dz: float,
     beam: jax.Array,
+    to_run: tuple[bool, bool, bool, bool, bool, bool],
     argnums: tuple[int, ...],
     *pars: Unpack[tuple[float, ...]],
 ):
@@ -361,6 +417,7 @@ def model_grad(
         n_rbins,
         dz,
         beam,
+        to_run,
         *pars,
     )
 
@@ -370,6 +427,7 @@ def model_grad(
         n_rbins,
         dz,
         beam,
+        to_run,
         *pars,
     )
     grad_padded = jnp.zeros((len(pars),) + pred.shape)
