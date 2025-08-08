@@ -612,10 +612,16 @@ def main():
 
         # Get the beam
         beam = make_beam(dset_name, cfg, dataset.info)
+        dataset.beam = beam
+
+        # Prefactor
+        prefactor = dataset.info.get("prefactor", None)
+        if prefactor is not None:
+            dataset.prefactor = prefactor
 
         # Define the model and get stuff setup fitting
         if "model" in cfg:
-            model = Model.from_cfg(cfg, beam, dataset.info.get("prefactor", None))
+            model = Model.from_cfg(cfg, beam, prefactor)
         else:
             model = None
             print_once("No model defined, setting fit, sim, and sub to False")

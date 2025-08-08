@@ -79,6 +79,9 @@ class Model:
     cur_round : int, default: 0
         Which round of fitting we are currently in,
         rounds are 0 indexed.
+    to_run : tuple[bool, bool, bool, bool, bool, bool], default: (True, True, True, True, True, True)
+        The model stages to run.
+        See `core.make_to_run` for details.
     chisq : float, default: np.inf
         The chi-squared of this model relative to some data.
         Used when fitting.
@@ -93,6 +96,9 @@ class Model:
     beam: jax.Array
     n_rounds: int
     cur_round: int = 0
+    to_run: tuple[bool, bool, bool, bool, bool, bool] = field(
+        default_factory=core.make_to_run
+    )
     chisq: jax.Array = field(
         default_factory=jnp.array(jnp.inf).copy
     )  # scalar float array
@@ -316,7 +322,7 @@ class Model:
             tuple(self.n_rbins),
             self.dz,
             self.beam,
-            (True, True, True, True, True, True),
+            self.to_run,
             *self.pars,
         )
 
@@ -342,7 +348,7 @@ class Model:
             tuple(self.n_rbins),
             self.dz,
             self.beam,
-            (True, True, True, True, True, True),
+            self.to_run,
             argnums,
             *self.pars,
         )

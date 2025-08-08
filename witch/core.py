@@ -505,3 +505,6 @@ model_grad_static = _get_static(model_grad_sig)
 # Now JIT
 model = jax.jit(model, static_argnums=model_static)
 model_grad = jax.jit(model_grad, static_argnums=model_grad_static)
+
+# Lets make a vectorized beam conv
+_beam_conv_vec = jnp.vectorize(_beam_conv, excluded=(1,), signature="(k,m,n)->(m,n)")

@@ -294,6 +294,11 @@ class DataSet:
         The data vector for this data.
         This will be a `jitkasi` container class.
         This field is not part of the initialization function.
+    beam : Aray
+        The beam to convolve models with for this dataset.
+    prefactor : float
+        The value to multiply models by when fitting this dataset.
+        This is useful for unit conversions.
     """
 
     name: str
@@ -307,6 +312,8 @@ class DataSet:
     global_comm: MPI.Intracomm
     info: dict = field(init=False)
     datavec: DataVec = field(init=False)
+    beam: Array = field(init=False)
+    prefactor: float = field(init=False)
 
     def __post_init__(self: Self):
         assert isinstance(self.get_files, GetFiles)
