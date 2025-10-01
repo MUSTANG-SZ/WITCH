@@ -15,6 +15,8 @@ mcmc:
   num_steps: 100
   sample_which: -1
 
+name: "ACT1407"
+
 paths:
   # Location of TOD files
   # If an absolute path then that is used directly
