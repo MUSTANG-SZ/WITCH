@@ -22,7 +22,7 @@ from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
 from . import utils as wu
-from .containers import Model, Model_xfer
+from .containers import MetaModel, Model, Model_xfer
 from .dataset import DataSet
 from .fitting import run_lmfit, run_mcmc
 from .nonparametric import para_to_non_para
@@ -147,22 +147,23 @@ def _mpi_fsplit(fnames, comm):
     return fnames_local, comm, comms_local
 
 
-def process_tods(cfg, dataset, model):
+def process_tods(cfg, dataset, metamodel):
     todvec = dataset.datavec
     info = dataset.info
     rank = todvec.comm.Get_rank()
     nproc = todvec.comm.Get_size()
-    noise_class = info["noise_class"]
-    noise_args = info["noise_args"]
-    noise_kwargs = info["noise_kwargs"]
     sim = cfg.get("sim", False)
-    if model is None and sim:
-        raise ValueError("model cannot be None when simming!")
-    model_cur = model
+    if metamodel is None and sim:
+        raise ValueError("metamodel cannot be None when simming!")
+    metamodel_cur = metamodel
     xfer = info.get("info", "")
     if xfer:
-        model_cur = Model_xfer.from_parent(model, xfer)
+        metamodel_cur = deepcopy(metamodel)
+        metamodel_cur.models = tuple(
+            Model_xfer.from_parent(model, xfer) for model in metamodel_cur.models
+        )
 
+    dset_ind = metamodel_cur.get_dataset_ind(dataset.name)
     for i, tod in enumerate(todvec.tods):
         if sim:
             if cfg["wnoise"]:
@@ -179,26 +180,31 @@ def process_tods(cfg, dataset, model):
             else:
                 tod.data *= tod.data * (-1) ** ((rank + nproc * i) % 2)
 
-            pred = model_cur.to_tod(
-                tod.x * wu.rad_to_arcsec, tod.y * wu.rad_to_arcsec
-            ).block_until_ready()
+            pred = metamodel_cur.model_proj(dset_ind, i)
             tod.data = tod.data + pred
         tod.data = tod.data - jnp.mean(tod.data, axis=-1)[..., None]
-        tod.compute_noise(noise_class, None, *noise_args, **noise_kwargs)
+        tod.compute_noise(
+            dataset.noise_class, None, *dataset.noise_args, **dataset.noise_kwargs
+        )
     return todvec
 
 
-def process_maps(cfg, dataset, model):
-    sim = cfg.get("sim", False)
+def process_maps(cfg, dataset, metamodel):
     mapset = dataset.datavec
-    if model is None and sim:
-        raise ValueError("model cannot be None when simming!")
-    model_cur = model
-    xfer = dataset.info.get("info", "")
+    info = dataset.info
+    sim = cfg.get("sim", False)
+    if metamodel is None and sim:
+        raise ValueError("metamodel cannot be None when simming!")
+    metamodel_cur = metamodel
+    xfer = info.get("info", "")
     if xfer:
-        model_cur = Model_xfer.from_parent(model, xfer)
+        metamodel_cur = deepcopy(metamodel)
+        metamodel_cur.models = tuple(
+            Model_xfer.from_parent(model, xfer) for model in metamodel_cur.models
+        )
 
-    for imap in mapset:
+    dset_ind = metamodel_cur.get_dataset_ind(dataset.name)
+    for i, imap in enumerate(mapset):
         if sim:
             if jnp.all(imap.ivar == 0):
                 print_once(
@@ -222,10 +228,7 @@ def process_maps(cfg, dataset, model):
                     "Only white noise currently supported for map sims... simming map with white noise"
                 )
 
-            x, y = imap.xy
-            pred = model_cur.to_map(
-                x * wu.rad_to_arcsec, y * wu.rad_to_arcsec
-            ).block_until_ready()
+            pred = metamodel_cur.model_proj(dset_ind, i)
             imap.data = imap.data + pred
         print("Map scale: ", jnp.mean(jnp.abs(imap.data)))
         imap.data = imap.data - jnp.mean(imap.data)
@@ -235,7 +238,7 @@ def process_maps(cfg, dataset, model):
     return mapset
 
 
-def get_outdir(cfg, model):
+def get_outdir(cfg, metamodel):
     outroot = cfg["paths"]["outroot"]
     if not os.path.isabs(outroot):
         outroot = os.path.join(
@@ -243,26 +246,30 @@ def get_outdir(cfg, model):
         )
 
     name = ""
-    if model is not None:
-        name = model.name + ("_ns" * (not cfg["sub"]))
+    if metamodel is not None:
+        name = "_".join([model.name for model in metamodel.models]) + (
+            "_ns" * (not cfg["sub"])
+        )
     outdir = os.path.join(outroot, cfg["name"], name)
     if "subdir" in cfg["paths"]:
         outdir = os.path.join(outdir, cfg["paths"]["subdir"])
-    if model is not None:
+    if metamodel is not None:
         if cfg["fit"]:
             outdir = os.path.join(
                 outdir,
                 "-".join(
                     [
                         name
-                        for name, to_fit in zip(model.par_names, model.to_fit_ever)
+                        for name, to_fit in zip(
+                            metamodel.par_names, metamodel.to_fit_ever
+                        )
                         if to_fit
                     ]
                 ),
             )
         else:
             outdir = os.path.join(outdir, "not_fit")
-    if cfg["sim"] and model is not None:
+    if cfg["sim"] and metamodel is not None:
         outdir += "-sim"
 
     print_once("Outputs can be found in", outdir)
@@ -274,65 +281,54 @@ def get_outdir(cfg, model):
     return outdir
 
 
-def _save_model(cfg, model, outdir, desc_str):
+def _save_model(cfg, metamodel, desc_str):
+    outdir = cfg["outdir"]
     if comm.Get_rank() != 0:
         return
     res_path = os.path.join(outdir, f"results_{desc_str}.dill")
     print_once("Saving results to", res_path)
-    model.save(res_path)
+    metamodel.save(res_path)
 
-    final = {"model": cfg["model"]}
-    for i, (struct_name, structure) in zip(
-        model.original_order, cfg["model"]["structures"].items()
-    ):
-        model_struct = model.structures[i]
-        for par, par_name in zip(
-            model_struct.parameters, structure["parameters"].keys()
-        ):
-            final["model"]["structures"][struct_name]["parameters"][par_name][
-                "value"
-            ] = [float(cur_par) for cur_par in par.val]
-    with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
-        yaml.dump(final, file)
+    # final = {"model": cfg["model"]}
+    # for i, (struct_name, structure) in zip(
+    #     model.original_order, cfg["model"]["structures"].items()
+    # ):
+    #     model_struct = model.structures[i]
+    #     for par, par_name in zip(
+    #         model_struct.parameters, structure["parameters"].keys()
+    #     ):
+    #         final["model"]["structures"][struct_name]["parameters"][par_name][
+    #             "value"
+    #         ] = [float(cur_par) for cur_par in par.val]
+    # with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
+    #     yaml.dump(final, file)
 
 
-def _reestimate_noise(models, datasets):
-    for i, dataset in enumerate(datasets):
-        for data in dataset.datavec:
-            if dataset.mode == "tod":
-                pred = (
-                    models[i]
-                    .to_tod(data.x * wu.rad_to_arcsec, data.y * wu.rad_to_arcsec)
-                    .block_until_ready()
-                )
-            else:
-                x, y = data.xy
-                pred = models[i].to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
+def _reestimate_noise(metamodel):
+    for i, dataset in enumerate(metamodel.datasets):
+        for j, data in enumerate(dataset.datavec):
+            pred = metamodel.model_proj(i, j)
             data.compute_noise(
-                dataset.info["noise_class"],
+                dataset.noise_class,
                 data.data - pred,
-                *dataset.info["noise_args"],
-                **dataset.info["noise_kwargs"],
+                *dataset.noise_args,
+                **dataset.noise_kwargs,
             )
-    return datasets
+    return metamodel
 
 
 def _run_fit(
     cfg,
-    models,
-    datasets,
+    metamodel,
     r,
 ):
-    for model in models:
-        model.cur_round = r
-    to_fit = np.array(models[0].to_fit)
+    metamodel.set_round(r)
+    to_fit = np.array(metamodel.to_fit)
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
     # TODO: Modify this to account for fit_dataset changes
     models, i, delta_chisq = run_lmfit(
-        models,
-        datasets,
-        len(datasets),
+        metamodel,
         eval(str(cfg["fitting"].get("maxiter", "10"))),
         eval(str(cfg["fitting"].get("chitol", "1e-5"))),
     )
@@ -342,25 +338,19 @@ def _run_fit(
         f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}"
     )
 
-    # TODO: Modify to save all models
-    print_once(models[0])
-    for model, dataset in zip(models, datasets):
-        _save_model(cfg, model, dataset.info["outdir"], f"fit{r}")
+    print_once(models)
+    _save_model(cfg, metamodel, f"fit{r}")
 
-    datasets = _reestimate_noise(
-        models,
-        datasets,
-    )
-    return models, datasets
+    metamodel = _reestimate_noise(metamodel)
+    return metamodel
 
 
-def _run_mcmc(cfg, models, datasets):
+def _run_mcmc(cfg, metamodel):
     print_once("Running MCMC")
-    init_pars = np.array(models[0].pars.copy())
+    init_pars = np.array(metamodel.parameters.copy())
     t1 = time.time()
-    models, samples = run_mcmc(
-        models,
-        datasets,
+    metamodel, samples = run_mcmc(
+        metamodel,
         num_steps=int(cfg["mcmc"].get("num_steps", 5000)),
         num_leaps=int(cfg["mcmc"].get("num_leaps", 10)),
         step_size=float(cfg["mcmc"].get("step_size", 0.02)),
@@ -372,102 +362,79 @@ def _run_mcmc(cfg, models, datasets):
     t2 = time.time()
     print_once(f"Took {t2 - t1} s to run mcmc")
 
-    message = str(models[0]).split("\n")
+    message = str(metamodel).split("\n")
     message[1] = "MCMC estimated pars:"
     print_once("\n".join(message))
 
-    for model, dataset in zip(models, datasets):
-        _save_model(cfg, model, dataset.info["outdir"], "mcmc")
+    _save_model(cfg, metamodel, "mcmc")
     if comm.Get_rank() == 0:
         samples = np.array(samples)
-        samps_path = os.path.join(datasets[0].info["outdir"], f"samples_mcmc.npz")
+        samps_path = os.path.join(cfg["outdir"], f"samples_mcmc.npz")
         print_once("Saving samples to", samps_path)
         np.savez_compressed(samps_path, samples=samples)
         try:
-            to_fit = np.array(models[0].to_fit)
+            to_fit = np.array(metamodel.to_fit)
             # ranges = [prior if prior is not None else [0.5 * model.params[i], 2 * model.params[i]] for i, prior in enumerate(model.priors)]
             corner.corner(
                 samples,
-                labels=np.array(models[0].par_names)[to_fit],
+                labels=np.array(metamodel.par_names)[to_fit],
                 truths=init_pars[to_fit],
             )
-            plt.savefig(os.path.join(datasets[0].info["outdir"], "corner.png"))
+            plt.savefig(os.path.join(cfg["outdir"], "corner.png"))
         except Exception as e:
             print_once(f"Failed to make corner plot with error: {str(e)}")
     else:
         # samples are incomplete on non root procs
         del samples
 
-    datasets = _reestimate_noise(
-        models,
-        datasets,
-    )
-    return models, datasets
+    metamodel = _reestimate_noise(metamodel)
+    return metamodel
 
 
-def fit_loop(models, cfg, datasets, comm, outdir):
-    for model in models:
-        if models is None:
-            raise ValueError("Can't fit without a model defined!")
+def fit_loop(metamodel, cfg, comm):
+    if metamodel is None:
+        raise ValueError("Can't fit without a model defined!")
     if cfg["sim"]:
-        models = list(models)
         # Remove structs we deliberately want to leave out of model
         for struct_name in cfg["model"]["structures"]:
             if cfg["model"]["structures"][struct_name].get("to_remove", False):
-                for i, model in models:
-                    model.remove_struct(struct_name)
-        for i, model in enumerate(models):
-            params = jnp.array(model.pars)
-            par_offset = cfg.get("par_offset", 1.1)
-            params = params.at[model.to_fit_ever].multiply(
-                par_offset
-            )  # Don't start at exactly the right value
-            models[i] = model.update(params, model.errs, model.chisq)
+                metamodel.remove_struct(struct_name)
+
+        params = jnp.array(metamodel.parameters)
+        par_offset = cfg.get("par_offset", 1.1)
+        params = params.at[metamodel.to_fit_ever].multiply(
+            par_offset
+        )  # Don't start at exactly the right value
+        metamodel = metamodel.update(params, metamodel.errors, metamodel.chisq)
 
     print_once("Compiling objective function")
     t0 = time.time()
-    chisq, *_ = joint_objective(models, datasets, len(models))
-    for i, model in enumerate(models):
-        models[i] = model.update(model.pars, model.errs, chisq)
+    chisq, *_ = joint_objective(metamodel)
+    metamodel = metamodel.update(metamodel.parameters, metamodel.errors, chisq)
     print_once(f"Took {time.time() - t0} s to compile")
 
-    models = tuple(models)
-    message = str(models[0]).split("\n")
+    message = str(metamodel).split("\n")
     message[1] = "Starting pars:"
     print_once("\n".join(message))
-    for r in range(models[0].n_rounds):  # TODO: enforce n_rounds same for all models
-        models, datasets = _run_fit(
+    for r in range(metamodel.n_rounds):  # TODO: enforce n_rounds same for all models
+        metamodel = _run_fit(
             cfg,
-            models,
-            datasets,
+            metamodel,
             r,
         )
         _ = mpi4jax.barrier(comm=comm)
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
-        models, datasets = _run_mcmc(
+        metamodel = _run_mcmc(
             cfg,
-            models,
-            datasets,
+            metamodel,
         )
         _ = mpi4jax.barrier(comm=comm)
-    # Save final pars
-    final = {"model": cfg["model"]}
-    model = models[0]  # TODO: TEMP will be fixed with metamodel
-    for i, (struct_name, structure) in zip(
-        model.original_order, cfg["model"]["structures"].items()
-    ):
-        model_struct = model.structures[i]
-        for par, par_name in zip(
-            model_struct.parameters, structure["parameters"].keys()
-        ):
-            final["model"]["structures"][struct_name]["parameters"][par_name][
-                "value"
-            ] = par.val
-    with open(os.path.join(outdir, "fit_params.yaml"), "w") as file:
-        yaml.dump(final, file)
 
-    return models
+    # Save final pars
+    _save_model(cfg, metamodel, "final_fit")
+
+    return metamodel
 
 
 def deep_merge(a: dict, b: dict) -> dict:
@@ -619,16 +586,6 @@ def main():
         if prefactor is not None:
             dataset.prefactor = prefactor
 
-        # Define the model and get stuff setup fitting
-        if "model" in cfg:
-            model = Model.from_cfg(cfg, beam, prefactor)
-        else:
-            model = None
-            print_once("No model defined, setting fit, sim, and sub to False")
-            cfg["fit"] = False
-            cfg["sim"] = False
-            cfg["sub"] = False
-
         # Setup noise
         noise_class = eval(str(cfg["datasets"][dset_name]["noise"]["class"]))
         noise_args = tuple(eval(str(cfg["datasets"][dset_name]["noise"]["args"])))
@@ -641,53 +598,83 @@ def main():
             del cfg[
                 "base"
             ]  # We've collated to the cfg files so no need to keep the base
+        datasets += [dataset]
 
-        outdir = get_outdir(cfg, model)
-        os.makedirs(os.path.join(outdir, dset_name), exist_ok=True)
-        dataset.info["outdir"] = outdir
-
-        # Process the data
-        preproc(dset_name, cfg, dataset, model, dataset.info)
-        if dataset.mode == "tod":
-            dataset.datavec = process_tods(cfg, dataset, model)
-        elif dataset.mode == "map":
-            dataset.datavec = process_maps(cfg, dataset, model)
-        dataset = jax.block_until_ready(dataset)
-        postproc(dset_name, cfg, dataset.datavec, model, dataset.info)
-        models.append(model)
-        datasets.append(dataset)
-    models = tuple(models)
     datasets = tuple(datasets)
+    # Define the model and get stuff setup fitting
+    if "model" in cfg:
+        model = Model.from_cfg(cfg)
+        # For now we define a MetaModel with a single model
+        # TODO: Add interface for more flexible metamodel
+        metamodel = MetaModel(
+            comm,
+            (model,),
+            datasets,
+            (jnp.arange(len(model.pars)),),
+            tuple([(0,)] * len(datasets)),
+            model.pars,
+            model.errs,
+            model.chisq,
+        )
+    else:
+        metamodel = MetaModel(
+            comm,
+            tuple(),
+            datasets,
+            tuple(),
+            tuple(),
+            jnp.zeros(0),
+            jnp.zeros(0),
+            jnp.zeros(0),
+        )
+        print_once("No model defined, setting fit, sim, and sub to False")
+        cfg["fit"] = False
+        cfg["sim"] = False
+        cfg["sub"] = False
+    outdir = get_outdir(cfg, metamodel)
+    cfg["outdir"] = outdir
+
+    # Now process
+    for dataset in metamodel.datasets:
+        os.makedirs(os.path.join(outdir, dataset.name), exist_ok=True)
+        dataset.info["outdir"] = outdir
+        dataset.preproc(dataset, cfg, metamodel)
+        if dataset.mode == "tod":
+            dataset.datavec = process_tods(cfg, dataset, metamodel)
+        elif dataset.mode == "map":
+            dataset.datavec = process_maps(cfg, dataset, metamodel)
+        dataset = jax.block_until_ready(dataset)
+        dataset.postproc(dataset, cfg, metamodel)
 
     # Now we fit
     to_fit = cfg.get("fit", True)
     if to_fit and outdir is not None:
-        models = fit_loop(models, cfg, datasets, comm, outdir)
-        for dset_name, dataset, model in zip(dset_names, datasets, models):
-            dataset.postfit(dset_name, cfg, dataset.datavec, model, dataset.info)
-        if "nonpara" in cfg:
-            to_copy = cfg["nonpara"].get("to_copy", "")
-            n_rounds = cfg["nonpara"].get("n_rounds", None)
-            sig_params = cfg["nonpara"].get("sig_params", "")
-            if to_copy == "":
-                raise ValueError("To copy must be specified")
-            if sig_params == "":
-                raise ValueError("Significance parameter must be specified")
-
-            nonpara_models = []
-            for dset_name, dataset, model in zip(dset_names, datasets, models):
-                nonpara_model = para_to_non_para(
-                    model, n_rounds=n_rounds, to_copy=to_copy, sig_params=sig_params
-                )
-                outdir = get_outdir(cfg, model)
-                dataset.info["outdir"] = outdir
-                nonpara_models += [nonpara_model]
-            nonpara_models = fit_loop(nonpara_models, cfg, datasets, comm, outdir)
-            for dset_name, dataset, nonpara_model in zip(
-                dset_names, datasets, nonpara_models
-            ):
-                dataset.postfit(
-                    dset_name, cfg, dataset.datavec, nonpara_model, dataset.info
-                )
+        metamodel = fit_loop(metamodel, cfg, comm)
+        for dataset in metamodel.datasets:
+            dataset.postfit(dataset, cfg, metamodel)
+        # if "nonpara" in cfg:
+        #     to_copy = cfg["nonpara"].get("to_copy", "")
+        #     n_rounds = cfg["nonpara"].get("n_rounds", None)
+        #     sig_params = cfg["nonpara"].get("sig_params", "")
+        #     if to_copy == "":
+        #         raise ValueError("To copy must be specified")
+        #     if sig_params == "":
+        #         raise ValueError("Significance parameter must be specified")
+        #
+        #     nonpara_models = []
+        #     for dset_name, dataset, model in zip(dset_names, datasets, models):
+        #         nonpara_model = para_to_non_para(
+        #             model, n_rounds=n_rounds, to_copy=to_copy, sig_params=sig_params
+        #         )
+        #         outdir = get_outdir(cfg, model)
+        #         dataset.info["outdir"] = outdir
+        #         nonpara_models += [nonpara_model]
+        #     nonpara_models = fit_loop(nonpara_models, cfg, datasets, comm, outdir)
+        #     for dset_name, dataset, nonpara_model in zip(
+        #         dset_names, datasets, nonpara_models
+        #     ):
+        #         dataset.postfit(
+        #             dset, cfg, nonpara_model
+        #         )
 
     print_once("Outputs can be found in", outdir)

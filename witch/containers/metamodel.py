@@ -6,8 +6,10 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import Self
 
+import dill
 import jax
 import jax.numpy as jnp
+import numpy as np
 from jax.tree_util import register_pytree_node_class
 from mpi4py import MPI
 
@@ -29,20 +31,50 @@ _project_vectorized = jax.vmap(_project, in_axes=(0, None, None, None))
 @register_pytree_node_class
 @dataclass
 class MetaModel:
-    global_comm: MPI.Intracomm
-    models: tuple[tuple[Model, Model], ...]
+    global_comm: MPI.Comm | MPI.Intracomm | wu.NullComm
+    models: tuple[Model, ...]
     datasets: tuple[DataSet, ...]
-    parameter_map: tuple[jax.Array, ...]
-    model_map: tuple[jax.Array, ...]
+    parameter_map: tuple[
+        jax.Array, ...
+    ]  # The i'th entry maps parameters to the i'th model
+    model_map: tuple[
+        tuple[int, ...], ...
+    ]  # The j'th entry lists the indices of the models used by the j'th dataset
     parameters: jax.Array
     errors: jax.Array
     chisq: jax.Array
+
+    def __repr__(self) -> str:
+        reprs = [str(model) for model in self.models]
+        rep = []
+        idx = 0
+        for r in reprs:
+            message = r.split("\n")
+            rep += message[idx:-1]
+        rep = "\n".join(rep)
+        rep += f"\nchisq is {self.chisq}"
+        return rep
+
+    @cached_property
+    def par_names(self) -> tuple[str]:
+        """
+        Get the parameter names in the same order as `self.parameters`.
+
+        Returns
+        -------
+        par_name : jax.Array
+            String array of parameter names.
+        """
+        par_names = np.zeros_like(self.parameters, dtype="U128")
+        for model, par_map in zip(self.models, self.parameter_map):
+            par_names[par_map] = np.array(model.par_names, dtype="U128")
+
+        return tuple(par_names.tolist())
 
     @cached_property
     def to_fit(self) -> jax.Array:
         """
         Get which parameters will  be fit this round in the same order `self.parameters`.
-        Also checks that all models agree on this.
 
         Returns
         -------
@@ -50,17 +82,8 @@ class MetaModel:
             Boolean array that is True for parameters that will be fit this round.
         """
         to_fit = jnp.zeros_like(self.parameters, dtype=bool)
-        for (model0, _), par_map in zip(self.models, self.parameter_map):
-            to_fit = to_fit.at[par_map].set(jnp.array(model0.to_fit))
-
-        # Now lets check
-        good = True
-        for (model0, model1), par_map in zip(self.models, self.parameter_map):
-            good = jnp.array_equal(jnp.array(model0.to_fit), to_fit[par_map])
-            good *= jnp.array_equal(jnp.array(model1.to_fit), to_fit[par_map])
-
-        if not good:
-            raise ValueError("To fit not consistant across models!")
+        for model, par_map in zip(self.models, self.parameter_map):
+            to_fit = to_fit.at[par_map].set(jnp.array(model.to_fit))
 
         return to_fit
 
@@ -68,7 +91,6 @@ class MetaModel:
     def to_fit_ever(self) -> jax.Array:
         """
         Get which parameters will ever be fit in the same order `self.parameters`.
-        Also checks that all models agree on this.
 
         Returns
         -------
@@ -76,17 +98,8 @@ class MetaModel:
             Boolean array that is True for parameters that will be fit.
         """
         to_fit_ever = jnp.zeros_like(self.parameters, dtype=bool)
-        for (model0, _), par_map in zip(self.models, self.parameter_map):
-            to_fit_ever = to_fit_ever.at[par_map].set(jnp.array(model0.to_fit_ever))
-
-        # Now lets check
-        good = True
-        for (model0, model1), par_map in zip(self.models, self.parameter_map):
-            good = jnp.array_equal(jnp.array(model0.to_fit_ever), to_fit_ever[par_map])
-            good *= jnp.array_equal(jnp.array(model1.to_fit_ever), to_fit_ever[par_map])
-
-        if not good:
-            raise ValueError("To fit not consistant across models!")
+        for model, par_map in zip(self.models, self.parameter_map):
+            to_fit_ever = to_fit_ever.at[par_map].set(jnp.array(model.to_fit_ever))
 
         return to_fit_ever
 
@@ -94,7 +107,6 @@ class MetaModel:
     def priors(self) -> tuple[jax.Array, jax.Array]:
         """
         Get priors in the same order as `self.parameters`.
-        Also checks that all models agree on this.
 
         Returns
         -------
@@ -105,60 +117,67 @@ class MetaModel:
         """
         priors_low = jnp.zeros_like(self.parameters)
         priors_high = jnp.zeros_like(self.parameters)
-        for (model0, _), par_map in zip(self.models, self.parameter_map):
-            priors_low = priors_low.at[par_map].set(model0.priors[0])
-            priors_high = priors_low.at[par_map].set(model0.priors[1])
-
-        # Now lets check
-        good = True
-        for (model0, model1), par_map in zip(self.models, self.parameter_map):
-            good = jnp.array_equal(model0.priors[0], priors_low[par_map])
-            good *= jnp.array_equal(model0.priors[1], priors_high[par_map])
-            good *= jnp.array_equal(model1.priors[0], priors_low[par_map])
-            good *= jnp.array_equal(model1.priors[1], priors_high[par_map])
-
-        if not good:
-            raise ValueError("Priors not consistant across models!")
+        for model, par_map in zip(self.models, self.parameter_map):
+            priors_low = priors_low.at[par_map].set(model.priors[0])
+            priors_high = priors_low.at[par_map].set(model.priors[1])
 
         return priors_low, priors_high
 
     @cached_property
-    def cur_round(self) -> int:
+    def cur_round(self) -> jax.Array:
         """
         Get the current round of fitting.
-        Also checks that all models agree on this.
 
         Returns
         -------
         cur_round : int
             The current fitting round.
         """
-        cur_rounds = jnp.array(
-            [(model0.cur_round, model1.cur_round) for model0, model1 in self.models]
-        ).ravel()
-        cur_round = cur_rounds[0].item()
-        if jnp.any(cur_rounds != cur_round):
-            raise ValueError("Models don't agree on current round!")
+        cur_rounds = jnp.array([model.cur_round for model in self.models]).ravel()
+        cur_round = cur_rounds[0]
+
         return cur_round
 
     @cached_property
-    def n_rounds(self) -> int:
+    def n_rounds(self) -> jax.Array:
         """
         Get the total rounds of fitting.
-        Also checks that all models agree on this.
 
         Returns
         -------
         n_rounds : int
             The total fitting rounds.
         """
-        n_rounds_all = jnp.array(
-            [(model0.n_rounds, model1.n_rounds) for model0, model1 in self.models]
-        ).ravel()
-        n_rounds = n_rounds_all[0].item()
-        if jnp.any(n_rounds_all != n_rounds):
-            raise ValueError("Models don't agree on current round!")
+        n_rounds_all = jnp.array([model.n_rounds for model in self.models]).ravel()
+        n_rounds = n_rounds_all[0]
+
         return n_rounds
+
+    def model_grid(self, dataset_ind: int) -> jax.Array:
+        """
+        Get the model for a dataset on the computed grid.
+        This currently assumes that all models have the same grid.
+
+        Parameters
+        ----------
+        dataset_ind : int
+            The index of the dataset in `self.datasets` to use.
+
+        Returns
+        -------
+        model_grid : jax.Array
+            The model on the computed grid.
+        """
+        dset = self.datasets[dataset_ind]
+        m_map = self.model_map[dataset_ind]
+        proj = jnp.zeros_like(self.models[m_map[0]].model)
+        for i in m_map:
+            model = self.models[i]
+            ip = model.model
+            ip = core._beam_conv(ip, dset.beam)
+            ip = ip.at[:].multiply(dset.prefactor)
+            proj = proj.at[:].add(ip)
+        return proj
 
     def model_proj(self, dataset_ind: int, datavec_ind: int) -> jax.Array:
         """
@@ -178,7 +197,7 @@ class MetaModel:
             `self.datasets[dataset_ind].datavec[datavec_ind]`.
         """
         dset = self.datasets[dataset_ind]
-        m_map = dset.datavec[dataset_ind]
+        m_map = self.model_map[dataset_ind]
         data = dset.datavec[datavec_ind]
         if dset.mode == "tod":
             x = data.x
@@ -188,13 +207,12 @@ class MetaModel:
         x = x * wu.rad_to_arcsec
         y = y * wu.rad_to_arcsec
         proj = jnp.zeros_like(x)
-        models = [model for i, model in enumerate(self.models) if i in m_map]
-        for model0, model1 in models:
-            ip = model0.model
+        for i in m_map:
+            model = self.models[i]
+            ip = model.model
             ip = core._beam_conv(ip, dset.beam)
-            ip = ip.at[:].add(model1.model)
             ip = ip.at[:].multiply(dset.prefactor)
-            proj = proj.at[:].add(_project_vectorized(ip, x, y, model0.xyz))
+            proj = proj.at[:].add(_project(ip, x, y, model.xyz))
         return proj
 
     def model_grad_proj(self, dataset_ind: int, datavec_ind: int) -> jax.Array:
@@ -215,7 +233,7 @@ class MetaModel:
             where each element matches the shape of `self.datasets[dataset_ind].datavec[datavec_ind]`.
         """
         dset = self.datasets[dataset_ind]
-        m_map = dset.datavec[dataset_ind]
+        m_map = self.model_map[dataset_ind]
         data = dset.datavec[datavec_ind]
         if dset.mode == "tod":
             x = data.x
@@ -225,20 +243,37 @@ class MetaModel:
         x = x * wu.rad_to_arcsec
         y = y * wu.rad_to_arcsec
         proj_grad = jnp.zeros(self.parameters.shape + x.shape)
-        models = [
-            (model, self.parameter_map[i])
-            for i, model in enumerate(self.models)
-            if i in m_map
-        ]
-        for (model0, model1), par_map in models:
-            ip_grad = model0.model_grad
+        for i in m_map:
+            model = self.models[i]
+            par_map = self.parameter_map[i]
+            ip_grad = model.model_grad[1]
             ip_grad = core._beam_conv_vec(ip_grad, dset.beam)
-            ip_grad = ip_grad.at[:].add(model1.model_grad)
             ip_grad = ip_grad.at[:].multiply(dset.prefactor)
             proj_grad = proj_grad.at[par_map].add(
-                _project_vectorized(ip_grad, x, y, model0.xyz)
+                _project_vectorized(ip_grad, x, y, model.xyz)
             )
         return proj_grad
+
+    def get_dataset_ind(self, dset_name: str) -> int:
+        """
+        Get the index of a dataset
+
+        Parameters
+        ----------
+        dset_name : str
+            The name of the dataset to find
+
+        Returns
+        -------
+        dataset_ind : int
+            The index of the dataset.
+        """
+        dataset_ind = -1
+        for i, dset in enumerate(self.datasets):
+            if dset_name == dset.name:
+                dataset_ind = i
+                break
+        return dataset_ind
 
     def update(self, vals: jax.Array, errs: jax.Array, chisq: jax.Array) -> Self:
         """
@@ -268,13 +303,8 @@ class MetaModel:
         self.errors = errs
         self.chisq = chisq
         self.models = tuple(
-            (
-                (
-                    model0.update(vals[par_map], errs[par_map], chisq),
-                    model1.update(vals[par_map], errs[par_map], chisq),
-                )
-                for (model0, model1), par_map in zip(self.models, self.parameter_map)
-            )
+            model.update(vals[par_map], errs[par_map], chisq)
+            for model, par_map in zip(self.models, self.parameter_map)
         )
 
         return self
@@ -300,13 +330,8 @@ class MetaModel:
         self.__dict__.pop("to_fit", None)
         self.__dict__.pop("to_fit_ever", None)
         self.models = tuple(
-            (
-                (
-                    model0.add_round(to_fit[par_map]),
-                    model1.add_round(to_fit[par_map]),
-                )
-                for (model0, model1), par_map in zip(self.models, self.parameter_map)
-            )
+            model.add_round(to_fit[par_map])
+            for model, par_map in zip(self.models, self.parameter_map)
         )
 
         return self
@@ -331,11 +356,66 @@ class MetaModel:
             raise ValueError("Trying to set a round that doesn't exist!")
         self.__dict__.pop("cur_round", None)
         self.__dict__.pop("to_fit", None)
-        for model0, model1 in self.models:
-            model0.cur_round = new_round
-            model1.cur_round = new_round
+        for model in self.models:
+            model.cur_round = new_round
 
         return self
+
+    def remove_struct(self, struct_name: str) -> Self:
+        """
+        Remove a structure from models
+        """
+        raise NotImplementedError
+        # pars_to_kill = []
+        # for model, par_map in zip(self.models, self.parameter_map):
+        #     if struct_name not in model.struct_names:
+        #         continue
+        # Figure out what params to kill
+
+    def save(self, path: str):
+        """
+        Serialize the model to a file with dill.
+
+        Parameters
+        ----------
+        path : str
+            The file to save to.
+            Does not check to see if the path is valid.
+        """
+        datavecs = []
+        comms = []
+        gcomm = self.global_comm
+        for dataset in self.datasets:
+            datavecs += [dataset.datavec]
+            comms += [dataset.global_comm]
+            dataset.datavec = None
+            dataset.global_comm = wu.NullComm
+        self.global_comm = wu.NullComm
+        with open(path, "wb") as f:
+            dill.dump(self, f)
+        for dataset, datavec, comm in zip(self.datasets, datavecs, comms):
+            dataset.datavec = datavec
+            dataset.global_comm = comm
+        self.global_comm = gcomm
+
+    @classmethod
+    def load(cls, path: str) -> Self:
+        """
+        Load the model from a file with dill.
+
+        Parameters
+        ----------
+        path : str
+            The path to the saved model.
+            Does not check to see if the path is valid.
+
+        Returns
+        -------
+        model : MetaModel
+            The loaded model.
+        """
+        with open(path, "rb") as f:
+            return dill.load(f)
 
     # Functions for making this a pytree
     # Don't call this on your own
@@ -344,19 +424,18 @@ class MetaModel:
             self.models,
             self.datasets,
             self.parameter_map,
-            self.model_map,
             self.parameters,
             self.errors,
             self.chisq,
         )
-        aux_data = (self.global_comm,)
+        aux_data = (self.global_comm, self.model_map)
 
         return (children, aux_data)
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        global_comm = aux_data[0]
-        models, datasets, parameter_map, model_map, parameters, errors, chisq = children
+        global_comm, model_map = aux_data
+        models, datasets, parameter_map, parameters, errors, chisq = children
 
         return cls(
             global_comm,

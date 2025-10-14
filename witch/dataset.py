@@ -4,7 +4,7 @@ the spec of the required functions for all datasets.
 """
 
 from dataclasses import dataclass, field
-from typing import Protocol, Self, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, Self, runtime_checkable
 
 import numpy as np
 from jax import Array
@@ -14,10 +14,13 @@ from jitkasi.solutions import SolutionSet
 from jitkasi.tod import TODVec
 from mpi4py import MPI
 
-from .containers import Model
+from . import utils as wu
 from .objective import ObjectiveFunc
 
 DataVec = TODVec | SolutionSet
+
+if TYPE_CHECKING:
+    from .containers import MetaModel
 
 
 @runtime_checkable
@@ -160,24 +163,18 @@ class PreProc(Protocol):
 
     def __call__(
         self: Self,
-        dset_name: str,
+        dset: "DataSet",
         cfg: dict,
-        datavec: DataVec,
-        model: Model,
-        info: dict,
+        metamodel: "MetaModel",
     ):
         """
         Parameters
         ----------
-        dset_name : str
-            The name of the dataset to get file list for.
+        dset : str
+            The dataset to preproc.
         cfg : dict
             The loaded `witcher` config.
-        datavec : DataVec
-            The `jitkasi` container for the data.
-            This is going to be `TODVec` for TODs
-            and `SolutionSet` for maps.
-        model : Model
+        metamodel : MetaModel
             The cluster model.
             At this point this will just be the initial state of the model.
         info : dict
@@ -199,28 +196,20 @@ class PostProc(Protocol):
 
     def __call__(
         self: Self,
-        dset_name: str,
+        dset: "DataSet",
         cfg: dict,
-        datavec: DataVec,
-        model: Model,
-        info: dict,
+        metamodel: "MetaModel",
     ):
         """
         Parameters
         ----------
-        dset_name : str
-            The name of the dataset to get file list for.
+        dset : str
+            The dataset to postproc.
         cfg : dict
             The loaded `witcher` config.
-        datavec : DataVec
-            The `jitkasi` container for the data.
-            This is going to be `TODVec` for TODs
-            and `SolutionSet` for maps.
-        model : Model
+        metamodel : MetaModel
             The cluster model.
             At this point this will just be the initial state of the model.
-        info : dict
-            Dictionairy containing dataset information.
         """
         ...
 
@@ -237,28 +226,20 @@ class PostFit(Protocol):
 
     def __call__(
         self: Self,
-        dset_name: str,
+        dset: "DataSet",
         cfg: dict,
-        datavec: DataVec,
-        model: Model,
-        info: dict,
+        metamodel: "MetaModel",
     ):
         """
         Parameters
         ----------
-        dset_name : str
-            The name of the dataset to get file list for.
+        dset : str
+            The dataset to process after fitting.
         cfg : dict
             The loaded `witcher` config.
-        datavec : DataVec
-            The `jitkasi` container for the data.
-            This is going to be `TODVec` for TODs
-            and `SolutionSet` for maps.
-        model : Model
+        metamodel : MetaModel
             The cluster model.
             This will contain the final best fit parameters.
-        info : dict
-            Dictionairy containing dataset information.
         """
         ...
 
@@ -287,6 +268,9 @@ class DataSet:
         The function to run postprocessing for this dataset.
     postfit : PostFit
         The function to run after fitting this dataset.
+    global_comm : MPI.Comm | MPI.Intracomm
+        The MPI communicator used for all datasets,
+        not the local one just for this data.
     info : dict
         The info dict for this dataset.
         This field is not part of the initialization function.
@@ -309,7 +293,7 @@ class DataSet:
     preproc: PreProc
     postproc: PostProc
     postfit: PostFit
-    global_comm: MPI.Intracomm
+    global_comm: MPI.Comm | MPI.Intracomm | wu.NullComm
     info: dict = field(init=False)
     datavec: DataVec = field(init=False)
     beam: Array = field(init=False)
@@ -442,6 +426,14 @@ class DataSet:
             children = (self.datavec,)
         else:
             children = (None,)
+        if "beam" in self.__dict__:
+            children += (self.beam,)
+        else:
+            children += (None,)
+        if "prefactor" in self.__dict__:
+            children += (self.prefactor,)
+        else:
+            children += (None,)
         aux_data = (
             self.name,
             self.get_files,
@@ -462,7 +454,7 @@ class DataSet:
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        (datavec,) = children
+        (datavec, beam, prefactor) = children
         name = aux_data[0]
         funcs_comm = aux_data[1:9]
         info = aux_data[9]
@@ -471,4 +463,8 @@ class DataSet:
             dataset.datavec = datavec
         if info is not None:
             dataset.info = info
+        if beam is not None:
+            dataset.beam = beam
+        if prefactor is not None:
+            dataset.prefactor = prefactor
         return dataset

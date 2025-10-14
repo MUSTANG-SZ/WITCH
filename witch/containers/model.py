@@ -6,20 +6,18 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import import_module
-from typing import Optional, Self
+from typing import Self
 
 import dill
 import jax
 import jax.numpy as jnp
 import numpy as np
 from jax.tree_util import register_pytree_node_class
-from jax.typing import ArrayLike
 from scipy import interpolate
 from typing_extensions import Self
 
 from .. import core
 from .. import grid as wg
-from .. import utils as wu
 from .base import Parameter, Structure
 
 
@@ -72,47 +70,32 @@ class Model:
         The LOS integration factor.
         Should minimally be the pixel size in arcseconds along the LOS,
         but can also include additional factors for performing unit conversions.
-    beam : jax.Array
-        The beam to convolve the model with.
+    original_order : jax.Array
+        The original order than the structures in `structures` were inputted.
     n_rounds : int
         How many rounds of fitting to perform.
     cur_round : int, default: 0
         Which round of fitting we are currently in,
         rounds are 0 indexed.
-    to_run : tuple[bool, bool, bool, bool, bool, bool], default: (True, True, True, True, True, True)
+    to_run : tuple[bool, bool, bool, bool], default: (True, True, True, True)
         The model stages to run.
         See `core.make_to_run` for details.
     chisq : float, default: np.inf
         The chi-squared of this model relative to some data.
         Used when fitting.
-    original_order : list[int]
-        The original order than the structures in `structures` were inputted.
     """
 
     name: str
-    structures: list[Structure]
+    structures: tuple[Structure, ...]
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float]  # arcseconds
     dz: float  # arcseconds * unknown
-    beam: jax.Array
+    original_order: jax.Array
     n_rounds: int
     cur_round: int = 0
-    to_run: tuple[bool, bool, bool, bool, bool, bool] = field(
-        default_factory=core.make_to_run
-    )
+    to_run: tuple[bool, bool, bool, bool] = field(default_factory=core.make_to_run)
     chisq: jax.Array = field(
         default_factory=jnp.array(jnp.inf).copy
     )  # scalar float array
-    original_order: list[int] = field(init=False)
-
-    def __post_init__(self):
-        # Make sure the structure is in the order that core expects
-        structure_idx = np.argsort(
-            np.array(
-                [core.ORDER.index(structure.structure) for structure in self.structures]
-            )
-        )
-        self.structures = [self.structures[i] for i in structure_idx]
-        self.original_order = list(jnp.sort(structure_idx))
 
     def __setattr__(self, name, value):
         if name == "cur_round" or name == "xyz":
@@ -221,6 +204,13 @@ class Model:
 
         return par_names
 
+    @cached_property
+    def struct_names(self) -> list[str]:
+        """
+        Get the names of all structures in this model
+        """
+        return [struct.name for struct in self.structures]
+
     @property
     def errs(self) -> jax.Array:
         """
@@ -321,7 +311,6 @@ class Model:
             tuple(self.n_struct),
             tuple(self.n_rbins),
             self.dz,
-            self.beam,
             self.to_run,
             *self.pars,
         )
@@ -347,140 +336,10 @@ class Model:
             tuple(self.n_struct),
             tuple(self.n_rbins),
             self.dz,
-            self.beam,
             self.to_run,
             argnums,
             *self.pars,
         )
-
-    def to_tod(self, dx: ArrayLike, dy: ArrayLike) -> jax.Array:
-        """
-        Project the model into a TOD.
-
-        Parameters
-        ----------
-        dx : ArrayLike
-            The RA TOD in arcseconds.
-        dy : ArrayLike
-            The Dec TOD in arcseconds.
-
-        Returns
-        -------
-        tod : jax.Array
-            The model as a TOD.
-            Same shape as dx.
-        """
-        tod = wu.bilinear_interp(
-            dx, dy, self.xyz[0].ravel(), self.xyz[1].ravel(), self.model
-        )
-        tod = tod - jnp.mean(tod, axis=-1)[..., None]
-        return tod
-
-    def to_tod_grad(self, dx: ArrayLike, dy: ArrayLike) -> tuple[jax.Array, jax.Array]:
-        """
-        Project the model and gradient into a TOD.
-
-        Parameters
-        ----------
-        dx : ArrayLike
-            The RA TOD in arcseconds.
-        dy : ArrayLike
-            The Dec TOD in arcseconds.
-
-        Returns
-        -------
-        tod : jax.Array
-            The model as a TOD.
-            Same shape as dx.
-        grad_tod : jax.Array
-            The gradient as a TOD.
-            Has shape `(len(pars),) + dx.shape`.
-        """
-        model, grad = self.model_grad
-        tod = wu.bilinear_interp(
-            dx, dy, self.xyz[0].ravel(), self.xyz[1].ravel(), model
-        )
-        tod = tod - jnp.mean(tod, axis=-1)[..., None]
-        grad_tod = jnp.array(
-            [
-                (
-                    wu.bilinear_interp(
-                        dx, dy, self.xyz[0].ravel(), self.xyz[1].ravel(), _grad
-                    )
-                    if _fit
-                    else jnp.zeros_like(tod)
-                )
-                for _grad, _fit in zip(grad, self.to_fit)
-            ]
-        )
-
-        return tod, grad_tod
-
-    def to_map(self, x: jax.Array, y: jax.Array) -> jax.Array:
-        """
-        Project the model into a map.
-
-        Parameters
-        ----------
-        x : jax.Array
-            The RA of the map at each pixel.
-        y : jax.Array
-            Th Dec of the map at each pixel.
-
-        Returns
-        -------
-        omap : jax.Array
-            The model projected onto a map.
-            Same shape as x.
-        """
-        omap = wu.bilinear_interp(
-            x.ravel(), y.ravel(), self.xyz[0].ravel(), self.xyz[1].ravel(), self.model
-        ).reshape(x.shape)
-        omap = omap - jnp.mean(omap)
-        return omap
-
-    def to_map_grad(self, x: jax.Array, y: jax.Array) -> tuple[jax.Array, jax.Array]:
-        """
-        Project the model into a map.
-
-        Parameters
-        ----------
-        x : jax.Array
-            The RA of the map at each pixel.
-        y : jax.Array
-            Th Dec of the map at each pixel.
-
-        Returns
-        -------
-        omap : jax.Array
-            The model projected onto a map.
-            Same shape as x.
-        grad_map : jax.Array
-            The gradient of each parameter projected onto a map.
-            Has shape `(npar,) + x.shape`.
-        """
-        model, grad = self.model_grad
-        omap = wu.bilinear_interp(
-            x.ravel(), y.ravel(), self.xyz[0].ravel(), self.xyz[1].ravel(), model
-        ).reshape(x.shape)
-        omap = omap - jnp.mean(omap)
-        grad_map = jnp.array(
-            [
-                (
-                    wu.bilinear_interp(
-                        x.ravel(),
-                        y.ravel(),
-                        self.xyz[0].ravel(),
-                        self.xyz[1].ravel(),
-                        _grad,
-                    ).reshape(x.shape)
-                    if _fit
-                    else jnp.zeros_like(omap)
-                )
-                for _grad, _fit in zip(grad, self.to_fit)
-            ]
-        )
-        return omap, grad_map
 
     def update(self, vals: jax.Array, errs: jax.Array, chisq: jax.Array) -> Self:
         """
@@ -557,22 +416,24 @@ class Model:
             Name of struct to be removed.
         """
         n = None
+        structures = list(self.structures)
         for i, structure in enumerate(self.structures):
             if str(structure.name) == str(struct_name):
                 n = i
         if type(n) == int:
-            self.structures.pop(n)
+            structures.pop(n)
         else:
             raise ValueError("Error: {} not in structure names".format(struct_name))
+        self.structures = tuple(structures)
 
         to_pop = ["to_fit_ever", "n_struct", "priors", "par_names"]
         for key in self.__dict__.keys():
             if key in to_pop:  # Pop keys if they are in dict
                 self.__dict__.pop(key)
 
+        self.__dict__.pop("struct_names", None)
         self.__dict__.pop("model", None)
         self.__dict__.pop("model_grad", None)
-        self.__post_init__()
 
     def save(self, path: str):
         """
@@ -610,8 +471,6 @@ class Model:
     def from_cfg(
         cls,
         cfg: dict,
-        beam: Optional[jax.Array] = None,
-        prefactor: Optional[float] = None,
     ) -> Self:
         """
         Create an instance of model from a witcher config.
@@ -620,19 +479,12 @@ class Model:
         ----------
         cfg : dict
             The config loaded into a dict.
-        beam : Optional[Array], default: None
-            The beam of the experiment
-        prefactor : Optional[float], default: 1
-            Prefactor which accounts for unit conversions
 
         Returns
         -------
         model : Model
             The model described by the config.
         """
-        # Check prefactor
-        if prefactor is None:
-            raise ValueError("prefactor not provided!")
         # Do imports
         for module, name in cfg.get("imports", {}).items():
             mod = import_module(module)
@@ -669,15 +521,7 @@ class Model:
         xyz[1].block_until_ready()
         xyz[2].block_until_ready()
 
-        # Make beam
-        if beam is None:
-            beam = jnp.ones((1, 1))
-        beam = jax.device_put(beam, device)
-        if beam is None:
-            raise ValueError("Beam somehow still None!")
-
         n_rounds = cfg.get("n_rounds", 1)
-        dz = dz * prefactor
 
         structures = []
         for name, structure in cfg["model"]["structures"].items():
@@ -707,32 +551,56 @@ class Model:
                     )
                 )
             structures.append(
-                Structure(name, structure["structure"], parameters, n_rbins=n_rbins)
+                Structure(
+                    name,
+                    structure["structure"],
+                    core.ORDER.index(structure["structure"]),
+                    parameters,
+                    n_rbins=n_rbins,
+                )
             )
         name = cfg["model"].get(
             "name", "-".join([structure.name for structure in structures])
         )
 
-        return cls(name, structures, xyz, dz, beam, n_rounds)
+        # Make sure the structure is in the order that core expects
+        structure_idx = jnp.argsort(
+            jnp.array([structure.structure_order for structure in structures])
+        ).ravel()
+        structures = tuple([structures[i] for i in structure_idx])
+        original_order = jnp.sort(structure_idx)
+
+        return cls(name, structures, xyz, dz, original_order, n_rounds)
 
     # Functions for making this a pytree
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
-        children = (tuple(self.structures), self.xyz, self.dz, self.beam, self.chisq)
+        children = (self.structures, self.xyz, self.dz, self.chisq, self.original_order)
         aux_data = (
             self.name,
             self.n_rounds,
             self.cur_round,
+            self.to_run,
         )
 
         return (children, aux_data)
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        name, n_rounds, cur_round = aux_data
-        structures, xyz, dz, beam, chisq = children
+        name, n_rounds, cur_round, to_run = aux_data
+        structures, xyz, dz, chisq, original_order = children
 
-        return cls(name, list(structures), xyz, dz, beam, n_rounds, cur_round, chisq)
+        return cls(
+            name,
+            structures,
+            xyz,
+            dz,
+            original_order,
+            n_rounds,
+            cur_round,
+            to_run,
+            chisq,
+        )
 
 
 @dataclass
@@ -768,7 +636,6 @@ class Model_xfer(Model):
             tuple(self.n_struct),
             tuple(self.n_rbins),
             self.dz,
-            self.beam,
             *self.pars,
         )
         # Code from JMP, whoever that is, by way of Charles
@@ -810,20 +677,6 @@ class Model_xfer(Model):
         None
         """
 
-        raise TypeError(
-            "Error; Grad cannot currently be computed on Models with transfer function"
-        )
-        return None  # Shouldnt get here
-
-    def to_tod_grad(self, dx: ArrayLike, dy: ArrayLike) -> None:
-        """
-        Project the model and gradient into a TOD. Currently computing
-        grad for models with transfer function is not supported.
-
-        Returns
-        -------
-        None
-        """
         raise TypeError(
             "Error; Grad cannot currently be computed on Models with transfer function"
         )

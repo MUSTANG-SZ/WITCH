@@ -208,31 +208,6 @@ def _beam_conv(
     return ip
 
 
-def _stage_3(
-    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
-    n_structs: tuple[int, ...],
-    params: jax.Array,
-    start: int,
-    ip: jax.Array,
-    run: bool = True,
-) -> tuple[jax.Array, int]:
-    for n_struct, struct in zip(n_structs, ORDER):
-        if STRUCT_STAGE[struct] != 3:
-            continue
-        if not n_struct:
-            continue
-        delta = n_struct * STRUCT_N_PAR[struct]
-        struct_pars = params[start : start + delta].reshape(
-            (n_struct, STRUCT_N_PAR[struct])
-        )
-        start += delta
-        if not run:
-            continue
-        for i in range(n_struct):
-            ip = jnp.add(ip, STRUCT_FUNCS[struct](*struct_pars[i], xyz))
-    return ip, int(start)
-
-
 def model3D(
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
     n_structs: tuple[int, ...],
@@ -265,8 +240,7 @@ def model3D(
         n_structs,
         n_rbins,
         0,
-        jnp.array([1]),
-        (True, True, True, False, False, False),
+        (True, True, True, False),
         *params,
     )
 
@@ -276,9 +250,7 @@ def make_to_run(
     stage_0: bool = True,
     stage_1: bool = True,
     stage_2: bool = True,
-    beam_conv: bool = True,
-    stage_3: bool = True,
-) -> tuple[bool, bool, bool, bool, bool, bool]:
+) -> tuple[bool, bool, bool, bool]:
     """
     Constructs the `to_run` tuple needed for calls to `model` and `model_grad` in the correct order.
     This is genrally prefered over manual construction, if you need to contsruct manualy the order of parameters in
@@ -299,18 +271,13 @@ def make_to_run(
     stage_2 : bool, default: True
         If True run stage 2.
         This is 2D structure added prior to beam convolution.
-    beam_conv : bool, default: True
-        If True apply beam convolution after stage 2.
-    stage_2 : bool, default: True
-        If True run stage 3.
-        This is 2D structure added after beam convolution.
 
     Returns
     -------
     to_run : tuple[bool, bool, bool, bool, bool, bool]
         Which stages to run in the order needed for `model` and `model_grad`.
     """
-    return (stage_m1, stage_0, stage_1, stage_2, beam_conv, stage_3)
+    return (stage_m1, stage_0, stage_1, stage_2)
 
 
 def model(
@@ -318,8 +285,7 @@ def model(
     n_structs: tuple[int, ...],
     n_rbins: tuple[int, ...],
     dz: float,
-    beam: jax.Array,
-    to_run: tuple[bool, bool, bool, bool, bool, bool],
+    to_run: tuple[bool, bool, bool, bool],
     *pars: Unpack[tuple[float, ...]],
 ):
     """
@@ -338,11 +304,9 @@ def model(
     dz : float
         Factor to scale by while integrating.
         Should at least include the pixel size along the LOS.
-    beam : jax.Array
-        Beam to convolve by, should be a 2d array.
-    to_run : tuple[bool, bool, bool, bool, bool, bool]
+    to_run : tuple[bool, bool, bool, bool]
         Which stages to run.
-        Should be a 6 element tuple of bools, see `make_to_run` for details.
+        Should be a 5 element tuple of bools, see `make_to_run` for details.
     *pars : Unpack[tuple[float,...]]
         1D container of model parameters.
 
@@ -374,12 +338,6 @@ def model(
     # Stage 2, add non-beam convolved to integrated profile
     ip, start = _stage_2(xyz, n_structs, params, start, ip, to_run[3])
 
-    # Beam conv
-    ip = _beam_conv(ip, beam, to_run[4])
-
-    # Stage 3, add beam convolved to the integrated profile
-    ip, start = _stage_3(xyz, n_structs, params, start, ip, to_run[5])
-
     return ip
 
 
@@ -388,8 +346,7 @@ def model_grad(
     n_structs: tuple[int, ...],
     n_rbins: tuple[int, ...],
     dz: float,
-    beam: jax.Array,
-    to_run: tuple[bool, bool, bool, bool, bool, bool],
+    to_run: tuple[bool, bool, bool, bool],
     argnums: tuple[int, ...],
     *pars: Unpack[tuple[float, ...]],
 ):
@@ -416,7 +373,6 @@ def model_grad(
         n_structs,
         n_rbins,
         dz,
-        beam,
         to_run,
         *pars,
     )
@@ -426,7 +382,6 @@ def model_grad(
         n_structs,
         n_rbins,
         dz,
-        beam,
         to_run,
         *pars,
     )
@@ -507,4 +462,4 @@ model = jax.jit(model, static_argnums=model_static)
 model_grad = jax.jit(model_grad, static_argnums=model_grad_static)
 
 # Lets make a vectorized beam conv
-_beam_conv_vec = jnp.vectorize(_beam_conv, excluded=(1,), signature="(k,m,n)->(m,n)")
+_beam_conv_vec = jax.vmap(_beam_conv, in_axes=(0, None))
