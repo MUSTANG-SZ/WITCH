@@ -50,8 +50,9 @@ def load_maps(
     mapset = SolutionSet(imaps, comm)
     return mapset
 
-#def get_metadata():
-#    
+
+# def get_metadata():
+#
 #    return exp_maps, psf_maps, back_maps
 
 
