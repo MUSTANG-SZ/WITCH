@@ -108,7 +108,7 @@ def _mpi_fsplit(fnames, comm):
         dset: 1
         + (nproc - len(fnames))
         * (len(fnames[dset]) - 1)
-        / (len(flat_fnames) - len(fnames))
+        / len(flat_fnames) #(len(flat_fnames) - len(fnames))
         for dset in fnames.keys()
     }
     nprocs = iteround.saferound(nprocs, 0)
