@@ -149,6 +149,60 @@ class MakeBeam(Protocol):
         """
         ...
 
+@runtime_checkable
+class MakeBackMap(Protocol):
+    """
+    Function that load the background map.
+    If you don't need a background map just write a dummy function to return `jnp.array([[1]])`.
+    See docstring of `__call__` for details on the parameters and returns.
+    """
+
+    def __call__(self: Self, dset_name: str, cfg: dict, info: dict) -> Array:
+        """
+        Parameters
+        ----------
+        dset_name : str
+            The name of the dataset to get file list for.
+        cfg : dict
+            The loaded `witcher` config.
+        info : dict
+            Dictionairy containing dataset information.
+
+        Returns
+        -------
+        back_map : Array
+            The background map to add to the model.
+            Should be a 2D array.
+        """
+        ...
+
+@runtime_checkable
+class MakeExpMaps(Protocol):
+    """
+    Function that load the exposure maps.
+    If you don't need a exposure maps just write a dummy function to return `jnp.array([[1]])`.
+    See docstring of `__call__` for details on the parameters and returns.
+    """
+
+    def __call__(self: Self, dset_name: str, cfg: dict, info: dict) -> Array:
+        """
+        Parameters
+        ----------
+        dset_name : str
+            The name of the dataset to get file list for.
+        cfg : dict
+            The loaded `witcher` config.
+        info : dict
+            Dictionairy containing dataset information.
+
+        Returns
+        -------
+        exp_maps : Array
+            The exposure maps to multiply with the model substructures.
+            Should be a 2D array.
+        """
+        ...
+
 
 @runtime_checkable
 class PreProc(Protocol):
@@ -262,6 +316,10 @@ class DataSet:
         The function to get the info dict for this dataset.
     make_beam : MakeBeam
         The function to make the beam for this dataset.
+    make_exp_maps : MakeExpMaps
+        The function to load the exposure maps for the x-ray dataset.
+    make_back_map : MakeBackMap
+        The function to load the background maps for the x-ray dataset.
     preproc : PreProc
         The function to run preprocessing for this dataset.
     postproc : PostProc
@@ -280,6 +338,10 @@ class DataSet:
         This field is not part of the initialization function.
     beam : Aray
         The beam to convolve models with for this dataset.
+    exp_maps : Aray
+        The exposure maps for the x-ray dataset.
+    back_map : Array
+        The background map for the x-ray dataset.
     prefactor : float
         The value to multiply models by when fitting this dataset.
         This is useful for unit conversions.
@@ -290,13 +352,17 @@ class DataSet:
     load: Load
     get_info: GetInfo
     make_beam: MakeBeam
+    make_exp_maps: MakeExpMaps
+    make_back_map: MakeBackMap
     preproc: PreProc
     postproc: PostProc
     postfit: PostFit
     global_comm: MPI.Comm | MPI.Intracomm | wu.NullComm
     info: dict = field(init=False)
     datavec: DataVec = field(init=False)
-    beam: Array = field(init=False)
+    beam: tuple = field(init=False)
+    exp_maps: tuple = field(init=False)
+    back_map: Array = field(init=False)
     prefactor: float = field(init=False)
 
     def __post_init__(self: Self):
@@ -304,6 +370,8 @@ class DataSet:
         assert isinstance(self.load, Load)
         assert isinstance(self.get_info, GetInfo)
         assert isinstance(self.make_beam, MakeBeam)
+        assert isinstance(self.make_exp_maps, MakeExpMaps)
+        assert isinstance(self.make_back_map, MakeBackMap)
         assert isinstance(self.preproc, PreProc)
         assert isinstance(self.postproc, PostProc)
         assert isinstance(self.postfit, PostFit)
@@ -428,6 +496,10 @@ class DataSet:
             children = (None,)
         if "beam" in self.__dict__:
             children += (self.beam,)
+        if "exp" in self.__dict__:
+            children += (self.exp_maps,)
+        if "back" in self.__dict__:
+            children += (self.back_maps,)
         else:
             children += (None,)
         if "prefactor" in self.__dict__:
@@ -440,6 +512,8 @@ class DataSet:
             self.load,
             self.get_info,
             self.make_beam,
+            self.make_exp_maps,
+            self.make_back_map,
             self.preproc,
             self.postproc,
             self.postfit,
@@ -454,7 +528,7 @@ class DataSet:
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        (datavec, beam, prefactor) = children
+        (datavec, beam, exp_maps, back_map, prefactor) = children
         name = aux_data[0]
         funcs_comm = aux_data[1:9]
         info = aux_data[9]
@@ -465,6 +539,10 @@ class DataSet:
             dataset.info = info
         if beam is not None:
             dataset.beam = beam
+        if exp_maps is not None:
+            dataset.exp_maps = exp_maps
+        if back_map is not None:
+            dataset.back_map = back_map
         if prefactor is not None:
             dataset.prefactor = prefactor
         return dataset

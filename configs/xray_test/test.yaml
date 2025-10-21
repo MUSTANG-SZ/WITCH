@@ -74,6 +74,8 @@ datasets:
       load: "xmf.load_maps"
       get_info: "xmf.get_info"
       make_beam: "xmf.make_beam"
+      make_exp_maps: "xmf.make_exp_maps"
+      make_back_map: "xmf.make_back_map"
       preproc: "xmf.preproc"
       postproc: "xmf.postproc"
       postfit: "xmf.postfit"
