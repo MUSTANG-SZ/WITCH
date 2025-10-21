@@ -50,6 +50,7 @@ def load_maps(
     mapset = SolutionSet(imaps, comm)
     return mapset
 
+
 def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
     _ = (dset_name, cfg, mapset)
     prefactor = eval(str(cfg["datasets"][dset_name]["prefactor"]))
@@ -86,6 +87,7 @@ def make_beam(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> Array:
 
     return beams
 
+
 def make_exp_maps(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> Array:
     maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
     if not os.path.isabs(maproot):
@@ -110,6 +112,7 @@ def make_exp_maps(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> Array:
         exp_maps += [maps.WCSMap(name, dat, comm, wcs, "nn")]
 
     return exp_maps
+
 
 def make_back_map(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> Array:
     maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
