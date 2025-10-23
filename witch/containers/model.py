@@ -70,8 +70,6 @@ class Model:
         The LOS integration factor.
         Should minimally be the pixel size in arcseconds along the LOS,
         but can also include additional factors for performing unit conversions.
-    original_order : jax.Array
-        The original order than the structures in `structures` were inputted.
     n_rounds : int
         How many rounds of fitting to perform.
     cur_round : int, default: 0
@@ -89,7 +87,6 @@ class Model:
     structures: tuple[Structure, ...]
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float]  # arcseconds
     dz: float  # arcseconds * unknown
-    original_order: jax.Array
     n_rounds: int
     cur_round: int = 0
     to_run: tuple[bool, bool, bool, bool] = field(default_factory=core.make_to_run)
@@ -108,8 +105,7 @@ class Model:
     def __repr__(self) -> str:
         rep = self.name + ":\n"
         rep += f"Round {self.cur_round + 1} out of {self.n_rounds}\n"
-        for i in self.original_order:
-            struct = self.structures[i]
+        for struct in self.structures:
             rep += "\t" + struct.name + ":\n"
             for par in struct.parameters:
                 rep += (
@@ -424,6 +420,27 @@ class Model:
                 n += 1
         return self
 
+    def remove_struct(self, struct_name: str):
+        """
+        Remove structure by name.
+
+        Parameters
+        ----------
+        struct_name : str
+            Name of struct to be removed.
+        """
+        self.structures = tuple(
+            structure for structure in self.structures if structure.name != struct_name
+        )
+
+        to_pop = ["to_fit_ever", "n_struct", "priors", "par_names"]
+        for key in self.__dict__.keys():
+            if key in to_pop:  # Pop keys if they are in dict
+                self.__dict__.pop(key)
+
+        self.__dict__.pop("model", None)
+        self.__dict__.pop("model_grad", None)
+
     def save(self, path: str):
         """
         Serialize the model to a file with dill.
@@ -555,7 +572,6 @@ class Model:
                 Structure(
                     name,
                     structure["structure"],
-                    core.ORDER.index(structure["structure"]),
                     parameters,
                     n_rbins=n_rbins,
                 )
@@ -570,14 +586,13 @@ class Model:
             jnp.array([structure.structure_order for structure in structures])
         ).ravel()
         structures = tuple([structures[i] for i in structure_idx])
-        original_order = jnp.sort(structure_idx)
 
-        return cls(name, structures, xyz, dz, original_order, n_rounds)
+        return cls(name, structures, xyz, dz, n_rounds)
 
     # Functions for making this a pytree
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
-        children = (self.structures, self.xyz, self.dz, self.chisq, self.original_order)
+        children = (self.structures, self.xyz, self.dz, self.chisq)
         aux_data = (
             self.name,
             self.n_rounds,
@@ -590,14 +605,13 @@ class Model:
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
         name, n_rounds, cur_round, to_run = aux_data
-        structures, xyz, dz, chisq, original_order = children
+        structures, xyz, dz, chisq = children
 
         return cls(
             name,
             structures,
             xyz,
             dz,
-            original_order,
             n_rounds,
             cur_round,
             to_run,

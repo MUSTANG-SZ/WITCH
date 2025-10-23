@@ -472,45 +472,7 @@ class MetaModel:
             for dset in datasets
         )
 
-        # Figure out parameter map and use to get initial parameters
-        # Non-parametric stuff is treated as seperate and flat here (ie. name_0, name_1, etc.)
-        pmap = metacfg.get("parameter_map", [])
-        # Get the names of all things
-        full_par_names = []
-        model_par_names = {}
-        for model in models:
-            par_names = model.par_names
-            par_struct_names = model.par_struct_names
-            par_model_names = [model.name] * len(par_names)
-            model_par_names[model.name] = [
-                f"{m}.{s}.{p}"
-                for m, s, p in zip(par_model_names, par_struct_names, par_names)
-            ]
-            full_par_names += model_par_names[model.name]
-        # Mark repeats and figure out indexing
-        repeats = np.zeros(len(full_par_names))
-        par_idx = jnp.arange(len(full_par_names))
-        for p in pmap:
-            for n in p[1:]:
-                repeats[full_par_names.index(n)] += 1
-                par_idx[full_par_names.index(n) :] -= 1
-                par_idx[full_par_names.index(n)] = full_par_names.index(p[0])
-        if np.any(repeats > 1):
-            raise ValueError("Some parameters mapped multiple times!")
-        repeats = repeats.astype(bool)
-        # Now build
-        n_pars = int(np.sum(~repeats))
-        pars = jnp.zeros(n_pars)
-        errs = jnp.zeros(n_pars)
-        n = 0
-        par_map = []
-        for model in models:
-            npar = len(model.par_names)
-            pars = pars.at[n : n + npar].set(model.pars)
-            errs = errs.at[n : n + npar].set(model.errs)
-            par_map += [tuple(par_idx.at[n : n + npar].get())]
-            n += npar
-        par_map = tuple(par_map)
+        par_map, pars, errs = _compute_par_map_and_pars(metacfg, models)
 
         return cls(
             global_comm,
@@ -553,3 +515,50 @@ class MetaModel:
             errors,
             chisq,
         )
+
+
+def _compute_par_map_and_pars(
+    metacfg,
+    models,
+):
+    # Figure out parameter map and use to get initial parameters
+    # Non-parametric stuff is treated as seperate and flat here (ie. name_0, name_1, etc.)
+    pmap = metacfg.get("parameter_map", [])
+    # Get the names of all things
+    full_par_names = []
+    model_par_names = {}
+    for model in models:
+        par_names = model.par_names
+        par_struct_names = model.par_struct_names
+        par_model_names = [model.name] * len(par_names)
+        model_par_names[model.name] = [
+            f"{m}.{s}.{p}"
+            for m, s, p in zip(par_model_names, par_struct_names, par_names)
+        ]
+        full_par_names += model_par_names[model.name]
+    # Mark repeats and figure out indexing
+    repeats = np.zeros(len(full_par_names))
+    par_idx = jnp.arange(len(full_par_names))
+    for p in pmap:
+        for n in p[1:]:
+            repeats[full_par_names.index(n)] += 1
+            par_idx[full_par_names.index(n) :] -= 1
+            par_idx[full_par_names.index(n)] = full_par_names.index(p[0])
+    if np.any(repeats > 1):
+        raise ValueError("Some parameters mapped multiple times!")
+    repeats = repeats.astype(bool)
+    # Now build
+    n_pars = int(np.sum(~repeats))
+    pars = jnp.zeros(n_pars)
+    errs = jnp.zeros(n_pars)
+    n = 0
+    par_map = []
+    for model in models:
+        npar = len(model.par_names)
+        pars = pars.at[n : n + npar].set(model.pars)
+        errs = errs.at[n : n + npar].set(model.errs)
+        par_map += [tuple(par_idx.at[n : n + npar].get())]
+        n += npar
+    par_map = tuple(par_map)
+
+    return par_map, pars, errs

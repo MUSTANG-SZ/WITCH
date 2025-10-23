@@ -7,7 +7,7 @@ import argparse as argp
 import os
 import sys
 import time
-from copy import deepcopy
+from copy import copy, deepcopy
 from importlib import import_module
 
 import corner
@@ -22,6 +22,7 @@ from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
 from .containers import MetaModel, Model_xfer
+from .containers.metamodel import _compute_par_map_and_pars
 from .dataset import DataSet
 from .fitting import run_lmfit, run_mcmc
 from .nonparametric import para_to_non_para
@@ -237,7 +238,7 @@ def process_maps(cfg, dataset, metamodel):
     return mapset
 
 
-def get_outdir(cfg, metamodel):
+def get_outdir(cfg, metamodel, nonpara=False):
     outroot = cfg["paths"]["outroot"]
     if not os.path.isabs(outroot):
         outroot = os.path.join(
@@ -270,6 +271,8 @@ def get_outdir(cfg, metamodel):
             outdir = os.path.join(outdir, "not_fit")
     if cfg["sim"] and metamodel is not None:
         outdir += "-sim"
+    if nonpara:
+        outdir += "-nonpara"
 
     print_once("Outputs can be found in", outdir)
     if comm.Get_rank() == 0:
@@ -673,29 +676,35 @@ def main():
         metamodel = fit_loop(metamodel, cfg, comm)
         for dataset in metamodel.datasets:
             dataset.postfit(dataset, cfg, metamodel)
-        # if "nonpara" in cfg:
-        #     to_copy = cfg["nonpara"].get("to_copy", "")
-        #     n_rounds = cfg["nonpara"].get("n_rounds", None)
-        #     sig_params = cfg["nonpara"].get("sig_params", "")
-        #     if to_copy == "":
-        #         raise ValueError("To copy must be specified")
-        #     if sig_params == "":
-        #         raise ValueError("Significance parameter must be specified")
-        #
-        #     nonpara_models = []
-        #     for dset_name, dataset, model in zip(dset_names, datasets, models):
-        #         nonpara_model = para_to_non_para(
-        #             model, n_rounds=n_rounds, to_copy=to_copy, sig_params=sig_params
-        #         )
-        #         outdir = get_outdir(cfg, model)
-        #         dataset.info["outdir"] = outdir
-        #         nonpara_models += [nonpara_model]
-        #     nonpara_models = fit_loop(nonpara_models, cfg, datasets, comm, outdir)
-        #     for dset_name, dataset, nonpara_model in zip(
-        #         dset_names, datasets, nonpara_models
-        #     ):
-        #         dataset.postfit(
-        #             dset, cfg, nonpara_model
-        #         )
+        if "nonpara" in cfg and cfg["nonpara"]["convert"]:
+            outdir = get_outdir(cfg, metamodel)
+            cfg["outdir"] = outdir
+            for dataset in metamodel.datasets:
+                os.makedirs(os.path.join(outdir, dataset.name), exist_ok=True)
+                dataset.info["outdir"] = outdir
+            n_rounds = cfg["nonpara"].get("n_rounds", None)
+            nonpara_models = []
+            for model in metamodel.models:
+                to_copy = cfg[model.name].get("to_copy", [])
+                if len(to_copy) == 0:
+                    nonpara_models += [copy(model)]
+                    continue
+                nonpara_model = para_to_non_para(
+                    model, n_rounds=n_rounds, to_copy=to_copy
+                )
+                nonpara_models += [nonpara_model]
+            nonpara_models = tuple(nonpara_models)
+            par_map, pars, errs = _compute_par_map_and_pars(
+                cfg.get("metamodel", {}), nonpara_models
+            )
+            nonparametamodel = copy(metamodel)
+            nonparametamodel.parameter_map = par_map
+            nonparametamodel.parameters = pars
+            nonparametamodel.errors = errs
+            nonparametamodel = nonparametamodel.update(pars, errs, metamodel.chisq)
+
+            nonparametamodel = fit_loop(nonparametamodel, cfg, comm)
+            for dataset in nonparametamodel.datasets:
+                dataset.postfit(dataset, cfg, nonparametamodel)
 
     print_once("Outputs can be found in", outdir)
