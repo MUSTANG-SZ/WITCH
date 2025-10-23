@@ -21,8 +21,7 @@ import yaml
 from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
-from . import utils as wu
-from .containers import MetaModel, Model, Model_xfer
+from .containers import MetaModel, Model_xfer
 from .dataset import DataSet
 from .fitting import run_lmfit, run_mcmc
 from .nonparametric import para_to_non_para
@@ -397,9 +396,7 @@ def fit_loop(metamodel, cfg, comm):
         raise ValueError("Can't fit without a model defined!")
     if cfg["sim"]:
         # Remove structs we deliberately want to leave out of model
-        for struct_name in cfg["model"]["structures"]:
-            if cfg["model"]["structures"][struct_name].get("to_remove", False):
-                metamodel.remove_struct(struct_name)
+        metamodel = metamodel.remove_structs(cfg)
 
         params = jnp.array(metamodel.parameters)
         par_offset = cfg.get("par_offset", 1.1)
@@ -417,7 +414,7 @@ def fit_loop(metamodel, cfg, comm):
     message = str(metamodel).split("\n")
     message[1] = "Starting pars:"
     print_once("\n".join(message))
-    for r in range(metamodel.n_rounds):  # TODO: enforce n_rounds same for all models
+    for r in range(metamodel.n_rounds):
         metamodel = _run_fit(
             cfg,
             metamodel,

@@ -361,17 +361,6 @@ class MetaModel:
 
         return self
 
-    def remove_struct(self, struct_name: str) -> Self:
-        """
-        Remove a structure from models
-        """
-        raise NotImplementedError
-        # pars_to_kill = []
-        # for model, par_map in zip(self.models, self.parameter_map):
-        #     if struct_name not in model.struct_names:
-        #         continue
-        # Figure out what params to kill
-
     def save(self, path: str):
         """
         Serialize the model to a file with dill.
@@ -389,8 +378,8 @@ class MetaModel:
             datavecs += [dataset.datavec]
             comms += [dataset.global_comm]
             dataset.datavec = None
-            dataset.global_comm = wu.NullComm
-        self.global_comm = wu.NullComm
+            dataset.global_comm = wu.NullComm()
+        self.global_comm = wu.NullComm()
         with open(path, "wb") as f:
             dill.dump(self, f)
         for dataset, datavec, comm in zip(self.datasets, datavecs, comms):
@@ -417,20 +406,47 @@ class MetaModel:
         with open(path, "rb") as f:
             return dill.load(f)
 
+    def remove_structs(self, cfg):
+        """
+        Create a new metamodel with marked structures removed.
+
+        Parameters
+        ----------
+        cfg : dict
+            The config loaded into a dict.
+
+        Returns
+        -------
+        metamodel : MetaModel
+            The metamodel described with structures removed.
+        """
+        new_metamodel = self.__class__.from_config(
+            self.global_comm, cfg, self.datasets, True
+        )
+        new_metamodel = new_metamodel.update(self.parameters, self.errors, self.chisq)
+        return new_metamodel
+
     @classmethod
     def from_config(
         cls,
         global_comm: MPI.Comm | MPI.Intracomm | wu.NullComm,
         cfg: dict,
-        datasets: tuple[DataSet],
+        datasets: tuple[DataSet, ...],
+        remove_structs: bool = False,
     ) -> Self:
         """
         Create an instance of metamodel from a witcher config.
 
         Parameters
         ----------
+        global_comm: MPI.Comm | MPI.Intracomm | wu.NullComm,
+            The communicator for this metamodel.
         cfg : dict
             The config loaded into a dict.
+        datasets : tuple[DataSet]
+            The datasets to associate with this model
+        remove_structs : bool, default: False
+            If True don't include structures marked for removal.
 
         Returns
         -------
@@ -441,13 +457,18 @@ class MetaModel:
 
         # First lets load all the models
         mlist = metacfg.get("models", ["model"])
-        models = tuple(Model.from_cfg(cfg, model_field, False) for model_field in mlist)
+        models = tuple(
+            Model.from_cfg(cfg, model_field, False, remove_structs)
+            for model_field in mlist
+        )
         model_ind = {model_field: i for i, model_field in enumerate(mlist)}
 
         # Now lets make the model map
         mmap = metacfg.get("model_map", {dset.name: mlist for dset in datasets})
         model_map = tuple(
-            sorted(tuple(model_ind[model_field] for model_field in mmap[dset.name]))
+            tuple(
+                sorted(tuple(model_ind[model_field] for model_field in mmap[dset.name]))
+            )
             for dset in datasets
         )
 
@@ -468,7 +489,7 @@ class MetaModel:
             full_par_names += model_par_names[model.name]
         # Mark repeats and figure out indexing
         repeats = np.zeros(len(full_par_names))
-        par_idx = np.arange(len(full_par_names))
+        par_idx = jnp.arange(len(full_par_names))
         for p in pmap:
             for n in p[1:]:
                 repeats[full_par_names.index(n)] += 1
@@ -479,15 +500,15 @@ class MetaModel:
         repeats = repeats.astype(bool)
         # Now build
         n_pars = int(np.sum(~repeats))
-        pars = np.zeros(n_pars)
-        errs = np.zeros(n_pars)
+        pars = jnp.zeros(n_pars)
+        errs = jnp.zeros(n_pars)
         n = 0
         par_map = []
         for model in models:
             npar = len(model.par_names)
-            pars[n : n + npar] = model.pars
-            errs[n : n + npar] = model.errs
-            par_map += [tuple(par_idx[n : n + npar])]
+            pars = pars.at[n : n + npar].set(model.pars)
+            errs = errs.at[n : n + npar].set(model.errs)
+            par_map += [tuple(par_idx.at[n : n + npar].get())]
             n += npar
         par_map = tuple(par_map)
 
