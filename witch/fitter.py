@@ -289,19 +289,21 @@ def _save_model(cfg, metamodel, desc_str):
     print_once("Saving results to", res_path)
     metamodel.save(res_path)
 
-    # final = {"model": cfg["model"]}
-    # for i, (struct_name, structure) in zip(
-    #     model.original_order, cfg["model"]["structures"].items()
-    # ):
-    #     model_struct = model.structures[i]
-    #     for par, par_name in zip(
-    #         model_struct.parameters, structure["parameters"].keys()
-    #     ):
-    #         final["model"]["structures"][struct_name]["parameters"][par_name][
-    #             "value"
-    #         ] = [float(cur_par) for cur_par in par.val]
-    # with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
-    #     yaml.dump(final, file)
+    final = {"metamodel": cfg["metamodel"]}
+    for model in metamodel.models:
+        final[model.name] = cfg[model.name]
+        for i, (struct_name, structure) in zip(
+            model.original_order, cfg[model.name]["structures"].items()
+        ):
+            model_struct = model.structures[i]
+            for par, par_name in zip(
+                model_struct.parameters, structure["parameters"].keys()
+            ):
+                final[model.name]["structures"][struct_name]["parameters"][par_name][
+                    "value"
+                ] = [float(cur_par) for cur_par in par.val]
+    with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
+        yaml.dump(final, file)
 
 
 def _reestimate_noise(metamodel):
@@ -326,7 +328,6 @@ def _run_fit(
     to_fit = np.array(metamodel.to_fit)
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
-    # TODO: Modify this to account for fit_dataset changes
     models, i, delta_chisq = run_lmfit(
         metamodel,
         eval(str(cfg["fitting"].get("maxiter", "10"))),
