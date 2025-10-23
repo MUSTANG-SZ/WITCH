@@ -633,19 +633,11 @@ def main():
 
     datasets = tuple(datasets)
     # Define the model and get stuff setup fitting
-    if "model" in cfg:
-        model = Model.from_cfg(cfg)
-        # For now we define a MetaModel with a single model
-        # TODO: Add interface for more flexible metamodel
-        metamodel = MetaModel(
+    if "metamodel" in cfg:
+        metamodel = MetaModel.from_config(
             comm,
-            (model,),
+            cfg,
             datasets,
-            (jnp.arange(len(model.pars)),),
-            tuple([(0,)] * len(datasets)),
-            model.pars,
-            model.errs,
-            model.chisq,
         )
     else:
         metamodel = MetaModel(

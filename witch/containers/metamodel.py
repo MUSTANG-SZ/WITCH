@@ -417,7 +417,92 @@ class MetaModel:
         with open(path, "rb") as f:
             return dill.load(f)
 
-    # Functions for making this a pytree
+    @classmethod
+    def from_config(
+        cls,
+        global_comm: MPI.Comm | MPI.Intracomm | wu.NullComm,
+        cfg: dict,
+        datasets: tuple[DataSet],
+    ) -> Self:
+        """
+        Create an instance of metamodel from a witcher config.
+
+        Parameters
+        ----------
+        cfg : dict
+            The config loaded into a dict.
+
+        Returns
+        -------
+        metamodel : MetaModel
+            The metamodel described by the config.
+        """
+        metacfg = cfg.get("metamodel", {})
+
+        # First lets load all the models
+        mlist = metacfg.get("models", ["model"])
+        models = tuple(Model.from_cfg(cfg, model_field, False) for model_field in mlist)
+        model_ind = {model_field: i for i, model_field in enumerate(mlist)}
+
+        # Now lets make the model map
+        mmap = metacfg.get("model_map", {dset.name: mlist for dset in datasets})
+        model_map = tuple(
+            sorted(tuple(model_ind[model_field] for model_field in mmap[dset.name]))
+            for dset in datasets
+        )
+
+        # Figure out parameter map and use to get initial parameters
+        # Non-parametric stuff is treated as seperate and flat here (ie. name_0, name_1, etc.)
+        pmap = metacfg.get("parameter_map", [])
+        # Get the names of all things
+        full_par_names = []
+        model_par_names = {}
+        for model in models:
+            par_names = model.par_names
+            par_struct_names = model.par_struct_names
+            par_model_names = [model.name] * len(par_names)
+            model_par_names[model.name] = [
+                f"{m}.{s}.{p}"
+                for m, s, p in zip(par_model_names, par_struct_names, par_names)
+            ]
+            full_par_names += model_par_names[model.name]
+        # Mark repeats and figure out indexing
+        repeats = np.zeros(len(full_par_names))
+        par_idx = np.arange(len(full_par_names))
+        for p in pmap:
+            for n in p[1:]:
+                repeats[full_par_names.index(n)] += 1
+                par_idx[full_par_names.index(n) :] -= 1
+                par_idx[full_par_names.index(n)] = full_par_names.index(p[0])
+        if np.any(repeats > 1):
+            raise ValueError("Some parameters mapped multiple times!")
+        repeats = repeats.astype(bool)
+        # Now build
+        n_pars = int(np.sum(~repeats))
+        pars = np.zeros(n_pars)
+        errs = np.zeros(n_pars)
+        n = 0
+        par_map = []
+        for model in models:
+            npar = len(model.par_names)
+            pars[n : n + npar] = model.pars
+            errs[n : n + npar] = model.errs
+            par_map += [tuple(par_idx[n : n + npar])]
+            n += npar
+        par_map = tuple(par_map)
+
+        return cls(
+            global_comm,
+            models,
+            datasets,
+            par_map,
+            model_map,
+            pars,
+            errs,
+            models[0].chisq,
+        )
+
+    # Functons for making this a pytree
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
         children = (

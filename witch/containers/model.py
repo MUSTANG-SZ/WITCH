@@ -205,6 +205,24 @@ class Model:
         return par_names
 
     @cached_property
+    def par_struct_names(self) -> list[str]:
+        """
+        Get the struct names of all parameters.
+        Note that this is cached.
+
+        Returns
+        -------
+        par_struct_names : list[str]
+            Parameter struct names in the same order as `pars`.
+        """
+        par_struct_names = []
+        for structure in self.structures:
+            for parameter in structure.parameters:
+                par_struct_names += [structure.name] * len(parameter.val)
+
+        return par_struct_names
+
+    @cached_property
     def struct_names(self) -> list[str]:
         """
         Get the names of all structures in this model
@@ -469,8 +487,7 @@ class Model:
 
     @classmethod
     def from_cfg(
-        cls,
-        cfg: dict,
+        cls, cfg: dict, model_field: str = "model", generate_name: bool = True
     ) -> Self:
         """
         Create an instance of model from a witcher config.
@@ -479,6 +496,11 @@ class Model:
         ----------
         cfg : dict
             The config loaded into a dict.
+        model_field : str, default: "model"
+            The name of the model in the config.
+        generate_name : bool, default: True
+            If True generate a name for the model.
+            If False use `model_field`.
 
         Returns
         -------
@@ -524,7 +546,7 @@ class Model:
         n_rounds = cfg.get("n_rounds", 1)
 
         structures = []
-        for name, structure in cfg["model"]["structures"].items():
+        for name, structure in cfg[model_field]["structures"].items():
             n_rbins = structure.get("n_rbins", 0)
             parameters = []
             for par_name, param in structure["parameters"].items():
@@ -559,9 +581,10 @@ class Model:
                     n_rbins=n_rbins,
                 )
             )
-        name = cfg["model"].get(
-            "name", "-".join([structure.name for structure in structures])
-        )
+
+        name = model_field
+        if generate_name:
+            name = "-".join([structure.name for structure in structures])
 
         # Make sure the structure is in the order that core expects
         structure_idx = jnp.argsort(
