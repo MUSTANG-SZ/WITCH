@@ -575,10 +575,10 @@ def main():
                 comm,
             )
         else:
-            #it gives this error: File "/home/elebar/joint/WITCH/witch/dataset.py", line 363, in __post_init__
-            #assert isinstance(self.make_exp_maps, MakeExpMaps)
-            #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-            #AssertionError
+            # it gives this error: File "/home/elebar/joint/WITCH/witch/dataset.py", line 363, in __post_init__
+            # assert isinstance(self.make_exp_maps, MakeExpMaps)
+            # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            # AssertionError
             dataset = DataSet(
                 dset_name,
                 get_files,
@@ -604,11 +604,11 @@ def main():
         # Get the beam
         beam = make_beam(dset_name, cfg, comms_local[dset_name])
         dataset.beam = beam
-        
+
         # Get the exp maps xray
         exp_maps = make_exp_maps(dset_name, cfg, comms_local[dset_name])
         dataset.exp_maps = exp_maps
-        
+
         # Get the back map xray
         back_map = make_back_map(dset_name, cfg, comms_local[dset_name])
         dataset.back_map = back_map

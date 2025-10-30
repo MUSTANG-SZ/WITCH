@@ -149,6 +149,7 @@ class MakeMetadata(Protocol):
         """
         ...
 
+
 @runtime_checkable
 class MakeBackMap(Protocol):
     """
@@ -175,6 +176,7 @@ class MakeBackMap(Protocol):
             Should be a 2D array.
         """
         ...
+
 
 @runtime_checkable
 class MakeExpMaps(Protocol):
