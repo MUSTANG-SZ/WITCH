@@ -7,7 +7,7 @@ import argparse as argp
 import os
 import sys
 import time
-from copy import deepcopy
+from copy import copy, deepcopy
 from importlib import import_module
 
 import corner
@@ -23,7 +23,7 @@ from typing_extensions import Any, Unpack
 
 from . import utils as wu
 from .containers import MetaModel, Model, Model_xfer
-from .dataset import DataSet, MakeMetadata
+from .dataset import DataSet
 from .fitting import run_lmfit, run_mcmc
 from .nonparametric import para_to_non_para
 from .objective import joint_objective
@@ -238,7 +238,7 @@ def process_maps(cfg, dataset, metamodel):
     return mapset
 
 
-def get_outdir(cfg, metamodel):
+def get_outdir(cfg, metamodel, nonpara=False):
     outroot = cfg["paths"]["outroot"]
     if not os.path.isabs(outroot):
         outroot = os.path.join(
@@ -271,6 +271,8 @@ def get_outdir(cfg, metamodel):
             outdir = os.path.join(outdir, "not_fit")
     if cfg["sim"] and metamodel is not None:
         outdir += "-sim"
+    if nonpara:
+        outdir += "-nonpara"
 
     print_once("Outputs can be found in", outdir)
     if comm.Get_rank() == 0:
@@ -289,19 +291,21 @@ def _save_model(cfg, metamodel, desc_str):
     print_once("Saving results to", res_path)
     metamodel.save(res_path)
 
-    # final = {"model": cfg["model"]}
-    # for i, (struct_name, structure) in zip(
-    #     model.original_order, cfg["model"]["structures"].items()
-    # ):
-    #     model_struct = model.structures[i]
-    #     for par, par_name in zip(
-    #         model_struct.parameters, structure["parameters"].keys()
-    #     ):
-    #         final["model"]["structures"][struct_name]["parameters"][par_name][
-    #             "value"
-    #         ] = [float(cur_par) for cur_par in par.val]
-    # with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
-    #     yaml.dump(final, file)
+    final = {"metamodel": cfg["metamodel"]}
+    for model in metamodel.models:
+        final[model.name] = cfg[model.name]
+        for i, (struct_name, structure) in zip(
+            model.original_order, cfg[model.name]["structures"].items()
+        ):
+            model_struct = model.structures[i]
+            for par, par_name in zip(
+                model_struct.parameters, structure["parameters"].keys()
+            ):
+                final[model.name]["structures"][struct_name]["parameters"][par_name][
+                    "value"
+                ] = [float(cur_par) for cur_par in par.val]
+    with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
+        yaml.dump(final, file)
 
 
 def _reestimate_noise(metamodel):
@@ -326,7 +330,6 @@ def _run_fit(
     to_fit = np.array(metamodel.to_fit)
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
-    # TODO: Modify this to account for fit_dataset changes
     models, i, delta_chisq = run_lmfit(
         metamodel,
         eval(str(cfg["fitting"].get("maxiter", "10"))),
@@ -396,9 +399,7 @@ def fit_loop(metamodel, cfg, comm):
         raise ValueError("Can't fit without a model defined!")
     if cfg["sim"]:
         # Remove structs we deliberately want to leave out of model
-        for struct_name in cfg["model"]["structures"]:
-            if cfg["model"]["structures"][struct_name].get("to_remove", False):
-                metamodel.remove_struct(struct_name)
+        metamodel = metamodel.remove_structs(cfg)
 
         params = jnp.array(metamodel.parameters)
         par_offset = cfg.get("par_offset", 1.1)
@@ -416,7 +417,7 @@ def fit_loop(metamodel, cfg, comm):
     message = str(metamodel).split("\n")
     message[1] = "Starting pars:"
     print_once("\n".join(message))
-    for r in range(metamodel.n_rounds):  # TODO: enforce n_rounds same for all models
+    for r in range(metamodel.n_rounds):
         metamodel = _run_fit(
             cfg,
             metamodel,
@@ -557,18 +558,41 @@ def main():
         preproc = eval(cfg["datasets"][dset_name]["funcs"]["preproc"])
         postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
         postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
-        dataset = DataSet(
-            dset_name,
-            get_files,
-            load,
-            get_info,
-            make_metadata,
-            preproc,
-            postproc,
-            postfit,
-            comm,
-        )
-        
+        if "xray" in dset_name:
+            make_exp_maps = eval(cfg["datasets"][dset_name]["funcs"]["make_exp_maps"])
+            make_back_map = eval(cfg["datasets"][dset_name]["funcs"]["make_back_map"])
+            dataset = DataSet(
+                dset_name,
+                get_files,
+                load,
+                get_info,
+                make_beam,
+                make_exp_maps,
+                make_back_map,
+                preproc,
+                postproc,
+                postfit,
+                comm,
+            )
+        else:
+            #it gives this error: File "/home/elebar/joint/WITCH/witch/dataset.py", line 363, in __post_init__
+            #assert isinstance(self.make_exp_maps, MakeExpMaps)
+            #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            #AssertionError
+            dataset = DataSet(
+                dset_name,
+                get_files,
+                load,
+                get_info,
+                make_beam,
+                jnp.array([[1]]),
+                jnp.array([[0]]),
+                preproc,
+                postproc,
+                postfit,
+                comm,
+            )
+
         # Get data
         dataset.datavec = load(
             dset_name, cfg, fnames[dset_name], comms_local[dset_name]
@@ -578,8 +602,16 @@ def main():
         dataset.info = get_info(dset_name, cfg, dataset.datavec)
 
         # Get the beam
-        metadata = make_metadata(dset_name, cfg, comms_local[dset_name])
-        dataset.metadata = metadata
+        beam = make_beam(dset_name, cfg, comms_local[dset_name])
+        dataset.beam = beam
+        
+        # Get the exp maps xray
+        exp_maps = make_exp_maps(dset_name, cfg, comms_local[dset_name])
+        dataset.exp_maps = exp_maps
+        
+        # Get the back map xray
+        back_map = make_back_map(dset_name, cfg, comms_local[dset_name])
+        dataset.back_map = back_map
 
         # Prefactor
         prefactor = dataset.info.get("prefactor", None)
@@ -602,19 +634,11 @@ def main():
 
     datasets = tuple(datasets)
     # Define the model and get stuff setup fitting
-    if "model" in cfg:
-        model = Model.from_cfg(cfg)
-        # For now we define a MetaModel with a single model
-        # TODO: Add interface for more flexible metamodel
-        metamodel = MetaModel(
+    if "metamodel" in cfg:
+        metamodel = MetaModel.from_config(
             comm,
-            (model,),
+            cfg,
             datasets,
-            (jnp.arange(len(model.pars)),),
-            tuple([(0,)] * len(datasets)),
-            model.pars,
-            model.errs,
-            model.chisq,
         )
     else:
         metamodel = MetaModel(
@@ -652,29 +676,35 @@ def main():
         metamodel = fit_loop(metamodel, cfg, comm)
         for dataset in metamodel.datasets:
             dataset.postfit(dataset, cfg, metamodel)
-        # if "nonpara" in cfg:
-        #     to_copy = cfg["nonpara"].get("to_copy", "")
-        #     n_rounds = cfg["nonpara"].get("n_rounds", None)
-        #     sig_params = cfg["nonpara"].get("sig_params", "")
-        #     if to_copy == "":
-        #         raise ValueError("To copy must be specified")
-        #     if sig_params == "":
-        #         raise ValueError("Significance parameter must be specified")
-        #
-        #     nonpara_models = []
-        #     for dset_name, dataset, model in zip(dset_names, datasets, models):
-        #         nonpara_model = para_to_non_para(
-        #             model, n_rounds=n_rounds, to_copy=to_copy, sig_params=sig_params
-        #         )
-        #         outdir = get_outdir(cfg, model)
-        #         dataset.info["outdir"] = outdir
-        #         nonpara_models += [nonpara_model]
-        #     nonpara_models = fit_loop(nonpara_models, cfg, datasets, comm, outdir)
-        #     for dset_name, dataset, nonpara_model in zip(
-        #         dset_names, datasets, nonpara_models
-        #     ):
-        #         dataset.postfit(
-        #             dset, cfg, nonpara_model
-        #         )
+        if "nonpara" in cfg and cfg["nonpara"]["convert"]:
+            outdir = get_outdir(cfg, metamodel)
+            cfg["outdir"] = outdir
+            for dataset in metamodel.datasets:
+                os.makedirs(os.path.join(outdir, dataset.name), exist_ok=True)
+                dataset.info["outdir"] = outdir
+            n_rounds = cfg["nonpara"].get("n_rounds", None)
+            nonpara_models = []
+            for model in metamodel.models:
+                to_copy = cfg[model.name].get("to_copy", [])
+                if len(to_copy) == 0:
+                    nonpara_models += [copy(model)]
+                    continue
+                nonpara_model = para_to_non_para(
+                    model, n_rounds=n_rounds, to_copy=to_copy
+                )
+                nonpara_models += [nonpara_model]
+            nonpara_models = tuple(nonpara_models)
+            par_map, pars, errs = _compute_par_map_and_pars(
+                cfg.get("metamodel", {}), nonpara_models
+            )
+            nonparametamodel = copy(metamodel)
+            nonparametamodel.parameter_map = par_map
+            nonparametamodel.parameters = pars
+            nonparametamodel.errors = errs
+            nonparametamodel = nonparametamodel.update(pars, errs, metamodel.chisq)
+
+            nonparametamodel = fit_loop(nonparametamodel, cfg, comm)
+            for dataset in nonparametamodel.datasets:
+                dataset.postfit(dataset, cfg, nonparametamodel)
 
     print_once("Outputs can be found in", outdir)

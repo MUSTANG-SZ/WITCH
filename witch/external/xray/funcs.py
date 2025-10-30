@@ -51,6 +51,7 @@ def load_maps(
     mapset = SolutionSet(imaps, comm)
     return mapset
 
+
 def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
     _ = (dset_name, cfg, mapset)
     prefactor = eval(str(cfg["datasets"][dset_name]["prefactor"]))
@@ -84,11 +85,22 @@ def make_metadata(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> tuple:
         dat = jnp.array(f[0].data.copy().T)  # type: ignore
         f.close()
         beams += [maps.WCSMap(name, dat, comm, wcs, "nn")]
-    
-    #import exposure maps
-    exp_glob = cfg["datasets"][dset_name].get("glob", "*exp*.fits")
-    exp_fnames = glob.glob(os.path.join(maproot, exp_glob))
-    exp_fnames.sort()
+
+    return beams
+
+def make_exp_maps(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> Array:
+    maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
+    if not os.path.isabs(maproot):
+        maproot = os.path.join(
+            os.environ.get("WITCH_DATROOT", os.environ["HOME"]), maproot
+        )
+    maproot_dset = os.path.join(maproot, dset_name)
+    if os.path.isdir(maproot_dset):
+        maproot = maproot_dset
+    map_glob = cfg["datasets"][dset_name].get("glob", "*exp*.fits")
+    fnames = glob.glob(os.path.join(maproot, map_glob))
+    fnames.sort()
+
     exp_maps = []
     for fname in exp_fnames:
         name = os.path.splitext(os.path.basename(fname))[0]
@@ -98,11 +110,22 @@ def make_metadata(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> tuple:
         dat = jnp.array(f[0].data.copy().T)  # type: ignore
         f.close()
         exp_maps += [maps.WCSMap(name, dat, comm, wcs, "nn")]
-    
-    #import background map
-    back_glob = cfg["datasets"][dset_name].get("glob", "*back*.fits")
-    back_fname = glob.glob(os.path.join(maproot, back_glob))[0]
-    back_name = os.path.splitext(os.path.basename(back_fname))[0]
+
+    return exp_maps
+
+def make_back_map(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> Array:
+    maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
+    if not os.path.isabs(maproot):
+        maproot = os.path.join(
+            os.environ.get("WITCH_DATROOT", os.environ["HOME"]), maproot
+        )
+    maproot_dset = os.path.join(maproot, dset_name)
+    if os.path.isdir(maproot_dset):
+        maproot = maproot_dset
+    map_glob = cfg["datasets"][dset_name].get("glob", "*back*.fits")
+    fname = glob.glob(os.path.join(maproot, map_glob))[0]
+
+    name = os.path.splitext(os.path.basename(fname))[0]
     # The actual map
     f: fits.HDUList = fits.open(fname)
     wcs = WCS(f[0].header)  # type: ignore

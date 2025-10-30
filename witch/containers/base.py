@@ -83,9 +83,6 @@ class Structure:
     structure : str
         The type of structure that this is an instance of.
         Should be a string that appears in `core.ORDER`
-    structure_order : int
-        The order of the structure.
-        See `core` for details.
     parameters : list[Parameter]
         The model parameters for this structure.
 
@@ -98,7 +95,6 @@ class Structure:
 
     name: str
     structure: str
-    structure_order: int
     parameters: list[Parameter]
     n_rbins: int = 0
 
@@ -116,7 +112,7 @@ class Structure:
     # Functions for making this a pytree
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
-        children = (self.structure_order, tuple(self.parameters))
+        children = tuple(self.parameters)
         aux_data = (self.name, self.structure, self.n_rbins)
 
         return (children, aux_data)
@@ -124,6 +120,6 @@ class Structure:
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
         name, structure, n_rbins = aux_data
-        structure_order, parameters = children
+        parameters = children
 
-        return cls(name, structure, structure_order, list(parameters), n_rbins)
+        return cls(name, structure, list(parameters), n_rbins)

@@ -143,10 +143,66 @@ class MakeMetadata(Protocol):
 
         Returns
         -------
-        metadata : tuple
-            The tuple of Metadata classes.
+        beam : Array
+            The beam to be convolved with the model.
+            Should be a 2D array.
         """
         ...
+
+@runtime_checkable
+class MakeBackMap(Protocol):
+    """
+    Function that load the background map.
+    If you don't need a background map just write a dummy function to return `jnp.array([[1]])`.
+    See docstring of `__call__` for details on the parameters and returns.
+    """
+
+    def __call__(self: Self, dset_name: str, cfg: dict, info: dict) -> Array:
+        """
+        Parameters
+        ----------
+        dset_name : str
+            The name of the dataset to get file list for.
+        cfg : dict
+            The loaded `witcher` config.
+        info : dict
+            Dictionairy containing dataset information.
+
+        Returns
+        -------
+        back_map : Array
+            The background map to add to the model.
+            Should be a 2D array.
+        """
+        ...
+
+@runtime_checkable
+class MakeExpMaps(Protocol):
+    """
+    Function that load the exposure maps.
+    If you don't need a exposure maps just write a dummy function to return `jnp.array([[1]])`.
+    See docstring of `__call__` for details on the parameters and returns.
+    """
+
+    def __call__(self: Self, dset_name: str, cfg: dict, info: dict) -> Array:
+        """
+        Parameters
+        ----------
+        dset_name : str
+            The name of the dataset to get file list for.
+        cfg : dict
+            The loaded `witcher` config.
+        info : dict
+            Dictionairy containing dataset information.
+
+        Returns
+        -------
+        exp_maps : Array
+            The exposure maps to multiply with the model substructures.
+            Should be a 2D array.
+        """
+        ...
+
 
 @runtime_checkable
 class PreProc(Protocol):
