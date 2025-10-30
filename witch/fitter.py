@@ -569,7 +569,7 @@ def main():
                 postfit,
                 comm,
             )
-
+        print('ciao')
         # Get data
         dataset.datavec = load(
             dset_name, cfg, fnames[dset_name], comms_local[dset_name]
