@@ -558,35 +558,12 @@ def main():
         preproc = eval(cfg["datasets"][dset_name]["funcs"]["preproc"])
         postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
         postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
-        if "xray" in dset_name:
-            make_exp_maps = eval(cfg["datasets"][dset_name]["funcs"]["make_exp_maps"])
-            make_back_map = eval(cfg["datasets"][dset_name]["funcs"]["make_back_map"])
-            dataset = DataSet(
+        dataset = DataSet(
                 dset_name,
                 get_files,
                 load,
                 get_info,
-                make_beam,
-                make_exp_maps,
-                make_back_map,
-                preproc,
-                postproc,
-                postfit,
-                comm,
-            )
-        else:
-            #it gives this error: File "/home/elebar/joint/WITCH/witch/dataset.py", line 363, in __post_init__
-            #assert isinstance(self.make_exp_maps, MakeExpMaps)
-            #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-            #AssertionError
-            dataset = DataSet(
-                dset_name,
-                get_files,
-                load,
-                get_info,
-                make_beam,
-                jnp.array([[1]]),
-                jnp.array([[0]]),
+                make_metadata,
                 preproc,
                 postproc,
                 postfit,
@@ -601,17 +578,9 @@ def main():
         # Get any info we need specific to an expiriment
         dataset.info = get_info(dset_name, cfg, dataset.datavec)
 
-        # Get the beam
-        beam = make_beam(dset_name, cfg, comms_local[dset_name])
-        dataset.beam = beam
-        
-        # Get the exp maps xray
-        exp_maps = make_exp_maps(dset_name, cfg, comms_local[dset_name])
-        dataset.exp_maps = exp_maps
-        
-        # Get the back map xray
-        back_map = make_back_map(dset_name, cfg, comms_local[dset_name])
-        dataset.back_map = back_map
+        # Get the metadata
+        metadata = make_metadata(dset_name, cfg, comms_local[dset_name])
+        dataset.metadata = metadata
 
         # Prefactor
         prefactor = dataset.info.get("prefactor", None)

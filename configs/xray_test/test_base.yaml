@@ -6,7 +6,7 @@ base: "test.yaml" #"act_m2_unit.yaml"
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "X_JOINT"
-sim: True # If True use TODs to make noise and add a simulated cluster
+sim: False # If True use TODs to make noise and add a simulated cluster
 
 # Define the model
 model:

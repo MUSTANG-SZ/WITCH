@@ -149,60 +149,6 @@ class MakeMetadata(Protocol):
         """
         ...
 
-@runtime_checkable
-class MakeBackMap(Protocol):
-    """
-    Function that load the background map.
-    If you don't need a background map just write a dummy function to return `jnp.array([[1]])`.
-    See docstring of `__call__` for details on the parameters and returns.
-    """
-
-    def __call__(self: Self, dset_name: str, cfg: dict, info: dict) -> Array:
-        """
-        Parameters
-        ----------
-        dset_name : str
-            The name of the dataset to get file list for.
-        cfg : dict
-            The loaded `witcher` config.
-        info : dict
-            Dictionairy containing dataset information.
-
-        Returns
-        -------
-        back_map : Array
-            The background map to add to the model.
-            Should be a 2D array.
-        """
-        ...
-
-@runtime_checkable
-class MakeExpMaps(Protocol):
-    """
-    Function that load the exposure maps.
-    If you don't need a exposure maps just write a dummy function to return `jnp.array([[1]])`.
-    See docstring of `__call__` for details on the parameters and returns.
-    """
-
-    def __call__(self: Self, dset_name: str, cfg: dict, info: dict) -> Array:
-        """
-        Parameters
-        ----------
-        dset_name : str
-            The name of the dataset to get file list for.
-        cfg : dict
-            The loaded `witcher` config.
-        info : dict
-            Dictionairy containing dataset information.
-
-        Returns
-        -------
-        exp_maps : Array
-            The exposure maps to multiply with the model substructures.
-            Should be a 2D array.
-        """
-        ...
-
 
 @runtime_checkable
 class PreProc(Protocol):
@@ -354,9 +300,6 @@ class DataSet:
     global_comm: MPI.Comm | MPI.Intracomm | wu.NullComm
     info: dict = field(init=False)
     datavec: DataVec = field(init=False)
-    beam: tuple = field(init=False)
-    exp_maps: tuple = field(init=False)
-    back_map: Array = field(init=False)
     prefactor: float = field(init=False)
 
     def __post_init__(self: Self):
@@ -486,12 +429,8 @@ class DataSet:
             children = (self.datavec,)
         else:
             children = (None,)
-        if "beam" in self.__dict__:
-            children += (self.beam,)
-        if "exp" in self.__dict__:
-            children += (self.exp_maps,)
-        if "back" in self.__dict__:
-            children += (self.back_maps,)
+        if "metadata" in self.__dict__:
+            children += (self.metadata,)
         else:
             children += (None,)
         if "prefactor" in self.__dict__:
@@ -518,7 +457,7 @@ class DataSet:
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        (datavec, beam, exp_maps, back_map, prefactor) = children
+        (datavec, metadata, prefactor) = children
         name = aux_data[0]
         funcs_comm = aux_data[1:9]
         info = aux_data[9]
@@ -527,12 +466,8 @@ class DataSet:
             dataset.datavec = datavec
         if info is not None:
             dataset.info = info
-        if beam is not None:
-            dataset.beam = beam
-        if exp_maps is not None:
-            dataset.exp_maps = exp_maps
-        if back_map is not None:
-            dataset.back_map = back_map
+        if metadata is not None:
+            dataset.metadata = metadata
         if prefactor is not None:
             dataset.prefactor = prefactor
         return dataset
