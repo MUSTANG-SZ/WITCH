@@ -62,10 +62,10 @@ datasets:
   xray:
     #These fields need to be set regardless of the dataset
     # This can rely on the imports section
-  # noise: # Noise to use while fitting
-  #   class: "jm.NoiseWhite"
-  #   args: "['self.ivar']"
-  #   kwargs: "{}"
+    noise: # Noise to use while fitting
+       class: "jm.NoiseI"
+       args: "[]"
+       kwargs: "{}"
     funcs: # Functions needed to interact with your dataset
       # All of these need to exist and be importable
       # If you don't have them in a library add the relevant file to your $PYTHONPATH
@@ -73,12 +73,11 @@ datasets:
       get_files: "xmf.get_files"
       load: "xmf.load_maps"
       get_info: "xmf.get_info"
-      make_beam: "xmf.make_beam"
-      make_exp_maps: "xmf.make_exp_maps"
-      make_back_map: "xmf.make_back_map"
+      make_metadata: "xmf.make_metadata"
       preproc: "xmf.preproc"
       postproc: "xmf.postproc"
       postfit: "xmf.postfit"
+      
     # Defines the beam
     # All are passed through eval
     # Note that these define a double gaussian

@@ -123,14 +123,14 @@ class GetInfo(Protocol):
 
 
 @runtime_checkable
-class MakeBeam(Protocol):
+class MakeMetadata(Protocol):
     """
-    Function that makes the beam array.
-    If you don't need a beam just write a dummy function to return `jnp.array([[1]])`.
+    Function that makes the metadata.
+    If you don't need it just write a dummy function to return `jnp.array([[1]])`.
     See docstring of `__call__` for details on the parameters and returns.
     """
 
-    def __call__(self: Self, dset_name: str, cfg: dict, info: dict) -> Array:
+    def __call__(self: Self, dset_name: str, cfg: dict, info: dict) -> tuple:
         """
         Parameters
         ----------
@@ -143,66 +143,10 @@ class MakeBeam(Protocol):
 
         Returns
         -------
-        beam : Array
-            The beam to be convolved with the model.
-            Should be a 2D array.
+        metadata : tuple
+            The tuple of Metadata classes.
         """
         ...
-
-@runtime_checkable
-class MakeBackMap(Protocol):
-    """
-    Function that load the background map.
-    If you don't need a background map just write a dummy function to return `jnp.array([[1]])`.
-    See docstring of `__call__` for details on the parameters and returns.
-    """
-
-    def __call__(self: Self, dset_name: str, cfg: dict, info: dict) -> Array:
-        """
-        Parameters
-        ----------
-        dset_name : str
-            The name of the dataset to get file list for.
-        cfg : dict
-            The loaded `witcher` config.
-        info : dict
-            Dictionairy containing dataset information.
-
-        Returns
-        -------
-        back_map : Array
-            The background map to add to the model.
-            Should be a 2D array.
-        """
-        ...
-
-@runtime_checkable
-class MakeExpMaps(Protocol):
-    """
-    Function that load the exposure maps.
-    If you don't need a exposure maps just write a dummy function to return `jnp.array([[1]])`.
-    See docstring of `__call__` for details on the parameters and returns.
-    """
-
-    def __call__(self: Self, dset_name: str, cfg: dict, info: dict) -> Array:
-        """
-        Parameters
-        ----------
-        dset_name : str
-            The name of the dataset to get file list for.
-        cfg : dict
-            The loaded `witcher` config.
-        info : dict
-            Dictionairy containing dataset information.
-
-        Returns
-        -------
-        exp_maps : Array
-            The exposure maps to multiply with the model substructures.
-            Should be a 2D array.
-        """
-        ...
-
 
 @runtime_checkable
 class PreProc(Protocol):
@@ -314,12 +258,8 @@ class DataSet:
         The function to load data for this dataset.
     get_info : GetInfo
         The function to get the info dict for this dataset.
-    make_beam : MakeBeam
+    make_metadata : MakeMetadata
         The function to make the beam for this dataset.
-    make_exp_maps : MakeExpMaps
-        The function to load the exposure maps for the x-ray dataset.
-    make_back_map : MakeBackMap
-        The function to load the background maps for the x-ray dataset.
     preproc : PreProc
         The function to run preprocessing for this dataset.
     postproc : PostProc
@@ -351,9 +291,7 @@ class DataSet:
     get_files: GetFiles
     load: Load
     get_info: GetInfo
-    make_beam: MakeBeam
-    make_exp_maps: MakeExpMaps
-    make_back_map: MakeBackMap
+    make_metadata: MakeMetadata
     preproc: PreProc
     postproc: PostProc
     postfit: PostFit
@@ -369,9 +307,7 @@ class DataSet:
         assert isinstance(self.get_files, GetFiles)
         assert isinstance(self.load, Load)
         assert isinstance(self.get_info, GetInfo)
-        assert isinstance(self.make_beam, MakeBeam)
-        assert isinstance(self.make_exp_maps, MakeExpMaps)
-        assert isinstance(self.make_back_map, MakeBackMap)
+        assert isinstance(self.make_metadata, MakeMetadata)
         assert isinstance(self.preproc, PreProc)
         assert isinstance(self.postproc, PostProc)
         assert isinstance(self.postfit, PostFit)
@@ -511,9 +447,7 @@ class DataSet:
             self.get_files,
             self.load,
             self.get_info,
-            self.make_beam,
-            self.make_exp_maps,
-            self.make_back_map,
+            self.make_metadata,
             self.preproc,
             self.postproc,
             self.postfit,
