@@ -150,7 +150,6 @@ class MakeMetadata(Protocol):
         ...
 
 
-
 @runtime_checkable
 class PreProc(Protocol):
     """

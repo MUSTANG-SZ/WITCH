@@ -559,17 +559,17 @@ def main():
         postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
         postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
         dataset = DataSet(
-                dset_name,
-                get_files,
-                load,
-                get_info,
-                make_metadata,
-                preproc,
-                postproc,
-                postfit,
-                comm,
-            )
-        print('ciao')
+            dset_name,
+            get_files,
+            load,
+            get_info,
+            make_metadata,
+            preproc,
+            postproc,
+            postfit,
+            comm,
+        )
+        print("ciao")
         # Get data
         dataset.datavec = load(
             dset_name, cfg, fnames[dset_name], comms_local[dset_name]
