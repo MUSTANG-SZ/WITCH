@@ -71,8 +71,8 @@ def make_metadata(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> tuple:
     maproot_dset = os.path.join(maproot, dset_name)
     if os.path.isdir(maproot_dset):
         maproot = maproot_dset
-    
-    #import beams
+
+    # import beams
     beam_glob = cfg["datasets"][dset_name].get("glob", "*psf*.fits")
     beam_fnames = glob.glob(os.path.join(maproot, beam_glob))
     beam_fnames.sort()
@@ -111,7 +111,7 @@ def make_metadata(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> tuple:
 
     meta_list = [beams, exp_maps, back_map]
     metadata = tuple(meta_list)
-    print('type metadata: ', type(metadata[0][0]))
+    print("type metadata: ", type(metadata[0][0]))
     return metadata
 
 
