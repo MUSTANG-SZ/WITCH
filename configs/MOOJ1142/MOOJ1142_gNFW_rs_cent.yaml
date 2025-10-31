@@ -16,7 +16,6 @@ coords:
   y0: "Angle('15:27:15.70 degrees').to(u.radian).value" #centroid
 
 model:
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   structures:
     gnfw_rs:
       structure: "gnfw_rs"
