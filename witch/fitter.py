@@ -406,11 +406,11 @@ def _run_mcmc(cfg, models, datasets):
 
 
 def fit_loop(models, cfg, datasets, comm, outdir):
+    models = list(models)
     for model in models:
         if models is None:
             raise ValueError("Can't fit without a model defined!")
     if cfg["sim"]:
-        models = list(models)
         # Remove structs we deliberately want to leave out of model
         for struct_name in cfg["model"]["structures"]:
             if cfg["model"]["structures"][struct_name].get("to_remove", False):
