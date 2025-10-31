@@ -1,3 +1,9 @@
+## 9.10.2 (2025-10-31)
+
+### Fix
+
+- models cast to lsit in wrong place
+
 ## 9.10.1 (2025-10-31)
 
 ### Fix
