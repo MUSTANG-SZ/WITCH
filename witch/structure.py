@@ -1480,7 +1480,7 @@ STRUCT_STAGE = {
     "powerlaw_cos": 1,
     "uniform": 1,
     "egaussian": 0,
-    "gaussian": 3,
+    "gaussian": 2,
     "gnfw": 0,
     "gnfw_rs": 0,
     "egnfw": 0,

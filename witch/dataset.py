@@ -4,7 +4,7 @@ the spec of the required functions for all datasets.
 """
 
 from dataclasses import dataclass, field
-from typing import Protocol, Self, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, Self, runtime_checkable
 
 import numpy as np
 from jax import Array
@@ -14,10 +14,13 @@ from jitkasi.solutions import SolutionSet
 from jitkasi.tod import TODVec
 from mpi4py import MPI
 
-from .containers import Model
+from . import utils as wu
 from .objective import ObjectiveFunc
 
 DataVec = TODVec | SolutionSet
+
+if TYPE_CHECKING:
+    from .containers import MetaModel
 
 
 @runtime_checkable
@@ -120,14 +123,14 @@ class GetInfo(Protocol):
 
 
 @runtime_checkable
-class MakeBeam(Protocol):
+class MakeMetadata(Protocol):
     """
-    Function that makes the beam array.
-    If you don't need a beam just write a dummy function to return `jnp.array([[1]])`.
+    Function that makes the metadata.
+    If you don't need it just write a dummy function to return `jnp.array([[1]])`.
     See docstring of `__call__` for details on the parameters and returns.
     """
 
-    def __call__(self: Self, dset_name: str, cfg: dict, info: dict) -> Array:
+    def __call__(self: Self, dset_name: str, cfg: dict, info: dict) -> tuple:
         """
         Parameters
         ----------
@@ -160,24 +163,18 @@ class PreProc(Protocol):
 
     def __call__(
         self: Self,
-        dset_name: str,
+        dset: "DataSet",
         cfg: dict,
-        datavec: DataVec,
-        model: Model,
-        info: dict,
+        metamodel: "MetaModel",
     ):
         """
         Parameters
         ----------
-        dset_name : str
-            The name of the dataset to get file list for.
+        dset : str
+            The dataset to preproc.
         cfg : dict
             The loaded `witcher` config.
-        datavec : DataVec
-            The `jitkasi` container for the data.
-            This is going to be `TODVec` for TODs
-            and `SolutionSet` for maps.
-        model : Model
+        metamodel : MetaModel
             The cluster model.
             At this point this will just be the initial state of the model.
         info : dict
@@ -199,28 +196,20 @@ class PostProc(Protocol):
 
     def __call__(
         self: Self,
-        dset_name: str,
+        dset: "DataSet",
         cfg: dict,
-        datavec: DataVec,
-        model: Model,
-        info: dict,
+        metamodel: "MetaModel",
     ):
         """
         Parameters
         ----------
-        dset_name : str
-            The name of the dataset to get file list for.
+        dset : str
+            The dataset to postproc.
         cfg : dict
             The loaded `witcher` config.
-        datavec : DataVec
-            The `jitkasi` container for the data.
-            This is going to be `TODVec` for TODs
-            and `SolutionSet` for maps.
-        model : Model
+        metamodel : MetaModel
             The cluster model.
             At this point this will just be the initial state of the model.
-        info : dict
-            Dictionairy containing dataset information.
         """
         ...
 
@@ -237,28 +226,20 @@ class PostFit(Protocol):
 
     def __call__(
         self: Self,
-        dset_name: str,
+        dset: "DataSet",
         cfg: dict,
-        datavec: DataVec,
-        model: Model,
-        info: dict,
+        metamodel: "MetaModel",
     ):
         """
         Parameters
         ----------
-        dset_name : str
-            The name of the dataset to get file list for.
+        dset : str
+            The dataset to process after fitting.
         cfg : dict
             The loaded `witcher` config.
-        datavec : DataVec
-            The `jitkasi` container for the data.
-            This is going to be `TODVec` for TODs
-            and `SolutionSet` for maps.
-        model : Model
+        metamodel : MetaModel
             The cluster model.
             This will contain the final best fit parameters.
-        info : dict
-            Dictionairy containing dataset information.
         """
         ...
 
@@ -279,7 +260,7 @@ class DataSet:
         The function to load data for this dataset.
     get_info : GetInfo
         The function to get the info dict for this dataset.
-    make_beam : MakeBeam
+    make_metadata : MakeMetadata
         The function to make the beam for this dataset.
     preproc : PreProc
         The function to run preprocessing for this dataset.
@@ -287,6 +268,9 @@ class DataSet:
         The function to run postprocessing for this dataset.
     postfit : PostFit
         The function to run after fitting this dataset.
+    global_comm : MPI.Comm | MPI.Intracomm
+        The MPI communicator used for all datasets,
+        not the local one just for this data.
     info : dict
         The info dict for this dataset.
         This field is not part of the initialization function.
@@ -294,25 +278,35 @@ class DataSet:
         The data vector for this data.
         This will be a `jitkasi` container class.
         This field is not part of the initialization function.
+    beam : Aray
+        The beam to convolve models with for this dataset.
+    exp_maps : Aray
+        The exposure maps for the x-ray dataset.
+    back_map : Array
+        The background map for the x-ray dataset.
+    prefactor : float
+        The value to multiply models by when fitting this dataset.
+        This is useful for unit conversions.
     """
 
     name: str
     get_files: GetFiles
     load: Load
     get_info: GetInfo
-    make_beam: MakeBeam
+    make_metadata: MakeMetadata
     preproc: PreProc
     postproc: PostProc
     postfit: PostFit
-    global_comm: MPI.Intracomm
+    global_comm: MPI.Comm | MPI.Intracomm | wu.NullComm
     info: dict = field(init=False)
     datavec: DataVec = field(init=False)
+    prefactor: float = field(init=False)
 
     def __post_init__(self: Self):
         assert isinstance(self.get_files, GetFiles)
         assert isinstance(self.load, Load)
         assert isinstance(self.get_info, GetInfo)
-        assert isinstance(self.make_beam, MakeBeam)
+        assert isinstance(self.make_metadata, MakeMetadata)
         assert isinstance(self.preproc, PreProc)
         assert isinstance(self.postproc, PostProc)
         assert isinstance(self.postfit, PostFit)
@@ -435,12 +429,20 @@ class DataSet:
             children = (self.datavec,)
         else:
             children = (None,)
+        if "metadata" in self.__dict__:
+            children += (self.metadata,)
+        else:
+            children += (None,)
+        if "prefactor" in self.__dict__:
+            children += (self.prefactor,)
+        else:
+            children += (None,)
         aux_data = (
             self.name,
             self.get_files,
             self.load,
             self.get_info,
-            self.make_beam,
+            self.make_metadata,
             self.preproc,
             self.postproc,
             self.postfit,
@@ -455,7 +457,7 @@ class DataSet:
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        (datavec,) = children
+        (datavec, metadata, prefactor) = children
         name = aux_data[0]
         funcs_comm = aux_data[1:9]
         info = aux_data[9]
@@ -464,4 +466,8 @@ class DataSet:
             dataset.datavec = datavec
         if info is not None:
             dataset.info = info
+        if metadata is not None:
+            dataset.metadata = metadata
+        if prefactor is not None:
+            dataset.prefactor = prefactor
         return dataset

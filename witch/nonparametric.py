@@ -317,10 +317,10 @@ def para_to_non_para(
 
     return Model(
         name="test",
-        structures=structures,
+        structures=tuple(structures),
         xyz=model.xyz,
         dz=model.dz,
-        beam=model.beam,
         n_rounds=n_rounds,
         cur_round=0,
+        to_run=model.to_run,
     )

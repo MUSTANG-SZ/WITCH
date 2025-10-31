@@ -4,9 +4,8 @@
 base: "base_unit.yaml"
 
 nonpara:
-  to_copy: ["a10"]
+  convert: True
   n_rounds: 4
-  sig_params: ["m500"]
 
 
 # Cluster name
@@ -16,9 +15,9 @@ sim: True # If True use TODs to make noise and add a simulated cluster
 
 # Define the model
 model:
-  # Unit conversion to apply at the end
-  # Will be evaled
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+  nonpara:
+    to_copy: ["a10"]
+    sig_params: ["m500"]
   # Structure to include in the model
   structures:
     # Name of the first structure

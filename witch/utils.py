@@ -459,3 +459,14 @@ def bin_map(data: ArrayLike, pixsize: float) -> tuple[np.array, np.array, np.arr
     rs = rs[:-1]
 
     return rs, bin1d, var1d
+
+
+### Fake MPI for saving
+class NullComm:
+    def __getattr__(self, name: str, /):
+        _ = name
+        return self._null_func
+
+    def _null_func(*args, **kwargs):
+        _ = args, kwargs
+        pass
