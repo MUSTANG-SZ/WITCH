@@ -1,3 +1,9 @@
+## 9.10.1 (2025-10-31)
+
+### Fix
+
+- fix bugs when using non simmed data
+
 ## 9.10.0 (2025-10-31)
 
 ### Feat
