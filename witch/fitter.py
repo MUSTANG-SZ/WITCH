@@ -147,9 +147,7 @@ def _mpi_fsplit(fnames, comm):
     return fnames_local, comm, comms_local
 
 
-def process_tods(cfg, dataset, model):
-    todvec = dataset.datavec
-    info = dataset.info
+def process_tods(cfg, todvec, info, model):
     rank = todvec.comm.Get_rank()
     nproc = todvec.comm.Get_size()
     noise_class = info["noise_class"]
@@ -188,13 +186,12 @@ def process_tods(cfg, dataset, model):
     return todvec
 
 
-def process_maps(cfg, dataset, model):
+def process_maps(cfg, mapset, info, model):
     sim = cfg.get("sim", False)
-    mapset = dataset.datavec
     if model is None and sim:
         raise ValueError("model cannot be None when simming!")
     model_cur = model
-    xfer = dataset.info.get("info", "")
+    xfer = info.get("xfer", "")
     if xfer:
         model_cur = Model_xfer.from_parent(model, xfer)
 
@@ -406,11 +403,11 @@ def _run_mcmc(cfg, models, datasets):
 
 
 def fit_loop(models, cfg, datasets, comm, outdir):
+    models = list(models)
     for model in models:
         if models is None:
             raise ValueError("Can't fit without a model defined!")
     if cfg["sim"]:
-        models = list(models)
         # Remove structs we deliberately want to leave out of model
         for struct_name in cfg["model"]["structures"]:
             if cfg["model"]["structures"][struct_name].get("to_remove", False):
@@ -643,8 +640,9 @@ def main():
         # Process the data
         preproc(dset_name, cfg, dataset, model, dataset.info)
         if dataset.mode == "tod":
-            dataset.datavec = process_tods(cfg, dataset, model)
+            dataset.datavec = process_tods(cfg, dataset.datavec, dataset.info, model)
         elif dataset.mode == "map":
+            dataset.datavec = process_maps(cfg, dataset.datavec, dataset.info, model)
             dataset.datavec = process_maps(cfg, dataset, model)
         dataset = jax.block_until_ready(dataset)
         postproc(dset_name, cfg, dataset.datavec, model, dataset.info)
