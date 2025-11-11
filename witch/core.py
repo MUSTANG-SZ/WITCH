@@ -185,29 +185,6 @@ def _stage_2(
     return ip, int(start)
 
 
-def _beam_conv(
-    ip: jax.Array,
-    beam: jax.Array,
-    run: bool = True,
-) -> jax.Array:
-    if not run:
-        return ip
-    bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
-        (ip.shape[1] - beam.shape[1]) / 2
-    )
-    beam = jnp.pad(
-        beam,
-        (
-            (bound0, ip.shape[0] - beam.shape[0] - bound0),
-            (bound1, ip.shape[1] - beam.shape[1] - bound1),
-        ),
-    )
-
-    ip = fft_conv(ip, beam)
-
-    return ip
-
-
 def model3D(
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
     n_structs: tuple[int, ...],
@@ -438,7 +415,6 @@ def stage2_model(
 
     # Integrate along line of site
     ip = trapz(pressure, dx=dz, axis=-1)
-    ip = _beam_conv(ip, beam)
 
     return ip
 
@@ -460,6 +436,3 @@ model_grad_static = _get_static(model_grad_sig)
 # Now JIT
 model = jax.jit(model, static_argnums=model_static)
 model_grad = jax.jit(model_grad, static_argnums=model_grad_static)
-
-# Lets make a vectorized beam conv
-_beam_conv_vec = jax.vmap(_beam_conv, in_axes=(0, None))

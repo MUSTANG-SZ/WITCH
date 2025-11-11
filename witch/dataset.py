@@ -23,6 +23,95 @@ if TYPE_CHECKING:
     from .containers import MetaModel
 
 
+@register_pytree_node_class
+@dataclass
+class MetaData:
+    """
+    Class for storing and applying metdata to a dataset.
+    You should subclass this for your individual metadata implementation.
+    """
+
+    def apply(self, model: Array) -> Array:
+        """
+        Apply the metdata to the model.
+        This is the model prior to projection into the datavector.
+
+        Parameters
+        ----------
+        model : Array
+            The model as defined on a grid.
+
+        Returns
+        -------
+        applied : Array
+            The model with the metadata applied.
+        """
+        return model
+
+    def apply_grad(self, model_grad: Array) -> Array:
+        """
+        Apply the metdata to the model gradient.
+        This is the model gradient prior to projection into the datavector.
+
+        Parameters
+        ----------
+        model_gradient : Array
+            The model gradient defined on a grid.
+
+        Returns
+        -------
+        applied : Array
+            The model gradient with the metadata applied.
+        """
+        return model_grad
+
+    def apply_proj(self, model_proj: Array) -> Array:
+        """
+        Apply the metdata to the model.
+        This is the model after projection into the datavector.
+
+        Parameters
+        ----------
+        model : Array
+            The model projected to the datavector.
+
+        Returns
+        -------
+        applied : Array
+            The model with the metadata applied.
+        """
+        return model_proj
+
+    def apply_grad_proj(self, model_grad_proj: Array) -> Array:
+        """
+        Apply the metdata to the model gradient.
+        This is the model gradient after projection into the datavector.
+
+        Parameters
+        ----------
+        model_gradient_proj : Array
+            The model gradient projected to the datavector.
+
+        Returns
+        -------
+        applied : Array
+            The model gradient with the metadata applied.
+        """
+        return model_grad_proj
+
+    # Functions for making this a pytree
+    # Don't call this on your own
+    def tree_flatten(self) -> tuple[tuple, tuple]:
+
+        return (tuple(), tuple())
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children) -> Self:
+        _ = aux_data, children
+
+        return cls()
+
+
 @runtime_checkable
 class GetFiles(Protocol):
     """
@@ -126,11 +215,13 @@ class GetInfo(Protocol):
 class MakeMetadata(Protocol):
     """
     Function that makes the metadata.
-    If you don't need it just write a dummy function to return `jnp.array([[1]])`.
+    If you don't need it just write a dummy function to return an empty tuple.
     See docstring of `__call__` for details on the parameters and returns.
     """
 
-    def __call__(self: Self, dset_name: str, cfg: dict, info: dict) -> tuple:
+    def __call__(
+        self: Self, dset_name: str, cfg: dict, info: dict
+    ) -> tuple[MetaData, ...]:
         """
         Parameters
         ----------
@@ -143,9 +234,8 @@ class MakeMetadata(Protocol):
 
         Returns
         -------
-        beam : Array
-            The beam to be convolved with the model.
-            Should be a 2D array.
+        metadata : tuple[MetaData, ...]
+            Tuple of MetaData instances.
         """
         ...
 
@@ -261,7 +351,7 @@ class DataSet:
     get_info : GetInfo
         The function to get the info dict for this dataset.
     make_metadata : MakeMetadata
-        The function to make the beam for this dataset.
+        The function to make the metadata for this dataset.
     preproc : PreProc
         The function to run preprocessing for this dataset.
     postproc : PostProc
