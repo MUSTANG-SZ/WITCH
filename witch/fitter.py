@@ -638,12 +638,11 @@ def main():
         dataset.info["outdir"] = outdir
 
         # Process the data
-        preproc(dset_name, cfg, dataset, model, dataset.info)
+        preproc(dset_name, cfg, dataset.datavec, model, dataset.info)
         if dataset.mode == "tod":
             dataset.datavec = process_tods(cfg, dataset.datavec, dataset.info, model)
         elif dataset.mode == "map":
             dataset.datavec = process_maps(cfg, dataset.datavec, dataset.info, model)
-            dataset.datavec = process_maps(cfg, dataset, model)
         dataset = jax.block_until_ready(dataset)
         postproc(dset_name, cfg, dataset.datavec, model, dataset.info)
         models.append(model)
