@@ -1,7 +1,8 @@
 import glob
-import inspect
 import os
 from copy import deepcopy
+from dataclasses import dataclass
+from typing import Self
 
 import jax.numpy as jnp
 import minkasi
@@ -15,10 +16,11 @@ from mpi4py import MPI
 import witch.utils as wu
 from witch import grid
 from witch.containers import MetaModel
-from witch.dataset import DataSet
+from witch.dataset import DataSet, MetaData
 from witch.fitter import print_once, process_tods
 
 from ...objective import chisq_objective
+from ...utils import beam_conv, beam_conv_vec
 from . import mapmaking as mm
 from .utils import from_minkasi, from_minkasi_noise, from_minkasi_tod, to_minkasi
 
@@ -118,7 +120,34 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
     }
 
 
-def make_beam(dset_name: str, cfg: dict, info: dict) -> Array:
+@dataclass
+class BeamProj(MetaData):
+    beam: Array
+
+    def apply(self, model: Array) -> Array:
+        return beam_conv(model, self.beam)
+
+    def apply_grad(self, model_grad: Array) -> Array:
+
+        return beam_conv_vec(model_grad, self.beam)
+
+    # Functions for making this a pytree
+    # Don't call this on your own
+    def tree_flatten(self) -> tuple[tuple, tuple]:
+
+        children = (self.beam,)
+        aux_data = tuple()
+
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children) -> Self:
+        _ = aux_data
+
+        return cls(children[0])
+
+
+def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]:
     _ = info
     dr = eval(str(cfg["coords"]["dr"]))
     beam = wu.beam_double_gauss(
@@ -129,7 +158,7 @@ def make_beam(dset_name: str, cfg: dict, info: dict) -> Array:
         eval(str(cfg["datasets"][dset_name]["beam"]["amp2"])),
     )
 
-    return beam
+    return (BeamProj(beam),)
 
 
 def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
