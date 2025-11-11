@@ -7,13 +7,40 @@ from astropy.wcs import WCS
 from jax import Array
 from jitkasi.solutions import SolutionSet, maps
 from mpi4py import MPI
+from dataclasses import dataclass
+from typing import Self
+from astropy.convolution import convolve_fft
 
 import witch.utils as wu
 from witch.containers import MetaModel
-from witch.dataset import DataSet
+from witch.dataset import DataSet, MetaData
 from witch.fitter import print_once
 
 from ...objective import poisson_objective
+
+
+def convolve (img, PSF):
+    '''
+    Parameters
+    ----------
+    img : np.ndarray
+        The map to be smoothed.
+        
+    res : float
+        FWHM (resolution) of the smoothing (arcmin).
+        
+    dim_pixel : float
+        Pixel size in the map (arcmin).
+
+    Returns
+    -------
+    img_convolved: np.ndarray
+        Same map but smoothed.
+    '''
+
+    img_convolved=convolve_fft(img, PSF)
+
+    return img_convolved
 
 
 def get_files(dset_name: str, cfg: dict) -> list:
@@ -61,59 +88,134 @@ def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
         "objective": poisson_objective,
     }
 
+@dataclass
+class ExpConvProj(MetaData):
+    dset_name: str
+    cfg: dict
+    
+    def __init__(self, dset_name: str, cfg: dict):
+        maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
+        if not os.path.isabs(maproot):
+            maproot = os.path.join(
+                os.environ.get("WITCH_DATROOT", os.environ["HOME"]), maproot
+            )
+        maproot_dset = os.path.join(maproot, dset_name)
+        if os.path.isdir(maproot_dset):
+            maproot = maproot_dset
+            
+        self.struct_names = cfg['model']['structures'].keys()
 
-def make_metadata(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> tuple:
-    maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
-    if not os.path.isabs(maproot):
-        maproot = os.path.join(
-            os.environ.get("WITCH_DATROOT", os.environ["HOME"]), maproot
-        )
-    maproot_dset = os.path.join(maproot, dset_name)
-    if os.path.isdir(maproot_dset):
-        maproot = maproot_dset
+        #import exposure maps
+        exp_glob = cfg["datasets"][dset_name].get("glob", "*exp*.fits")
+        exp_fnames = glob.glob(os.path.join(maproot, exp_glob))
+        order_map = {item: index for index, item in enumerate(self.struct_names)}
+        exp_fnames = sorted(exp_fnames, key=lambda x: order_map.get(x, float('inf')))
+        exp_maps = []
+        for strc_name in self.struct_names:
+            for fname in exp_fnames:
+                if strc_name in fname:
+                    name = os.path.splitext(os.path.basename(fname))[0]
+                    # The actual map
+                    f: fits.HDUList = fits.open(fname)
+                    wcs = WCS(f[0].header)  # type: ignore
+                    dat = jnp.array(f[0].data.copy().T)  # type: ignore
+                    f.close()
+                    exp_maps += [dat]
+        self.exp_maps = tuple(exp_maps)
+    
+        # import beams
+        beam_glob = cfg["datasets"][dset_name].get("glob", "*psf*.fits")
+        beam_fnames = glob.glob(os.path.join(maproot, beam_glob))
+        order_map = {item: index for index, item in enumerate(self.struct_names)}
+        beam_fnames = sorted(beam_fnames, key=lambda x: order_map.get(x, float('inf')))
+        beams = []
+        for strc_name in self.struct_names:
+            for fname in beam_fnames:
+                if strc_name in fname:
+                    name = os.path.splitext(os.path.basename(fname))[0]
+                    # The actual map
+                    f: fits.HDUList = fits.open(fname)
+                    wcs = WCS(f[0].header)  # type: ignore
+                    dat = jnp.array(f[0].data.copy().T)  # type: ignore
+                    f.close()
+                    beams += [dat]
+        self.beams = tuple(beams)
 
-    # import beams
-    beam_glob = cfg["datasets"][dset_name].get("glob", "*psf*.fits")
-    beam_fnames = glob.glob(os.path.join(maproot, beam_glob))
-    beam_fnames.sort()
-    beams = []
-    for fname in beam_fnames:
-        name = os.path.splitext(os.path.basename(fname))[0]
+    def apply(self, model: Array) -> Array:
+        return self.exp_maps * convolve(model, self.beams)
+
+    def apply_grad(self, model_grad: Array) -> Array:
+
+        return beam_conv_vec(model_grad, self.beam)
+
+    # Functions for making this a pytree
+    # Don't call this on your own
+    def tree_flatten(self) -> tuple[tuple, tuple]:
+
+        children = (self.beam,)
+        aux_data = tuple()
+
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children) -> Self:
+        _ = aux_data
+
+        return cls(children[0])
+
+@dataclass
+class BackgroundProj(MetaData):
+    dset_name: str
+    cfg: dict
+    
+    def __init__(self, dset_name: str, cfg: dict):
+        maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
+        if not os.path.isabs(maproot):
+            maproot = os.path.join(
+                os.environ.get("WITCH_DATROOT", os.environ["HOME"]), maproot
+            )
+        maproot_dset = os.path.join(maproot, dset_name)
+        if os.path.isdir(maproot_dset):
+            maproot = maproot_dset
+
+        back_glob = cfg["datasets"][dset_name].get("glob", "*back*.fits")
+        back_fname = glob.glob(os.path.join(maproot, back_glob))[0]
+        back_name = os.path.splitext(os.path.basename(back_fname))[0]
         # The actual map
-        f: fits.HDUList = fits.open(fname)
+        f: fits.HDUList = fits.open(back_fname)
         wcs = WCS(f[0].header)  # type: ignore
         dat = jnp.array(f[0].data.copy().T)  # type: ignore
         f.close()
-        beams += [maps.WCSMap(name, dat, comm, wcs, "nn")]
+        self.back_map = dat
 
-    exp_glob = cfg["datasets"][dset_name].get("glob", "*exp*.fits")
-    exp_fnames = glob.glob(os.path.join(maproot, exp_glob))
-    exp_fnames.sort()
-    exp_maps = []
-    for fname in exp_fnames:
-        name = os.path.splitext(os.path.basename(fname))[0]
-        # The actual map
-        f: fits.HDUList = fits.open(fname)
-        wcs = WCS(f[0].header)  # type: ignore
-        dat = jnp.array(f[0].data.copy().T)  # type: ignore
-        f.close()
-        exp_maps += [maps.WCSMap(name, dat, comm, wcs, "nn")]
+    def apply(self, model: Array) -> Array:
+        return model + self.back_map
 
-    back_glob = cfg["datasets"][dset_name].get("glob", "*back*.fits")
-    back_fname = glob.glob(os.path.join(maproot, back_glob))[0]
-    back_name = os.path.splitext(os.path.basename(back_fname))[0]
-    # The actual map
-    f: fits.HDUList = fits.open(fname)
-    wcs = WCS(f[0].header)  # type: ignore
-    dat = jnp.array(f[0].data.copy().T)  # type: ignore
-    f.close()
-    back_map = [maps.WCSMap(name, dat, comm, wcs, "nn")]
+    def apply_grad(self, model_grad: Array) -> Array:
 
-    meta_list = [beams, exp_maps, back_map]
-    metadata = tuple(meta_list)
-    print("type metadata: ", type(metadata[0][0]))
-    return metadata
+        return beam_conv_vec(model_grad, self.beam)
 
+    # Functions for making this a pytree
+    # Don't call this on your own
+    def tree_flatten(self) -> tuple[tuple, tuple]:
+
+        children = (self.beam,)
+        aux_data = tuple()
+
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children) -> Self:
+        _ = aux_data
+
+        return cls(children[0])
+
+
+def make_metadata(dset_name: str, cfg: dict) -> tuple[MetaData, ...]: #, info: dict
+    #_ = info
+    dr = eval(str(cfg["coords"]["dr"]))
+    
+    return (ExpConvProj(dset_name, cfg), BackgroundProj(dset_name, cfg))
 
 def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
     _ = (dset, cfg, metamodel)
@@ -173,3 +275,31 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
                 os.path.join(outdir, dset_name, f"{imap.name}_truth.fits"),
                 overwrite=True,
             )
+
+
+'''
+def make_metadata(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> tuple:
+    maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
+    if not os.path.isabs(maproot):
+        maproot = os.path.join(
+            os.environ.get("WITCH_DATROOT", os.environ["HOME"]), maproot
+        )
+    maproot_dset = os.path.join(maproot, dset_name)
+    if os.path.isdir(maproot_dset):
+        maproot = maproot_dset
+
+    back_glob = cfg["datasets"][dset_name].get("glob", "*back*.fits")
+    back_fname = glob.glob(os.path.join(maproot, back_glob))[0]
+    back_name = os.path.splitext(os.path.basename(back_fname))[0]
+    # The actual map
+    f: fits.HDUList = fits.open(fname)
+    wcs = WCS(f[0].header)  # type: ignore
+    dat = jnp.array(f[0].data.copy().T)  # type: ignore
+    f.close()
+    back_map = [maps.WCSMap(name, dat, comm, wcs, "nn")]
+
+    meta_list = [beams, exp_maps, back_map]
+    metadata = tuple(meta_list)
+    print("type metadata: ", type(metadata[0][0]))
+    return metadata
+'''

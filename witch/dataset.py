@@ -221,7 +221,7 @@ class MakeMetadata(Protocol):
 
     def __call__(
         self: Self, dset_name: str, cfg: dict, info: dict
-    ) -> tuple[Metdata, ...]:
+    ) -> tuple[MetaData, ...]:
         """
         Parameters
         ----------
