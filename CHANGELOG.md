@@ -1,3 +1,9 @@
+## 9.10.4 (2025-11-11)
+
+### Fix
+
+- remove fitter install and fix versioning
+
 ## 9.10.3 (2025-11-11)
 
 ### Fix
