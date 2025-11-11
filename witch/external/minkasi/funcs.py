@@ -147,8 +147,8 @@ class BeamProj(MetaData):
         return cls(children[0])
 
 
-def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]:
-    _ = info
+def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]: 
+    #_ = info
     dr = eval(str(cfg["coords"]["dr"]))
     beam = wu.beam_double_gauss(
         dr,
@@ -175,7 +175,7 @@ def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
 
     print_once("Making noise map")
     noise_vec = to_minkasi(
-        dset.datvec, copy_noise, False
+        dset.datavec, copy_noise, False
     )  # We always take a mem hit here...
     noise_skymap = minkasi.maps.SkyMap(lims, pixsize)
     for i, tod in enumerate(noise_vec.tods):

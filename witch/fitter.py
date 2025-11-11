@@ -579,7 +579,7 @@ def main():
         dataset.info = get_info(dset_name, cfg, dataset.datavec)
 
         # Get the metadata
-        metadata = make_metadata(dset_name, cfg) #info?????
+        metadata = make_metadata(dset_name, cfg, dataset.info) #info?????
         dataset.metadata = metadata
 
         # Prefactor

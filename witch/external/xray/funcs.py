@@ -88,71 +88,105 @@ def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
         "objective": poisson_objective,
     }
 
+def load_exps(dset_name: str, cfg: dict):
+    #def __init__(self, dset_name: str, cfg: dict):
+    maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
+    if not os.path.isabs(maproot):
+        maproot = os.path.join(
+            os.environ.get("WITCH_DATROOT", os.environ["HOME"]), maproot
+        )
+    maproot_dset = os.path.join(maproot, dset_name)
+    if os.path.isdir(maproot_dset):
+        maproot = maproot_dset
+
+    struct_names = cfg['model']['structures'].keys()
+    
+    #import exposure maps
+    exp_glob = cfg["datasets"][dset_name].get("glob", "*exp*.fits")
+    exp_fnames = glob.glob(os.path.join(maproot, exp_glob))
+    order_map = {item: index for index, item in enumerate(struct_names)}
+    exp_fnames = sorted(exp_fnames, key=lambda x: order_map.get(x, float('inf')))
+    exp_maps = []
+    for strc_name in struct_names:
+        for fname in exp_fnames:
+            if strc_name in fname:
+                name = os.path.splitext(os.path.basename(fname))[0]
+                # The actual map
+                f: fits.HDUList = fits.open(fname)
+                wcs = WCS(f[0].header)  # type: ignore
+                dat = jnp.array(f[0].data.copy().T)  # type: ignore
+                f.close()
+                exp_maps += [dat]
+    return tuple(exp_maps)
+
+def load_beams(dset_name: str, cfg: dict):
+    #def __init__(self, dset_name: str, cfg: dict):
+    maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
+    if not os.path.isabs(maproot):
+        maproot = os.path.join(
+            os.environ.get("WITCH_DATROOT", os.environ["HOME"]), maproot
+        )
+    maproot_dset = os.path.join(maproot, dset_name)
+    if os.path.isdir(maproot_dset):
+        maproot = maproot_dset
+        
+    struct_names = cfg['model']['structures'].keys()
+    
+    # import beams
+    beam_glob = cfg["datasets"][dset_name].get("glob", "*psf*.fits")
+    beam_fnames = glob.glob(os.path.join(maproot, beam_glob))
+    order_map = {item: index for index, item in enumerate(struct_names)}
+    beam_fnames = sorted(beam_fnames, key=lambda x: order_map.get(x, float('inf')))
+    beams = []
+    for strc_name in struct_names:
+        for fname in beam_fnames:
+            if strc_name in fname:
+                name = os.path.splitext(os.path.basename(fname))[0]
+                # The actual map
+                f: fits.HDUList = fits.open(fname)
+                wcs = WCS(f[0].header)  # type: ignore
+                dat = jnp.array(f[0].data.copy().T)  # type: ignore
+                f.close()
+                beams += [dat]
+    return tuple(beams)
+
+def load_back(dset_name: str, cfg: dict):
+    maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
+    if not os.path.isabs(maproot):
+        maproot = os.path.join(
+            os.environ.get("WITCH_DATROOT", os.environ["HOME"]), maproot
+        )
+    maproot_dset = os.path.join(maproot, dset_name)
+    if os.path.isdir(maproot_dset):
+        maproot = maproot_dset
+
+    back_glob = cfg["datasets"][dset_name].get("glob", "*back*.fits")
+    back_fname = glob.glob(os.path.join(maproot, back_glob))[0]
+    back_name = os.path.splitext(os.path.basename(back_fname))[0]
+    # The actual map
+    f: fits.HDUList = fits.open(back_fname)
+    wcs = WCS(f[0].header)  # type: ignore
+    dat = jnp.array(f[0].data.copy().T)  # type: ignore
+    f.close()
+    return dat
+
 @dataclass
 class ExpConvProj(MetaData):
-    dset_name: str
-    cfg: dict
+    exp_maps: Array
+    beam_maps: Array
     
-    def __init__(self, dset_name: str, cfg: dict):
-        maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
-        if not os.path.isabs(maproot):
-            maproot = os.path.join(
-                os.environ.get("WITCH_DATROOT", os.environ["HOME"]), maproot
-            )
-        maproot_dset = os.path.join(maproot, dset_name)
-        if os.path.isdir(maproot_dset):
-            maproot = maproot_dset
-            
-        self.struct_names = cfg['model']['structures'].keys()
-
-        #import exposure maps
-        exp_glob = cfg["datasets"][dset_name].get("glob", "*exp*.fits")
-        exp_fnames = glob.glob(os.path.join(maproot, exp_glob))
-        order_map = {item: index for index, item in enumerate(self.struct_names)}
-        exp_fnames = sorted(exp_fnames, key=lambda x: order_map.get(x, float('inf')))
-        exp_maps = []
-        for strc_name in self.struct_names:
-            for fname in exp_fnames:
-                if strc_name in fname:
-                    name = os.path.splitext(os.path.basename(fname))[0]
-                    # The actual map
-                    f: fits.HDUList = fits.open(fname)
-                    wcs = WCS(f[0].header)  # type: ignore
-                    dat = jnp.array(f[0].data.copy().T)  # type: ignore
-                    f.close()
-                    exp_maps += [dat]
-        self.exp_maps = tuple(exp_maps)
-    
-        # import beams
-        beam_glob = cfg["datasets"][dset_name].get("glob", "*psf*.fits")
-        beam_fnames = glob.glob(os.path.join(maproot, beam_glob))
-        order_map = {item: index for index, item in enumerate(self.struct_names)}
-        beam_fnames = sorted(beam_fnames, key=lambda x: order_map.get(x, float('inf')))
-        beams = []
-        for strc_name in self.struct_names:
-            for fname in beam_fnames:
-                if strc_name in fname:
-                    name = os.path.splitext(os.path.basename(fname))[0]
-                    # The actual map
-                    f: fits.HDUList = fits.open(fname)
-                    wcs = WCS(f[0].header)  # type: ignore
-                    dat = jnp.array(f[0].data.copy().T)  # type: ignore
-                    f.close()
-                    beams += [dat]
-        self.beams = tuple(beams)
-
     def apply(self, model: Array) -> Array:
         return self.exp_maps * convolve(model, self.beams)
 
     def apply_grad(self, model_grad: Array) -> Array:
-
+        
         return beam_conv_vec(model_grad, self.beam)
 
     # Functions for making this a pytree
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
 
-        children = (self.beam,)
+        children = (self.exp_maps, self.beams)
         aux_data = tuple()
 
         return (children, aux_data)
@@ -165,29 +199,8 @@ class ExpConvProj(MetaData):
 
 @dataclass
 class BackgroundProj(MetaData):
-    dset_name: str
-    cfg: dict
+    back_map: Array
     
-    def __init__(self, dset_name: str, cfg: dict):
-        maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
-        if not os.path.isabs(maproot):
-            maproot = os.path.join(
-                os.environ.get("WITCH_DATROOT", os.environ["HOME"]), maproot
-            )
-        maproot_dset = os.path.join(maproot, dset_name)
-        if os.path.isdir(maproot_dset):
-            maproot = maproot_dset
-
-        back_glob = cfg["datasets"][dset_name].get("glob", "*back*.fits")
-        back_fname = glob.glob(os.path.join(maproot, back_glob))[0]
-        back_name = os.path.splitext(os.path.basename(back_fname))[0]
-        # The actual map
-        f: fits.HDUList = fits.open(back_fname)
-        wcs = WCS(f[0].header)  # type: ignore
-        dat = jnp.array(f[0].data.copy().T)  # type: ignore
-        f.close()
-        self.back_map = dat
-
     def apply(self, model: Array) -> Array:
         return model + self.back_map
 
@@ -199,7 +212,7 @@ class BackgroundProj(MetaData):
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
 
-        children = (self.beam,)
+        children = (self.back_map,)
         aux_data = tuple()
 
         return (children, aux_data)
@@ -211,11 +224,16 @@ class BackgroundProj(MetaData):
         return cls(children[0])
 
 
-def make_metadata(dset_name: str, cfg: dict) -> tuple[MetaData, ...]: #, info: dict
-    #_ = info
+def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]:
+    _ = info
     dr = eval(str(cfg["coords"]["dr"]))
+    struct_names = cfg['model']['structures'].keys()
     
-    return (ExpConvProj(dset_name, cfg), BackgroundProj(dset_name, cfg))
+    exp_maps = load_exps(dset_name, cfg)
+    beam_maps = load_beams(dset_name, cfg)
+    back_map = load_back(dset_name, cfg)
+    
+    return (ExpConvProj(exp_maps, beam_maps), BackgroundProj(back_map))
 
 def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
     _ = (dset, cfg, metamodel)
