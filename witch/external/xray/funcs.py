@@ -117,7 +117,7 @@ def load_exps(dset_name: str, cfg: dict):
                 dat = jnp.array(f[0].data.copy().T)  # type: ignore
                 f.close()
                 exp_maps += [dat]
-    return tuple(exp_maps)
+    return exp_maps
 
 def load_beams(dset_name: str, cfg: dict):
     #def __init__(self, dset_name: str, cfg: dict):
@@ -148,7 +148,7 @@ def load_beams(dset_name: str, cfg: dict):
                 dat = jnp.array(f[0].data.copy().T)  # type: ignore
                 f.close()
                 beams += [dat]
-    return tuple(beams)
+    return beams
 
 def load_back(dset_name: str, cfg: dict):
     maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
@@ -172,21 +172,20 @@ def load_back(dset_name: str, cfg: dict):
 
 @dataclass
 class ExpConvProj(MetaData):
-    exp_maps: Array
-    beam_maps: Array
+    exp_map: Array
+    beam_map: Array
     
     def apply(self, model: Array) -> Array:
-        return self.exp_maps * convolve(model, self.beams)
+        return self.exp_map * convolve(model, self.beam)
 
     def apply_grad(self, model_grad: Array) -> Array:
-        
+        #EDIT!!!!!!!!!!!
         return beam_conv_vec(model_grad, self.beam)
 
     # Functions for making this a pytree
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
-
-        children = (self.exp_maps, self.beams)
+        children = ([self.exp_map, self.beam], )
         aux_data = tuple()
 
         return (children, aux_data)
@@ -205,7 +204,7 @@ class BackgroundProj(MetaData):
         return model + self.back_map
 
     def apply_grad(self, model_grad: Array) -> Array:
-
+        #EDIT!!!!!!!!!!!
         return beam_conv_vec(model_grad, self.beam)
 
     # Functions for making this a pytree
@@ -232,8 +231,15 @@ def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]
     exp_maps = load_exps(dset_name, cfg)
     beam_maps = load_beams(dset_name, cfg)
     back_map = load_back(dset_name, cfg)
+    print(type(exp_maps[0]))
+    print(type(beam_maps[0]))
     
-    return (ExpConvProj(exp_maps, beam_maps), BackgroundProj(back_map))
+    metadata = []
+    for idx in range(len(struct_names)):
+        metadata +=[ExpConvProj(exp_maps[idx], beam_maps[idx])]
+    metadata += [BackgroundProj(back_map)]
+    
+    return tuple(metadata)
 
 def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
     _ = (dset, cfg, metamodel)
