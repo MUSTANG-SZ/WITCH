@@ -88,7 +88,7 @@ def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
         "objective": poisson_objective,
     }
 
-def load_exps(dset_name: str, cfg: dict):
+def load_exps(dset_name: str, cfg: dict, struct_names: list):
     #def __init__(self, dset_name: str, cfg: dict):
     maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
     if not os.path.isabs(maproot):
@@ -98,8 +98,6 @@ def load_exps(dset_name: str, cfg: dict):
     maproot_dset = os.path.join(maproot, dset_name)
     if os.path.isdir(maproot_dset):
         maproot = maproot_dset
-
-    struct_names = cfg['model']['structures'].keys()
     
     #import exposure maps
     exp_glob = cfg["datasets"][dset_name].get("glob", "*exp*.fits")
@@ -119,7 +117,7 @@ def load_exps(dset_name: str, cfg: dict):
                 exp_maps += [dat]
     return exp_maps
 
-def load_beams(dset_name: str, cfg: dict):
+def load_beams(dset_name: str, cfg: dict, struct_names: list):
     #def __init__(self, dset_name: str, cfg: dict):
     maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
     if not os.path.isabs(maproot):
@@ -129,8 +127,6 @@ def load_beams(dset_name: str, cfg: dict):
     maproot_dset = os.path.join(maproot, dset_name)
     if os.path.isdir(maproot_dset):
         maproot = maproot_dset
-        
-    struct_names = cfg['model']['structures'].keys()
     
     # import beams
     beam_glob = cfg["datasets"][dset_name].get("glob", "*psf*.fits")
@@ -185,7 +181,7 @@ class ExpConvProj(MetaData):
     # Functions for making this a pytree
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
-        children = ([self.exp_map, self.beam], )
+        children = ((self.exp_map, self.beam), )
         aux_data = tuple()
 
         return (children, aux_data)
@@ -228,11 +224,9 @@ def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]
     dr = eval(str(cfg["coords"]["dr"]))
     struct_names = cfg['model']['structures'].keys()
     
-    exp_maps = load_exps(dset_name, cfg)
-    beam_maps = load_beams(dset_name, cfg)
+    exp_maps = load_exps(dset_name, cfg, struct_names)
+    beam_maps = load_beams(dset_name, cfg, struct_names)
     back_map = load_back(dset_name, cfg)
-    print(type(exp_maps[0]))
-    print(type(beam_maps[0]))
     
     metadata = []
     for idx in range(len(struct_names)):
