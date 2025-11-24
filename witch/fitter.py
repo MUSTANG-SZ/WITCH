@@ -28,6 +28,8 @@ from .fitting import run_lmfit, run_mcmc
 from .nonparametric import para_to_non_para
 from .objective import joint_objective
 
+import pickle
+
 comm = MPI.COMM_WORLD.Clone()
 
 
@@ -403,6 +405,10 @@ def _run_mcmc(cfg, models, datasets):
 
 
 def fit_loop(models, cfg, datasets, comm, outdir):
+    # ensure checkpoint directory exists
+    ckpt_dir = os.path.join(outdir, "checkpoints")
+    os.makedirs(cpkt_dir, exist_ok=True)
+
     models = list(models)
     for model in models:
         if models is None:
@@ -441,6 +447,22 @@ def fit_loop(models, cfg, datasets, comm, outdir):
         )
         _ = mpi4jax.barrier(comm=comm)
 
+        #Checkpoint after each round
+        ckpt_path = os.path.join(ckpt_dir, f"round_{r}.pkl")
+        with open(ckpt_path, "wb") as f:
+            picke.dump(
+                {
+                    "stage": "fit_round",
+                    "round": r,
+                    "models": models,
+                    "datasets": datasets,
+                    "cfg": cfg,
+                },
+                f,
+                protocol=pickle.HIGHEST_PROTOCOL
+            )
+        print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
+
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
         models, datasets = _run_mcmc(
             cfg,
@@ -448,6 +470,21 @@ def fit_loop(models, cfg, datasets, comm, outdir):
             datasets,
         )
         _ = mpi4jax.barrier(comm=comm)
+
+        # MCMC Checkpoint (Once every few hundred steps)
+        cpkt_path = os.path.join(cpkt_dir, "mcmc.pkl")
+        with open(cpkt_path, "wb") as f:
+            pickle.dump(
+                {
+                    "stage": "mcmc",
+                    "models": models,
+                    "datasets": datasets,
+                    "cfg":cfg,
+                },
+                f,
+                protocol = pickle.HIGHEST_PROTOCOL
+            )
+        print_once(f"[checkpoint] Saved MCMC stae -> {ckpt_path}")
     # Save final pars
     final = {"model": cfg["model"]}
     model = models[0]  # TODO: TEMP will be fixed with metamodel
