@@ -5,6 +5,7 @@ You typically want to run the `witcher` command instead of this.
 
 import argparse as argp
 import os
+import pickle
 import sys
 import time
 from copy import deepcopy
@@ -27,8 +28,6 @@ from .dataset import DataSet
 from .fitting import run_lmfit, run_mcmc
 from .nonparametric import para_to_non_para
 from .objective import joint_objective
-
-import pickle
 
 comm = MPI.COMM_WORLD.Clone()
 
@@ -447,7 +446,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
         )
         _ = mpi4jax.barrier(comm=comm)
 
-        #Checkpoint after each round
+        # Checkpoint after each round
         ckpt_path = os.path.join(ckpt_dir, f"round_{r}.pkl")
         with open(ckpt_path, "wb") as f:
             picke.dump(
@@ -459,7 +458,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
                     "cfg": cfg,
                 },
                 f,
-                protocol=pickle.HIGHEST_PROTOCOL
+                protocol=pickle.HIGHEST_PROTOCOL,
             )
         print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
 
@@ -479,10 +478,10 @@ def fit_loop(models, cfg, datasets, comm, outdir):
                     "stage": "mcmc",
                     "models": models,
                     "datasets": datasets,
-                    "cfg":cfg,
+                    "cfg": cfg,
                 },
                 f,
-                protocol = pickle.HIGHEST_PROTOCOL
+                protocol=pickle.HIGHEST_PROTOCOL,
             )
         print_once(f"[checkpoint] Saved MCMC stae -> {ckpt_path}")
     # Save final pars
