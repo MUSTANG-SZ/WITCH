@@ -412,10 +412,10 @@ def fit_loop(models, cfg, datasets, comm, outdir):
     load = cfg.get("load_progress", False)
 
     if load is True:
-        #Automatically load latest checkpoint round
+        # Automatically load latest checkpoint round
         ckpts = [f for f in os.listdir(ckpt_dir) if f.startswith("round_")]
         if len(ckpts) > 0:
-            latest = sorted(ckpts, key = lambda x: int(x.split("_")[1].split(".")[0]))[-1]
+            latest = sorted(ckpts, key=lambda x: int(x.split("_")[1].split(".")[0]))[-1]
             load_path = os.path.join(ckpt_dir, latest)
             with open(load_path, "rb") as f:
                 state = pickle.load(f)
@@ -432,15 +432,19 @@ def fit_loop(models, cfg, datasets, comm, outdir):
         if os.path.exists(load_path):
             with open(load_path, "rb") as f:
                 state = pickle.load(f)
-            print_once(f"[resume] Loaded specific checkpoint round {load} -> {load_path}")
+            print_once(
+                f"[resume] Loaded specific checkpoint round {load} -> {load_path}"
+            )
 
             models = state["models"]
             datasets = state["datasets"]
             start_round = load + 1
         else:
-            print_once(f"[resume] Requested round {load} not found, starting at round 0")
+            print_once(
+                f"[resume] Requested round {load} not found, starting at round 0"
+            )
             start_round = 0
-    else:  
+    else:
         start_round = 0
 
     models = list(models)
@@ -472,7 +476,9 @@ def fit_loop(models, cfg, datasets, comm, outdir):
     message = str(models[0]).split("\n")
     message[1] = "Starting pars:"
     print_once("\n".join(message))
-    for r in range(start_round, models[0].n_rounds):  # TODO: enforce n_rounds same for all models
+    for r in range(
+        start_round, models[0].n_rounds
+    ):  # TODO: enforce n_rounds same for all models
         models, datasets = _run_fit(
             cfg,
             models,
