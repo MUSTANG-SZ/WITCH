@@ -406,7 +406,42 @@ def _run_mcmc(cfg, models, datasets):
 def fit_loop(models, cfg, datasets, comm, outdir):
     # ensure checkpoint directory exists
     ckpt_dir = os.path.join(outdir, "checkpoints")
-    os.makedirs(cpkt_dir, exist_ok=True)
+    os.makedirs(ckpt_dir, exist_ok=True)
+
+    # Load progress (loading checkpoint if requested)
+    load = cfg.get("load_progress", False)
+
+    if load is True:
+        #Automatically load latest checkpoint round
+        ckpts = [f for f in os.listdir(ckpt_dir) if f.startswith("round_")]
+        if len(ckpts) > 0:
+            latest = sorted(ckpts, key = lambda x: int(x.split("_")[1].split(".")[0]))[-1]
+            load_path = os.path.join(ckpt_dir, latest)
+            with open(load_path, "rb") as f:
+                state = pickle.load(f)
+            print_once(f"[resume] Loaded checkpoint -> {load_path}")
+
+            models = state["models"]
+            datasets = state["datasets"]
+            start_round = state["round"] + 1
+        else:
+            start_round = 0
+    elif isinstance(load, int):
+        # Load specific round index
+        load_path = os.path.join(ckpt_dir, f"round_{load}.pkl")
+        if os.path.exists(load_path):
+            with open(load_path, "rb") as f:
+                state = pickle.load(f)
+            print_once(f"[resume] Loaded specific checkpoint round {load} -> {load_path}")
+
+            models = state["models"]
+            datasets = state["datasets"]
+            start_round = load + 1
+        else:
+            print_once(f"[resume] Requested round {load} not found, starting at round 0")
+            start_round = 0
+    else:  
+        start_round = 0
 
     models = list(models)
     for model in models:
@@ -437,7 +472,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
     message = str(models[0]).split("\n")
     message[1] = "Starting pars:"
     print_once("\n".join(message))
-    for r in range(models[0].n_rounds):  # TODO: enforce n_rounds same for all models
+    for r in range(start_round, models[0].n_rounds):  # TODO: enforce n_rounds same for all models
         models, datasets = _run_fit(
             cfg,
             models,
@@ -449,7 +484,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
         # Checkpoint after each round
         ckpt_path = os.path.join(ckpt_dir, f"round_{r}.pkl")
         with open(ckpt_path, "wb") as f:
-            picke.dump(
+            pickle.dump(
                 {
                     "stage": "fit_round",
                     "round": r,
@@ -471,8 +506,8 @@ def fit_loop(models, cfg, datasets, comm, outdir):
         _ = mpi4jax.barrier(comm=comm)
 
         # MCMC Checkpoint (Once every few hundred steps)
-        cpkt_path = os.path.join(cpkt_dir, "mcmc.pkl")
-        with open(cpkt_path, "wb") as f:
+        ckpt_path = os.path.join(ckpt_dir, "mcmc.pkl")
+        with open(ckpt_path, "wb") as f:
             pickle.dump(
                 {
                     "stage": "mcmc",
@@ -483,7 +518,8 @@ def fit_loop(models, cfg, datasets, comm, outdir):
                 f,
                 protocol=pickle.HIGHEST_PROTOCOL,
             )
-        print_once(f"[checkpoint] Saved MCMC stae -> {ckpt_path}")
+        print_once(f"[checkpoint] Saved MCMC state -> {ckpt_path}")
+
     # Save final pars
     final = {"model": cfg["model"]}
     model = models[0]  # TODO: TEMP will be fixed with metamodel
