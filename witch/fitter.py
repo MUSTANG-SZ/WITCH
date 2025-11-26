@@ -5,7 +5,7 @@ You typically want to run the `witcher` command instead of this.
 
 import argparse as argp
 import os
-import pickle
+import dill as pk
 import sys
 import time
 from copy import deepcopy
@@ -355,7 +355,40 @@ def _run_fit(
 def _run_mcmc(cfg, models, datasets):
     print_once("Running MCMC")
     init_pars = np.array(models[0].pars.copy())
+
+    # Checkpoint settings
+    checkpoint_interval = int(cfg["mcmc"].get("checkpoint_interval", 200))
+    ckpt_dir = os.path.join(datasets[0].info["outdir"], "checkpoints")
+    os.makedirs(ckpt_dir, exist_ok=True)
+
+    # Tracking container for callback to update
+    callback_state = {
+        "models" : models,
+        "datasets" : datasets,
+        "step" : 0,
+    }
+
+    # Callback that _run_mcmc will call every step
+    def _mcmc_callback(updated_models):
+        callback_state["step"] += 1
+        callback_state["models"] = updated_models
+
+        step = callback_state["step"]
+
+        if step % checkpoint_interval == 0 and comm.Get_rank() == 0:
+            ckpt_path = os.path.join(ckpt_dir, f"mcmc_ste_{step}.pkl")
+            _save_model(
+                ckpt_pathm,
+                updated_models,
+                datasets,
+                cfg,
+                stage = "mcmc",
+                step_num = step,
+            )
+            print_once(f"[checkpoint] Saved MCMC checkpoint at step {step} -> {ckpt_path}")
+
     t1 = time.time()
+
     models, samples = run_mcmc(
         models,
         datasets,
@@ -365,6 +398,7 @@ def _run_mcmc(cfg, models, datasets):
         sample_which=int(cfg["mcmc"].get("sample_which", -1)),
         burn_in=float(cfg["mcmc"].get("burn_in", 0.1)),
         max_tries=int(cfg["mcmc"].get("max_tries", 20)),
+        callback = _mcmc_callback,
     )
     _ = mpi4jax.barrier(comm=comm)
     t2 = time.time()
@@ -410,13 +444,8 @@ def _read_checkpoint(ckpt_path):
     """
     import dill
 
-    # Prefer dill, fall back to pickle?
-    try:
-        with open(ckpt_path, "rb") as f:
-            state = dill.load(f)
-    except Exception:
-        with open(ckpt_path, "rb") as f:
-            state = pickle.load(f)
+    with open(ckpt_path, "rb") as f:
+        state = pk.load(f)
 
     models = state["models"]
     datasets = state["datasets"]
@@ -427,6 +456,33 @@ def _read_checkpoint(ckpt_path):
     datasets = _reestimate_noise(models, datasets)
 
     return models, datasets, start_round, stage, cfg
+
+
+def _read_model(ckpt_path):
+    '''
+    Lightweight loader for reading model + dataset from a checkpoint
+    without resuming training/fitting model
+
+    Returns:
+        models
+        datasets (with reestimated noise)
+        round_number
+        stage
+        cfg
+    '''
+
+    with open(ckpt_path, "rb") as f:
+        state = pk.load(f)
+    
+    models = state.get("models", None)
+    datasets = state.get("datasets", None)
+    round_number = stae.get("round", 0)
+    stage = state.get("stage", None)
+    cfg = state.get("cfg", None)
+
+    datasets = _reestimate_noise(models, datasets)
+
+    return models, datasets, round_number, stage, cfg
 
 
 def fit_loop(models, cfg, datasets, comm, outdir):
@@ -506,7 +562,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
 
         # Checkpoint after each round
         ckpt_path = os.path.join(ckpt_dir, f"round_{r}.pkl")
-        _save_models(ckpt_path, models, datasets, cfg, stage="fit_round", round_num=r)
+        _save_model(ckpt_path, models, datasets, cfg, stage="fit_round", round_num=r)
         print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
@@ -517,10 +573,6 @@ def fit_loop(models, cfg, datasets, comm, outdir):
         )
         _ = mpi4jax.barrier(comm=comm)
 
-        # MCMC Checkpoint (Once every few hundred steps)
-        ckpt_path = os.path.join(ckpt_dir, "mcmc.pkl")
-        _save_models(ckpt_path, models, datasets, cfg, stage="mcmc")
-        print_once(f"[checkpoint] Saved MCMC state -> {ckpt_path}")
 
     # Save final pars
     final = {"model": cfg["model"]}
