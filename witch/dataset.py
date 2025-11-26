@@ -391,6 +391,7 @@ class DataSet:
     info: dict = field(init=False)
     datavec: DataVec = field(init=False)
     prefactor: float = field(init=False)
+    metadata: tuple[MetaData, ...] = field(init=False)
 
     def __post_init__(self: Self):
         assert isinstance(self.get_files, GetFiles)

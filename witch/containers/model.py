@@ -583,7 +583,9 @@ class Model:
 
         # Make sure the structure is in the order that core expects
         structure_idx = jnp.argsort(
-            jnp.array([structure.structure_order for structure in structures])
+            jnp.array(
+                [core.ORDER_DICT[structure.structure] for structure in structures]
+            )
         ).ravel()
         structures = tuple([structures[i] for i in structure_idx])
 

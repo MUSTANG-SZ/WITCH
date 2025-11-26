@@ -2,6 +2,7 @@
 Dataclass for storing multi model and dataset systems.
 """
 
+from copy import deepcopy
 from dataclasses import dataclass
 from functools import cached_property
 from typing import Self
@@ -13,7 +14,6 @@ import numpy as np
 from jax.tree_util import register_pytree_node_class
 from mpi4py import MPI
 
-from .. import core
 from .. import utils as wu
 from ..dataset import DataSet
 from .model import Model
@@ -35,7 +35,7 @@ class MetaModel:
     models: tuple[Model, ...]
     datasets: tuple[DataSet, ...]
     parameter_map: tuple[
-        jax.Array, ...
+        tuple[int, ...], ...
     ]  # The i'th entry maps parameters to the i'th model
     model_map: tuple[
         tuple[int, ...], ...
@@ -67,11 +67,11 @@ class MetaModel:
         """
         par_names = np.zeros_like(self.parameters, dtype="U128")
         for model, par_map in zip(self.models, self.parameter_map):
-            par_names[par_map] = np.array(model.par_names, dtype="U128")
+            par_names[list(par_map)] = np.array(model.par_names, dtype="U128")
 
         return tuple(par_names.tolist())
 
-    @cached_property
+    @property
     def to_fit(self) -> jax.Array:
         """
         Get which parameters will  be fit this round in the same order `self.parameters`.
@@ -83,7 +83,7 @@ class MetaModel:
         """
         to_fit = jnp.zeros_like(self.parameters, dtype=bool)
         for model, par_map in zip(self.models, self.parameter_map):
-            to_fit = to_fit.at[par_map].set(jnp.array(model.to_fit))
+            to_fit = to_fit.at[jnp.array(par_map)].set(jnp.array(model.to_fit))
 
         return to_fit
 
@@ -99,7 +99,9 @@ class MetaModel:
         """
         to_fit_ever = jnp.zeros_like(self.parameters, dtype=bool)
         for model, par_map in zip(self.models, self.parameter_map):
-            to_fit_ever = to_fit_ever.at[par_map].set(jnp.array(model.to_fit_ever))
+            to_fit_ever = to_fit_ever.at[jnp.array(par_map)].set(
+                jnp.array(model.to_fit_ever)
+            )
 
         return to_fit_ever
 
@@ -118,8 +120,8 @@ class MetaModel:
         priors_low = jnp.zeros_like(self.parameters)
         priors_high = jnp.zeros_like(self.parameters)
         for model, par_map in zip(self.models, self.parameter_map):
-            priors_low = priors_low.at[par_map].set(model.priors[0])
-            priors_high = priors_low.at[par_map].set(model.priors[1])
+            priors_low = priors_low.at[jnp.array(par_map)].set(model.priors[0])
+            priors_high = priors_low.at[jnp.array(par_map)].set(model.priors[1])
 
         return priors_low, priors_high
 
@@ -174,7 +176,6 @@ class MetaModel:
         for i in m_map:
             model = self.models[i]
             ip = model.model
-            ip = core._beam_conv(ip, dset.beam)
             ip = ip.at[:].multiply(dset.prefactor)
             proj = proj.at[:].add(ip)
         return proj
@@ -210,7 +211,6 @@ class MetaModel:
         for i in m_map:
             model = self.models[i]
             ip = model.model
-            ip = core._beam_conv(ip, dset.beam)
             ip = ip.at[:].multiply(dset.prefactor)
             proj = proj.at[:].add(_project(ip, x, y, model.xyz))
         return proj
@@ -247,9 +247,8 @@ class MetaModel:
             model = self.models[i]
             par_map = self.parameter_map[i]
             ip_grad = model.model_grad[1]
-            ip_grad = core._beam_conv_vec(ip_grad, dset.beam)
             ip_grad = ip_grad.at[:].multiply(dset.prefactor)
-            proj_grad = proj_grad.at[par_map].add(
+            proj_grad = proj_grad.at[jnp.array(par_map)].add(
                 _project_vectorized(ip_grad, x, y, model.xyz)
             )
         return proj_grad
@@ -303,7 +302,9 @@ class MetaModel:
         self.errors = errs
         self.chisq = chisq
         self.models = tuple(
-            model.update(vals[par_map], errs[par_map], chisq)
+            deepcopy(model).update(
+                vals[jnp.array(par_map)], errs[jnp.array(par_map)], chisq
+            )
             for model, par_map in zip(self.models, self.parameter_map)
         )
 
@@ -330,7 +331,7 @@ class MetaModel:
         self.__dict__.pop("to_fit", None)
         self.__dict__.pop("to_fit_ever", None)
         self.models = tuple(
-            model.add_round(to_fit[par_map])
+            model.add_round(to_fit[jnp.array(par_map)])
             for model, par_map in zip(self.models, self.parameter_map)
         )
 
@@ -491,19 +492,18 @@ class MetaModel:
         children = (
             self.models,
             self.datasets,
-            self.parameter_map,
             self.parameters,
             self.errors,
             self.chisq,
         )
-        aux_data = (self.global_comm, self.model_map)
+        aux_data = (self.global_comm, self.model_map, self.parameter_map)
 
         return (children, aux_data)
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        global_comm, model_map = aux_data
-        models, datasets, parameter_map, parameters, errors, chisq = children
+        global_comm, model_map, parameter_map = aux_data
+        models, datasets, parameters, errors, chisq = children
 
         return cls(
             global_comm,
@@ -542,8 +542,10 @@ def _compute_par_map_and_pars(
     for p in pmap:
         for n in p[1:]:
             repeats[full_par_names.index(n)] += 1
-            par_idx[full_par_names.index(n) :] -= 1
-            par_idx[full_par_names.index(n)] = full_par_names.index(p[0])
+            par_idx = par_idx.at[full_par_names.index(n) :].add(-1)
+            par_idx = par_idx.at[full_par_names.index(n)].set(
+                full_par_names.index(p[0])
+            )
     if np.any(repeats > 1):
         raise ValueError("Some parameters mapped multiple times!")
     repeats = repeats.astype(bool)
@@ -555,9 +557,10 @@ def _compute_par_map_and_pars(
     par_map = []
     for model in models:
         npar = len(model.par_names)
-        pars = pars.at[n : n + npar].set(model.pars)
-        errs = errs.at[n : n + npar].set(model.errs)
-        par_map += [tuple(par_idx.at[n : n + npar].get())]
+        _par_map = jnp.array(par_idx.at[n : n + npar].get())
+        pars = pars.at[_par_map].set(model.pars)
+        errs = errs.at[_par_map].set(model.errs)
+        par_map += [tuple(_par_map)]
         n += npar
     par_map = tuple(par_map)
 

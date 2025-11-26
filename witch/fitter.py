@@ -5,6 +5,7 @@ You typically want to run the `witcher` command instead of this.
 
 import argparse as argp
 import os
+import re
 import sys
 import time
 from copy import copy, deepcopy
@@ -23,6 +24,7 @@ from typing_extensions import Any, Unpack
 
 from . import utils as wu
 from .containers import MetaModel, Model, Model_xfer
+from .containers.metamodel import _compute_par_map_and_pars
 from .dataset import DataSet
 from .fitting import run_lmfit, run_mcmc
 from .nonparametric import para_to_non_para
@@ -108,7 +110,7 @@ def _mpi_fsplit(fnames, comm):
         dset: 1
         + (nproc - len(fnames))
         * (len(fnames[dset]) - 1)
-        / len(flat_fnames)  # (len(flat_fnames) - len(fnames))
+        / max(1, (len(flat_fnames) - len(fnames)))
         for dset in fnames.keys()
     }
     nprocs = iteround.saferound(nprocs, 0)
@@ -294,16 +296,14 @@ def _save_model(cfg, metamodel, desc_str):
     final = {"metamodel": cfg["metamodel"]}
     for model in metamodel.models:
         final[model.name] = cfg[model.name]
-        for i, (struct_name, structure) in zip(
-            model.original_order, cfg[model.name]["structures"].items()
-        ):
-            model_struct = model.structures[i]
+        for model_struct in model.structures:
+            structure = cfg[model.name]["structures"][model_struct.name]
             for par, par_name in zip(
                 model_struct.parameters, structure["parameters"].keys()
             ):
-                final[model.name]["structures"][struct_name]["parameters"][par_name][
-                    "value"
-                ] = [float(cur_par) for cur_par in par.val]
+                final[model.name]["structures"][model_struct.name]["parameters"][
+                    par_name
+                ]["value"] = [float(cur_par) for cur_par in par.val]
     with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
         yaml.dump(final, file)
 
@@ -414,9 +414,9 @@ def fit_loop(metamodel, cfg, comm):
     metamodel = metamodel.update(metamodel.parameters, metamodel.errors, chisq)
     print_once(f"Took {time.time() - t0} s to compile")
 
-    message = str(metamodel).split("\n")
-    message[1] = "Starting pars:"
-    print_once("\n".join(message))
+    print_once(
+        re.sub(r"^Round 1.*\n?", "Starting pars:", str(metamodel), flags=re.MULTILINE)
+    )
     for r in range(metamodel.n_rounds):
         metamodel = _run_fit(
             cfg,
@@ -559,17 +559,17 @@ def main():
         postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
         postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
         dataset = DataSet(
-                dset_name,
-                get_files,
-                load,
-                get_info,
-                make_metadata,
-                preproc,
-                postproc,
-                postfit,
-                comm,
-            )
-        
+            dset_name,
+            get_files,
+            load,
+            get_info,
+            make_metadata,
+            preproc,
+            postproc,
+            postfit,
+            comm,
+        )
+
         # Get data
         dataset.datavec = load(
             dset_name, cfg, fnames[dset_name], comms_local[dset_name]
@@ -579,7 +579,7 @@ def main():
         dataset.info = get_info(dset_name, cfg, dataset.datavec)
 
         # Get the metadata
-        metadata = make_metadata(dset_name, cfg, dataset.info) #info?????
+        metadata = make_metadata(dset_name, cfg, dataset.info)  # info?????
         dataset.metadata = metadata
 
         # Prefactor

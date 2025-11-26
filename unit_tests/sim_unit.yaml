@@ -144,5 +144,5 @@ metamodel:
       - cluster_model
       - ps_model
   parameter_map:
-    - [cluster_model.a10.dx1, ps_model.gauss.dx_g]
-    - [cluster_model.a10.dy1, ps_model.gauss.dy_g]
+    - [cluster_model.a10.dx_1, ps_model.gauss.dx_g]
+    - [cluster_model.a10.dy_1, ps_model.gauss.dy_g]

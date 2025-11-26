@@ -37,6 +37,8 @@ ORDER = (
     "gaussian",
 )
 
+ORDER_DICT = {name: i for i, name in enumerate(ORDER)}
+
 jax.config.update("jax_enable_x64", True)
 # jax.config.update("jax_platform_name", "gpu")
 

@@ -22,7 +22,7 @@ paths:
   # If an absolute path then that is used directly
   # If a relative path taken relative to MJ_TODROOT
   #maps: "ACT1407"
-  xmaps: "/home/elebar/MOO1142/"
+  xmaps: "/mnt/welch/XRAY/MOO1142/"
   #tods: "ACT1407"
   #glob: "Signal_TOD*.fits" # Pattern to search for TODs with
   ndo: False # ?

@@ -9,6 +9,7 @@ import minkasi
 import numpy as np
 from astropy.convolution import Gaussian2DKernel, convolve
 from jax import Array
+from jax.tree_util import register_pytree_node_class
 from jitkasi.tod import TODVec
 from minkasi.tools import presets_by_source as pbs
 from mpi4py import MPI
@@ -120,6 +121,7 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
     }
 
 
+@register_pytree_node_class
 @dataclass
 class BeamProj(MetaData):
     beam: Array
@@ -147,8 +149,8 @@ class BeamProj(MetaData):
         return cls(children[0])
 
 
-def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]: 
-    #_ = info
+def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]:
+    # _ = info
     dr = eval(str(cfg["coords"]["dr"]))
     beam = wu.beam_double_gauss(
         dr,

@@ -112,3 +112,9 @@ model:
           value: 0.97 
           priors: [.9, 1]
 
+metamodel:
+  models:
+    - model 
+  model_map:
+    xray:
+      - model 

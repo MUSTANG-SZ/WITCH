@@ -319,7 +319,8 @@ def hmc(
         if rank == 0:
             print(f"Compiling MC sample function. This can take a few minutes!")
         t0 = time.time()
-        l_sample = _sample.lower(key, params, step_size)
+        t_sample = _sample.trace(key, params, step_size)
+        l_sample = t_sample.lower()
         c_sample = l_sample.compile()
         t1 = time.time()
         if rank == 0:
@@ -442,9 +443,11 @@ def run_mcmc(
             metamodel.priors, full_pars, jnp.array(metamodel.to_fit)
         )
         log_prior = jnp.sum(
-            jnp.where(in_bounds.at[metamodel.to_fit].get(), 0, -1 * jnp.inf)
+            jnp.where(
+                jnp.array(jnp.where(metamodel.to_fit, in_bounds, True)), 0, -1 * jnp.inf
+            )
         )
-        temp_metamodel = metamodel.update(full_pars, init_errs, jnp.array(0))
+        temp_metamodel = copy(metamodel).update(full_pars, init_errs, jnp.array(0))
         chisq, *_ = joint_objective(temp_metamodel, True, False, False)
         log_like = -0.5 * chisq
         log_like = log_like + log_prior
@@ -458,9 +461,11 @@ def run_mcmc(
             metamodel.priors, full_pars, jnp.array(metamodel.to_fit)
         )
         log_prior = jnp.sum(
-            jnp.where(in_bounds.at[metamodel.to_fit].get(), 0, -1 * jnp.inf)
+            jnp.where(
+                jnp.array(jnp.where(metamodel.to_fit, in_bounds, True)), 0, -1 * jnp.inf
+            )
         )
-        temp_metamodel = metamodel.update(full_pars, init_errs, jnp.array(0))
+        temp_metamodel = copy(metamodel).update(full_pars, init_errs, jnp.array(0))
         _, grad, _ = joint_objective(temp_metamodel, False, True, False)
         grad = grad.at[:].multiply(1.0 / scale)
         log_like_grad = grad.at[to_fit].get().ravel()
