@@ -402,6 +402,31 @@ def _run_mcmc(cfg, models, datasets):
     )
     return models, datasets
 
+def _read_checkpoint(ckpt_path):
+    '''
+    Load a checkpoint and return model, datasets, start_round, stage, and cfg.
+    Automatically reestimates noise after loading.
+    '''
+    import dill
+    
+    # Prefer dill, fall back to pickle?
+    try:
+        with open(ckpt_path, "rb") as f:
+            state = dill.load(f)
+    except Exception:
+        with open(ckpt_path, "rb") as f:
+            state = pickle.load(f)
+
+    models = state["models"]
+    datasets = state["datasets"]
+    start_round = state.get["round", 0] + 1
+    stage = state.get("stage", None)
+    cfg = state.get("cfg", None)
+
+    datasets = _reestimate_noise(models, datasets)
+
+    return models, datasets, start_round, stage, cfg
+
 
 def fit_loop(models, cfg, datasets, comm, outdir):
     # ensure checkpoint directory exists
@@ -410,61 +435,48 @@ def fit_loop(models, cfg, datasets, comm, outdir):
 
     # Load progress (loading checkpoint if requested)
     load = cfg.get("load_progress", False)
+    start_round = 0
 
-    if load is True:
-        # Automatically load latest checkpoint round
-        ckpts = [f for f in os.listdir(ckpt_dir) if f.startswith("round_")]
-        if len(ckpts) > 0:
-            latest = sorted(ckpts, key=lambda x: int(x.split("_")[1].split(".")[0]))[-1]
-            load_path = os.path.join(ckpt_dir, latest)
-            with open(load_path, "rb") as f:
-                state = pickle.load(f)
-            print_once(f"[resume] Loaded checkpoint -> {load_path}")
+    if load:
+        if load is True:
+            # Automatically load latest checkpoint round
+            ckpts = [f for f in os.listdir(ckpt_dir) if f.startswith("round_")]
+            
+            if len(ckpts) > 0:
+                latest = sorted(
+                    ckpts, key=lambda x: int(x.split("_")[1].split(".")[0]))[-1]
+                load_path = os.path.join(ckpt_dir, latest)
+                print_once(f"[resume] Loading latest checkpoint -> {load_path}")
+                models, datasets, start_round, _, _ = _read_checkpoint(load_path)
 
-            models = state["models"]
-            datasets = state["datasets"]
-            start_round = state["round"] + 1
-        else:
-            start_round = 0
-    elif isinstance(load, int):
-        # Load specific round index
-        load_path = os.path.join(ckpt_dir, f"round_{load}.pkl")
-        if os.path.exists(load_path):
-            with open(load_path, "rb") as f:
-                state = pickle.load(f)
-            print_once(
-                f"[resume] Loaded specific checkpoint round {load} -> {load_path}"
-            )
+        elif isinstance(load, int):
+            load_path = os.path.join(ckpt_dir, f"round_{load}.pkl")
 
-            models = state["models"]
-            datasets = state["datasets"]
-            start_round = load + 1
-        else:
-            print_once(
-                f"[resume] Requested round {load} not found, starting at round 0"
-            )
-            start_round = 0
-    else:
-        start_round = 0
+            if os.path.exists(load_path):
+                print_once(f"[resume] Loading checkpoint round {load} -> {load_path}")
+                models, datasets, start_round, _, _ = _read_checkpoint(load_path)
+            else:
+                print_once(f"[resume] Requested round {load} not found, starting at round 0")
+                start_round = 0
 
     models = list(models)
-    for model in models:
-        if models is None:
-            raise ValueError("Can't fit without a model defined!")
-    if cfg["sim"]:
-        # Remove structs we deliberately want to leave out of model
+    if not models:
+        raise ValueError("Can't fit without a model defined!")
+    
+    # Preprocessing for sim if needed
+    if cfg.get("sim", False):
         for struct_name in cfg["model"]["structures"]:
             if cfg["model"]["structures"][struct_name].get("to_remove", False):
-                for i, model in models:
+                for model in models:
                     model.remove_struct(struct_name)
         for i, model in enumerate(models):
             params = jnp.array(model.pars)
             par_offset = cfg.get("par_offset", 1.1)
-            params = params.at[model.to_fit_ever].multiply(
-                par_offset
-            )  # Don't start at exactly the right value
+            params = params.at[model.to_fit_ever].multiply(par_offset)  
+            # Don't start at exactly the right value
             models[i] = model.update(params, model.errs, model.chisq)
 
+    # Compile objective function
     print_once("Compiling objective function")
     t0 = time.time()
     chisq, *_ = joint_objective(models, datasets, len(models))
@@ -476,9 +488,8 @@ def fit_loop(models, cfg, datasets, comm, outdir):
     message = str(models[0]).split("\n")
     message[1] = "Starting pars:"
     print_once("\n".join(message))
-    for r in range(
-        start_round, models[0].n_rounds
-    ):  # TODO: enforce n_rounds same for all models
+    
+    for r in range(start_round, models[0].n_rounds):  # TODO: enforce n_rounds same for all models
         models, datasets = _run_fit(
             cfg,
             models,
@@ -489,18 +500,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
 
         # Checkpoint after each round
         ckpt_path = os.path.join(ckpt_dir, f"round_{r}.pkl")
-        with open(ckpt_path, "wb") as f:
-            pickle.dump(
-                {
-                    "stage": "fit_round",
-                    "round": r,
-                    "models": models,
-                    "datasets": datasets,
-                    "cfg": cfg,
-                },
-                f,
-                protocol=pickle.HIGHEST_PROTOCOL,
-            )
+        _save_models(ckpt_path, models, datasets, cfg, stage = "fit_round", round_num = r)
         print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
@@ -513,17 +513,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
 
         # MCMC Checkpoint (Once every few hundred steps)
         ckpt_path = os.path.join(ckpt_dir, "mcmc.pkl")
-        with open(ckpt_path, "wb") as f:
-            pickle.dump(
-                {
-                    "stage": "mcmc",
-                    "models": models,
-                    "datasets": datasets,
-                    "cfg": cfg,
-                },
-                f,
-                protocol=pickle.HIGHEST_PROTOCOL,
-            )
+        _save_models(ckpt_path, models, datasets, cfg, stage = "mcmc")
         print_once(f"[checkpoint] Saved MCMC state -> {ckpt_path}")
 
     # Save final pars
