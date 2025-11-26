@@ -5,13 +5,13 @@ You typically want to run the `witcher` command instead of this.
 
 import argparse as argp
 import os
-import dill as pk
 import sys
 import time
 from copy import deepcopy
 from importlib import import_module
 
 import corner
+import dill as pk
 import iteround
 import jax
 import jax.numpy as jnp
@@ -363,9 +363,9 @@ def _run_mcmc(cfg, models, datasets):
 
     # Tracking container for callback to update
     callback_state = {
-        "models" : models,
-        "datasets" : datasets,
-        "step" : 0,
+        "models": models,
+        "datasets": datasets,
+        "step": 0,
     }
 
     # Callback that _run_mcmc will call every step
@@ -382,10 +382,12 @@ def _run_mcmc(cfg, models, datasets):
                 updated_models,
                 datasets,
                 cfg,
-                stage = "mcmc",
-                step_num = step,
+                stage="mcmc",
+                step_num=step,
             )
-            print_once(f"[checkpoint] Saved MCMC checkpoint at step {step} -> {ckpt_path}")
+            print_once(
+                f"[checkpoint] Saved MCMC checkpoint at step {step} -> {ckpt_path}"
+            )
 
     t1 = time.time()
 
@@ -398,7 +400,7 @@ def _run_mcmc(cfg, models, datasets):
         sample_which=int(cfg["mcmc"].get("sample_which", -1)),
         burn_in=float(cfg["mcmc"].get("burn_in", 0.1)),
         max_tries=int(cfg["mcmc"].get("max_tries", 20)),
-        callback = _mcmc_callback,
+        callback=_mcmc_callback,
     )
     _ = mpi4jax.barrier(comm=comm)
     t2 = time.time()
@@ -459,7 +461,7 @@ def _read_checkpoint(ckpt_path):
 
 
 def _read_model(ckpt_path):
-    '''
+    """
     Lightweight loader for reading model + dataset from a checkpoint
     without resuming training/fitting model
 
@@ -469,11 +471,11 @@ def _read_model(ckpt_path):
         round_number
         stage
         cfg
-    '''
+    """
 
     with open(ckpt_path, "rb") as f:
         state = pk.load(f)
-    
+
     models = state.get("models", None)
     datasets = state.get("datasets", None)
     round_number = stae.get("round", 0)
@@ -572,7 +574,6 @@ def fit_loop(models, cfg, datasets, comm, outdir):
             datasets,
         )
         _ = mpi4jax.barrier(comm=comm)
-
 
     # Save final pars
     final = {"model": cfg["model"]}
