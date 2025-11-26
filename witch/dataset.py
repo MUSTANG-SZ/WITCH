@@ -29,7 +29,45 @@ class MetaData:
     """
     Class for storing and applying metdata to a dataset.
     You should subclass this for your individual metadata implementation.
+
+    Attributes
+    ----------
+    include : tuple[str, ...]
+        Used when computing metamodel mapping.
+        If provided only models whose names are listed will
+        have this metadata applied. If an empty tuple is provided
+        then all models will have this metadata applied by default.
+    exclude : tuple[str, ...]
+        Used when computing metamodel mapping.
+        If provided  models whose names are listed will not
+        have this metadata applied. If an empty tuple is provided
+        then no models will be excluded by default.
+        This exclusion list is applied after the inclusion list,
+        so a model listed in both will be excluded.
     """
+
+    include: tuple[str, ...] = field(default_factory=tuple, kw_only=True)
+    exclude: tuple[str, ...] = field(default_factory=tuple, kw_only=True)
+
+    def check_apply(self, model_name) -> bool:
+        """
+        Check based on `self.include` and `self.exclude` if we should
+        apply this metadata to a given model.
+
+        Parameters
+        ----------
+        model_name : str
+            The name of the model to apply.
+
+        Returns
+        -------
+        check : bool
+            True if this metadata should be applied.
+            False if not.
+        """
+        if len(self.include) != 0 and model_name not in self.include:
+            return False
+        return model_name not in self.exclude
 
     def apply(self, model: Array) -> Array:
         """
@@ -103,13 +141,14 @@ class MetaData:
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
 
-        return (tuple(), tuple())
+        return (tuple(), (self.include, self.exclude))
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        _ = aux_data, children
+        _ = children
+        include, exclude = aux_data
 
-        return cls()
+        return cls(include=include, exclude=exclude)
 
 
 @runtime_checkable

@@ -118,12 +118,13 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
         "copy_noise": cfg["datasets"][dset_name]["copy_noise"],
         "xfer": cfg["datasets"][dset_name].get("xfer", ""),
         "prefactor": prefactor,
+        "skip_beam": cfg["datasets"][dset_name].get("skip_beam", []),
     }
 
 
 @register_pytree_node_class
 @dataclass
-class BeamProj(MetaData):
+class BeamConv(MetaData):
     beam: Array
 
     def apply(self, model: Array) -> Array:
@@ -144,13 +145,12 @@ class BeamProj(MetaData):
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        _ = aux_data
+        include, exclude = aux_data
 
-        return cls(children[0])
+        return cls(children[0], include=include, exclude=exclude)
 
 
 def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]:
-    # _ = info
     dr = eval(str(cfg["coords"]["dr"]))
     beam = wu.beam_double_gauss(
         dr,
@@ -160,7 +160,7 @@ def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]
         eval(str(cfg["datasets"][dset_name]["beam"]["amp2"])),
     )
 
-    return (BeamProj(beam),)
+    return (BeamConv(beam, exclude=tuple(info["skip_beam"])),)
 
 
 def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):

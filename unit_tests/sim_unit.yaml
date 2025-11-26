@@ -134,6 +134,11 @@ ps_model:
           to_fit: [True, False, True, True]
           priors: [0, .005]
 
+# Add some info on what metadata to apply
+datasets:
+  mustang2:
+    - skip_beam:
+      - "ps_model"
 
 metamodel:
   models:

@@ -24,7 +24,7 @@ from typing_extensions import Any, Unpack
 
 from . import utils as wu
 from .containers import MetaModel, Model, Model_xfer
-from .containers.metamodel import _compute_par_map_and_pars
+from .containers.metamodel import _compute_metadata_map, _compute_par_map_and_pars
 from .dataset import DataSet
 from .fitting import run_lmfit, run_mcmc
 from .nonparametric import para_to_non_para
@@ -616,11 +616,12 @@ def main():
             datasets,
             tuple(),
             tuple(),
+            tuple(),
             jnp.zeros(0),
             jnp.zeros(0),
             jnp.zeros(0),
         )
-        print_once("No model defined, setting fit, sim, and sub to False")
+        print_once("No metamodel defined, setting fit, sim, and sub to False")
         cfg["fit"] = False
         cfg["sim"] = False
         cfg["sub"] = False
@@ -666,10 +667,12 @@ def main():
             par_map, pars, errs = _compute_par_map_and_pars(
                 cfg.get("metamodel", {}), nonpara_models
             )
+            metadata_map = _compute_metadata_map(nonpara_models, metamodel.datasets)
             nonparametamodel = copy(metamodel)
             nonparametamodel.parameter_map = par_map
             nonparametamodel.parameters = pars
             nonparametamodel.errors = errs
+            nonparametamodel.metadata_map = metadata_map
             nonparametamodel = nonparametamodel.update(pars, errs, metamodel.chisq)
 
             nonparametamodel = fit_loop(nonparametamodel, cfg, comm)

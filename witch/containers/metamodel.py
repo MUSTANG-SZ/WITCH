@@ -31,6 +31,7 @@ _project_vectorized = jax.vmap(_project, in_axes=(0, None, None, None))
 @register_pytree_node_class
 @dataclass
 class MetaModel:
+    # TODO: Add docstring!
     global_comm: MPI.Comm | MPI.Intracomm | wu.NullComm
     models: tuple[Model, ...]
     datasets: tuple[DataSet, ...]
@@ -40,6 +41,9 @@ class MetaModel:
     model_map: tuple[
         tuple[int, ...], ...
     ]  # The j'th entry lists the indices of the models used by the j'th dataset
+    metadata_map: tuple[
+        tuple[tuple[int, ...], ...], ...
+    ]  # The j'th entry is an n_model lenght tuple in which the i'th entry lists the indices of the metadata to apply from the j'th dataset
     parameters: jax.Array
     errors: jax.Array
     chisq: jax.Array
@@ -159,6 +163,7 @@ class MetaModel:
         """
         Get the model for a dataset on the computed grid.
         This currently assumes that all models have the same grid.
+        This will not apply any metadata (ie. beam convolution).
 
         Parameters
         ----------
@@ -199,6 +204,7 @@ class MetaModel:
         """
         dset = self.datasets[dataset_ind]
         m_map = self.model_map[dataset_ind]
+        md_map = self.metadata_map[dataset_ind]
         data = dset.datavec[datavec_ind]
         if dset.mode == "tod":
             x = data.x
@@ -210,9 +216,14 @@ class MetaModel:
         proj = jnp.zeros_like(x)
         for i in m_map:
             model = self.models[i]
+            md = md_map[i]
             ip = model.model
             ip = ip.at[:].multiply(dset.prefactor)
+            for md_idx in md:
+                ip = dset.metadata[md_idx].apply(ip)
             proj = proj.at[:].add(_project(ip, x, y, model.xyz))
+            for md_idx in md:
+                proj = dset.metadata[md_idx].apply_proj(proj)
         return proj
 
     def model_grad_proj(self, dataset_ind: int, datavec_ind: int) -> jax.Array:
@@ -234,6 +245,7 @@ class MetaModel:
         """
         dset = self.datasets[dataset_ind]
         m_map = self.model_map[dataset_ind]
+        md_map = self.metadata_map[dataset_ind]
         data = dset.datavec[datavec_ind]
         if dset.mode == "tod":
             x = data.x
@@ -245,12 +257,17 @@ class MetaModel:
         proj_grad = jnp.zeros(self.parameters.shape + x.shape)
         for i in m_map:
             model = self.models[i]
+            md = md_map[i]
             par_map = self.parameter_map[i]
             ip_grad = model.model_grad[1]
             ip_grad = ip_grad.at[:].multiply(dset.prefactor)
+            for md_idx in md:
+                ip_grad = dset.metadata[md_idx].apply_grad(ip_grad)
             proj_grad = proj_grad.at[jnp.array(par_map)].add(
                 _project_vectorized(ip_grad, x, y, model.xyz)
             )
+            for md_idx in md:
+                proj_grad = dset.metadata[md_idx].apply_grad_proj(proj_grad)
         return proj_grad
 
     def get_dataset_ind(self, dset_name: str) -> int:
@@ -475,12 +492,15 @@ class MetaModel:
 
         par_map, pars, errs = _compute_par_map_and_pars(metacfg, models)
 
+        metadata_map = _compute_metadata_map(models, datasets)
+
         return cls(
             global_comm,
             models,
             datasets,
             par_map,
             model_map,
+            metadata_map,
             pars,
             errs,
             models[0].chisq,
@@ -496,13 +516,18 @@ class MetaModel:
             self.errors,
             self.chisq,
         )
-        aux_data = (self.global_comm, self.model_map, self.parameter_map)
+        aux_data = (
+            self.global_comm,
+            self.model_map,
+            self.parameter_map,
+            self.metadata_map,
+        )
 
         return (children, aux_data)
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        global_comm, model_map, parameter_map = aux_data
+        global_comm, model_map, parameter_map, metadata_map = aux_data
         models, datasets, parameters, errors, chisq = children
 
         return cls(
@@ -511,6 +536,7 @@ class MetaModel:
             datasets,
             parameter_map,
             model_map,
+            metadata_map,
             parameters,
             errors,
             chisq,
@@ -565,3 +591,18 @@ def _compute_par_map_and_pars(
     par_map = tuple(par_map)
 
     return par_map, pars, errs
+
+
+def _compute_metadata_map(models, datasets):
+    metadata_map = tuple(
+        tuple(
+            tuple(
+                i
+                for i, metadata in enumerate(dataset.metadata)
+                if metadata.check_apply(model.name)
+            )
+            for model in models
+        )
+        for dataset in datasets
+    )
+    return tuple(metadata_map)
