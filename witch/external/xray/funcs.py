@@ -1,15 +1,16 @@
 import glob
 import os
-
-import jax.numpy as jnp
-from astropy.io import fits
-from astropy.wcs import WCS
-from jax import Array
-from jitkasi.solutions import SolutionSet, maps
-from mpi4py import MPI
 from dataclasses import dataclass
 from typing import Self
+
+import jax.numpy as jnp
 from astropy.convolution import convolve_fft
+from astropy.io import fits
+from astropy.wcs import WCS
+from jax import Array, vmap
+from jax.tree_util import register_pytree_node_class
+from jitkasi.solutions import SolutionSet, maps
+from mpi4py import MPI
 
 import witch.utils as wu
 from witch.containers import MetaModel
@@ -19,16 +20,16 @@ from witch.fitter import print_once
 from ...objective import poisson_objective
 
 
-def convolve (img, PSF):
-    '''
+def convolve(img, PSF):
+    """
     Parameters
     ----------
     img : np.ndarray
         The map to be smoothed.
-        
+
     res : float
         FWHM (resolution) of the smoothing (arcmin).
-        
+
     dim_pixel : float
         Pixel size in the map (arcmin).
 
@@ -36,11 +37,14 @@ def convolve (img, PSF):
     -------
     img_convolved: np.ndarray
         Same map but smoothed.
-    '''
+    """
 
-    img_convolved=convolve_fft(img, PSF)
+    img_convolved = convolve_fft(img, PSF)
 
     return img_convolved
+
+
+convolve_vec = vmap(convolve, in_axes=(0, None))
 
 
 def get_files(dset_name: str, cfg: dict) -> list:
@@ -88,8 +92,9 @@ def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
         "objective": poisson_objective,
     }
 
+
 def load_exps(dset_name: str, cfg: dict, struct_names: list):
-    #def __init__(self, dset_name: str, cfg: dict):
+    # def __init__(self, dset_name: str, cfg: dict):
     maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
     if not os.path.isabs(maproot):
         maproot = os.path.join(
@@ -98,12 +103,12 @@ def load_exps(dset_name: str, cfg: dict, struct_names: list):
     maproot_dset = os.path.join(maproot, dset_name)
     if os.path.isdir(maproot_dset):
         maproot = maproot_dset
-    
-    #import exposure maps
+
+    # import exposure maps
     exp_glob = cfg["datasets"][dset_name].get("glob", "*exp*.fits")
     exp_fnames = glob.glob(os.path.join(maproot, exp_glob))
     order_map = {item: index for index, item in enumerate(struct_names)}
-    exp_fnames = sorted(exp_fnames, key=lambda x: order_map.get(x, float('inf')))
+    exp_fnames = sorted(exp_fnames, key=lambda x: order_map.get(x, float("inf")))
     exp_maps = []
     for strc_name in struct_names:
         for fname in exp_fnames:
@@ -117,8 +122,9 @@ def load_exps(dset_name: str, cfg: dict, struct_names: list):
                 exp_maps += [dat]
     return exp_maps
 
+
 def load_beams(dset_name: str, cfg: dict, struct_names: list):
-    #def __init__(self, dset_name: str, cfg: dict):
+    # def __init__(self, dset_name: str, cfg: dict):
     maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
     if not os.path.isabs(maproot):
         maproot = os.path.join(
@@ -127,12 +133,12 @@ def load_beams(dset_name: str, cfg: dict, struct_names: list):
     maproot_dset = os.path.join(maproot, dset_name)
     if os.path.isdir(maproot_dset):
         maproot = maproot_dset
-    
+
     # import beams
     beam_glob = cfg["datasets"][dset_name].get("glob", "*psf*.fits")
     beam_fnames = glob.glob(os.path.join(maproot, beam_glob))
     order_map = {item: index for index, item in enumerate(struct_names)}
-    beam_fnames = sorted(beam_fnames, key=lambda x: order_map.get(x, float('inf')))
+    beam_fnames = sorted(beam_fnames, key=lambda x: order_map.get(x, float("inf")))
     beams = []
     for strc_name in struct_names:
         for fname in beam_fnames:
@@ -145,6 +151,7 @@ def load_beams(dset_name: str, cfg: dict, struct_names: list):
                 f.close()
                 beams += [dat]
     return beams
+
 
 def load_back(dset_name: str, cfg: dict):
     maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
@@ -166,22 +173,28 @@ def load_back(dset_name: str, cfg: dict):
     f.close()
     return dat
 
+
+@register_pytree_node_class
 @dataclass
 class ExpConvProj(MetaData):
     exp_map: Array
     beam_map: Array
-    
+
     def apply(self, model: Array) -> Array:
-        return self.exp_map * convolve(model, self.beam)
+        return self.exp_map * convolve(model, self.beam_map)
 
     def apply_grad(self, model_grad: Array) -> Array:
-        #EDIT!!!!!!!!!!!
-        return beam_conv_vec(model_grad, self.beam)
+        # Using *c* as convolution below
+        # d/dx_i ( exp_map*(beam_map *c* model))
+        # = d/dx_i(exp_map*beam_map *c* model))
+        # = exp_map*beam_map *c* d/dx_i(model)
+        # = exp_map*beam_map *c* model_grad
+        return convolve_vec(model_grad, self.exp_map * self.beam_map)
 
     # Functions for making this a pytree
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
-        children = ((self.exp_map, self.beam), )
+        children = (self.exp_map, self.beam_map)
         aux_data = tuple()
 
         return (children, aux_data)
@@ -190,20 +203,20 @@ class ExpConvProj(MetaData):
     def tree_unflatten(cls, aux_data, children) -> Self:
         _ = aux_data
 
-        return cls(children[0])
+        return cls(*children)
 
+
+@register_pytree_node_class
 @dataclass
 class BackgroundProj(MetaData):
     back_map: Array
-    
+
     def apply(self, model: Array) -> Array:
         return model + self.back_map
 
     def apply_grad(self, model_grad: Array) -> Array:
-        #EDIT!!!!!!!!!!!
-        return beam_conv_vec(model_grad, self.beam)
+        return model_grad  # Functions for making this a pytree
 
-    # Functions for making this a pytree
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
 
@@ -222,18 +235,19 @@ class BackgroundProj(MetaData):
 def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]:
     _ = info
     dr = eval(str(cfg["coords"]["dr"]))
-    struct_names = cfg['model']['structures'].keys()
-    
+    struct_names = cfg["model"]["structures"].keys()
+
     exp_maps = load_exps(dset_name, cfg, struct_names)
     beam_maps = load_beams(dset_name, cfg, struct_names)
     back_map = load_back(dset_name, cfg)
-    
+
     metadata = []
     for idx in range(len(struct_names)):
-        metadata +=[ExpConvProj(exp_maps[idx], beam_maps[idx])]
+        metadata += [ExpConvProj(exp_maps[idx], beam_maps[idx])]
     metadata += [BackgroundProj(back_map)]
-    
+
     return tuple(metadata)
+
 
 def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
     _ = (dset, cfg, metamodel)
@@ -295,7 +309,7 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
             )
 
 
-'''
+"""
 def make_metadata(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> tuple:
     maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
     if not os.path.isabs(maproot):
@@ -320,4 +334,4 @@ def make_metadata(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> tuple:
     metadata = tuple(meta_list)
     print("type metadata: ", type(metadata[0][0]))
     return metadata
-'''
+"""
