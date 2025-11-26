@@ -402,13 +402,14 @@ def _run_mcmc(cfg, models, datasets):
     )
     return models, datasets
 
+
 def _read_checkpoint(ckpt_path):
-    '''
+    """
     Load a checkpoint and return model, datasets, start_round, stage, and cfg.
     Automatically reestimates noise after loading.
-    '''
+    """
     import dill
-    
+
     # Prefer dill, fall back to pickle?
     try:
         with open(ckpt_path, "rb") as f:
@@ -441,10 +442,11 @@ def fit_loop(models, cfg, datasets, comm, outdir):
         if load is True:
             # Automatically load latest checkpoint round
             ckpts = [f for f in os.listdir(ckpt_dir) if f.startswith("round_")]
-            
+
             if len(ckpts) > 0:
                 latest = sorted(
-                    ckpts, key=lambda x: int(x.split("_")[1].split(".")[0]))[-1]
+                    ckpts, key=lambda x: int(x.split("_")[1].split(".")[0])
+                )[-1]
                 load_path = os.path.join(ckpt_dir, latest)
                 print_once(f"[resume] Loading latest checkpoint -> {load_path}")
                 models, datasets, start_round, _, _ = _read_checkpoint(load_path)
@@ -456,13 +458,15 @@ def fit_loop(models, cfg, datasets, comm, outdir):
                 print_once(f"[resume] Loading checkpoint round {load} -> {load_path}")
                 models, datasets, start_round, _, _ = _read_checkpoint(load_path)
             else:
-                print_once(f"[resume] Requested round {load} not found, starting at round 0")
+                print_once(
+                    f"[resume] Requested round {load} not found, starting at round 0"
+                )
                 start_round = 0
 
     models = list(models)
     if not models:
         raise ValueError("Can't fit without a model defined!")
-    
+
     # Preprocessing for sim if needed
     if cfg.get("sim", False):
         for struct_name in cfg["model"]["structures"]:
@@ -472,7 +476,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
         for i, model in enumerate(models):
             params = jnp.array(model.pars)
             par_offset = cfg.get("par_offset", 1.1)
-            params = params.at[model.to_fit_ever].multiply(par_offset)  
+            params = params.at[model.to_fit_ever].multiply(par_offset)
             # Don't start at exactly the right value
             models[i] = model.update(params, model.errs, model.chisq)
 
@@ -488,8 +492,10 @@ def fit_loop(models, cfg, datasets, comm, outdir):
     message = str(models[0]).split("\n")
     message[1] = "Starting pars:"
     print_once("\n".join(message))
-    
-    for r in range(start_round, models[0].n_rounds):  # TODO: enforce n_rounds same for all models
+
+    for r in range(
+        start_round, models[0].n_rounds
+    ):  # TODO: enforce n_rounds same for all models
         models, datasets = _run_fit(
             cfg,
             models,
@@ -500,7 +506,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
 
         # Checkpoint after each round
         ckpt_path = os.path.join(ckpt_dir, f"round_{r}.pkl")
-        _save_models(ckpt_path, models, datasets, cfg, stage = "fit_round", round_num = r)
+        _save_models(ckpt_path, models, datasets, cfg, stage="fit_round", round_num=r)
         print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
@@ -513,7 +519,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
 
         # MCMC Checkpoint (Once every few hundred steps)
         ckpt_path = os.path.join(ckpt_dir, "mcmc.pkl")
-        _save_models(ckpt_path, models, datasets, cfg, stage = "mcmc")
+        _save_models(ckpt_path, models, datasets, cfg, stage="mcmc")
         print_once(f"[checkpoint] Saved MCMC state -> {ckpt_path}")
 
     # Save final pars
