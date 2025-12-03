@@ -1,3 +1,15 @@
+## 9.10.4 (2025-11-11)
+
+### Fix
+
+- remove fitter install and fix versioning
+
+## 9.10.3 (2025-11-11)
+
+### Fix
+
+- pass in correct datavec and remove old line
+
 ## 9.10.2 (2025-10-31)
 
 ### Fix
