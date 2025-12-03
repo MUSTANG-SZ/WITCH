@@ -1,3 +1,9 @@
+## 9.11.0 (2025-12-03)
+
+### Feat
+
+- slightly changing moo1142 params
+
 ## 9.10.4 (2025-11-11)
 
 ### Fix
