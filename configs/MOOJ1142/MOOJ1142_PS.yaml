@@ -27,14 +27,16 @@ model:
       structure: "gaussian"
       parameters:
         dx_g:
-          value: 1.78
+          value: 1.62696504 
           to_fit: True
         dy_g:
-          value: -3.38
+          value: -3.81933555
           to_fit: True
         sigma:
-          value: 4.0
+          value: 4.94485922
           to_fit: True
         amp_g:
-          value: 0.00128582673
+          value: 0.0013034
           to_fit: True
+
+
