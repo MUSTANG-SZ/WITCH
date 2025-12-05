@@ -8,7 +8,7 @@ import numpy as np
 from . import core
 from . import utils as wu
 from .containers import Model, Parameter, Structure
-from .power import profile_to_broken_power
+from .powerlaw import profile_to_broken_power
 
 
 def array_to_tuple(arr):
@@ -119,8 +119,8 @@ def get_rbins(
     rmax: float = 3.0 * 60.0,
     struct_num: int = 0,
     sig_params: list[str] = ["amp", "P0"],
-    default: tuple[int] = (0, 10, 20, 30, 50, 80, 120, 180),
-) -> tuple[int]:
+    default: tuple[int, ...] = (0, 10, 20, 30, 50, 80, 120, 180),
+) -> tuple[int, ...]:
     """
     Function which returns a good set of rbins for a non-parametric fit given the significance of the underlying parametric model.
 
@@ -135,12 +135,12 @@ def get_rbins(
     sig_params: list[str], default: ["amp", "P0"]
         Parameters to consider for computing significance.
         Only first match will be used.
-    default: tuple[int], default: (0, 10, 20, 30, 50, 80, 120, 180)
+    default: tuple[int, ...], default: (0, 10, 20, 30, 50, 80, 120, 180)
         Default rbins to be returned if generation fails.
 
     Returns
     -------
-    rbins: tuple[int]
+    rbins: tuple[int, ...]
         rbins for nonparametric fit
     """
     sig = 0
@@ -172,7 +172,7 @@ def get_rbins(
         rbins = np.array(rbins)
         rbins = np.append(rbins, rmax)
 
-        return rbins
+        return tuple(rbins.ravel())
 
     logrange = np.logspace(np.log10(rmin), np.log10(rmax), nrbins)
     step = logrange[1] - logrange[0]
@@ -184,7 +184,7 @@ def get_rbins(
         logrange = np.logspace(np.log10(rmin), np.log10(rmax), nrbins)
         step = logrange[1] - logrange[0]
         if rmin > rmax or nrbins < 1:
-            return np.array(rbins)
+            return tuple(rbins)
     rbins = np.array(rbins)
     rbins = np.append(rbins, logrange)
 

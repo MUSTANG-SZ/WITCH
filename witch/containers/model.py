@@ -600,7 +600,10 @@ class Model:
 
     @classmethod
     def from_cfg(
-        cls, cfg: dict, beam: Optional[jax.Array] = None, prefactor: Optional[float] = 1
+        cls,
+        cfg: dict,
+        beam: Optional[jax.Array] = None,
+        prefactor: Optional[float] = None,
     ) -> Self:
         """
         Create an instance of model from a witcher config.
@@ -619,6 +622,9 @@ class Model:
         model : Model
             The model described by the config.
         """
+        # Check prefactor
+        if prefactor is None:
+            raise ValueError("prefactor not provided!")
         # Do imports
         for module, name in cfg.get("imports", {}).items():
             mod = import_module(module)
@@ -671,10 +677,10 @@ class Model:
             parameters = []
             for par_name, param in structure["parameters"].items():
                 val = eval(str(param["value"]))
-                fit = param.get("to_fit", [False] * n_rounds)
+                fit = param.get("to_fit", [False] * max(1, n_rounds))
                 if isinstance(fit, bool):
-                    fit = [fit] * n_rounds
-                if len(fit) != n_rounds:
+                    fit = [fit] * max(1, n_rounds)
+                if len(fit) != max(1, n_rounds):
                     raise ValueError(
                         f"to_fit has {len(fit)} entries but we only have {n_rounds} rounds"
                     )

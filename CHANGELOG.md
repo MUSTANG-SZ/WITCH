@@ -1,3 +1,86 @@
+## 9.11.0 (2025-12-03)
+
+### Feat
+
+- slightly changing moo1142 params
+
+## 9.10.4 (2025-11-11)
+
+### Fix
+
+- remove fitter install and fix versioning
+
+## 9.10.3 (2025-11-11)
+
+### Fix
+
+- pass in correct datavec and remove old line
+
+## 9.10.2 (2025-10-31)
+
+### Fix
+
+- models cast to lsit in wrong place
+
+## 9.10.1 (2025-10-31)
+
+### Fix
+
+- fix bugs when using non simmed data
+
+## 9.10.0 (2025-10-31)
+
+### Feat
+
+- updating configs
+
+## 9.9.1 (2025-08-07)
+
+### Fix
+
+- incorrect import name
+
+## 9.9.0 (2025-07-30)
+
+### Feat
+
+- add joint fitting to mcmc code and some minor fixes
+- add mpi support when joint fitting and fix reference to wrong model tuple in lmfit
+- move to new dataset class in joint fitting
+- print map noise and unjit fit_dataset for debug
+- adding joint vs m2 only configs
+- MOO1142 MCMC and also removing some TODOS
+- limiting TODs for testing
+- updated yamls for joint fitting
+- Adding fitting over multiple models to _run_fit. Significant cleanup still to do. Known issue: some combintations of round-by-round to_fit will cause hangs. Included sim_unit will induce error
+- moved unit_conversion from model to dataset. Beginning to allow multiple datasets
+- print map noise and unjit fit_dataset for debug
+- adding joint vs m2 only configs
+- MOO1142 MCMC and also removing some TODOS
+- limiting TODs for testing
+- updated yamls for joint fitting
+- Adding fitting over multiple models to _run_fit. Significant cleanup still to do. Known issue: some combintations of round-by-round to_fit will cause hangs. Included sim_unit will induce error
+- merging main changes into joint_fitting. I think comm has been correctly handled
+
+### Fix
+
+- act beam had wrong amp
+- no more default prefac
+- add back in mcmc with no fit lost in merge
+- remove no mcmc print
+- imported nonpara function and fixed some typing
+- rename power to powerlaw
+- adjust type hints to allow for a flexible length tuple
+- several joint fitting fixes, mostly typos and bad loops
+- circular imports
+- some typing fixes
+- some typing fixes
+- still more get_files problems
+- missing get_files
+- merge conflict
+- bad dict
+- bad dict
+
 ## 9.8.0 (2025-07-11)
 
 ### Feat

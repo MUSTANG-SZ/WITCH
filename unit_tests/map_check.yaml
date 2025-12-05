@@ -53,8 +53,8 @@ datasets:
     # Note that these define a double gaussian
     beam:
       fwhm1: 122 # FWHM in arcseconds of the first gaussian
-      amp1: 1.0 # Amplitude of the first gaussian
-      fwhm2: "90" # FWHM in arcseconds of the second gaussian
+      amp1: .9808 # Amplitude of the first gaussian
+      fwhm2: 90 # FWHM in arcseconds of the second gaussian
       amp2: 0.0192 # Amplitude of the second gaussian
     prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_RJ(97e9, cfg['constants']['Te'])*wu.XMpc/wu.me)"
          

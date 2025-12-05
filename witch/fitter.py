@@ -25,6 +25,7 @@ from . import utils as wu
 from .containers import Model, Model_xfer
 from .dataset import DataSet
 from .fitting import run_lmfit, run_mcmc
+from .nonparametric import para_to_non_para
 from .objective import joint_objective
 
 comm = MPI.COMM_WORLD.Clone()
@@ -146,9 +147,7 @@ def _mpi_fsplit(fnames, comm):
     return fnames_local, comm, comms_local
 
 
-def process_tods(cfg, dataset, model):
-    todvec = dataset.datavec
-    info = dataset.info
+def process_tods(cfg, todvec, info, model):
     rank = todvec.comm.Get_rank()
     nproc = todvec.comm.Get_size()
     noise_class = info["noise_class"]
@@ -187,13 +186,12 @@ def process_tods(cfg, dataset, model):
     return todvec
 
 
-def process_maps(cfg, dataset, model):
+def process_maps(cfg, mapset, info, model):
     sim = cfg.get("sim", False)
-    mapset = dataset.datavec
     if model is None and sim:
         raise ValueError("model cannot be None when simming!")
     model_cur = model
-    xfer = dataset.info.get("info", "")
+    xfer = info.get("xfer", "")
     if xfer:
         model_cur = Model_xfer.from_parent(model, xfer)
 
@@ -405,6 +403,7 @@ def _run_mcmc(cfg, models, datasets):
 
 
 def fit_loop(models, cfg, datasets, comm, outdir):
+    models = list(models)
     for model in models:
         if models is None:
             raise ValueError("Can't fit without a model defined!")
@@ -444,7 +443,6 @@ def fit_loop(models, cfg, datasets, comm, outdir):
         _ = mpi4jax.barrier(comm=comm)
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
-        print_once("No mcmc yet!")
         models, datasets = _run_mcmc(
             cfg,
             models,
@@ -615,7 +613,7 @@ def main():
 
         # Define the model and get stuff setup fitting
         if "model" in cfg:
-            model = Model.from_cfg(cfg, beam, dataset.info["prefactor"])
+            model = Model.from_cfg(cfg, beam, dataset.info.get("prefactor", None))
         else:
             model = None
             print_once("No model defined, setting fit, sim, and sub to False")
@@ -641,11 +639,11 @@ def main():
         dataset.info["outdir"] = outdir
 
         # Process the data
-        preproc(dset_name, cfg, dataset, model, dataset.info)
+        preproc(dset_name, cfg, dataset.datavec, model, dataset.info)
         if dataset.mode == "tod":
-            dataset.datavec = process_tods(cfg, dataset, model)
+            dataset.datavec = process_tods(cfg, dataset.datavec, dataset.info, model)
         elif dataset.mode == "map":
-            dataset.datavec = process_maps(cfg, dataset, model)
+            dataset.datavec = process_maps(cfg, dataset.datavec, dataset.info, model)
         dataset = jax.block_until_ready(dataset)
         postproc(dset_name, cfg, dataset.datavec, model, dataset.info)
         models.append(model)
@@ -670,8 +668,8 @@ def main():
 
             nonpara_models = []
             for dset_name, dataset, model in zip(dset_names, datasets, models):
-                nonpara_model = model.para_to_non_para(
-                    n_rounds=n_rounds, to_copy=to_copy, sig_params=sig_params
+                nonpara_model = para_to_non_para(
+                    model, n_rounds=n_rounds, to_copy=to_copy, sig_params=sig_params
                 )
                 outdir = get_outdir(cfg, model)
                 dataset.info["outdir"] = outdir
