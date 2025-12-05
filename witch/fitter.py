@@ -107,7 +107,7 @@ def _mpi_fsplit(fnames, comm):
         dset: 1
         + (nproc - len(fnames))
         * (len(fnames[dset]) - 1)
-        / (len(flat_fnames) - len(fnames))
+        / max((len(flat_fnames) - len(fnames)), 1)
         for dset in fnames.keys()
     }
     nprocs = iteround.saferound(nprocs, 0)
@@ -408,8 +408,8 @@ def fit_loop(models, cfg, datasets, comm, outdir):
     for model in models:
         if models is None:
             raise ValueError("Can't fit without a model defined!")
+    models = list(models)
     if cfg["sim"]:
-        models = list(models)
         # Remove structs we deliberately want to leave out of model
         for struct_name in cfg["model"]["structures"]:
             if cfg["model"]["structures"][struct_name].get("to_remove", False):
