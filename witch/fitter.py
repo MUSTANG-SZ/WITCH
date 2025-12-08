@@ -507,18 +507,24 @@ def fit_loop(models, cfg, datasets, comm, outdir):
                 )[-1]
                 load_path = os.path.join(ckpt_dir, latest)
                 print_once(f"[resume] Loading latest checkpoint -> {load_path}")
-                
-                loaded_models, loaded_datasets, loaded_start_round, loaded_stage, loaded_cfg = _read_checkpoint(load_path)
+
+                (
+                    loaded_models,
+                    loaded_datasets,
+                    loaded_start_round,
+                    loaded_stage,
+                    loaded_cfg,
+                ) = _read_checkpoint(load_path)
                 # Compatibility checks
                 if len(loaded_models) != len(models):
-                    raise ValueError (
+                    raise ValueError(
                         f"Checkpoint has {len(loaded_models)} models but current config expects {len(models)}"
                     )
                 for idx, (cur, ckpt) in enumerate(zip(models, loaded_models)):
                     try:
                         cur.check_compatibility(ckpt)
                     except Exception as e:
-                        raise ValueError (
+                        raise ValueError(
                             f"Incompatible model at index {idx} when loading checkpoint {load_path}: {e}"
                         )
                 models = loaded_models
@@ -527,24 +533,29 @@ def fit_loop(models, cfg, datasets, comm, outdir):
 
                 print_once(f"[resume] Checkpoint OK. Resuming from round {start_round}")
 
-
         elif isinstance(load, int):
             load_path = os.path.join(ckpt_dir, f"round_{load}.pkl")
 
             if os.path.exists(load_path):
                 print_once(f"[resume] Loading checkpoint round {load} -> {load_path}")
-                
-                loaded_models, loaded_datasets, loaded_start_round, loaded_stage, loaded_cfg = _read_checkpoint(load_path)
+
+                (
+                    loaded_models,
+                    loaded_datasets,
+                    loaded_start_round,
+                    loaded_stage,
+                    loaded_cfg,
+                ) = _read_checkpoint(load_path)
                 # Compatibility checks
                 if len(loaded_models) != len(models):
-                    raise ValueError (
+                    raise ValueError(
                         f"Checkpoint has {len(loaded_models)} models but current config expects {len(models)}"
                     )
                 for idx, (cur, ckpt) in enumerate(zip(models, loaded_models)):
                     try:
                         cur.check_compatibility(ckpt)
                     except Exception as e:
-                        raise ValueError (
+                        raise ValueError(
                             f"Incompatible model at index {idx} when loading checkpoint {load_path}: {e}"
                         )
                 models = loaded_models
