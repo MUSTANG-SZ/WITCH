@@ -187,6 +187,9 @@ def process_tods(cfg, todvec, info, model):
 
 
 def process_maps(cfg, mapset, info, model):
+    noise_class = info["noise_class"]
+    noise_args = info["noise_args"]
+    noise_kwargs = info["noise_kwargs"]
     sim = cfg.get("sim", False)
     if model is None and sim:
         raise ValueError("model cannot be None when simming!")
@@ -226,9 +229,7 @@ def process_maps(cfg, mapset, info, model):
             imap.data = imap.data + pred
         print("Map scale: ", jnp.mean(jnp.abs(imap.data)))
         imap.data = imap.data - jnp.mean(imap.data)
-        imap.compute_noise(
-            dataset.noise_class, None, *dataset.noise_args, **dataset.noise_kwargs
-        )
+        imap.compute_noise(noise_class, None, *noise_args, **noise_kwargs)
     return mapset
 
 
