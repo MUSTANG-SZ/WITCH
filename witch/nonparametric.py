@@ -195,6 +195,7 @@ def para_to_non_para(
     model,
     n_rounds: Optional[int] = None,
     to_copy: list[str] = ["gnfw", "gnfw_rs", "a10", "isobeta", "uniform"],
+    sig_params: list[str] = ["amp", "P0"],
 ) -> Model:
     """
     Function which approximately converts cluster profiles into a non-parametric form. Note this is
@@ -208,6 +209,9 @@ def para_to_non_para(
         Number of rounds to fit for output model. If none, copy from self
     to_copy : list[str], default: gnfw, gnfw_rs, a10, isobeta, uniform
         List of structures, by name, to copy.
+    sig_params: list[str], default: ["amp", "P0"]
+        Parameters to consider for computing significance.
+        Only first match will be used.
     Returns
     -------
     Model : Model
@@ -241,7 +245,7 @@ def para_to_non_para(
 
     rs, bin1d, _ = wu.bin_map(pressure, pixsize)
 
-    rbins = get_rbins(cur_model)
+    rbins = get_rbins(cur_model, sig_params=sig_params)
     rbins = np.append(rbins, np.array([np.amax(rs)]))
 
     condlist = [
