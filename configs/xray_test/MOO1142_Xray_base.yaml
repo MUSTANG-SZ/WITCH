@@ -1,6 +1,6 @@
 fit: True # If True fit the cluster, overridden by command line
 sub: False # If True the cluster before mapmaking, overridden by command line
-n_rounds: 1 # How many rounds of fitting to try
+n_rounds: 4 # How many rounds of fitting to try
 
 # Constants for use in the model and grid construction
 # Can be used as a dict ie: constants['z']

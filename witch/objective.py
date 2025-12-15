@@ -278,5 +278,5 @@ def poisson_objective(
                     jnp.transpose(grad_dat),
                 )
             )
-
+    print("LOGLIKELIHOOD: ", 2*loglike)
     return -2 * loglike, -2 * grad, -2 * curve

@@ -117,7 +117,12 @@ def load_exps(dset_name: str, cfg: dict, struct_names: list):
                 # The actual map
                 f: fits.HDUList = fits.open(fname)
                 wcs = WCS(f[0].header)  # type: ignore
-                dat = jnp.array(f[0].data.copy().T)  # type: ignore
+                dat_raw = jnp.array(f[0].data.copy().T)  # type: ignore
+                dat_norm = dat_raw / jnp.max(dat_raw)
+                #set the pixel with zero exposure to nan
+                e_min = 0.03
+                dat = jnp.where(dat_norm>e_min, dat_norm, jnp.nan)
+                #dat = dat.astype(float)
                 f.close()
                 exp_maps += [dat]
     return exp_maps
