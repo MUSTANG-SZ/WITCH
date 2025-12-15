@@ -225,13 +225,15 @@ def para_to_non_para(
         model
     )  # Make a copy of model, we don't want to lose structures
     i = 0  # Make sure we keep at least one struct
+    to_remove = []
     for structure in cur_model.structures:
         if structure.structure not in to_copy:
-            cur_model.remove_struct(structure.name)
-        else:
-            i += 1
-    if i == 0:
+            to_remove.append(structure.name)
+
+    if len(to_remove) == len(cur_model.structures):
         raise ValueError("Error: no model structures in {}".format(to_copy))
+    for struct in to_remove:
+        cur_model.remove_struct(struct)
     params = jnp.array(cur_model.pars)
     params = jnp.ravel(params)
     pressure, _ = core.model3D(
