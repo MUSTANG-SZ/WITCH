@@ -21,6 +21,7 @@ import numpy as np
 import yaml
 from mpi4py import MPI
 from typing_extensions import Any, Unpack
+from functools import partial
 
 from . import utils as wu
 from .containers import Model, Model_xfer
@@ -351,6 +352,26 @@ def _run_fit(
     )
     return models, datasets
 
+def _mcmc_checkpoint_callback(updated_models):
+    # Callback that _run_mcmc will call every step
+    callback_state["step"] += 1
+    callback_state["models"] = updated_models
+
+    step = callback_state["step"]
+
+    if step % checkpoint_interval == 0 and comm.Get_rank() == 0:
+        ckpt_path = os.path.join(ckpt_dir, f"mcmc_ste_{step}.pkl")
+        _save_model(
+            ckpt_pathm,
+            updated_models,
+            datasets,
+            cfg,
+            stage="mcmc",
+            step_num=step,
+        )
+        print_once(
+            f"[checkpoint] Saved MCMC checkpoint at step {step} -> {ckpt_path}"
+        )
 
 def _run_mcmc(cfg, models, datasets):
     print_once("Running MCMC")
@@ -368,26 +389,14 @@ def _run_mcmc(cfg, models, datasets):
         "step": 0,
     }
 
-    # Callback that _run_mcmc will call every step
-    def _mcmc_callback(updated_models):
-        callback_state["step"] += 1
-        callback_state["models"] = updated_models
-
-        step = callback_state["step"]
-
-        if step % checkpoint_interval == 0 and comm.Get_rank() == 0:
-            ckpt_path = os.path.join(ckpt_dir, f"mcmc_ste_{step}.pkl")
-            _save_model(
-                ckpt_pathm,
-                updated_models,
-                datasets,
-                cfg,
-                stage="mcmc",
-                step_num=step,
-            )
-            print_once(
-                f"[checkpoint] Saved MCMC checkpoint at step {step} -> {ckpt_path}"
-            )
+    callback = partial(
+        _mcmc_checkpoint_callback,
+        callback_state=callback_state,
+        checkpoint_interval=checkpoint_interval,
+        ckpt_dir=ckpt_dir,
+        datasets=datasets,
+        cfg=cfg
+    )
 
     t1 = time.time()
 
@@ -400,7 +409,7 @@ def _run_mcmc(cfg, models, datasets):
         sample_which=int(cfg["mcmc"].get("sample_which", -1)),
         burn_in=float(cfg["mcmc"].get("burn_in", 0.1)),
         max_tries=int(cfg["mcmc"].get("max_tries", 20)),
-        callback=_mcmc_callback,
+        callback=callback,
     )
     _ = mpi4jax.barrier(comm=comm)
     t2 = time.time()
@@ -444,14 +453,13 @@ def _read_checkpoint(ckpt_path):
     Load a checkpoint and return model, datasets, start_round, stage, and cfg.
     Automatically reestimates noise after loading.
     """
-    import dill
 
     with open(ckpt_path, "rb") as f:
         state = pk.load(f)
 
     models = state["models"]
     datasets = state["datasets"]
-    start_round = state.get["round", 0] + 1
+    start_round = state.get("round", -1) + 1
     stage = state.get("stage", None)
     cfg = state.get("cfg", None)
 
@@ -478,7 +486,7 @@ def _read_model(ckpt_path):
 
     models = state.get("models", None)
     datasets = state.get("datasets", None)
-    round_number = stae.get("round", 0)
+    round_number = state.get("round", 0)
     stage = state.get("stage", None)
     cfg = state.get("cfg", None)
 
@@ -495,80 +503,64 @@ def fit_loop(models, cfg, datasets, comm, outdir):
     # Load progress (loading checkpoint if requested)
     load = cfg.get("load_progress", False)
     start_round = 0
+    load_path = None
 
-    if load:
-        if load is True:
-            # Automatically load latest checkpoint round
-            ckpts = [f for f in os.listdir(ckpt_dir) if f.startswith("round_")]
+    if load is True:
+        # Automatically load latest checkpoint round
+        ckpts = [f for f in os.listdir(ckpt_dir) if f.startswith("round_")]
 
-            if len(ckpts) > 0:
-                latest = sorted(
-                    ckpts, key=lambda x: int(x.split("_")[1].split(".")[0])
-                )[-1]
-                load_path = os.path.join(ckpt_dir, latest)
-                print_once(f"[resume] Loading latest checkpoint -> {load_path}")
+        if len(ckpts) > 0:
+            latest = sorted(
+                ckpts, key=lambda x: int(x.split("_")[1].split(".")[0])
+            )[-1]
+            load_path = os.path.join(ckpt_dir, latest)
+            print_once(f"[resume] Loading latest checkpoint -> {load_path}")
 
-                (
-                    loaded_models,
-                    loaded_datasets,
-                    loaded_start_round,
-                    loaded_stage,
-                    loaded_cfg,
-                ) = _read_checkpoint(load_path)
-                # Compatibility checks
-                if len(loaded_models) != len(models):
-                    raise ValueError(
-                        f"Checkpoint has {len(loaded_models)} models but current config expects {len(models)}"
-                    )
-                for idx, (cur, ckpt) in enumerate(zip(models, loaded_models)):
-                    try:
-                        cur.check_compatibility(ckpt)
-                    except Exception as e:
-                        raise ValueError(
-                            f"Incompatible model at index {idx} when loading checkpoint {load_path}: {e}"
-                        )
-                models = loaded_models
-                datasets = loaded_datasets
-                start_round = loaded_start_round
+    elif isinstance(load, int):
+        # Load specific round number
+        load_path = os.path.join(ckpt_dir, f"round_{load}.pkl")
 
-                print_once(f"[resume] Checkpoint OK. Resuming from round {start_round}")
+        if os.path.exists(load_path):
+            print_once(f"[resume] Loading checkpoint round {load} -> {load_path}")
+        else:
+            print_once(
+                f"[resume] Requested round {load} not found, starting at round 0"
+            )
+            load_path = None
 
-        elif isinstance(load, int):
-            load_path = os.path.join(ckpt_dir, f"round_{load}.pkl")
+    # Actually load and validate checkpoint if we found valid path
+    if load_path is not None:
+        (
+            loaded_models,
+            loaded_datasets,
+            loaded_start_round,
+            loaded_stage,
+            loaded_cfg,
+        ) = _read_checkpoint(load_path)
 
-            if os.path.exists(load_path):
-                print_once(f"[resume] Loading checkpoint round {load} -> {load_path}")
-
-                (
-                    loaded_models,
-                    loaded_datasets,
-                    loaded_start_round,
-                    loaded_stage,
-                    loaded_cfg,
-                ) = _read_checkpoint(load_path)
-                # Compatibility checks
-                if len(loaded_models) != len(models):
-                    raise ValueError(
-                        f"Checkpoint has {len(loaded_models)} models but current config expects {len(models)}"
-                    )
-                for idx, (cur, ckpt) in enumerate(zip(models, loaded_models)):
-                    try:
-                        cur.check_compatibility(ckpt)
-                    except Exception as e:
-                        raise ValueError(
-                            f"Incompatible model at index {idx} when loading checkpoint {load_path}: {e}"
-                        )
-                models = loaded_models
-                datasets = loaded_datasets
-                start_round = loaded_start_round
-
-                print_once(f"[resume] Checkpoint OK. Resuming from round {start_round}")
-
-            else:
-                print_once(
-                    f"[resume] Requested round {load} not found, starting at round 0"
+        # Compatibility checks
+        #1: We have the right number of models
+        if len(loaded_models) != len(models):
+            raise ValueError(
+                f"Checkpoint has {len(loaded_models)} models but current config expects {len(models)}"
+            )
+        
+        #2: Each of the models are compatible with each other
+        for idx, (cur, ckpt) in enumerate(zip(models, loaded_models)):
+            try:
+                cur.check_compatibility(ckpt)
+            except Exception as e:
+                raise ValueError(
+                    f"Incompatible model at index {idx} when loading checkpoint {load_path}: {e}"
                 )
-                start_round = 0
+            
+        models = loaded_models
+        datasets = loaded_datasets
+        start_round = loaded_start_round
+
+        print_once(f"[resume] Checkpoint OK. Resuming from round {start_round}")
+
+                
 
     models = list(models)
     if not models:

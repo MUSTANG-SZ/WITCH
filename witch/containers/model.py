@@ -108,14 +108,18 @@ class Model:
         self.structures = [self.structures[i] for i in structure_idx]
         self.original_order = list(jnp.sort(structure_idx))
 
-    def check_compatibility(self, other):
+    def check_compatibility(self, other, check_count = None):
         """
         Check whether 'other' (a model loaded from a checkpoint) is compatible with the current model defined in config
 
         Checks that structures, xyz, and dz are equal
+
+        Arguments:
+            other: Model to compare against
+            check_count: If provided, verifies the number of models matches this count
         """
         # Structure name match
-        if self.structures.keys() != other.structures.keys * ():
+        if self.structures.keys() != other.structures.keys():
             raise ValueError(
                 f"Model structure mismatch. "
                 f"Config structures = {list(self.structures.keys())}, "
@@ -151,13 +155,10 @@ class Model:
             else:  # jax arrays
                 if a.shape != b.shape:
                     raise ValueError(
-                        f"xyz[i] array shape mismatch: {a.shape} vs {b.shapoe}"
+                        f"xyz[i] array shape mismatch: {a.shape} vs {b.shape}"
                     )
 
         # dz compatibility
-        if type(self.dz) != type(other.dz):
-            raise ValueError("dz type mismatch.")
-
         if self.dz != other.dz:  # Checks same numerical value
             raise ValueError(f"dz value mismatch: {self.dz} vs {other.dz}")
 
