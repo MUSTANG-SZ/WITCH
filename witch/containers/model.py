@@ -108,7 +108,7 @@ class Model:
         self.structures = [self.structures[i] for i in structure_idx]
         self.original_order = list(jnp.sort(structure_idx))
 
-    def check_compatibility(self, other, check_count = None):
+    def check_compatibility(self, other, check_count=None):
         """
         Check whether 'other' (a model loaded from a checkpoint) is compatible with the current model defined in config
 

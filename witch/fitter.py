@@ -8,6 +8,7 @@ import os
 import sys
 import time
 from copy import deepcopy
+from functools import partial
 from importlib import import_module
 
 import corner
@@ -21,7 +22,6 @@ import numpy as np
 import yaml
 from mpi4py import MPI
 from typing_extensions import Any, Unpack
-from functools import partial
 
 from . import utils as wu
 from .containers import Model, Model_xfer
@@ -352,6 +352,7 @@ def _run_fit(
     )
     return models, datasets
 
+
 def _mcmc_checkpoint_callback(updated_models):
     # Callback that _run_mcmc will call every step
     callback_state["step"] += 1
@@ -369,9 +370,8 @@ def _mcmc_checkpoint_callback(updated_models):
             stage="mcmc",
             step_num=step,
         )
-        print_once(
-            f"[checkpoint] Saved MCMC checkpoint at step {step} -> {ckpt_path}"
-        )
+        print_once(f"[checkpoint] Saved MCMC checkpoint at step {step} -> {ckpt_path}")
+
 
 def _run_mcmc(cfg, models, datasets):
     print_once("Running MCMC")
@@ -395,7 +395,7 @@ def _run_mcmc(cfg, models, datasets):
         checkpoint_interval=checkpoint_interval,
         ckpt_dir=ckpt_dir,
         datasets=datasets,
-        cfg=cfg
+        cfg=cfg,
     )
 
     t1 = time.time()
@@ -510,9 +510,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
         ckpts = [f for f in os.listdir(ckpt_dir) if f.startswith("round_")]
 
         if len(ckpts) > 0:
-            latest = sorted(
-                ckpts, key=lambda x: int(x.split("_")[1].split(".")[0])
-            )[-1]
+            latest = sorted(ckpts, key=lambda x: int(x.split("_")[1].split(".")[0]))[-1]
             load_path = os.path.join(ckpt_dir, latest)
             print_once(f"[resume] Loading latest checkpoint -> {load_path}")
 
@@ -539,13 +537,13 @@ def fit_loop(models, cfg, datasets, comm, outdir):
         ) = _read_checkpoint(load_path)
 
         # Compatibility checks
-        #1: We have the right number of models
+        # 1: We have the right number of models
         if len(loaded_models) != len(models):
             raise ValueError(
                 f"Checkpoint has {len(loaded_models)} models but current config expects {len(models)}"
             )
-        
-        #2: Each of the models are compatible with each other
+
+        # 2: Each of the models are compatible with each other
         for idx, (cur, ckpt) in enumerate(zip(models, loaded_models)):
             try:
                 cur.check_compatibility(ckpt)
@@ -553,14 +551,12 @@ def fit_loop(models, cfg, datasets, comm, outdir):
                 raise ValueError(
                     f"Incompatible model at index {idx} when loading checkpoint {load_path}: {e}"
                 )
-            
+
         models = loaded_models
         datasets = loaded_datasets
         start_round = loaded_start_round
 
         print_once(f"[resume] Checkpoint OK. Resuming from round {start_round}")
-
-                
 
     models = list(models)
     if not models:
