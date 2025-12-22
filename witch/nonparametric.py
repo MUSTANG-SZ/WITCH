@@ -195,6 +195,7 @@ def para_to_non_para(
     model,
     n_rounds: Optional[int] = None,
     to_copy: list[str] = ["gnfw", "gnfw_rs", "a10", "isobeta", "uniform"],
+    sig_params: list[str] = ["amp", "P0"],
 ) -> Model:
     """
     Function which approximately converts cluster profiles into a non-parametric form. Note this is
@@ -208,6 +209,9 @@ def para_to_non_para(
         Number of rounds to fit for output model. If none, copy from self
     to_copy : list[str], default: gnfw, gnfw_rs, a10, isobeta, uniform
         List of structures, by name, to copy.
+    sig_params: list[str], default: ["amp", "P0"]
+        Parameters to consider for computing significance.
+        Only first match will be used.
     Returns
     -------
     Model : Model
@@ -221,13 +225,15 @@ def para_to_non_para(
         model
     )  # Make a copy of model, we don't want to lose structures
     i = 0  # Make sure we keep at least one struct
+    to_remove = []
     for structure in cur_model.structures:
         if structure.structure not in to_copy:
-            cur_model.remove_struct(structure.name)
-        else:
-            i += 1
-    if i == 0:
+            to_remove.append(structure.name)
+
+    if len(to_remove) == len(cur_model.structures):
         raise ValueError("Error: no model structures in {}".format(to_copy))
+    for struct in to_remove:
+        cur_model.remove_struct(struct)
     params = jnp.array(cur_model.pars)
     params = jnp.ravel(params)
     pressure, _ = core.model3D(
@@ -241,7 +247,7 @@ def para_to_non_para(
 
     rs, bin1d, _ = wu.bin_map(pressure, pixsize)
 
-    rbins = get_rbins(cur_model)
+    rbins = get_rbins(cur_model, sig_params=sig_params)
     rbins = np.append(rbins, np.array([np.amax(rs)]))
 
     condlist = [

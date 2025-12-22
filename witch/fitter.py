@@ -108,7 +108,7 @@ def _mpi_fsplit(fnames, comm):
         dset: 1
         + (nproc - len(fnames))
         * (len(fnames[dset]) - 1)
-        / (len(flat_fnames) - len(fnames))
+        / max((len(flat_fnames) - len(fnames)), 1)
         for dset in fnames.keys()
     }
     nprocs = iteround.saferound(nprocs, 0)
@@ -187,6 +187,9 @@ def process_tods(cfg, todvec, info, model):
 
 
 def process_maps(cfg, mapset, info, model):
+    noise_class = info["noise_class"]
+    noise_args = info["noise_args"]
+    noise_kwargs = info["noise_kwargs"]
     sim = cfg.get("sim", False)
     if model is None and sim:
         raise ValueError("model cannot be None when simming!")
@@ -226,9 +229,7 @@ def process_maps(cfg, mapset, info, model):
             imap.data = imap.data + pred
         print("Map scale: ", jnp.mean(jnp.abs(imap.data)))
         imap.data = imap.data - jnp.mean(imap.data)
-        imap.compute_noise(
-            dataset.noise_class, None, *dataset.noise_args, **dataset.noise_kwargs
-        )
+        imap.compute_noise(noise_class, None, *noise_args, **noise_kwargs)
     return mapset
 
 
@@ -407,6 +408,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
     for model in models:
         if models is None:
             raise ValueError("Can't fit without a model defined!")
+    models = list(models)
     if cfg["sim"]:
         # Remove structs we deliberately want to leave out of model
         for struct_name in cfg["model"]["structures"]:
