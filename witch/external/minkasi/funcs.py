@@ -1,15 +1,11 @@
 import glob
 import os
 from copy import deepcopy
-from dataclasses import dataclass
-from typing import Self
 
 import jax.numpy as jnp
 import minkasi
 import numpy as np
 from astropy.convolution import Gaussian2DKernel, convolve
-from jax import Array
-from jax.tree_util import register_pytree_node_class
 from jitkasi.tod import TODVec
 from minkasi.tools import presets_by_source as pbs
 from mpi4py import MPI
@@ -17,11 +13,10 @@ from mpi4py import MPI
 import witch.utils as wu
 from witch import grid
 from witch.containers import MetaModel
-from witch.dataset import DataSet, MetaData
+from witch.dataset import BeamConvAndPrefac, DataSet, MetaData
 from witch.fitter import print_once, process_tods
 
 from ...objective import chisq_objective
-from ...utils import beam_conv, beam_conv_vec
 from . import mapmaking as mm
 from .utils import from_minkasi, from_minkasi_noise, from_minkasi_tod, to_minkasi
 
@@ -120,34 +115,6 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
         "prefactor": prefactor,
         "point_sources": cfg["datasets"][dset_name].get("point_sources", []),
     }
-
-
-@register_pytree_node_class
-@dataclass
-class BeamConvAndPrefac(MetaData):
-    beam: Array
-    prefactor: Array
-
-    def apply(self, model: Array) -> Array:
-        return self.prefactor * beam_conv(model, self.beam)
-
-    def apply_grad(self, model_grad: Array) -> Array:
-        return self.prefactor * beam_conv_vec(model_grad, self.beam)
-
-    # Functions for making this a pytree
-    # Don't call this on your own
-    def tree_flatten(self) -> tuple[tuple, tuple]:
-
-        children = (self.beam, self.prefactor)
-        aux_data = (self.include, self.exclude)
-
-        return (children, aux_data)
-
-    @classmethod
-    def tree_unflatten(cls, aux_data, children) -> Self:
-        include, exclude = aux_data
-
-        return cls(*children, include=include, exclude=exclude)
 
 
 def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]:

@@ -10,8 +10,7 @@ from mpi4py import MPI
 
 import witch.utils as wu
 from witch.containers import MetaModel
-from witch.dataset import DataSet
-from witch.fitter import print_once
+from witch.dataset import BeamConvAndPrefac, DataSet, MetaData
 
 from ...objective import chisq_objective
 
@@ -76,9 +75,7 @@ def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
     }
 
 
-def make_beam(dset_name: str, cfg: dict, info: dict) -> Array:
-    # TODO: Maybe just load from a file?
-    _ = info
+def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]:
     dr = eval(str(cfg["coords"]["dr"]))
     beam = wu.beam_double_gauss(
         dr,
@@ -88,7 +85,7 @@ def make_beam(dset_name: str, cfg: dict, info: dict) -> Array:
         eval(str(cfg["datasets"][dset_name]["beam"]["amp2"])),
     )
 
-    return beam
+    return (BeamConvAndPrefac(beam, info["prefactor"]),)
 
 
 def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):

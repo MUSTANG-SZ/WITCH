@@ -16,6 +16,7 @@ from mpi4py import MPI
 
 from . import utils as wu
 from .objective import ObjectiveFunc
+from .utils import beam_conv, beam_conv_vec
 
 DataVec = TODVec | SolutionSet
 
@@ -149,6 +150,34 @@ class MetaData:
         include, exclude = aux_data
 
         return cls(include=include, exclude=exclude)
+
+
+@register_pytree_node_class
+@dataclass
+class BeamConvAndPrefac(MetaData):
+    beam: Array
+    prefactor: Array
+
+    def apply(self, model: Array) -> Array:
+        return self.prefactor * beam_conv(model, self.beam)
+
+    def apply_grad(self, model_grad: Array) -> Array:
+        return self.prefactor * beam_conv_vec(model_grad, self.beam)
+
+    # Functions for making this a pytree
+    # Don't call this on your own
+    def tree_flatten(self) -> tuple[tuple, tuple]:
+
+        children = (self.beam, self.prefactor)
+        aux_data = (self.include, self.exclude)
+
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children) -> Self:
+        include, exclude = aux_data
+
+        return cls(*children, include=include, exclude=exclude)
 
 
 @runtime_checkable
