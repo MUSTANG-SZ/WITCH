@@ -407,15 +407,9 @@ class DataSet:
         The data vector for this data.
         This will be a `jitkasi` container class.
         This field is not part of the initialization function.
-    beam : Aray
-        The beam to convolve models with for this dataset.
-    exp_maps : Aray
-        The exposure maps for the x-ray dataset.
-    back_map : Array
-        The background map for the x-ray dataset.
-    prefactor : float
-        The value to multiply models by when fitting this dataset.
-        This is useful for unit conversions.
+    metadata : tuple[MetaData]
+        Tuple of `MetaData` instances to apply to model.
+        This field is not part of the initialization function.
     """
 
     name: str
@@ -429,7 +423,6 @@ class DataSet:
     global_comm: MPI.Comm | MPI.Intracomm | wu.NullComm
     info: dict = field(init=False)
     datavec: DataVec = field(init=False)
-    prefactor: float = field(init=False)
     metadata: tuple[MetaData, ...] = field(init=False)
 
     def __post_init__(self: Self):
@@ -563,10 +556,6 @@ class DataSet:
             children += (self.metadata,)
         else:
             children += (None,)
-        if "prefactor" in self.__dict__:
-            children += (self.prefactor,)
-        else:
-            children += (None,)
         aux_data = (
             self.name,
             self.get_files,
@@ -587,7 +576,7 @@ class DataSet:
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        (datavec, metadata, prefactor) = children
+        (datavec, metadata) = children
         name = aux_data[0]
         funcs_comm = aux_data[1:9]
         info = aux_data[9]
@@ -598,6 +587,4 @@ class DataSet:
             dataset.info = info
         if metadata is not None:
             dataset.metadata = metadata
-        if prefactor is not None:
-            dataset.prefactor = prefactor
         return dataset

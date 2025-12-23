@@ -3,6 +3,7 @@
 # Otherwise it is assumed to me reative to the directory of this file
 base: "base_unit.yaml"
 
+map: True
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "SIM"
@@ -22,12 +23,12 @@ cluster_model:
           # Set to True for the rounds where we want to fit this param
           # If you set it to just True of False it will be that for all rounds
           # If not provided assumed to be False
-          to_fit: [True, True, False, True] 
+          to_fit: False #[True, False, False, True] 
           # Range to prior to, will be evaled
           priors: [-9.0, 9.0]
         dy_1:
           value: 0.0
-          to_fit: [True, True, False, True]
+          to_fit: False #[True, False, False, True]
           priors: [-9.0, 9.0]
         dz_1:
           value: 0.0 
@@ -43,7 +44,7 @@ cluster_model:
           priors: [1, 3]
         m500:
           value: "1.5e15"
-          to_fit: [True, False, True, True] 
+          to_fit: True #[True, False, True, True] 
           priors: ["1e14", "1e16"]
         gamma:
           value: .3081 
@@ -120,34 +121,38 @@ ps_model:
       parameters:
         dx_g:
           value: 0.0
-          to_fit: [True, True, True, False]
+          to_fit: False #[True, False, False, True]
           priors: [-9.0, 9.0]
         dy_g:
           value: 0.0
-          to_fit: [True, True, True, False]
+          to_fit: False # [True, False, False, True]
           priors: [-9.0, 9.0]
         sigma:
           value: 4
+          to_fit: False #[False, True, True, False]
           priors: [1, 10]
         amp_g:
           value: 0.002
-          to_fit: [True, False, True, True]
+          to_fit: True # [False, True, True, False]
           priors: [0, .005]
 
 # Add some info on what metadata to apply
-datasets:
-  mustang2:
-    - skip_beam:
-      - "ps_model"
+# datasets:
+#   mustang2:
+#     point_sources:
+#       - "ps_model"
+#
+fitting:
+  maxiter: 20
 
 metamodel:
   models:
     - cluster_model
-    - ps_model
+    # - ps_model
   model_map:
     mustang2:
       - cluster_model
-      - ps_model
-  parameter_map:
-    - [cluster_model.a10.dx_1, ps_model.gauss.dx_g]
-    - [cluster_model.a10.dy_1, ps_model.gauss.dy_g]
+      # - ps_model
+  # parameter_map:
+  #   - [cluster_model.a10.dx_1, ps_model.gauss.dx_g]
+  #   - [cluster_model.a10.dy_1, ps_model.gauss.dy_g]

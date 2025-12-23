@@ -118,28 +118,28 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
         "copy_noise": cfg["datasets"][dset_name]["copy_noise"],
         "xfer": cfg["datasets"][dset_name].get("xfer", ""),
         "prefactor": prefactor,
-        "skip_beam": cfg["datasets"][dset_name].get("skip_beam", []),
+        "point_sources": cfg["datasets"][dset_name].get("point_sources", []),
     }
 
 
 @register_pytree_node_class
 @dataclass
-class BeamConv(MetaData):
+class BeamConvAndPrefac(MetaData):
     beam: Array
+    prefactor: Array
 
     def apply(self, model: Array) -> Array:
-        return beam_conv(model, self.beam)
+        return self.prefactor * beam_conv(model, self.beam)
 
     def apply_grad(self, model_grad: Array) -> Array:
-
-        return beam_conv_vec(model_grad, self.beam)
+        return self.prefactor * beam_conv_vec(model_grad, self.beam)
 
     # Functions for making this a pytree
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
 
-        children = (self.beam,)
-        aux_data = tuple()
+        children = (self.beam, self.prefactor)
+        aux_data = (self.include, self.exclude)
 
         return (children, aux_data)
 
@@ -147,7 +147,7 @@ class BeamConv(MetaData):
     def tree_unflatten(cls, aux_data, children) -> Self:
         include, exclude = aux_data
 
-        return cls(children[0], include=include, exclude=exclude)
+        return cls(*children, include=include, exclude=exclude)
 
 
 def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]:
@@ -160,7 +160,11 @@ def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]
         eval(str(cfg["datasets"][dset_name]["beam"]["amp2"])),
     )
 
-    return (BeamConv(beam, exclude=tuple(info["skip_beam"])),)
+    return (
+        BeamConvAndPrefac(
+            beam, info["prefactor"], exclude=tuple(info["point_sources"])
+        ),
+    )
 
 
 def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):

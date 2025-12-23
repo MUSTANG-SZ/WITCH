@@ -163,6 +163,10 @@ def chisq_objective(
             grad_dat = metamodel.model_grad_proj(dataset_ind, i)
 
         resid = data.data - pred_dat
+        # if dataset.mode == "tod":
+        #     resid = resid.at[:].add(-1*jnp.mean(resid, axis=-1)[..., None])
+        # else:
+        #     resid = resid.at[:].add(-1*jnp.mean(resid))
         if do_loglike:
             resid_filt = data.noise.apply_noise(resid)
             chisq += jnp.sum(resid * resid_filt)

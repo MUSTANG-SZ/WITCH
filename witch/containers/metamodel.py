@@ -2,7 +2,7 @@
 Dataclass for storing multi model and dataset systems.
 """
 
-from copy import deepcopy
+from copy import copy
 from dataclasses import dataclass
 from functools import cached_property
 from typing import Self
@@ -125,7 +125,7 @@ class MetaModel:
         priors_high = jnp.zeros_like(self.parameters)
         for model, par_map in zip(self.models, self.parameter_map):
             priors_low = priors_low.at[jnp.array(par_map)].set(model.priors[0])
-            priors_high = priors_low.at[jnp.array(par_map)].set(model.priors[1])
+            priors_high = priors_high.at[jnp.array(par_map)].set(model.priors[1])
 
         return priors_low, priors_high
 
@@ -175,13 +175,11 @@ class MetaModel:
         model_grid : jax.Array
             The model on the computed grid.
         """
-        dset = self.datasets[dataset_ind]
         m_map = self.model_map[dataset_ind]
         proj = jnp.zeros_like(self.models[m_map[0]].model)
         for i in m_map:
             model = self.models[i]
             ip = model.model
-            ip = ip.at[:].multiply(dset.prefactor)
             proj = proj.at[:].add(ip)
         return proj
 
@@ -218,12 +216,12 @@ class MetaModel:
             model = self.models[i]
             md = md_map[i]
             ip = model.model
-            ip = ip.at[:].multiply(dset.prefactor)
             for md_idx in md:
                 ip = dset.metadata[md_idx].apply(ip)
-            proj = proj.at[:].add(_project(ip, x, y, model.xyz))
+            _proj = _project(ip, x, y, model.xyz)
             for md_idx in md:
-                proj = dset.metadata[md_idx].apply_proj(proj)
+                _proj = dset.metadata[md_idx].apply_proj(_proj)
+            proj = proj.at[:].add(_proj)
         return proj
 
     def model_grad_proj(self, dataset_ind: int, datavec_ind: int) -> jax.Array:
@@ -260,14 +258,12 @@ class MetaModel:
             md = md_map[i]
             par_map = self.parameter_map[i]
             ip_grad = model.model_grad[1]
-            ip_grad = ip_grad.at[:].multiply(dset.prefactor)
             for md_idx in md:
                 ip_grad = dset.metadata[md_idx].apply_grad(ip_grad)
-            proj_grad = proj_grad.at[jnp.array(par_map)].add(
-                _project_vectorized(ip_grad, x, y, model.xyz)
-            )
+            _proj_grad = _project_vectorized(ip_grad, x, y, model.xyz)
             for md_idx in md:
-                proj_grad = dset.metadata[md_idx].apply_grad_proj(proj_grad)
+                _proj_grad = dset.metadata[md_idx].apply_grad_proj(_proj_grad)
+            proj_grad = proj_grad.at[jnp.array(par_map)].add(_proj_grad)
         return proj_grad
 
     def get_dataset_ind(self, dset_name: str) -> int:
@@ -319,13 +315,13 @@ class MetaModel:
         self.errors = errs
         self.chisq = chisq
         self.models = tuple(
-            deepcopy(model).update(
+            copy(model).update(
                 vals[jnp.array(par_map)], errs[jnp.array(par_map)], chisq
             )
             for model, par_map in zip(self.models, self.parameter_map)
         )
 
-        return self
+        return copy(self)
 
     def add_round(self, to_fit: jax.Array) -> Self:
         """

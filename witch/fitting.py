@@ -7,19 +7,19 @@ from typing import Callable
 import jax
 import jax.numpy as jnp
 import mpi4jax
+import numpy as np
 from mpi4py import MPI
 from numpy import float32
 from tqdm import tqdm
 
-from .containers import MetaModel, Model
-from .dataset import DataSet
+from .containers import MetaModel
 from .objective import joint_objective
 
 _cache = {}
 
 
 @jax.jit
-def invsafe(matrix: jax.Array, thresh: float = 1e-14) -> jax.Array:
+def invsafe(matrix: jax.Array, thresh: float = 1e-16) -> jax.Array:
     """
     Safe SVD based psuedo-inversion of the matrix.
     This zeros out modes that are too small when inverting.
@@ -40,13 +40,13 @@ def invsafe(matrix: jax.Array, thresh: float = 1e-14) -> jax.Array:
         Same shape as `matrix`.
     """
     u, s, v = jnp.linalg.svd(matrix, False)
-    s_inv = jnp.array(jnp.where(jnp.abs(s) < thresh * jnp.max(s), 0, 1 / s))
+    s_inv = jnp.array(jnp.where(jnp.abs(s) <= thresh * jnp.max(s), 0, 1 / s))
 
     return jnp.dot(jnp.transpose(v), jnp.dot(jnp.diag(s_inv), jnp.transpose(u)))
 
 
-@jax.jit
-def invscale(matrix: jax.Array, thresh: float = 1e-14) -> jax.Array:
+@partial(jax.jit, static_argnums=(2,))
+def invscale(matrix: jax.Array, thresh: float = 1e-16, do_invsafe=False) -> jax.Array:
     """
     Invert and rescale a matrix by the diagonal.
     This uses `invsafe` for the inversion.
@@ -69,10 +69,12 @@ def invscale(matrix: jax.Array, thresh: float = 1e-14) -> jax.Array:
         Same shape as `matrix`.
     """
     diag = jnp.diag(matrix)
-    vec = jnp.array(jnp.where(diag != 0, 1.0 / jnp.sqrt(jnp.abs(diag)), 1e-10))
+    vec = jnp.array(jnp.where(diag != 0, 1.0 / jnp.sqrt(jnp.abs(diag)), thresh))
     mm = jnp.outer(vec, vec)
 
-    return mm * invsafe(mm * matrix, thresh)
+    if do_invsafe:
+        return mm * invsafe(mm * matrix, thresh)
+    return mm * jnp.linalg.inv(mm * matrix)
 
 
 @jax.jit
@@ -127,7 +129,6 @@ def _success(
     return new_metamodel, new_grad, new_curve, new_delta_chisq, lmd
 
 
-@partial(jax.jit, static_argnums=(1, 2))
 def run_lmfit(
     metamodel: MetaModel,
     maxiter: int = 10,
@@ -158,31 +159,38 @@ def run_lmfit(
     """
     zero = jnp.array(0.0, jnp.float32)
     chitol = jnp.float32(chitol)
+    tf = np.where(np.array(metamodel.to_fit))[0]
 
+    @jax.jit
     def _cond_func(val):
         i, delta_chisq, lmd, *_ = val
         iterbool = jax.lax.lt(i, maxiter)
         chisqbool = jax.lax.ge(delta_chisq, chitol) + jax.lax.gt(lmd, zero)
         return iterbool * chisqbool
 
+    @jax.jit
     def _body_func(val):
         i, delta_chisq, lmd, metamodel, curve, grad = val
         curve_use = curve.at[:].add(lmd * jnp.diag(jnp.diag(curve)))
         # Get the step
-        step = jnp.dot(invscale(curve_use), grad)
+        step = jnp.dot(
+            invscale(curve_use.at[tf, :].get().at[:, tf].get()), grad.at[tf].get()
+        )
         new_pars, to_fit = _prior_pars_fit(
             metamodel.priors,
-            metamodel.parameters.at[:].add(step),
+            metamodel.parameters.at[tf].add(step),
             jnp.array(metamodel.to_fit),
         )
         # Get errs
-        errs = jnp.where(to_fit, jnp.sqrt(jnp.diag(invscale(curve_use))), 0)
+        errs = jnp.where(
+            to_fit, jnp.sqrt(jnp.diag(invscale(curve_use, do_invsafe=True))), 0
+        )
         # Now lets get an updated model
         new_metamodel = copy(metamodel).update(new_pars, errs, metamodel.chisq)
         new_chisq, new_grad, new_curve = joint_objective(
             new_metamodel, True, True, True
         )
-        new_metamodel = new_metamodel.update(new_pars, errs, new_chisq)
+        new_metamodel = copy(new_metamodel).update(new_pars, errs, new_chisq)
 
         new_delta_chisq = jnp.astype(metamodel.chisq - new_metamodel.chisq, jnp.float32)
         metamodel, grad, curve, delta_chisq, lmd = jax.lax.cond(
@@ -367,12 +375,8 @@ def run_mcmc(
 
     Parameters
     ----------
-    models : tuple[Model, ...]
-        The models to run MCMC on.
-        Right now we assume that these are all identical but with different prefactors.
-    datasets : tuple[DataSet, ...]
-        The datasets to compute the model posterior with.
-        The `dataset.global_comm` object is used to fit in an MPI aware way.
+    metamodel : MetaModel
+        The MetaModel that describes the models and datasets.
     num_steps : int, default: 5000
         The number of steps to run MCMC for.
     num_leaps: int, default: 10
@@ -396,8 +400,8 @@ def run_mcmc(
 
     Returns
     -------
-    models : MetaModel
-        The models with MCMC estimated parameters and errors.
+    metamodel : MetaModel
+        The metamodel with MCMC estimated parameters and errors.
         The parameters are estimated as the mean of the samples.
         The errors are estimated as the standard deviation.
         This also has the chi-squared of the estimated parameters.

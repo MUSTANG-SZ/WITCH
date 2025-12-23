@@ -160,12 +160,13 @@ def process_tods(cfg, dataset, metamodel):
     metamodel_cur = metamodel
     xfer = info.get("info", "")
     if xfer:
-        metamodel_cur = deepcopy(metamodel)
+        metamodel_cur = copy(metamodel)
         metamodel_cur.models = tuple(
             Model_xfer.from_parent(model, xfer) for model in metamodel_cur.models
         )
 
     dset_ind = metamodel_cur.get_dataset_ind(dataset.name)
+    todvec.comm.barrier()
     for i, tod in enumerate(todvec.tods):
         if sim:
             if cfg["wnoise"]:
@@ -180,11 +181,10 @@ def process_tods(cfg, dataset, metamodel):
                     * scale[..., None]
                 )
             else:
-                tod.data *= tod.data * (-1) ** ((rank + nproc * i) % 2)
+                tod.data *= (-1) ** ((rank + nproc * i) % 2)
 
             pred = metamodel_cur.model_proj(dset_ind, i)
-            tod.data = tod.data + pred
-        tod.data = tod.data - jnp.mean(tod.data, axis=-1)[..., None]
+            tod.data += pred
         tod.compute_noise(
             dataset.noise_class, None, *dataset.noise_args, **dataset.noise_kwargs
         )
@@ -233,7 +233,6 @@ def process_maps(cfg, dataset, metamodel):
             pred = metamodel_cur.model_proj(dset_ind, i)
             imap.data = imap.data + pred
         print("Map scale: ", jnp.mean(jnp.abs(imap.data)))
-        imap.data = imap.data - jnp.mean(imap.data)
         imap.compute_noise(
             dataset.noise_class, None, *dataset.noise_args, **dataset.noise_kwargs
         )
@@ -330,7 +329,7 @@ def _run_fit(
     to_fit = np.array(metamodel.to_fit)
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
-    models, i, delta_chisq = run_lmfit(
+    metamodel, i, delta_chisq = run_lmfit(
         metamodel,
         eval(str(cfg["fitting"].get("maxiter", "10"))),
         eval(str(cfg["fitting"].get("chitol", "1e-5"))),
@@ -341,7 +340,7 @@ def _run_fit(
         f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}"
     )
 
-    print_once(models)
+    print_once(metamodel)
     _save_model(cfg, metamodel, f"fit{r}")
 
     metamodel = _reestimate_noise(metamodel)
@@ -525,7 +524,7 @@ def main():
         else:
             raise TypeError("Expect import name to be a string or a list")
 
-    # Get the functions needed to work with out dataset
+    # Get the functions needed to work with our dataset
     dset_names = list(cfg["datasets"].keys())
     models = []
     datasets = []
@@ -579,13 +578,8 @@ def main():
         dataset.info = get_info(dset_name, cfg, dataset.datavec)
 
         # Get the metadata
-        metadata = make_metadata(dset_name, cfg, dataset.info)  # info?????
+        metadata = make_metadata(dset_name, cfg, dataset.info)
         dataset.metadata = metadata
-
-        # Prefactor
-        prefactor = dataset.info.get("prefactor", None)
-        if prefactor is not None:
-            dataset.prefactor = prefactor
 
         # Setup noise
         noise_class = eval(str(cfg["datasets"][dset_name]["noise"]["class"]))
@@ -632,13 +626,17 @@ def main():
     for dataset in metamodel.datasets:
         os.makedirs(os.path.join(outdir, dataset.name), exist_ok=True)
         dataset.info["outdir"] = outdir
+        comm.barrier()
         dataset.preproc(dataset, cfg, metamodel)
+        comm.barrier()
         if dataset.mode == "tod":
             dataset.datavec = process_tods(cfg, dataset, metamodel)
         elif dataset.mode == "map":
             dataset.datavec = process_maps(cfg, dataset, metamodel)
+        comm.barrier()
         dataset = jax.block_until_ready(dataset)
         dataset.postproc(dataset, cfg, metamodel)
+    comm.barrier()
 
     # Now we fit
     to_fit = cfg.get("fit", True)

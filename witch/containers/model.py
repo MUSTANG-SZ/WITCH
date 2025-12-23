@@ -86,7 +86,7 @@ class Model:
     name: str
     structures: tuple[Structure, ...]
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float]  # arcseconds
-    dz: float  # arcseconds * unknown
+    dz: float  # arcseconds
     n_rounds: int
     cur_round: int = 0
     to_run: tuple[bool, bool, bool, bool] = field(default_factory=core.make_to_run)

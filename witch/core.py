@@ -16,7 +16,6 @@ else:
 import numpy as np
 
 from .structure import STRUCT_FUNCS, STRUCT_N_NONPARA, STRUCT_N_PAR, STRUCT_STAGE
-from .utils import fft_conv
 
 ORDER = (
     "nonpara_power",
@@ -249,7 +248,7 @@ def make_to_run(
         This is 3D sub-structure.
     stage_2 : bool, default: True
         If True run stage 2.
-        This is 2D structure added prior to beam convolution.
+        This is 2D structure.
 
     Returns
     -------
@@ -314,7 +313,7 @@ def model(
     # Integrate along line of site
     ip = trapz(pressure, dx=dz, axis=-1)
 
-    # Stage 2, add non-beam convolved to integrated profile
+    # Stage 2, add to integrated profile
     ip, start = _stage_2(xyz, n_structs, params, start, ip, to_run[3])
 
     return ip
@@ -356,16 +355,19 @@ def model_grad(
         *pars,
     )
 
-    grad = jax.jacfwd(model, argnums=argnums)(
-        xyz,
-        n_structs,
-        n_rbins,
-        dz,
-        to_run,
-        *pars,
-    )
     grad_padded = jnp.zeros((len(pars),) + pred.shape)
-    grad_padded = grad_padded.at[jnp.array(argnums) - ARGNUM_SHIFT].set(jnp.array(grad))
+    if len(argnums) > 0:
+        grad = jax.jacfwd(model, argnums=argnums)(
+            xyz,
+            n_structs,
+            n_rbins,
+            dz,
+            to_run,
+            *pars,
+        )
+        grad_padded = grad_padded.at[jnp.array(argnums) - ARGNUM_SHIFT].set(
+            jnp.array(grad)
+        )
 
     return pred, grad_padded
 
@@ -374,7 +376,6 @@ def stage2_model(
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
     n_structs: tuple[int, ...],
     dz: float,
-    beam: jax.Array,
     *pars: Unpack[tuple[float, ...]],
 ):
     """
@@ -392,8 +393,6 @@ def stage2_model(
     dz : float
         Factor to scale by while integrating.
         Should at least include the pixel size along the LOS.
-    beam : jax.Array
-        Beam to convolve by, should be a 2d array.
     *pars : Unpack[tuple[float,...]]
         1D container of model parameters.
 
