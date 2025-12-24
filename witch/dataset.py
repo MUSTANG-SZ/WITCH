@@ -155,13 +155,44 @@ class MetaData:
 @register_pytree_node_class
 @dataclass
 class BeamConvAndPrefac(MetaData):
+    """
+    Apply beam convolution and a prefactor (for unit conversion) to a model.
+    Only attributes unique to this subclass are listed here.
+    See `MetaData` for the rest.
+
+    Attributes
+    ----------
+    beam : jax.Array
+        The beam to convolve both the model and gradient with.
+    prefactor : jax.Array
+        Scalary array containing a value to multiply the model and gradients by.
+    """
+
     beam: Array
     prefactor: Array
 
     def apply(self, model: Array) -> Array:
+        """
+        Convolve the model by the beam and then multiply by the prefactor.
+        See `MetaData.apply` for details on parameters and returns.
+        """
         return self.prefactor * beam_conv(model, self.beam)
 
     def apply_grad(self, model_grad: Array) -> Array:
+        r"""
+        Convolve the gradient by the beam and then multiply by the prefactor.
+        Here we are taking advantage of the following:
+
+        $$
+        \frac{\partial}{\partial x}(p * (b \circledast m))
+         = p\frac{\partial}{\partial x}(b \circledast m)
+         = p * b \circledast \frac{\partial m}{\partial x}
+        $$
+
+        Where $m$ is the model, $x$ is some parameter, $p$ is the prefactor, and $b$ is the beam.
+
+        See `MetaData.apply_grad` for details on parameters and returns.
+        """
         return self.prefactor * beam_conv_vec(model_grad, self.beam)
 
     # Functions for making this a pytree

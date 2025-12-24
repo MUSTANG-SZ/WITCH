@@ -31,19 +31,48 @@ _project_vectorized = jax.vmap(_project, in_axes=(0, None, None, None))
 @register_pytree_node_class
 @dataclass
 class MetaModel:
-    # TODO: Add docstring!
+    """
+    Class that manages multiple models and datasets at once.
+    This enables computing a single model for multiple datasets
+    as well as multiple models with shared parameters.
+
+    Attributes
+    ----------
+    global_comm : MPI.Comm | MPI.Intracomm
+        The MPI communicator used for all datasets.
+    models : tuple[Model, ...]
+        Tuple of models to fit together.
+    datasets : tuple[DataSet]
+        Tuple of datasets to fit together.
+    parameter_map : tuple[tuple[int, ...], ...]
+        Structure to map the parameters held in `MetaModel`
+        to each individual `Model` instance.
+        Thie `i`th entry is a tuple that indexes `MetaModel.parameters`
+        to get the parameters for the `i`th `Model` in `MetaModel.models`
+    model_map : tuple[tuple[int, ...], ...]
+        Structure to map models to datasets.
+        The `j`th entry is an `n_model` length tuple in which the
+        `i`th entry lists the indices of `MetaModel.models` used by
+        `MetaModel.datasets[j]`.
+    metadata_map : tuple[tuple[tuple[int, ...], ...], ...]
+        Structure to map what metadata to apply to which model.
+        The `j`th entry is an `n_model` length tuple in which the
+        `i`th entry lists the indices of `MetaModel.datasets[j].metadata`
+        to apply to `MetaModel.models[i]`.
+    parameters : jax.Array
+        The parameters of this `MetaModel`.
+    errors : jax.Array
+        The error currently associated with each element of `MetaModel.parameters`.
+    chisq : jax.Array
+        The log-likelihood of the current state of the `MetaModel`.
+    """
+
     global_comm: MPI.Comm | MPI.Intracomm | wu.NullComm
     models: tuple[Model, ...]
     datasets: tuple[DataSet, ...]
-    parameter_map: tuple[
-        tuple[int, ...], ...
-    ]  # The i'th entry maps parameters to the i'th model
-    model_map: tuple[
-        tuple[int, ...], ...
-    ]  # The j'th entry lists the indices of the models used by the j'th dataset
-    metadata_map: tuple[
-        tuple[tuple[int, ...], ...], ...
-    ]  # The j'th entry is an n_model lenght tuple in which the i'th entry lists the indices of the metadata to apply from the j'th dataset
+    parameter_map: tuple[tuple[int, ...], ...]
+    model_map: tuple[tuple[int, ...], ...]
+    metadata_map: tuple[tuple[tuple[int, ...], ...], ...]
     parameters: jax.Array
     errors: jax.Array
     chisq: jax.Array
