@@ -72,6 +72,7 @@ def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
         "mode": "map",
         "prefactor": prefactor,
         "objective": chisq_objective,
+        "point_sources": cfg["datasets"][dset_name].get("point_sources", []),
     }
 
 
@@ -85,7 +86,11 @@ def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]
         eval(str(cfg["datasets"][dset_name]["beam"]["amp2"])),
     )
 
-    return (BeamConvAndPrefac(beam, info["prefactor"]),)
+    return (
+        BeamConvAndPrefac(
+            beam, info["prefactor"], exclude=tuple(info["point_sources"])
+        ),
+    )
 
 
 def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
