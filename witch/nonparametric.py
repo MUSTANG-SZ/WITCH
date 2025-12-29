@@ -116,10 +116,6 @@ def bin_map(hdu, rbins, x0=None, y0=None, cunit=None):
 
 def get_rbins(
     model,
-    rmax: float = 3.0 * 60.0,
-    struct_num: int = 0,
-    sig_params: list[str] = ["amp", "P0"],
-    default: tuple[int, ...] = (0, 10, 20, 30, 50, 80, 120, 180),
 ) -> tuple[int, ...]:
     """
     Function which returns a good set of rbins for a non-parametric fit given the significance of the underlying parametric model.
@@ -127,22 +123,31 @@ def get_rbins(
     Parameters
     ----------
     model : container.Model
-        Parametric model to calculate rbins on
-    rmax : float, default: 180
-        Maximum radius of the rbins
-    struct_num : int, defualt: 0
-        Structure within model to calculate rbins on
-    sig_params: list[str], default: ["amp", "P0"]
-        Parameters to consider for computing significance.
-        Only first match will be used.
-    default: tuple[int, ...], default: (0, 10, 20, 30, 50, 80, 120, 180)
-        Default rbins to be returned if generation fails.
+        Parametric model to calculate rbins on.
+        Will search for the following in `model['nonpara']`:
+
+        * rmax : float, default: 180
+            Maximum radius of the rbins
+
+        * struct_num : int, defualt: 0
+            Structure within model to calculate rbins on
+
+        * sig_params: list[str], default: ["amp", "P0"]
+            Parameters to consider for computing significance.
+            Only first match will be used.
+
+        * default: tuple[int, ...], default: (0, 10, 20, 30, 50, 80, 120, 180)
+            Default rbins to be returned if generation fails.
 
     Returns
     -------
     rbins: tuple[int, ...]
         rbins for nonparametric fit
     """
+    rmax = model["nonpara"].get("rmax", 180.0)
+    struct_num = model["nonpara"].get("struct_num", 0)
+    sig_params = model["nonpara"].get("sig_params", ["amp", "P0"])
+    default = model["nonpara"].get("default", (0, 10, 20, 30, 50, 80, 120, 180))
     sig = 0
     for par in model.structures[struct_num].parameters:
         if par.name in sig_params:

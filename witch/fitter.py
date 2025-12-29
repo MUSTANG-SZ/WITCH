@@ -23,7 +23,7 @@ from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
 from . import utils as wu
-from .containers import MetaModel, Model, Model_xfer
+from .containers import MetaModel, Model_xfer
 from .containers.metamodel import _compute_metadata_map, _compute_par_map_and_pars
 from .dataset import DataSet
 from .fitting import run_lmfit, run_mcmc
@@ -334,7 +334,7 @@ def _run_fit(
         eval(str(cfg["fitting"].get("maxiter", "10"))),
         eval(str(cfg["fitting"].get("chitol", "1e-5"))),
     )
-    _ = mpi4jax.barrier(comm=comm)
+    mpi4jax.barrier(comm=comm)
     t2 = time.time()
     print_once(
         f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}"
@@ -360,7 +360,7 @@ def _run_mcmc(cfg, metamodel):
         burn_in=float(cfg["mcmc"].get("burn_in", 0.1)),
         max_tries=int(cfg["mcmc"].get("max_tries", 20)),
     )
-    _ = mpi4jax.barrier(comm=comm)
+    mpi4jax.barrier(comm=comm)
     t2 = time.time()
     print_once(f"Took {t2 - t1} s to run mcmc")
 
@@ -422,14 +422,14 @@ def fit_loop(metamodel, cfg, comm):
             metamodel,
             r,
         )
-        _ = mpi4jax.barrier(comm=comm)
+        mpi4jax.barrier(comm=comm)
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
         metamodel = _run_mcmc(
             cfg,
             metamodel,
         )
-        _ = mpi4jax.barrier(comm=comm)
+        mpi4jax.barrier(comm=comm)
 
     # Save final pars
     _save_model(cfg, metamodel, "final_fit")
@@ -604,6 +604,10 @@ def main():
             datasets,
         )
     else:
+        if "model" in cfg:
+            raise ValueError(
+                "No MetaModel defined but Model definition found. This appears to be a legacy configuration! Please update!"
+            )
         metamodel = MetaModel(
             comm,
             tuple(),
@@ -653,7 +657,7 @@ def main():
             n_rounds = cfg["nonpara"].get("n_rounds", None)
             nonpara_models = []
             for model in metamodel.models:
-                to_copy = cfg[model.name].get("to_copy", [])
+                to_copy = cfg[model.name].get("nonpara", {}).get("to_copy", [])
                 if len(to_copy) == 0:
                     nonpara_models += [copy(model)]
                     continue

@@ -9,11 +9,11 @@ import jax.numpy as jnp
 import mpi4jax
 import numpy as np
 from mpi4py import MPI
-from numpy import float32
 from tqdm import tqdm
 
 from .containers import MetaModel
 from .objective import joint_objective
+from .utils import NullComm
 
 _cache = {}
 
@@ -231,7 +231,7 @@ def hmc(
     num_steps: int,
     num_leaps: int,
     step_size: float,
-    comm: MPI.Intracomm,
+    comm: MPI.Comm | MPI.Intracomm | NullComm,
     key: jax.Array,
 ) -> tuple[jax.Array, jax.Array]:
     """
@@ -266,7 +266,7 @@ def hmc(
     step_size : float
         The step size to use.
         At each leapfrog step the parameters will evolve by `step_size`*`momentum`.
-    comm : MPI.Intracomm
+    comm : MPI.Comm | MPI.Intracomm | NullComm
         The MPI comm object to use.
 
     Returns
@@ -296,8 +296,8 @@ def hmc(
 
     @jax.jit
     def _sample(key, params, step_size):
-        token = mpi4jax.barrier(comm=comm)
-        key, token = mpi4jax.bcast(key, 0, comm=comm, token=token)
+        mpi4jax.barrier(comm=comm)
+        key = mpi4jax.bcast(key, 0, comm=comm)
         key, uniform_key = jax.random.split(key, 2)
 
         # generate random momentum
@@ -410,7 +410,7 @@ def run_mcmc(
 
     """
     global_comm = metamodel.global_comm
-    token = mpi4jax.barrier(comm=global_comm)
+    mpi4jax.barrier(comm=global_comm)
     rank = global_comm.Get_rank()
 
     if burn_in >= 1.0 or burn_in < 0:
@@ -477,7 +477,7 @@ def run_mcmc(
         return log_like_grad
 
     def _get_step_size(step_size, key, comm, max_tries):
-        token = mpi4jax.barrier(comm=global_comm)
+        mpi4jax.barrier(comm=global_comm)
 
         def _can_interp(probs):
             probs = jnp.array(probs)
@@ -494,7 +494,7 @@ def run_mcmc(
                     return True
             return False
 
-        def _hmc(n_steps, step_size, token):
+        def _hmc(n_steps, step_size):
             _, chain_probs = hmc(
                 init_pars.at[to_fit].get().ravel(),
                 _log_prob,
@@ -508,9 +508,9 @@ def run_mcmc(
             prob = 0.0
             if rank == 0:
                 prob = jnp.mean(chain_probs)
-            prob, token = mpi4jax.bcast(prob, 0, comm=comm, token=token)
+            prob = jnp.array(mpi4jax.bcast(prob, 0, comm=comm))
 
-            return prob, token
+            return prob
 
         if max_tries == 0:
             return step_size
@@ -520,11 +520,11 @@ def run_mcmc(
         step_sizes = []
         probs = []
         for i in range(max_tries):
-            token = mpi4jax.barrier(comm=global_comm, token=token)
+            mpi4jax.barrier(comm=global_comm)
             step_size *= step_fac
             if rank == 0:
                 print(f"Trying step size {step_size}")
-            prob, token = _hmc(n_steps, step_size, token)
+            prob = _hmc(n_steps, step_size)
             step_sizes += [step_size]
             probs += [prob]
 
@@ -562,7 +562,7 @@ def run_mcmc(
                 )
                 sys.stdout.flush()
             return step_sizes[-1]
-        token = mpi4jax.barrier(comm=global_comm, token=token)
+        mpi4jax.barrier(comm=global_comm)
         probs = jnp.array(probs)
         step_sizes = jnp.array(step_sizes)
         msk = jnp.isfinite(probs) + (probs > 0)
@@ -575,7 +575,7 @@ def run_mcmc(
             jnp.array([0.63]), probs[msk][srt], step_sizes[msk][srt]
         )
         step_size = float(step_size_interp[0].item())
-        prob, token = _hmc(5, step_size, token)
+        prob = _hmc(5, step_size)
         if rank == 0:
             print(
                 f"Interpolated to get a step size of {step_size} with an acceptance probability {prob:.2%}"
@@ -583,8 +583,8 @@ def run_mcmc(
             sys.stdout.flush()
         return step_size
 
-    key = jax.random.PRNGKey(0)
-    key, token = mpi4jax.bcast(key, 0, comm=global_comm, token=token)
+    key = jax.random.key(0)
+    key = jnp.array(mpi4jax.bcast(key, 0, comm=global_comm))
 
     step_size = _get_step_size(
         step_size=step_size,
@@ -610,8 +610,8 @@ def run_mcmc(
         flat_samples = flat_samples[burn_in:]
         final_pars = final_pars.at[to_fit].set(jnp.median(flat_samples, axis=0).ravel())
         final_errs = final_errs.at[to_fit].set(jnp.std(flat_samples, axis=0).ravel())
-    final_pars, token = mpi4jax.bcast(final_pars, 0, comm=global_comm, token=token)
-    final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=global_comm, token=token)
+    final_pars = jnp.array(mpi4jax.bcast(final_pars, 0, comm=global_comm))
+    final_errs = jnp.array(mpi4jax.bcast(final_errs, 0, comm=global_comm))
     metamodel = metamodel.update(
         final_pars.block_until_ready(),
         final_errs.block_until_ready(),

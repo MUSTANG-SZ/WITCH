@@ -76,16 +76,13 @@ def joint_objective(
         loglike += _loglike
         grad = grad.at[:].add(_grad)
         curve = curve.at[:].add(_curve)
-    token = mpi4jax.barrier(comm=global_comm)
+    mpi4jax.barrier(comm=global_comm)
     if do_loglike:
-        loglike, token = mpi4jax.allreduce(
-            loglike, MPI.SUM, comm=global_comm, token=token
-        )
+        loglike = mpi4jax.allreduce(loglike, MPI.SUM, comm=global_comm)
     if do_grad:
-        grad, token = mpi4jax.allreduce(grad, MPI.SUM, comm=global_comm, token=token)
+        grad = mpi4jax.allreduce(grad, MPI.SUM, comm=global_comm)
     if do_curve:
-        curve, token = mpi4jax.allreduce(curve, MPI.SUM, comm=global_comm, token=token)
-    _ = token
+        curve = mpi4jax.allreduce(curve, MPI.SUM, comm=global_comm)
 
     return loglike, grad, curve
 
@@ -282,5 +279,5 @@ def poisson_objective(
                     jnp.transpose(grad_dat),
                 )
             )
-    print("LOGLIKELIHOOD: ", 2*loglike)
+    print("LOGLIKELIHOOD: ", 2 * loglike)
     return -2 * loglike, -2 * grad, -2 * curve
