@@ -3,8 +3,6 @@ name: "RXJ1347" # Name of the cluster
 noise_map: True # Whether to make the noise map
 model_map: True # Whether to make a map of just the model
 model:
-  # Unit conversion converts from the model units (integrated pressure) to the map units (K_RJ)
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   structures:
     #The first structure is called a10
     a10:
@@ -38,6 +36,8 @@ model:
           value: 5.4905 
         z:
           value: 0.97 
+ps_model:
+  structures:
     ps_gauss:
       structure: "gaussian"
       parameters:
@@ -54,3 +54,18 @@ model:
         amp_g: # Amplitude in map units (K_RJ)
           value: 0.002
           to_fit: [True, False, True, True]
+
+# Add some info on what metadata to apply
+datasets:
+  mustang2:
+    point_sources:
+      - "ps_model"
+
+metamodel:
+  models:
+    - cluster_model
+    - ps_model
+  model_map:
+    mustang2:
+      - cluster_model
+      - ps_model
