@@ -213,14 +213,22 @@ def model3D(
     pressure : jax.Array
         The 3D model with the specified substructure evaluated on the grid.
     """
-    return model(
-        xyz,
-        n_structs,
-        n_rbins,
-        0,
-        (True, True, True, False),
-        *params,
-    )
+    params = jnp.array(params)
+    params = jnp.ravel(params)  # Fixes strange bug with params having dim (1,n)
+
+    pressure = jnp.zeros((xyz[0].shape[0], xyz[1].shape[1], xyz[2].shape[2]))
+    start = 0
+
+    # Stage -1, non para
+    pressure, start = _stage_m1(xyz, n_structs, n_rbins, params, start, pressure, True)
+
+    # Stage 0, add to the 3d grid
+    pressure, start = _stage_0(xyz, n_structs, params, start, pressure, True)
+
+    # Stage 1, modify the 3d grid
+    pressure, start = _stage_1(xyz, n_structs, params, start, pressure, True)
+
+    return pressure
 
 
 def make_to_run(

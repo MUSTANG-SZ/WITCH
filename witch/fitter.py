@@ -284,13 +284,16 @@ def get_outdir(cfg, metamodel, nonpara=False):
     return outdir
 
 
-def _save_model(cfg, metamodel, desc_str):
+def _save_model(cfg, metamodel, desc_str, nonpara=False):
     outdir = cfg["outdir"]
     if comm.Get_rank() != 0:
         return
     res_path = os.path.join(outdir, f"results_{desc_str}.dill")
     print_once("Saving results to", res_path)
     metamodel.save(res_path)
+
+    if nonpara:
+        return
 
     final = {"metamodel": cfg["metamodel"]}
     for model in metamodel.models:
@@ -324,6 +327,7 @@ def _run_fit(
     cfg,
     metamodel,
     r,
+    nonpara=False,
 ):
     metamodel.set_round(r)
     to_fit = np.array(metamodel.to_fit)
@@ -341,13 +345,13 @@ def _run_fit(
     )
 
     print_once(metamodel)
-    _save_model(cfg, metamodel, f"fit{r}")
+    _save_model(cfg, metamodel, f"fit{r}", nonpara)
 
     metamodel = _reestimate_noise(metamodel)
     return metamodel
 
 
-def _run_mcmc(cfg, metamodel):
+def _run_mcmc(cfg, metamodel, nonpara=False):
     print_once("Running MCMC")
     init_pars = np.array(metamodel.parameters.copy())
     t1 = time.time()
@@ -368,7 +372,7 @@ def _run_mcmc(cfg, metamodel):
     message[1] = "MCMC estimated pars:"
     print_once("\n".join(message))
 
-    _save_model(cfg, metamodel, "mcmc")
+    _save_model(cfg, metamodel, "mcmc", nonpara)
     if comm.Get_rank() == 0:
         samples = np.array(samples)
         samps_path = os.path.join(cfg["outdir"], f"samples_mcmc.npz")
@@ -393,10 +397,10 @@ def _run_mcmc(cfg, metamodel):
     return metamodel
 
 
-def fit_loop(metamodel, cfg, comm):
+def fit_loop(metamodel, cfg, comm, nonpara=False):
     if metamodel is None:
         raise ValueError("Can't fit without a model defined!")
-    if cfg["sim"]:
+    if cfg["sim"] and not nonpara:
         # Remove structs we deliberately want to leave out of model
         metamodel = metamodel.remove_structs(cfg)
 
@@ -414,13 +418,14 @@ def fit_loop(metamodel, cfg, comm):
     print_once(f"Took {time.time() - t0} s to compile")
 
     print_once(
-        re.sub(r"^Round 1.*\n?", "Starting pars:", str(metamodel), flags=re.MULTILINE)
+        re.sub(r"^Round 1.*\n?", "Starting pars:\n", str(metamodel), flags=re.MULTILINE)
     )
     for r in range(metamodel.n_rounds):
         metamodel = _run_fit(
             cfg,
             metamodel,
             r,
+            nonpara,
         )
         mpi4jax.barrier(comm=comm)
 
@@ -428,11 +433,12 @@ def fit_loop(metamodel, cfg, comm):
         metamodel = _run_mcmc(
             cfg,
             metamodel,
+            nonpara,
         )
         mpi4jax.barrier(comm=comm)
 
     # Save final pars
-    _save_model(cfg, metamodel, "final_fit")
+    _save_model(cfg, metamodel, "final_fit", nonpara)
 
     return metamodel
 
@@ -649,35 +655,49 @@ def main():
         for dataset in metamodel.datasets:
             dataset.postfit(dataset, cfg, metamodel)
         if "nonpara" in cfg and cfg["nonpara"]["convert"]:
-            outdir = get_outdir(cfg, metamodel)
-            cfg["outdir"] = outdir
-            for dataset in metamodel.datasets:
-                os.makedirs(os.path.join(outdir, dataset.name), exist_ok=True)
-                dataset.info["outdir"] = outdir
+            print_once("Setting up nonparametric model")
             n_rounds = cfg["nonpara"].get("n_rounds", None)
             nonpara_models = []
+            mm_cfg = cfg.get("metamodel", {})
             for model in metamodel.models:
-                to_copy = cfg[model.name].get("nonpara", {}).get("to_copy", [])
+                mnonpara = cfg[model.name].get("nonpara", {})
+                to_copy = mnonpara.get("to_copy", [])
                 if len(to_copy) == 0:
                     nonpara_models += [copy(model)]
                     continue
+                rmax = mnonpara.get("rmax", 180.0)
+                struct_num = mnonpara.get("struct_num", 0)
+                sig_params = mnonpara.get("sig_params", ["amp", "P0"])
+                default = mnonpara.get("default", (0, 10, 20, 30, 50, 80, 120, 180))
                 nonpara_model = para_to_non_para(
-                    model, n_rounds=n_rounds, to_copy=to_copy
+                    model,
+                    n_rounds,
+                    to_copy,
+                    rmax,
+                    struct_num,
+                    sig_params,
+                    default,
+                    mm_cfg,
                 )
                 nonpara_models += [nonpara_model]
             nonpara_models = tuple(nonpara_models)
-            par_map, pars, errs = _compute_par_map_and_pars(
-                cfg.get("metamodel", {}), nonpara_models
-            )
+            par_map, pars, errs = _compute_par_map_and_pars(mm_cfg, nonpara_models)
             metadata_map = _compute_metadata_map(nonpara_models, metamodel.datasets)
             nonparametamodel = copy(metamodel)
+            nonparametamodel.models = nonpara_models
             nonparametamodel.parameter_map = par_map
             nonparametamodel.parameters = pars
             nonparametamodel.errors = errs
             nonparametamodel.metadata_map = metadata_map
             nonparametamodel = nonparametamodel.update(pars, errs, metamodel.chisq)
 
-            nonparametamodel = fit_loop(nonparametamodel, cfg, comm)
+            outdir = get_outdir(cfg, nonparametamodel)
+            cfg["outdir"] = outdir
+            for dataset in nonparametamodel.datasets:
+                os.makedirs(os.path.join(outdir, dataset.name), exist_ok=True)
+                dataset.info["outdir"] = outdir
+
+            nonparametamodel = fit_loop(nonparametamodel, cfg, comm, True)
             for dataset in nonparametamodel.datasets:
                 dataset.postfit(dataset, cfg, nonparametamodel)
 

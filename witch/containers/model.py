@@ -434,8 +434,8 @@ class Model:
         )
 
         to_pop = ["to_fit_ever", "n_struct", "priors", "par_names"]
-        for key in self.__dict__.keys():
-            if key in to_pop:  # Pop keys if they are in dict
+        for key in to_pop:
+            if key in self.__dict__:  # Pop keys if they are in dict
                 self.__dict__.pop(key)
 
         self.__dict__.pop("model", None)
