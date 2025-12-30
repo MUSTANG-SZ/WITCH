@@ -2,7 +2,7 @@
 Dataclass for storing multi model and dataset systems.
 """
 
-from copy import copy
+from copy import copy, deepcopy
 from dataclasses import dataclass
 from functools import cached_property
 from typing import Self
@@ -344,7 +344,7 @@ class MetaModel:
         self.errors = errs
         self.chisq = chisq
         self.models = tuple(
-            copy(model).update(
+            deepcopy(model).update(
                 vals[jnp.array(par_map)], errs[jnp.array(par_map)], chisq
             )
             for model, par_map in zip(self.models, self.parameter_map)

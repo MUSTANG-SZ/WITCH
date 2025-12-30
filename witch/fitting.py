@@ -230,7 +230,7 @@ def hmc(
     log_prob_grad: Callable[[jax.Array], jax.Array],
     num_steps: int,
     num_leaps: int,
-    step_size: float,
+    step_size: jax.Array,
     comm: MPI.Comm | MPI.Intracomm | NullComm,
     key: jax.Array,
 ) -> tuple[jax.Array, jax.Array]:
@@ -263,8 +263,9 @@ def hmc(
         The number of steps to run the chain for.
     num_leaps : int
         The number of leapfrog steps to run at each step of the chain.
-    step_size : float
+    step_size : jax.Array
         The step size to use.
+        Should be a scalar jax array.
         At each leapfrog step the parameters will evolve by `step_size`*`momentum`.
     comm : MPI.Comm | MPI.Intracomm | NullComm
         The MPI comm object to use.
@@ -323,13 +324,18 @@ def hmc(
         return chain, accept_prob
 
     c_sample = _cache.get("hmc_sample", None)
+    # Suboptimal caching for right now
+    # Can probably fix by moving functions out of local scope
     if c_sample is None:
         if rank == 0:
             print(f"Compiling MC sample function. This can take a few minutes!")
         t0 = time.time()
-        t_sample = _sample.trace(key, params, step_size)
-        l_sample = t_sample.lower()
-        c_sample = l_sample.compile()
+        _ = _sample(key.copy(), params.copy(), step_size.copy())
+        jax.block_until_ready(_)
+        # t_sample = _sample.trace(key.copy(), params.copy(), step_size.copy())
+        # l_sample = t_sample.lower()
+        # c_sample = l_sample.compile()
+        c_sample = _sample
         t1 = time.time()
         if rank == 0:
             print(f"Compiled MC sample function in {t1-t0} s")
@@ -358,13 +364,13 @@ def run_mcmc(
     metamodel: MetaModel,
     num_steps: int = 5000,
     num_leaps: int = 10,
-    step_size: float = 0.02,
+    step_size: jax.Array = jnp.array(0.02),
     sample_which: int = -1,
     burn_in: float = 0.1,
     max_tries: int = 20,
 ) -> tuple[MetaModel, jax.Array]:
     """
-    Run MCMC using the `emcee` package to estimate the posterior for our model.
+    Run Hamilonian Monte Carlo to estimate the posterior for our model.
     Currently this function only support flat priors, but more will be supported
     down the line. In order to ensure accuracy of the noise model used, it is
     reccomended that you run at least one round of `fit_tods` followed by noise
@@ -412,6 +418,7 @@ def run_mcmc(
     global_comm = metamodel.global_comm
     mpi4jax.barrier(comm=global_comm)
     rank = global_comm.Get_rank()
+    step_size = jnp.array(step_size)
 
     if burn_in >= 1.0 or burn_in < 0:
         raise ValueError("Error: burn_in must be in range [0, 1)")
@@ -574,7 +581,7 @@ def run_mcmc(
         step_size_interp = jnp.interp(
             jnp.array([0.63]), probs[msk][srt], step_sizes[msk][srt]
         )
-        step_size = float(step_size_interp[0].item())
+        step_size = step_size_interp[0].item()
         prob = _hmc(5, step_size)
         if rank == 0:
             print(
@@ -583,7 +590,7 @@ def run_mcmc(
             sys.stdout.flush()
         return step_size
 
-    key = jax.random.key(0)
+    key = jax.random.PRNGKey(0)
     key = jnp.array(mpi4jax.bcast(key, 0, comm=global_comm))
 
     step_size = _get_step_size(

@@ -355,7 +355,7 @@ def _run_mcmc(cfg, metamodel):
         metamodel,
         num_steps=int(cfg["mcmc"].get("num_steps", 5000)),
         num_leaps=int(cfg["mcmc"].get("num_leaps", 10)),
-        step_size=float(cfg["mcmc"].get("step_size", 0.02)),
+        step_size=jnp.array(float(cfg["mcmc"].get("step_size", 0.02))),
         sample_which=int(cfg["mcmc"].get("sample_which", -1)),
         burn_in=float(cfg["mcmc"].get("burn_in", 0.1)),
         max_tries=int(cfg["mcmc"].get("max_tries", 20)),
