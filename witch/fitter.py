@@ -399,7 +399,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
 
 def fit_loop(metamodel, cfg, comm, nonpara=False):
     if metamodel is None:
-        raise ValueError("Can't fit without a model defined!")
+        raise ValueError("Can't fit without metamodel defined!")
     if cfg["sim"] and not nonpara:
         # Remove structs we deliberately want to leave out of model
         metamodel = metamodel.remove_structs(cfg)

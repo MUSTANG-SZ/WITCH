@@ -68,15 +68,16 @@ model:
       parameters:
         dx_g:
           value: 0.0
-          to_fit: False 
+          to_fit: True 
           priors: [-9.0, 9.0]
         dy_g:
           value: 0.0
-          to_fit: False 
+          to_fit: True 
           priors: [-9.0, 9.0]
         sigma:
           value: 4
-          priors: [1, 10]
+          to_fit: True
+          priors: [1., 100.]
         amp_g:
           value: 0.002
           to_fit: True 

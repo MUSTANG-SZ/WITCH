@@ -1,3 +1,59 @@
+## 9.12.0 (2025-12-22)
+
+### Feat
+
+- add MOOJ1142 joint yamls. Also add step size to joint unit tests
+- add sig_params as arg for para_to_nonpara
+
+### Fix
+
+- bug with removing structs in para_to_non_para
+- correctly pass noise in run_mcmc
+- correctly pop dict keys in remove_struct
+- error when only one map causing div by 0
+
+## 9.11.0 (2025-12-03)
+
+### Feat
+
+- slightly changing moo1142 params
+
+## 9.10.4 (2025-11-11)
+
+### Fix
+
+- remove fitter install and fix versioning
+
+## 9.10.3 (2025-11-11)
+
+### Fix
+
+- pass in correct datavec and remove old line
+
+## 9.10.2 (2025-10-31)
+
+### Fix
+
+- models cast to lsit in wrong place
+
+## 9.10.1 (2025-10-31)
+
+### Fix
+
+- fix bugs when using non simmed data
+
+## 9.10.0 (2025-10-31)
+
+### Feat
+
+- updating configs
+
+## 9.9.1 (2025-08-07)
+
+### Fix
+
+- incorrect import name
+
 ## 9.9.0 (2025-07-30)
 
 ### Feat
