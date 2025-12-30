@@ -44,7 +44,7 @@ cluster_model:
           priors: [1, 3]
         m500:
           value: "1.5e15"
-          to_fit: True #[True, False, True, True] 
+          to_fit: True # [True, False, True, True] 
           priors: ["1e14", "1e16"]
         gamma:
           value: .3081 
@@ -84,7 +84,7 @@ cluster_model:
           priors: [0, 6.29]
         b_ne_sup:
           value: -0.75
-          to_fit: [False, True, True, True]
+          to_fit: True # [False, True, True, True]
           priors: [-1.0, 0.0]
     bubble_sw:
       structure: "uniform"
@@ -112,7 +112,7 @@ cluster_model:
           priors: [0, 6.29]
         b_sw_sup:
           value: -0.75
-          to_fit: [False, True, True, True]
+          to_fit: True # [False, True, True, True]
           priors: [-1.0, 0.0]
 ps_model:
   structures:
@@ -129,7 +129,7 @@ ps_model:
           priors: [-9.0, 9.0]
         sigma:
           value: 4
-          to_fit: False #[False, True, True, False]
+          to_fit: False # [False, True, True, False]
           priors: [1, 10]
         amp_g:
           value: 0.002
@@ -137,22 +137,19 @@ ps_model:
           priors: [0, .005]
 
 # Add some info on what metadata to apply
-# datasets:
-#   mustang2:
-#     point_sources:
-#       - "ps_model"
-#
-fitting:
-  maxiter: 20
+datasets:
+  mustang2:
+    point_sources:
+      - "ps_model"
 
 metamodel:
   models:
     - cluster_model
-    # - ps_model
+    - ps_model
   model_map:
     mustang2:
       - cluster_model
-      # - ps_model
-  # parameter_map:
-  #   - [cluster_model.a10.dx_1, ps_model.gauss.dx_g]
-  #   - [cluster_model.a10.dy_1, ps_model.gauss.dy_g]
+      - ps_model
+  parameter_map:
+    - [cluster_model.a10.dx_1, ps_model.gauss.dx_g]
+    - [cluster_model.a10.dy_1, ps_model.gauss.dy_g]
