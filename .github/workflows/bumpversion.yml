@@ -11,19 +11,21 @@ jobs:
     runs-on: ubuntu-latest
     name: "Bump version and create changelog with commitizen"
     steps:
+      - name: Get token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
       - name: Check out
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ssh-key: "${{ secrets.SKH_KEY }}"
+          token: ${{ steps.app-token.outputs.token }}
       - name: Create bump and changelog
         uses: commitizen-tools/commitizen-action@master
         with:
-          push: false
-      - name: Push using ssh
-        run: |
-          git push origin main --tags
-      - name: Print Version
+          github_token: ${{ steps.app-token.outputs.token }}
         run: echo "Bumped to version ${{ steps.cz.outputs.version }}"
       - name: Setup python
         uses: actions/setup-python@v4
