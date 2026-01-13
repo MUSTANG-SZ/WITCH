@@ -42,7 +42,7 @@ paths:
 # All pixel space references will be made wrt this point.
 coords:
   r_map: "3.0*60" # Radial size of grid in arcseconds 
-  dr: "1.0" # Pixel size of grid in x and y in arcseconds
+  dr: 1.0 # Pixel size of grid in x and y in arcseconds
   dz: 1.0 # Pixel size along the LOS, if not provided dr is used
   x0: "(206.8776*u.degree).to(u.radian).value" # RA of grid origin in radians
   y0: "(-11.7528*u.degree).to(u.radian).value" # Dec of grid origin in radian 
@@ -65,7 +65,7 @@ datasets:
       get_files: "mf.get_files"
       load_tods: "mf.load_tods"
       get_info: "mf.get_info"
-      make_beam: "mf.make_beam"
+      make_metadata: "mf.make_metadata"
       preproc: "mf.preproc"
       postproc: "mf.postproc"
       postfit: "mf.postfit"

@@ -115,11 +115,11 @@ def bin_map(hdu, rbins, x0=None, y0=None, cunit=None):
 
 
 def get_rbins(
-    model,
-    rmax: float = 3.0 * 60.0,
-    struct_num: int = 0,
-    sig_params: list[str] = ["amp", "P0"],
-    default: tuple[int, ...] = (0, 10, 20, 30, 50, 80, 120, 180),
+    model: Model,
+    rmax: float,
+    struct_num: int,
+    sig_params: list[int],
+    default: tuple[int, ...],
 ) -> tuple[int, ...]:
     """
     Function which returns a good set of rbins for a non-parametric fit given the significance of the underlying parametric model.
@@ -127,15 +127,15 @@ def get_rbins(
     Parameters
     ----------
     model : container.Model
-        Parametric model to calculate rbins on
-    rmax : float, default: 180
+        Parametric model to calculate rbins on.
+    rmax : float
         Maximum radius of the rbins
-    struct_num : int, defualt: 0
+    struct_num : int
         Structure within model to calculate rbins on
-    sig_params: list[str], default: ["amp", "P0"]
+    sig_params: list[str]
         Parameters to consider for computing significance.
         Only first match will be used.
-    default: tuple[int, ...], default: (0, 10, 20, 30, 50, 80, 120, 180)
+    default: tuple[int, ...]
         Default rbins to be returned if generation fails.
 
     Returns
@@ -193,9 +193,13 @@ def get_rbins(
 
 def para_to_non_para(
     model,
-    n_rounds: Optional[int] = None,
-    to_copy: list[str] = ["gnfw", "gnfw_rs", "a10", "isobeta", "uniform"],
-    sig_params: list[str] = ["amp", "P0"],
+    n_rounds: Optional[int],
+    to_copy: list[str],
+    rmax: float,
+    struct_num: int,
+    sig_params: list[int],
+    default: tuple[int, ...],
+    mm_cfg: dict,
 ) -> Model:
     """
     Function which approximately converts cluster profiles into a non-parametric form. Note this is
@@ -205,13 +209,21 @@ def para_to_non_para(
     ----------
     model : Model
         The parametric model to start from.
-    n_rounds: Optional int | None, default: None
+    n_rounds: Optional int | None
         Number of rounds to fit for output model. If none, copy from self
-    to_copy : list[str], default: gnfw, gnfw_rs, a10, isobeta, uniform
+    to_copy : list[str]
         List of structures, by name, to copy.
-    sig_params: list[str], default: ["amp", "P0"]
+    rmax : float
+        Maximum radius of the rbins
+    struct_num : int
+        Structure within model to calculate rbins on
+    sig_params: list[str]
         Parameters to consider for computing significance.
         Only first match will be used.
+    default: tuple[int, ...]
+        Default rbins to be returned if generation fails.
+    mm_cfg: dict
+        MetaModel config, parameter_map will be modified if need be.
     Returns
     -------
     Model : Model
@@ -236,7 +248,7 @@ def para_to_non_para(
         cur_model.remove_struct(struct)
     params = jnp.array(cur_model.pars)
     params = jnp.ravel(params)
-    pressure, _ = core.model3D(
+    pressure = core.model3D(
         cur_model.xyz, tuple(cur_model.n_struct), tuple(cur_model.n_rbins), params
     )
     pressure = pressure[
@@ -247,7 +259,7 @@ def para_to_non_para(
 
     rs, bin1d, _ = wu.bin_map(pressure, pixsize)
 
-    rbins = get_rbins(cur_model, sig_params=sig_params)
+    rbins = get_rbins(cur_model, rmax, struct_num, sig_params, default)
     rbins = np.append(rbins, np.array([np.amax(rs)]))
 
     condlist = [
@@ -314,19 +326,23 @@ def para_to_non_para(
         ),
     ]
 
-    structures = [
-        Structure("nonpara_power", "nonpara_power", parameters, n_rbins=len(rbins) - 1)
-    ]
-    for structure in model.structures:
-        if structure.name not in to_copy:
-            structures.append(structure)
+    structure = Structure(
+        "nonpara_power", "nonpara_power", parameters, n_rbins=len(rbins) - 1
+    )
+    structures = list(model.structures)
+    if "parameter_map" in mm_cfg:
+        mm_cfg["parameter_map"] = [
+            [p for p in pm if f".{structures[struct_num].name}." in p]
+            for pm in mm_cfg["parameter_map"]
+        ]
+    structures[struct_num] = structure
 
     return Model(
-        name="test",
-        structures=structures,
+        name=model.name,
+        structures=tuple(structures),
         xyz=model.xyz,
         dz=model.dz,
-        beam=model.beam,
         n_rounds=n_rounds,
         cur_round=0,
+        to_run=model.to_run,
     )
