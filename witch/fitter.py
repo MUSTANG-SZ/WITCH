@@ -302,9 +302,9 @@ def _save_checkpoint(
     if comm.Get_rank() != 0:
         return
 
+    # Only saves model parameters (which is what we needed to resume)
     state = {
         "models": models,
-        "datasets": datasets,
         "cfg": cfg,
         "stage": stage,
         "round": round_num,
@@ -478,12 +478,10 @@ def _read_checkpoint(ckpt_path):
         state = pk.load(f)
 
     models = state["models"]
-    datasets = state["datasets"]
+    datasets = None
     start_round = state.get("round", -1) + 1
     stage = state.get("stage", None)
     cfg = state.get("cfg", None)
-
-    datasets = _reestimate_noise(models, datasets)
 
     return models, datasets, start_round, stage, cfg
 
