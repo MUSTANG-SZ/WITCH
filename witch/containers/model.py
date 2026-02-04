@@ -685,10 +685,10 @@ class Model:
         for module, name in cfg.get("imports", {}).items():
             mod = import_module(module)
             if isinstance(name, str):
-                locals()[name] = mod
+                globals()[name] = mod
             elif isinstance(name, list):
                 for n in name:
-                    locals()[n] = getattr(mod, n)
+                    globals()[n] = getattr(mod, n)
             else:
                 raise TypeError("Expect import name to be a string or a list")
 

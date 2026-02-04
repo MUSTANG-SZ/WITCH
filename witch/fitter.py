@@ -295,6 +295,26 @@ def _save_model(cfg, model, outdir, desc_str):
         yaml.dump(final, file)
 
 
+def _save_checkpoint(
+    ckpt_path, models, datasets, cfg, stage=None, round_num=None, step_num=None
+):
+    """Save a checkpoint for resuming training"""
+    if comm.Get_rank() != 0:
+        return
+
+    state = {
+        "models": models,
+        "datasets": datasets,
+        "cfg": cfg,
+        "stage": stage,
+        "round": round_num,
+        "step": step_num,
+    }
+
+    with open(ckpt_path, "wb") as f:
+        pk.dump(state, f)
+
+
 def _reestimate_noise(models, datasets):
     for i, dataset in enumerate(datasets):
         for data in dataset.datavec:
@@ -362,7 +382,7 @@ def _mcmc_checkpoint_callback(updated_models):
 
     if step % checkpoint_interval == 0 and comm.Get_rank() == 0:
         ckpt_path = os.path.join(ckpt_dir, f"mcmc_ste_{step}.pkl")
-        _save_model(
+        _save_checkpoint(
             ckpt_pathm,
             updated_models,
             datasets,
@@ -601,7 +621,9 @@ def fit_loop(models, cfg, datasets, comm, outdir):
 
         # Checkpoint after each round
         ckpt_path = os.path.join(ckpt_dir, f"round_{r}.pkl")
-        _save_model(ckpt_path, models, datasets, cfg, stage="fit_round", round_num=r)
+        _save_checkpoint(
+            ckpt_path, models, datasets, cfg, stage="fit_round", round_num=r
+        )
         print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
