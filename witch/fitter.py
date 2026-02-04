@@ -471,7 +471,6 @@ def _run_mcmc(cfg, models, datasets):
 def _read_checkpoint(ckpt_path):
     """
     Load a checkpoint and return model, datasets, start_round, stage, and cfg.
-    Automatically reestimates noise after loading.
     """
 
     with open(ckpt_path, "rb") as f:
