@@ -471,18 +471,19 @@ def _run_mcmc(cfg, models, datasets):
 def _read_checkpoint(ckpt_path):
     """
     Load a checkpoint and return model, datasets, start_round, stage, and cfg.
+    Note: datasets parameter should be freshly created one from fit_loop (for reestimating noise)
+        this function updates the noise estimation based on the loaded model
     """
 
     with open(ckpt_path, "rb") as f:
         state = pk.load(f)
 
     models = state["models"]
-    datasets = None
     start_round = state.get("round", -1) + 1
     stage = state.get("stage", None)
     cfg = state.get("cfg", None)
 
-    return models, datasets, start_round, stage, cfg
+    return models, start_round, stage, cfg
 
 
 def _read_model(ckpt_path):
@@ -552,6 +553,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
             loaded_stage,
             loaded_cfg,
         ) = _read_checkpoint(load_path)
+        datasets = _reestimate_noise(models, datasets)
 
         # Compatibility checks
         # 1: We have the right number of models
