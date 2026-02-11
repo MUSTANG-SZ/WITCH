@@ -1,3 +1,17 @@
+## 9.12.0 (2025-12-22)
+
+### Feat
+
+- add MOOJ1142 joint yamls. Also add step size to joint unit tests
+- add sig_params as arg for para_to_nonpara
+
+### Fix
+
+- bug with removing structs in para_to_non_para
+- correctly pass noise in run_mcmc
+- correctly pop dict keys in remove_struct
+- error when only one map causing div by 0
+
 ## 9.11.0 (2025-12-03)
 
 ### Feat
