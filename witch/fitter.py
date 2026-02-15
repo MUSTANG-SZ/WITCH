@@ -493,7 +493,7 @@ def _read_model(ckpt_path):
 
     Returns:
         models
-        datasets (with reestimated noise)
+        datasets (none, not loaded from checkpoint)
         round_number
         stage
         cfg
@@ -503,12 +503,10 @@ def _read_model(ckpt_path):
         state = pk.load(f)
 
     models = state.get("models", None)
-    datasets = state.get("datasets", None)
+    datasets = None
     round_number = state.get("round", 0)
     stage = state.get("stage", None)
     cfg = state.get("cfg", None)
-
-    datasets = _reestimate_noise(models, datasets)
 
     return models, datasets, round_number, stage, cfg
 
