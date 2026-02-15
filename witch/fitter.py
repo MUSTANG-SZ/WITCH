@@ -548,7 +548,6 @@ def fit_loop(models, cfg, datasets, comm, outdir):
     if load_path is not None:
         (
             loaded_models,
-            loaded_datasets,
             loaded_start_round,
             loaded_stage,
             loaded_cfg,
@@ -572,8 +571,8 @@ def fit_loop(models, cfg, datasets, comm, outdir):
                 )
 
         models = loaded_models
-        datasets = loaded_datasets
         start_round = loaded_start_round
+        datasets = _reestimate_noise(models, datasets)
 
         print_once(f"[resume] Checkpoint OK. Resuming from round {start_round}")
 
