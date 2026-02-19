@@ -16,7 +16,6 @@ coords:
   y0: "Angle('15:27:13.10 degrees').to(u.radian).value" #peak
 
 model:
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   structures:
     gnfw_rs:
       structure: "gnfw_rs"

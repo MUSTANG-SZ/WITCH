@@ -13,7 +13,7 @@ paths:
   subdir: "joint_xray_peak_rs" # Subdirectory to use
 
 mcmc:
-  run: True 
+  run: False 
   num_steps: 1000
   n_leaps: 4
 
