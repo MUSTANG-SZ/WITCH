@@ -1,3 +1,11 @@
+## 9.13.0 (2026-02-19)
+
+### Feat
+
+- updated 1142 configs
+- updating width to including pointing error from Charles
+- update MOO1142 center position and beam shapes
+
 ## 9.12.0 (2025-12-22)
 
 ### Feat
