@@ -683,4 +683,8 @@ def main():
                     dset_name, cfg, dataset.datavec, nonpara_model, dataset.info
                 )
 
+    else:
+        for dset_name, dataset, model in zip(dset_names, datasets, models):
+            dataset.postfit(dset_name, cfg, dataset.datavec, model, dataset.info)
+
     print_once("Outputs can be found in", outdir)
