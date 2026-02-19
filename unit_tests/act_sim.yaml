@@ -44,7 +44,7 @@ datasets:
       get_files: "amf.get_files"
       load: "amf.load_maps"
       get_info: "amf.get_info"
-      make_beam: "amf.make_beam"
+      make_metadata: "amf.make_metadata"
       preproc: "amf.preproc"
       postproc: "amf.postproc"
       postfit: "amf.postfit"
@@ -68,11 +68,7 @@ mcmc:
   step_size: .6e-9
   sample_which: -1
 
-model:
-  # Unit conversion to apply at the end
-  # Will be evaled
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2uK_CMB(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
-  # Structure to include in the model
+cluster_model:
   structures:
     a10:
       # The first structure is witch.structures.a10
@@ -103,6 +99,8 @@ model:
           value: 5.4905
         z:
           value: 0.97
+ps_model:
+  structures:
     ps_gauss:
       structure: "gaussian"
       parameters:
@@ -131,3 +129,18 @@ imports:
   jitkasi.noise: jn
   jitkasi.solutions.maps: jm
   witch.external.act_map.funcs: amf
+
+# Add some info on what metadata to apply
+datasets:
+  act:
+    point_sources:
+      - "ps_model"
+
+metamodel:
+  models:
+    - cluster_model
+    - ps_model
+  model_map:
+    act:
+      - cluster_model
+      - ps_model

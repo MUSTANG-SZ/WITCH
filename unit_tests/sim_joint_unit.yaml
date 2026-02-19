@@ -16,10 +16,7 @@ mcmc:
   step_size: 1e-7 
 
 # Define the model
-model:
-  # Unit conversion to apply at the end
-  # Will be evaled
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+cluster_model:
   # Structure to include in the model
   structures:
     # Name of the first structure
@@ -67,24 +64,6 @@ model:
         z:
           value: 0.97 
           priors: [.9, 1]
-    ps_gauss:
-      structure: "gaussian"
-      parameters:
-        dx_g:
-          value: 0.0
-          to_fit: [True, True, True, False]
-          priors: [-9.0, 9.0]
-        dy_g:
-          value: 0.0
-          to_fit: [True, True, True, False]
-          priors: [-9.0, 9.0]
-        sigma:
-          value: 4
-          priors: [1, 10]
-        amp_g:
-          value: 0.002
-          to_fit: [True, False, True, True]
-          priors: [0, .005]
     bubble_ne:
       structure: "uniform"
       parameters:
@@ -141,3 +120,46 @@ model:
           value: -0.75
           to_fit: [False, True, True, True]
           priors: [-1.0, 0.0]
+ps_model:
+  structures:
+    gauss:
+      structure: "gaussian"
+      parameters:
+        dx_g:
+          value: 0.0
+          to_fit: [True, True, True, False]
+          priors: [-9.0, 9.0]
+        dy_g:
+          value: 0.0
+          to_fit: [True, True, True, False]
+          priors: [-9.0, 9.0]
+        sigma:
+          value: 4
+          priors: [1, 10]
+        amp_g:
+          value: 0.002
+          to_fit: [True, False, True, True]
+          priors: [0, .005]
+# Add some info on what metadata to apply
+datasets:
+  mustang2:
+    point_sources:
+      - "ps_model"
+  act:
+    point_sources:
+      - "ps_model"
+
+metamodel:
+  models:
+    - cluster_model
+    - ps_model
+  model_map:
+    mustang2:
+      - cluster_model
+      - ps_model
+    act:
+      - cluster_model
+      - ps_model
+  parameter_map:
+    - [cluster_model.a10.dx_1, ps_model.gauss.dx_g]
+    - [cluster_model.a10.dy_1, ps_model.gauss.dy_g]

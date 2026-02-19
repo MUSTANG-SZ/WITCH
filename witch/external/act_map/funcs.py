@@ -9,8 +9,8 @@ from jitkasi.solutions import SolutionSet, maps
 from mpi4py import MPI
 
 import witch.utils as wu
-from witch.containers import Model
-from witch.fitter import print_once
+from witch.containers import MetaModel
+from witch.dataset import BeamConvAndPrefac, DataSet, MetaData
 
 from ...objective import chisq_objective
 
@@ -72,12 +72,11 @@ def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
         "mode": "map",
         "prefactor": prefactor,
         "objective": chisq_objective,
+        "point_sources": cfg["datasets"][dset_name].get("point_sources", []),
     }
 
 
-def make_beam(dset_name: str, cfg: dict, info: dict) -> Array:
-    # TODO: Maybe just load from a file?
-    _ = info
+def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]:
     dr = eval(str(cfg["coords"]["dr"]))
     beam = wu.beam_double_gauss(
         dr,
@@ -87,53 +86,50 @@ def make_beam(dset_name: str, cfg: dict, info: dict) -> Array:
         eval(str(cfg["datasets"][dset_name]["beam"]["amp2"])),
     )
 
-    return beam
+    return (
+        BeamConvAndPrefac(
+            beam, info["prefactor"], exclude=tuple(info["point_sources"])
+        ),
+    )
 
 
-def preproc(dset_name: str, cfg: dict, mapset: SolutionSet, model: Model, info: dict):
-    _ = (dset_name, cfg, mapset, model, info)
+def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
+    _ = (dset, cfg, metamodel)
 
 
-def postproc(dset_name: str, cfg: dict, mapset: SolutionSet, model: Model, info: dict):
-    _ = (dset_name, cfg, mapset, model, info)
+def postproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
+    _ = (dset, cfg, metamodel)
 
 
-def postfit(dset_name: str, cfg: dict, mapset: SolutionSet, model: Model, info: dict):
-    outdir = info["outdir"]
+def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
+    outdir = dset.info["outdir"]
     # Residual map (or with noise from residual)
-    if cfg.get("res_map", cfg.get("map", True)):
+    res_map = cfg.get("res_map", cfg.get("map", True))
+    mod_map = cfg.get("model_map", cfg.get("map", True))
+    if res_map or mod_map:
         # Compute residual and either set it to the data or use it for noise
-        if model is None:
+        if metamodel is None:
             raise ValueError(
-                "Somehow trying to make a residual map with no model defined!"
+                "Somehow trying to make a residual or model map with no model defined!"
             )
-        for imap in mapset:
-            x, y = imap.xy
-            pred = model.to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
-            imap.data = imap.data - pred
+        dset_ind = metamodel.get_dataset_ind(dset.name)
+        for i, imap in enumerate(dset.datavec):
+            pred = metamodel.model_proj(dset_ind, i)
 
-            hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
-            hdul = fits.HDUList([hdu])
-            hdul.writeto(
-                os.path.join(outdir, dset_name, f"{imap.name}_residual.fits"),
-                overwrite=True,
-            )
+            if res_map:
+                imap.data = imap.data - pred
+                hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
+                hdul = fits.HDUList([hdu])
+                hdul.writeto(
+                    os.path.join(outdir, dset.name, f"{imap.name}_residual.fits"),
+                    overwrite=True,
+                )
 
-    # Make Model maps
-    if cfg.get("model_map", cfg.get("map", True)):
-        print_once("Making model map")
-        if model is None:
-            raise ValueError(
-                "Somehow trying to make a model map with no model defined!"
-            )
-        for imap in mapset:
-            x, y = imap.xy
-            pred = model.to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
-            imap.data = pred
-
-            hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
-            hdul = fits.HDUList([hdu])
-            hdul.writeto(
-                os.path.join(outdir, dset_name, f"{imap.name}_truth.fits"),
-                overwrite=True,
-            )
+            if mod_map:
+                imap.data = pred
+                hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
+                hdul = fits.HDUList([hdu])
+                hdul.writeto(
+                    os.path.join(outdir, dset.name, f"{imap.name}_truth.fits"),
+                    overwrite=True,
+                )

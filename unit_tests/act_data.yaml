@@ -44,7 +44,7 @@ datasets:
       get_files: "amf.get_files"
       load: "amf.load_maps"
       get_info: "amf.get_info"
-      make_beam: "amf.make_beam"
+      make_metadata: "amf.make_metadata"
       preproc: "amf.preproc"
       postproc: "amf.postproc"
       postfit: "amf.postfit"
@@ -69,9 +69,6 @@ mcmc:
   sample_which: -1
 
 model:
-  # Unit conversion to apply at the end
-  # Will be evaled
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2uK_CMB(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   # Structure to include in the model
   structures:
     a10:
@@ -120,3 +117,10 @@ imports:
   jitkasi.noise: jn
   jitkasi.solutions.maps: jm
   witch.external.act_map.funcs: amf
+
+metamodel:
+  models:
+    - model 
+  model_map:
+    act:
+      - model
