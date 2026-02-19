@@ -1,3 +1,9 @@
+## 9.13.1 (2026-02-19)
+
+### Fix
+
+- add post-proc loop when fit==false
+
 ## 9.13.0 (2026-02-19)
 
 ### Feat
