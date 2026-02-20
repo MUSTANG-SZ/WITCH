@@ -1,3 +1,18 @@
+## 9.15.0 (2026-02-20)
+
+### Feat
+
+- added unit tests for checkpoint functions, fixed _read_model
+- **fitter.py**: reesimate noise after loading checkpoint
+
+### Fix
+
+- correct _read_checkpoint and reestimate noise with loaded models
+- don't pickle datasets in checkpoints (contains unpicklable MPI objects)
+- use globals() for imports in model.py, add _save_checkpoint function, downgrade to compatible versions
+- **pyproject.toml**: changed jax, mpi4jax, and jitkasi requirements to allow local editable install
+- use globals() for imports to fix eval namespace issue
+
 ## 9.14.0 (2026-02-19)
 
 ### Feat
