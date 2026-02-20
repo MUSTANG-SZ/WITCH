@@ -1,7 +1,7 @@
 # Base config to merge into
 # If an absolute path is given then it is used
 # Otherwise it is assumed to me reative to the directory of this file
-base: "MOOJ1142_base.yaml"
+base: "MOOJ1142_joint_base.yaml"
 
 # Cluster name
 # Used both for the output path as well as to load presets
@@ -9,34 +9,34 @@ name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
 paths:
-  subdir: "PS_sub"
+  subdir: "joint_xray_peak_rs" # Subdirectory to use
 
-coords:
-  x0: "Angle('11 42 47.44 hours').to(u.radian).value" #peak
-  y0: "Angle('15:27:13.10 degrees').to(u.radian).value" #peak
-    
-# Define the model
+mcmc:
+  run: False 
+  num_steps: 1000
+  n_leaps: 4
+
+#nonpara:
+  #to_copy: ["gnfw_rs"]
+  #n_rounds: 4
+  #sig_params: ["P0"]
+
+
 model:
-  # Unit conversion to apply at the end
-  # Will be evaled
   unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
-  # Structure to include in the model
   structures:
-    # Name of the first structure
-    ps_gauss:
+   ps_gauss:
       structure: "gaussian"
       parameters:
         dx_g:
-          value: 1.62696504 
+          value: 1.67
           to_fit: True
         dy_g:
-          value: -3.81933555
+          value: -3.81
           to_fit: True
         sigma:
-          value: 4.94485922
-          to_fit: True
+          value: 5.049
+          to_fit: False 
         amp_g:
-          value: 0.0013034
-          to_fit: True
-
-
+          value: 0.00135129
+          to_fit: False 

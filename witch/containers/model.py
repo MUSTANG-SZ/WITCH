@@ -614,9 +614,8 @@ class Model:
             raise ValueError("Error: {} not in structure names".format(struct_name))
 
         to_pop = ["to_fit_ever", "n_struct", "priors", "par_names"]
-        for key in self.__dict__.keys():
-            if key in to_pop:  # Pop keys if they are in dict
-                self.__dict__.pop(key)
+        for key in to_pop:
+            self.__dict__.pop(key, None)
 
         self.__dict__.pop("model", None)
         self.__dict__.pop("model_grad", None)

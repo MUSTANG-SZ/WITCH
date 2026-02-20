@@ -1,3 +1,43 @@
+## 9.14.0 (2026-02-19)
+
+### Feat
+
+- adding act stamping tools
+
+## 9.13.1 (2026-02-19)
+
+### Fix
+
+- add post-proc loop when fit==false
+
+## 9.13.0 (2026-02-19)
+
+### Feat
+
+- updated 1142 configs
+- updating width to including pointing error from Charles
+- update MOO1142 center position and beam shapes
+
+## 9.12.0 (2025-12-22)
+
+### Feat
+
+- add MOOJ1142 joint yamls. Also add step size to joint unit tests
+- add sig_params as arg for para_to_nonpara
+
+### Fix
+
+- bug with removing structs in para_to_non_para
+- correctly pass noise in run_mcmc
+- correctly pop dict keys in remove_struct
+- error when only one map causing div by 0
+
+## 9.11.0 (2025-12-03)
+
+### Feat
+
+- slightly changing moo1142 params
+
 ## 9.10.4 (2025-11-11)
 
 ### Fix

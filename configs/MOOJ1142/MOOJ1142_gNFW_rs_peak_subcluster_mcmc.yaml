@@ -3,8 +3,6 @@
 # Otherwise it is assumed to me reative to the directory of this file
 base: "MOOJ1142_base.yaml"
 
-n_rounds: 2
-
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "MOOJ1142"
@@ -13,15 +11,21 @@ sim: False # If True use TODs to make noise and add a simulated cluster
 paths:
   subdir: "xray_peak_rs" # Subdirectory to use
 
-coords:
-  x0: "Angle('11 42 47.44 hours').to(u.radian).value" #peak
-  y0: "Angle('15:27:13.10 degrees').to(u.radian).value" #peak
-
 mcmc:
-  run: True
-  num_steps: 100
+  run: True 
+  num_steps: 1000
   n_leaps: 4
-  
+  step_size: 3e-8
+
+#nonpara:
+  #to_copy: ["gnfw_rs"]
+  #n_rounds: 4
+  #sig_params: ["P0"]
+
+coords:
+  x0: "(175.69766238*u.deg).to(u.radian).value" # eleonora peak
+  y0: "(15.45364413*u.deg).to(u.radian).value" #eleonora peak
+
 model:
   unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   structures:
@@ -45,37 +49,34 @@ model:
           to_fit: True
         alpha:
           value: 1.233
-          to_fit: False 
+          to_fit: True
         beta:
           value: 3.377
-          to_fit: False
+          to_fit: True
         z:
           value: 1.19
-    isobeta:
-      structure: "isobeta"
+    sph_isobeta:
+      structure: "sph_isobeta"
       parameters:
         x0:
-          value: -32.45823544
+          value: -33.423264
             #priors: [-25., -65.]
           to_fit: False 
         y0:
-          value: 7.92494073
+          value: 7.26858 
             #priors: [0., 20.]
           to_fit: False
         z0:
           value: 0.0
-        r_1:
-          value: 20.0
-        r_2:
-          value: 20.0
-        r_3:
-          value: 20.0
+        r:
+          value: 10.0
+          to_fit: True
         theta:
           value: 0.0
         beta:
-          value: 0.66
+          value: 3.0
           to_fit: True
-          priors: [-1.0, 5.0]
+          priors: [0.0, 10.0]
         amp:
           value: 0.05
           to_fit: True
@@ -85,13 +86,13 @@ model:
       parameters:
         dx_g:
           value: 1.91
-          to_fit: False 
+          to_fit: True
         dy_g:
           value: -4.04
-          to_fit: False
+          to_fit: True
         sigma:
           value: 5.1
-          to_fit: [True, False]
+          to_fit: True
         amp_g:
           value: 0.00128582673
-          to_fit: [True, False]
+          to_fit: True

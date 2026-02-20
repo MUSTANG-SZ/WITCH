@@ -1,6 +1,7 @@
 fit: True # If True fit the cluster, overridden by command line
 sub: True # If True the cluster before mapmaking, overridden by command line
-n_rounds: 1 # How many rounds of fitting to try
+n_rounds: 4 # How many rounds of fitting to try
+model_map: True
 
 # Constants for use in the model and grid construction
 # Can be used as a dict ie: constants['z']
@@ -11,8 +12,8 @@ constants:
   z: 0.451
 
 mcmc:
-  run: True
-  num_steps: 100
+  run: False
+  num_steps: 500
   sample_which: -1
   step_size: 3e-8
     
@@ -20,8 +21,8 @@ paths:
   # Location of TOD files
   # If an absolute path then that is used directly
   # If a relative path taken relative to MJ_TODROOT
-  maps: "ACT1407"
-  tods: "ACT1407"
+  maps: "MOOJ1142"
+  tods: "MOOJ1142"
   glob: "Signal_TOD*.fits" # Pattern to search for TODs with
   ndo: False # ?
   odo: False # ?
@@ -29,7 +30,7 @@ paths:
   # If an absolute path then that is used directly
   # If a relative path taken relative to MJ_OUTROOT
   outroot: ""
-  subdir: "" # Subdirectory to use
+  subdir: "joint" # Subdirectory to use
   # Final outdir will be something like: outroot/name/model_name/subdir
 
 # Defines the grid
@@ -49,10 +50,10 @@ paths:
 # All pixel space references will be made wrt this point.
 coords:
   r_map: "5.0*60" # Radial size of grid in arcseconds 
-  dr: "2.0" # Pixel size of grid in x and y in arcseconds
-  dz: 2.0 # Pixel size along the LOS, if not provided dr is used
-  x0: "Angle('14:07:06.0 hours').to(u.radian).value"
-  y0: "Angle('10:48:30.00 degrees').to(u.radian).value"
+  dr: "3.0" # Pixel size of grid in x and y in arcseconds
+  dz: 3.0 # Pixel size along the LOS, if not provided dr is used
+  x0: "(175.69766238*u.deg).to(u.radian).value" # eleonora peak
+  y0: "(15.45364413*u.deg).to(u.radian).value" #eleonora peak
 
 # Settings that define the datasets we are working with 
 # For now you can only have one, but this structure is in prep for the future
@@ -87,16 +88,16 @@ datasets:
     # All are passed through eval
     # Note that these define a double gaussian
     beam:
-      fwhm1: "9.735" # FWHM in arcseconds of the first gaussian
-      amp1: 0.9808 # Amplitude of the first gaussian
-      fwhm2: "32.627" # FWHM in arcseconds of the second gaussian
-      amp2: 0.0192 # Amplitude of the second gaussian
+      fwhm1: "10.088324" # FWHM in arcseconds of the first gaussian
+      amp1: 0.96811 # Amplitude of the first gaussian
+      fwhm2: "33.123396" # FWHM in arcseconds of the second gaussian
+      amp2: 0.03188 # Amplitude of the second gaussian
     copy_noise: False # If true then fitting noise just wraps minkasi noise, may make this automatic later
     dograd: False # If True then use gradient priors when mapmaking
     npass: 1 # How many passes of mapmaking to run
     freq: "float(90e9)"
     prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_RJ(90e9, cfg['constants']['Te'])*wu.XMpc/wu.me)"
-    ntods: 10
+    
   act:
     # These fields need to be set regardless of the dataset
     # This can rely on the imports section
@@ -119,12 +120,12 @@ datasets:
     # All are passed through eval
     # Note that these define a double gaussian
     beam:
-      fwhm1: "180" # FWHM in arcseconds of the first gaussian
+      fwhm1: "120" # FWHM in arcseconds of the first gaussian
       amp1: 0.9808 # Amplitude of the first gaussian
-      fwhm2: "270" # FWHM in arcseconds of the second gaussian
+      fwhm2: "1800" # FWHM in arcseconds of the second gaussian
       amp2: 0.0192 # Amplitude of the second gaussian
     prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_CMB(97e9, cfg['constants']['Te'])*wu.XMpc/wu.me)*1e6"
-
+    
 # Setting for the fitter
 fitting:
   maxiter: 10 # Maximum fit iterations per round
