@@ -8,9 +8,11 @@ import os
 import sys
 import time
 from copy import deepcopy
+from functools import partial
 from importlib import import_module
 
 import corner
+import dill as pk
 import iteround
 import jax
 import jax.numpy as jnp
@@ -294,6 +296,26 @@ def _save_model(cfg, model, outdir, desc_str):
         yaml.dump(final, file)
 
 
+def _save_checkpoint(
+    ckpt_path, models, datasets, cfg, stage=None, round_num=None, step_num=None
+):
+    """Save a checkpoint for resuming training"""
+    if comm.Get_rank() != 0:
+        return
+
+    # Only saves model parameters (which is what we needed to resume)
+    state = {
+        "models": models,
+        "cfg": cfg,
+        "stage": stage,
+        "round": round_num,
+        "step": step_num,
+    }
+
+    with open(ckpt_path, "wb") as f:
+        pk.dump(state, f)
+
+
 def _reestimate_noise(models, datasets):
     for i, dataset in enumerate(datasets):
         for data in dataset.datavec:
@@ -352,10 +374,53 @@ def _run_fit(
     return models, datasets
 
 
+def _mcmc_checkpoint_callback(updated_models):
+    # Callback that _run_mcmc will call every step
+    callback_state["step"] += 1
+    callback_state["models"] = updated_models
+
+    step = callback_state["step"]
+
+    if step % checkpoint_interval == 0 and comm.Get_rank() == 0:
+        ckpt_path = os.path.join(ckpt_dir, f"mcmc_ste_{step}.pkl")
+        _save_checkpoint(
+            ckpt_pathm,
+            updated_models,
+            datasets,
+            cfg,
+            stage="mcmc",
+            step_num=step,
+        )
+        print_once(f"[checkpoint] Saved MCMC checkpoint at step {step} -> {ckpt_path}")
+
+
 def _run_mcmc(cfg, models, datasets):
     print_once("Running MCMC")
     init_pars = np.array(models[0].pars.copy())
+
+    # Checkpoint settings
+    checkpoint_interval = int(cfg["mcmc"].get("checkpoint_interval", 200))
+    ckpt_dir = os.path.join(datasets[0].info["outdir"], "checkpoints")
+    os.makedirs(ckpt_dir, exist_ok=True)
+
+    # Tracking container for callback to update
+    callback_state = {
+        "models": models,
+        "datasets": datasets,
+        "step": 0,
+    }
+
+    callback = partial(
+        _mcmc_checkpoint_callback,
+        callback_state=callback_state,
+        checkpoint_interval=checkpoint_interval,
+        ckpt_dir=ckpt_dir,
+        datasets=datasets,
+        cfg=cfg,
+    )
+
     t1 = time.time()
+
     models, samples = run_mcmc(
         models,
         datasets,
@@ -365,6 +430,7 @@ def _run_mcmc(cfg, models, datasets):
         sample_which=int(cfg["mcmc"].get("sample_which", -1)),
         burn_in=float(cfg["mcmc"].get("burn_in", 0.1)),
         max_tries=int(cfg["mcmc"].get("max_tries", 20)),
+        callback=callback,
     )
     _ = mpi4jax.barrier(comm=comm)
     t2 = time.time()
@@ -403,7 +469,112 @@ def _run_mcmc(cfg, models, datasets):
     return models, datasets
 
 
+def _read_checkpoint(ckpt_path):
+    """
+    Load a checkpoint and return model, datasets, start_round, stage, and cfg.
+    Note: datasets parameter should be freshly created one from fit_loop (for reestimating noise)
+        this function updates the noise estimation based on the loaded model
+    """
+
+    with open(ckpt_path, "rb") as f:
+        state = pk.load(f)
+
+    models = state["models"]
+    start_round = state.get("round", -1) + 1
+    stage = state.get("stage", None)
+    cfg = state.get("cfg", None)
+
+    return models, start_round, stage, cfg
+
+
+def _read_model(ckpt_path):
+    """
+    Lightweight loader for reading model + dataset from a checkpoint
+    without resuming training/fitting model
+
+    Returns:
+        models
+        datasets (none, not loaded from checkpoint)
+        round_number
+        stage
+        cfg
+    """
+
+    with open(ckpt_path, "rb") as f:
+        state = pk.load(f)
+
+    models = state.get("models", None)
+    datasets = None
+    round_number = state.get("round", 0)
+    stage = state.get("stage", None)
+    cfg = state.get("cfg", None)
+
+    return models, datasets, round_number, stage, cfg
+
+
 def fit_loop(models, cfg, datasets, comm, outdir):
+    # ensure checkpoint directory exists
+    ckpt_dir = os.path.join(outdir, "checkpoints")
+    os.makedirs(ckpt_dir, exist_ok=True)
+
+    # Load progress (loading checkpoint if requested)
+    load = cfg.get("load_progress", False)
+    start_round = 0
+    load_path = None
+
+    if load is True:
+        # Automatically load latest checkpoint round
+        ckpts = [f for f in os.listdir(ckpt_dir) if f.startswith("round_")]
+
+        if len(ckpts) > 0:
+            latest = sorted(ckpts, key=lambda x: int(x.split("_")[1].split(".")[0]))[-1]
+            load_path = os.path.join(ckpt_dir, latest)
+            print_once(f"[resume] Loading latest checkpoint -> {load_path}")
+
+    elif isinstance(load, int):
+        # Load specific round number
+        load_path = os.path.join(ckpt_dir, f"round_{load}.pkl")
+
+        if os.path.exists(load_path):
+            print_once(f"[resume] Loading checkpoint round {load} -> {load_path}")
+        else:
+            print_once(
+                f"[resume] Requested round {load} not found, starting at round 0"
+            )
+            load_path = None
+
+    # Actually load and validate checkpoint if we found valid path
+    if load_path is not None:
+        (
+            loaded_models,
+            loaded_start_round,
+            loaded_stage,
+            loaded_cfg,
+        ) = _read_checkpoint(load_path)
+        datasets = _reestimate_noise(models, datasets)
+
+        # Compatibility checks
+        # 1: We have the right number of models
+        if len(loaded_models) != len(models):
+            raise ValueError(
+                f"Checkpoint has {len(loaded_models)} models but current config expects {len(models)}"
+            )
+
+        # 2: Each of the models are compatible with each other
+        for idx, (cur, ckpt) in enumerate(zip(models, loaded_models)):
+            try:
+                cur.check_compatibility(ckpt)
+            except Exception as e:
+                raise ValueError(
+                    f"Incompatible model at index {idx} when loading checkpoint {load_path}: {e}"
+                )
+
+        models = loaded_models
+        start_round = loaded_start_round
+        datasets = _reestimate_noise(models, datasets)
+
+        print_once(f"[resume] Checkpoint OK. Resuming from round {start_round}")
+
     models = list(models)
     for model in models:
         if models is None:
@@ -413,16 +584,16 @@ def fit_loop(models, cfg, datasets, comm, outdir):
         # Remove structs we deliberately want to leave out of model
         for struct_name in cfg["model"]["structures"]:
             if cfg["model"]["structures"][struct_name].get("to_remove", False):
-                for i, model in models:
+                for model in models:
                     model.remove_struct(struct_name)
         for i, model in enumerate(models):
             params = jnp.array(model.pars)
             par_offset = cfg.get("par_offset", 1.1)
-            params = params.at[model.to_fit_ever].multiply(
-                par_offset
-            )  # Don't start at exactly the right value
+            params = params.at[model.to_fit_ever].multiply(par_offset)
+            # Don't start at exactly the right value
             models[i] = model.update(params, model.errs, model.chisq)
 
+    # Compile objective function
     print_once("Compiling objective function")
     t0 = time.time()
     chisq, *_ = joint_objective(models, datasets, len(models))
@@ -434,7 +605,10 @@ def fit_loop(models, cfg, datasets, comm, outdir):
     message = str(models[0]).split("\n")
     message[1] = "Starting pars:"
     print_once("\n".join(message))
-    for r in range(models[0].n_rounds):  # TODO: enforce n_rounds same for all models
+
+    for r in range(
+        start_round, models[0].n_rounds
+    ):  # TODO: enforce n_rounds same for all models
         models, datasets = _run_fit(
             cfg,
             models,
@@ -443,6 +617,13 @@ def fit_loop(models, cfg, datasets, comm, outdir):
         )
         _ = mpi4jax.barrier(comm=comm)
 
+        # Checkpoint after each round
+        ckpt_path = os.path.join(ckpt_dir, f"round_{r}.pkl")
+        _save_checkpoint(
+            ckpt_path, models, datasets, cfg, stage="fit_round", round_num=r
+        )
+        print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
+
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
         models, datasets = _run_mcmc(
             cfg,
@@ -450,6 +631,7 @@ def fit_loop(models, cfg, datasets, comm, outdir):
             datasets,
         )
         _ = mpi4jax.barrier(comm=comm)
+
     # Save final pars
     final = {"model": cfg["model"]}
     model = models[0]  # TODO: TEMP will be fixed with metamodel
@@ -549,7 +731,7 @@ def main():
     for module, name in cfg.get("imports", {}).items():
         mod = import_module(module)
         if isinstance(name, str):
-            locals()[name] = mod
+            globals()[name] = mod
         elif isinstance(name, list):
             for n in name:
                 locals()[n] = getattr(mod, n)
