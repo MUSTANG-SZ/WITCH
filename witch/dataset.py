@@ -636,7 +636,7 @@ class DataSet:
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        (datavec, metadata) = children
+        datavec, metadata = children
         name = aux_data[0]
         funcs_comm = aux_data[1:9]
         info = aux_data[9]
