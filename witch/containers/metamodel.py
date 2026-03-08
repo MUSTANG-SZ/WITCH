@@ -88,6 +88,46 @@ class MetaModel:
         rep += f"\nchisq is {self.chisq}"
         return rep
 
+    def check_compatibility(self, other: Self) -> bool:
+        """
+        Check if another `MetaModel` instance is compatible with this one.
+        Used for checkpointing.
+
+        Arguments
+        ---------
+        other : MetaModel
+            The `MetaModel` instance to check compatibility with.
+
+        Returns
+        -------
+        compatible : bool
+            True if compatible,
+            False if not.
+        """
+        # Check models
+        if len(self.models) != len(other.models):
+            return False
+        for sm, om in zip(self.models, other.models):
+            if not sm.check_compatibility(om):
+                return False
+
+        # Check datasets (just names for now)
+        if len(self.datasets) != len(other.datasets):
+            return False
+        for sd, od in zip(self.datasets, other.datasets):
+            if sd.name != od.name:
+                return False
+
+        # Check mappings
+        if self.parameter_map != other.parameter_map:
+            return False
+        if self.model_map != other.metadata_map:
+            return False
+        if self.metadata_map != other.metadata_map:
+            return False
+
+        return True
+
     @cached_property
     def par_names(self) -> tuple[str]:
         """
@@ -404,7 +444,7 @@ class MetaModel:
 
         return self
 
-    def save(self, path: str):
+    def save(self, path: str, state: dict = {}):
         """
         Serialize the model to a file with dill.
 
@@ -413,6 +453,8 @@ class MetaModel:
         path : str
             The file to save to.
             Does not check to see if the path is valid.
+        state : dict
+            Dictionary of metadata to understand the state when we are saving.
         """
         datavecs = []
         comms = []
@@ -424,14 +466,14 @@ class MetaModel:
             dataset.global_comm = wu.NullComm()
         self.global_comm = wu.NullComm()
         with open(path, "wb") as f:
-            dill.dump(self, f)
+            dill.dump((self, state), f)
         for dataset, datavec, comm in zip(self.datasets, datavecs, comms):
             dataset.datavec = datavec
             dataset.global_comm = comm
         self.global_comm = gcomm
 
     @classmethod
-    def load(cls, path: str) -> Self:
+    def load(cls, path: str) -> tuple[Self, dict]:
         """
         Load the model from a file with dill.
 
@@ -445,6 +487,8 @@ class MetaModel:
         -------
         model : MetaModel
             The loaded model.
+        state : dict
+            Dictionary of metadata to understand the state from when we saved.
         """
         with open(path, "rb") as f:
             return dill.load(f)

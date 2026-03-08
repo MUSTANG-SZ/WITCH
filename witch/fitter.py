@@ -9,9 +9,11 @@ import re
 import sys
 import time
 from copy import copy, deepcopy
+from functools import partial
 from importlib import import_module
 
 import corner
+import dill as pk
 import iteround
 import jax
 import jax.numpy as jnp
@@ -323,6 +325,41 @@ def _reestimate_noise(metamodel):
     return metamodel
 
 
+def _save_checkpoint(
+    ckpt_path, metamodel, cfg, stage=None, round_num=None, step_num=None
+):
+    """Save a checkpoint for resuming training"""
+    if comm.Get_rank() != 0:
+        return
+
+    # Only saves model parameters (which is what we needed to resume)
+    state = {
+        "cfg": cfg,
+        "stage": stage,
+        "round": round_num,
+        "step": step_num,
+    }
+
+    metamodel.save(ckpt_path, state)
+
+
+def _read_checkpoint(ckpt_path):
+    """
+    Load a checkpoint and return model, datasets, start_round, stage, and cfg.
+    Note: datasets parameter should be freshly created one from fit_loop (for reestimating noise)
+        this function updates the noise estimation based on the loaded model
+    """
+
+    with open(ckpt_path, "rb") as f:
+        metamodel, state = pk.load(f)
+
+    start_round = state.get("round", -1) + 1
+    stage = state.get("stage", None)
+    cfg = state.get("cfg", None)
+
+    return metamodel, start_round, stage, cfg
+
+
 def _run_fit(
     cfg,
     metamodel,
@@ -351,9 +388,49 @@ def _run_fit(
     return metamodel
 
 
+def _mcmc_checkpoint_callback(
+    updated_metamodel, callback_state, checkpoint_interval, ckpt_dir, nonpara, cfg
+):
+    # Callback that _run_mcmc will call every step
+    callback_state["step"] += 1
+
+    step = callback_state["step"]
+
+    if step % checkpoint_interval == 0 and comm.Get_rank() == 0:
+        ckpt_path = os.path.join(ckpt_dir, f"mcmc_step_{step}{'_nonpara'*nonpara}.pkl")
+        _save_checkpoint(
+            ckpt_path,
+            updated_metamodel,
+            cfg,
+            stage="mcmc",
+            step_num=step,
+        )
+        print_once(f"[checkpoint] Saved MCMC checkpoint at step {step} -> {ckpt_path}")
+
+
 def _run_mcmc(cfg, metamodel, nonpara=False):
     print_once("Running MCMC")
     init_pars = np.array(metamodel.parameters.copy())
+
+    # Checkpoint settings
+    checkpoint_interval = int(cfg["mcmc"].get("checkpoint_interval", 200))
+    ckpt_dir = os.path.join(cfg["outdir"], "checkpoints")
+    os.makedirs(ckpt_dir, exist_ok=True)
+
+    # Tracking container for callback to update
+    callback_state = {
+        "step": 0,
+    }
+
+    callback = partial(
+        _mcmc_checkpoint_callback,
+        callback_state=callback_state,
+        checkpoint_interval=checkpoint_interval,
+        ckpt_dir=ckpt_dir,
+        nonpara=nonpara,
+        cfg=cfg,
+    )
+
     t1 = time.time()
     metamodel, samples = run_mcmc(
         metamodel,
@@ -363,10 +440,13 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
         sample_which=int(cfg["mcmc"].get("sample_which", -1)),
         burn_in=float(cfg["mcmc"].get("burn_in", 0.1)),
         max_tries=int(cfg["mcmc"].get("max_tries", 20)),
+        # callback=callback, # Disabling for now, impure callbacks in a jax loop are dangerous
     )
     mpi4jax.barrier(comm=comm)
     t2 = time.time()
     print_once(f"Took {t2 - t1} s to run mcmc")
+    callback_state["step"] = samples.shape[1]
+    callback(metamodel, callback_state=callback_state)
 
     message = str(metamodel).split("\n")
     message[1] = "MCMC estimated pars:"
@@ -400,10 +480,58 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
 def fit_loop(metamodel, cfg, comm, nonpara=False):
     if metamodel is None:
         raise ValueError("Can't fit without metamodel defined!")
-    if cfg["sim"] and not nonpara:
+    # ensure checkpoint directory exists
+    ckpt_dir = os.path.join(cfg["outdir"], "checkpoints")
+    os.makedirs(ckpt_dir, exist_ok=True)
+
+    # Load progress (loading checkpoint if requested)
+    load = cfg.get("load_progress", False)
+    start_round = 0
+    load_path = None
+
+    if load is True:
+        # Automatically load latest checkpoint round
+        ckpts = [f for f in os.listdir(ckpt_dir) if f.startswith("round_")]
+        if nonpara:
+            ckpts = [c for c in ckpts if "nonpara" in c]
+        else:
+            ckpts = [c for c in ckpts if "nonpara" not in c]
+
+        if len(ckpts) > 0:
+            latest = sorted(ckpts, key=lambda x: int(x.split("_")[1].split(".")[0]))[-1]
+            load_path = os.path.join(ckpt_dir, latest)
+            print_once(f"[resume] Loading latest checkpoint -> {load_path}")
+
+    elif isinstance(load, int):
+        # Load specific round number
+        load_path = os.path.join(ckpt_dir, f"round_{load}{'_nonpara'*nonpara}.pkl")
+
+        if os.path.exists(load_path):
+            print_once(f"[resume] Loading checkpoint round {load} -> {load_path}")
+        else:
+            print_once(
+                f"[resume] Requested round {load} not found, starting at round 0"
+            )
+            load_path = None
+
+    # Actually load and validate checkpoint if we found valid path
+    if load_path is not None:
+        loaded_metamodel, loaded_start_round, *_ = _read_checkpoint(load_path)
+
+        # Compatibility checks
+        if not metamodel.check_compatibility(loaded_metamodel):
+            raise ValueError("Checkpoint is incompatible!")
+
+        loaded_metamodel.global_comm = metamodel.global_comm
+        loaded_metamodel.datasets = metamodel.datasets
+        start_round = loaded_start_round
+        metamodel = _reestimate_noise(loaded_metamodel)
+
+        print_once(f"[resume] Checkpoint OK. Resuming from round {start_round}")
+
+    if cfg["sim"]:
         # Remove structs we deliberately want to leave out of model
         metamodel = metamodel.remove_structs(cfg)
-
         params = jnp.array(metamodel.parameters)
         par_offset = cfg.get("par_offset", 1.1)
         params = params.at[metamodel.to_fit_ever].multiply(
@@ -411,6 +539,7 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
         )  # Don't start at exactly the right value
         metamodel = metamodel.update(params, metamodel.errors, metamodel.chisq)
 
+    # Compile objective function
     print_once("Compiling objective function")
     t0 = time.time()
     chisq, *_ = joint_objective(metamodel)
@@ -420,7 +549,7 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     print_once(
         re.sub(r"^Round 1.*\n?", "Starting pars:\n", str(metamodel), flags=re.MULTILINE)
     )
-    for r in range(metamodel.n_rounds):
+    for r in range(start_round, metamodel.n_rounds):
         metamodel = _run_fit(
             cfg,
             metamodel,
@@ -428,6 +557,17 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             nonpara,
         )
         mpi4jax.barrier(comm=comm)
+
+        # Checkpoint after each round
+        ckpt_path = os.path.join(ckpt_dir, f"round_{r}{'_nonpara'*nonpara}.pkl")
+        _save_checkpoint(
+            ckpt_path,
+            metamodel,
+            cfg,
+            stage="fit_round",
+            round_num=r,
+        )
+        print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
         metamodel = _run_mcmc(
@@ -523,7 +663,7 @@ def main():
     for module, name in cfg.get("imports", {}).items():
         mod = import_module(module)
         if isinstance(name, str):
-            locals()[name] = mod
+            globals()[name] = mod
         elif isinstance(name, list):
             for n in name:
                 locals()[n] = getattr(mod, n)
@@ -700,5 +840,9 @@ def main():
             nonparametamodel = fit_loop(nonparametamodel, cfg, comm, True)
             for dataset in nonparametamodel.datasets:
                 dataset.postfit(dataset, cfg, nonparametamodel)
+
+    else:
+        for dset_name, dataset, model in zip(dset_names, datasets, models):
+            dataset.postfit(dset_name, cfg, dataset.datavec, model, dataset.info)
 
     print_once("Outputs can be found in", outdir)

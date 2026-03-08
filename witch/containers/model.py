@@ -94,6 +94,71 @@ class Model:
         default_factory=jnp.array(jnp.inf).copy
     )  # scalar float array
 
+    def check_compatibility(self, other: Self) -> bool:
+        """
+        Check whether 'other' (a model loaded from a checkpoint) is compatible with the current model defined in config.
+        Checks that structures, xyz, and dz are equal.
+
+        Arguments
+        ---------
+        other : Model
+            Model to compare against
+
+        Returns
+        -------
+        compatible : bool
+            True if compatible,
+            False if not.
+        """
+        # Structure name match
+        struct_names = tuple(s.name for s in self.structures)
+        ostruct_names = tuple(s.name for s in other.structures)
+        if struct_names != ostruct_names:
+            print(
+                f"Model structure mismatch. "
+                f"Config structures = {struct_names}, "
+                f"Checkpoint structures = {ostruct_names}"
+            )
+            return False
+
+        # Parameter counts per structure
+        for self_struct, other_struct in zip(self.structures, other.structures):
+            self_params = self_struct.parameters
+            other_params = other_struct.parameters
+            if len(self_params) != len(other_params):
+                print(
+                    f"Parameter count mismatch in structure '{self_struct.name}': "
+                    f"{len(self_params)} (config) vs {len(other_params)} (ckpt)"
+                )
+                return False
+
+        # Parameter order match
+        if self.par_names != other.par_names:
+            print("Parameter ordering mismatch between config and checkpoint models")
+            return False
+
+        # xyz compatibility
+        if len(self.xyz) != len(other.xyz):
+            print("parameter ordering mismatch between config and checkpoint models")
+            return False
+
+        for a, b in zip(self.xyz, other.xyz):
+            if isinstance(a, (float, int)):  # check the two float elements
+                if not isinstance(b, (float, int)):
+                    print("xyz element type mismatch")
+                    return False
+            else:  # jax arrays
+                if a.shape != b.shape:
+                    print(f"xyz[i] array shape mismatch: {a.shape} vs {b.shape}")
+                    return False
+
+        # dz compatibility
+        if self.dz != other.dz:  # Checks same numerical value
+            print(f"dz value mismatch: {self.dz} vs {other.dz}")
+            return False
+
+        return True
+
     def __setattr__(self, name, value):
         if name == "cur_round" or name == "xyz":
             self.__dict__.pop("model_grad", None)
@@ -505,10 +570,10 @@ class Model:
         for module, name in cfg.get("imports", {}).items():
             mod = import_module(module)
             if isinstance(name, str):
-                locals()[name] = mod
+                globals()[name] = mod
             elif isinstance(name, list):
                 for n in name:
-                    locals()[n] = getattr(mod, n)
+                    globals()[n] = getattr(mod, n)
             else:
                 raise TypeError("Expect import name to be a string or a list")
 

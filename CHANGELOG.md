@@ -1,3 +1,38 @@
+## 9.15.0 (2026-02-20)
+
+### Feat
+
+- added unit tests for checkpoint functions, fixed _read_model
+- **fitter.py**: reesimate noise after loading checkpoint
+
+### Fix
+
+- correct _read_checkpoint and reestimate noise with loaded models
+- don't pickle datasets in checkpoints (contains unpicklable MPI objects)
+- use globals() for imports in model.py, add _save_checkpoint function, downgrade to compatible versions
+- **pyproject.toml**: changed jax, mpi4jax, and jitkasi requirements to allow local editable install
+- use globals() for imports to fix eval namespace issue
+
+## 9.14.0 (2026-02-19)
+
+### Feat
+
+- adding act stamping tools
+
+## 9.13.1 (2026-02-19)
+
+### Fix
+
+- add post-proc loop when fit==false
+
+## 9.13.0 (2026-02-19)
+
+### Feat
+
+- updated 1142 configs
+- updating width to including pointing error from Charles
+- update MOO1142 center position and beam shapes
+
 ## 9.12.0 (2025-12-22)
 
 ### Feat

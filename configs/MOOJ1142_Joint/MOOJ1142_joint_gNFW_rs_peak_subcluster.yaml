@@ -8,11 +8,12 @@ base: "MOOJ1142_joint_base.yaml"
 name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
+
 paths:
   subdir: "joint_xray_peak_rs" # Subdirectory to use
 
 mcmc:
-  run: True
+  run: False 
   num_steps: 1000
   n_leaps: 4
 
