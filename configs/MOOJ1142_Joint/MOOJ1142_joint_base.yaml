@@ -9,7 +9,7 @@ model_map: True
 constants:
   Te: 5.0
   freq: "90e9"
-  z: 0.451
+  z: 1.19 
 
 mcmc:
   run: False
