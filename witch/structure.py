@@ -694,6 +694,65 @@ def isobeta(
 
     return amp * rrpow
 
+@jax.jit
+def qso(
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    dx: float,
+    dy: float,
+    dz: float,
+    z: float,
+    Lw12: float,
+    ):
+    """
+    QSO model from Kyle Massingill. This is basically a uniform model where the
+    amplitude and radius are parameterized by the luminosity, Lw12, which
+    is just the luminosity in solar units. The function calculates an amplitude
+    and radius from Lw12, and then is simply a constant pressure model with
+    that amplitude within that radius and 0 outside. Note unlike add_uniform
+    this function does not modify an underlying pressure grid.
+    Parameters
+    ----------
+    pressure : jax.Array
+        The pressure profile to modify with this ellipsoid.
+        Should be evaluated on the same grid as `xyz`.
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    z : float
+        Redshift of QSO.
+        Units: redshift
+    Lw12 : float
+        Luminosity of QSO.
+        Units: $M_{\odot}$
+
+    Returns
+    -------
+    model : jax.Array
+        The QSO model evaluated on the 3D grid
+    """
+
+    beta = 0.8828
+    time = 1.0e8 * 365.25*24*3600
+    Omega_b = 0.022*(1/0.7)**2
+    H0 = h79 * 7.00e01
+    rho_crit = 3 * H0**2 / (8*jnp.pi*6.67e-11)
+    bQ = 13
+    delta = 180
+    r2=beta*(Lw12*time**3/Omega_b/rhocrit/(1+z)**2/(1+bQ*delta))**0.2
+    pbub = 0.4*0.75/jnp.pi*Lw12*time/r2**3
+    pe=pbub/1.92
 
 @jax.jit
 def cylindrical_beta(
@@ -995,7 +1054,6 @@ def gaussian(
 
     return amp * jnp.exp(power)
 
-
 @jax.jit
 def add_uniform(
     pressure: jax.Array,
@@ -1067,7 +1125,6 @@ def add_uniform(
         jnp.sqrt(x**2 + y**2 + z**2) > 1, pressure, (1 + amp) * pressure
     )
     return new_pressure
-
 
 @jax.jit
 def add_exponential(
