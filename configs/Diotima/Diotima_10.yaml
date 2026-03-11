@@ -1,0 +1,5 @@
+base: "Diotima_base.yaml"
+name: "Diotima_10"
+paths:
+  tods: "Diotima/Diotima_10"
+

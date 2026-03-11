@@ -1,0 +1,35 @@
+paths:
+  # Location of TOD files
+  # If an absolute path then that is used directly
+  # If a relative path taken relative to MJ_TODROOT
+  tods: "AT2026dbl_Mar1"
+  glob: "Signal_TOD*.fits" # Pattern to search for TODs with
+  ndo: False # ?
+  odo: False # ?
+  # Directory to use as root for outputs
+  # If an absolute path then that is used directly
+  # If a relative path taken relative to MJ_OUTROOT
+  outroot: "Mar1"
+  subdir: ""
+  # Final outdir will be something like: outroot/name/model_name/subdir
+
+base: "AT2026dbl_base.yaml"
+model:
+  structures:
+    ps_gauss:
+      structure: "gaussian"
+      parameters:
+        dx_g:
+          value: 0.
+          to_fit: True
+        dy_g:
+          value: 0
+          to_fit: True
+        sigma:
+          value: 5.1
+          to_fit: True
+        amp_g:
+          value: 0.00528582673
+          to_fit: True 
+
+
