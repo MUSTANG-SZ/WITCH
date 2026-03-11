@@ -1,3 +1,16 @@
+## 9.16.0 (2026-03-11)
+
+### Feat
+
+- no subcluster config for plot comparison
+- Diotima configs
+- AT2026dbl configs
+- Abell 780 configs
+
+### Fix
+
+- wrong redshift for moo1142
+
 ## 9.15.0 (2026-02-20)
 
 ### Feat
