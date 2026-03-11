@@ -1,0 +1,69 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "MOOJ1142_joint_base.yaml"
+
+# Cluster name
+# Used both for the output path as well as to load presets
+name: "MOOJ1142"
+sim: False # If True use TODs to make noise and add a simulated cluster
+
+
+paths:
+  subdir: "joint_xray_peak_rs_nosubcluster" # Subdirectory to use
+
+mcmc:
+  run: False 
+  num_steps: 1000
+  n_leaps: 4
+
+#nonpara:
+  #to_copy: ["gnfw_rs"]
+  #n_rounds: 4
+  #sig_params: ["P0"]
+
+
+model:
+  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+  structures:
+    gnfw_rs:
+      structure: "gnfw_rs"
+      parameters:
+        dx_1:
+          value: 0.0
+        dy_1:
+          value: 0.0
+        dz_1:
+          value: 0.0
+        P0:
+          value: 0.373
+          to_fit: True
+        r_s:
+          value: 26
+          to_fit: True
+        gamma:
+          value: -0.717
+          to_fit: True
+        alpha:
+          value: 1.233
+          to_fit: True
+        beta:
+          value: 3.377
+          to_fit: True
+        z:
+          value: 1.19
+    ps_gauss:
+      structure: "gaussian"
+      parameters:
+        dx_g:
+          value: 1.91
+          to_fit: True
+        dy_g:
+          value: -4.04
+          to_fit: True
+        sigma:
+          value: 5.1
+          to_fit: True
+        amp_g:
+          value: 0.00128582673
+          to_fit: True
