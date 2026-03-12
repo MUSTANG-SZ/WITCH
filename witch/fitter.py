@@ -485,11 +485,11 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     os.makedirs(ckpt_dir, exist_ok=True)
 
     # Load progress (loading checkpoint if requested)
-    load = cfg.get("load_progress", False)
+    load = cfg.get("load_progress", 0)
     start_round = 0
     load_path = None
 
-    if load is True:
+    if load == -1:
         # Automatically load latest checkpoint round
         ckpts = [f for f in os.listdir(ckpt_dir) if f.startswith("round_")]
         if nonpara:
@@ -502,7 +502,7 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             load_path = os.path.join(ckpt_dir, latest)
             print_once(f"[resume] Loading latest checkpoint -> {load_path}")
 
-    elif isinstance(load, int):
+    elif load > 0:
         # Load specific round number
         load_path = os.path.join(ckpt_dir, f"round_{load}{'_nonpara'*nonpara}.pkl")
 
@@ -513,6 +513,8 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
                 f"[resume] Requested round {load} not found, starting at round 0"
             )
             load_path = None
+    else:
+        print_once(f"[resume] Not resuming from previous checkpoint")
 
     # Actually load and validate checkpoint if we found valid path
     if load_path is not None:
