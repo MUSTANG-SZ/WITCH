@@ -54,3 +54,50 @@ def gaussian_2d_integrated(
     amp_integrated = amp * jnp.sqrt(2 * jnp.pi) * sigma
 
     return amp_integrated * jnp.exp(-r_sq / (2 * sigma**2))
+
+
+def cylindrical_beta_2d_analytical(
+    dx: float,
+    dy: float,
+    dz: float,
+    L: float,
+    theta: float,
+    phi: float,
+    P0: float,
+    r_c: float,
+    beta: float,
+    xyz: tuple,
+) -> jnp.ndarray:
+    """
+    Wrapper around structure.cylindrical_beta_2d for use in tests.
+    phi=0 means cylinder is along line of sight, sec(phi)=1.
+    """
+    from witch import structure
+
+    return structure.cylindrical_beta_2d(dx, dy, dz, L, theta, phi, P0, r_c, beta, xyz)
+
+
+def sph_isobeta_2d_slice(
+    dx: float,
+    dy: float,
+    r: float,
+    beta: float,
+    amp: float,
+    xyz: tuple,
+    z_val: float = 0.0,
+) -> jnp.ndarray:
+    """
+    3D sph_isobeta evaluated at a given z slice.
+    structure.sph_isobeta: amp * (1 + r²)^(-3β/2)
+    where r is already scaled by transform_grid with scale=r.
+    So at z=z_val: amp * (1 + R²/r² + z_val²/r²)^(-3β/2)
+    """
+    x, y, *_ = transform_grid(dx, dy, 0, 1, 1, 1, 0, xyz)
+    x_2d = x[..., 0]
+    y_2d = y[..., 0]
+
+    r_sq = x_2d**2 + y_2d**2
+    rr = 1 + r_sq / r**2 + z_val**2 / r**2
+    power = -1.5 * beta
+
+    return amp * rr**power
