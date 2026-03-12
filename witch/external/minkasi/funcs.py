@@ -337,10 +337,13 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
             0.00116355,
             0.00000969,
         )
-        tmpmodel = deepcopy(metamodel)
-        for tm in tmpmodel.models:
+        orig_grids = []
+        for tm in metamodel.models:
+            orig_grids += [deepcopy(tm.xyz)]
             tm.xyz = xyz
-        dataset_ind = tmpmodel.get_dataset_ind(dset.name)
-        model_skymap.map = tmpmodel.model_grid(dataset_ind)
+        dataset_ind = metamodel.get_dataset_ind(dset.name)
+        model_skymap.map = metamodel.model_grid(dataset_ind)
         if minkasi.myrank == 0:
             model_skymap.write(os.path.join(outdir, "model/truth.fits"))
+        for tm, og in zip(metamodel.models, orig_grids):
+            tm.xyz = og
