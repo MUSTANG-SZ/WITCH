@@ -752,7 +752,7 @@ def qso(
     rho_crit = 3 * H0_kpc**2 / (8 * jnp.pi * 6.67e-11)
     bQ = 13
     delta = 180
-    Lw12 *= 3.828e26 #Convert from solar luminosity
+    Lw12 *= 3.828e26  # Convert from solar luminosity
     r2 = (
         beta
         * (Lw12 * time**3 / Omega_b / rho_crit / (1 + z) ** 2 / (1 + bQ * delta)) ** 0.2
