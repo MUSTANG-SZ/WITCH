@@ -20,6 +20,7 @@ from .structure import STRUCT_FUNCS, STRUCT_N_NONPARA, STRUCT_N_PAR, STRUCT_STAG
 ORDER = (
     "nonpara_power",
     "isobeta",
+    "qso",
     "sph_isobeta",
     "gnfw",
     "gnfw_rs",
