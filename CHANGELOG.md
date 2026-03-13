@@ -1,3 +1,37 @@
+## 10.0.0 (2026-03-13)
+
+### Feat
+
+- don't deepcopy metamodel
+- add ps list to act
+- add metadata for act maps
+- add metadata application and mapping
+- first pass at new metadata system for beam conv
+- first pass at new metadata system for beam conv
+- add metamodel config system
+- working metamodel implementation required several breaking changes to model and dataset code
+- first pass of metamodel
+- add interface to choose which stages of the model to run
+
+### Fix
+
+- bools are ints in python, adjust checkpoint loader logic to match
+- unit test typo
+- nonpara fixes
+- mcmc fixes
+- remove tokens from mpi4jax calls
+- Move prefactor into metadata, don't use invsafe when computing step, and many small fixes
+- lots of fixes:
+- xray metadata fixes
+- reimplement para to non para conversion
+- reimplement structure removal for metamodel
+- reimplement model serialization for metamodel
+- incorrect import name
+
+### Refactor
+
+- make each stage a seperate function
+
 ## 9.16.0 (2026-03-11)
 
 ### Feat
