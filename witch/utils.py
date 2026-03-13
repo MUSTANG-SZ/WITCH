@@ -24,6 +24,7 @@ h70 = cosmo.H0.value / 7.00e01
 Tcmb = 2.7255  # K
 kb = const.k_B.value
 me = ((const.m_e * const.c**2).to(u.keV)).value
+pa_to_kevcm3 = (u.Pa).to(u.keV / u.cm**3)
 h = const.h.value
 Xthom = const.sigma_T.to(u.cm**2).value
 XMpc = Xthom * u.Mpc.to(u.cm)

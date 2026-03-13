@@ -21,6 +21,7 @@ from .utils import fft_conv
 ORDER = (
     "nonpara_power",
     "isobeta",
+    "qso",
     "sph_isobeta",
     "gnfw",
     "gnfw_rs",
