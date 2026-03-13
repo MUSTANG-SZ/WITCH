@@ -764,7 +764,7 @@ def qso(
 
     x, y, z, *_ = transform_grid(dx, dy, dz, 1.0, 1.0, 1.0, 0.0, xyz)
     r = jnp.sqrt(x**2 + y**2 + z**2)
-    pressure = jnp.where(r <= r2, 0, pe)
+    pressure = jnp.where(r <= r2, pe, 0)
 
     return pressure
 
