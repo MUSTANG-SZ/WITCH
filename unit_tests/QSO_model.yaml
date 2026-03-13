@@ -1,6 +1,7 @@
 #name: "HS1700" # Name of the cluster
 base: "QSO_base.yaml"
 name: "RXJ1347"
+sim: True
 noise_map: True # Whether to make the noise map
 model_map: True # Whether to make a map of just the model
 model:
