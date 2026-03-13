@@ -1,3 +1,17 @@
+## 10.1.0 (2026-03-13)
+
+### Feat
+
+- update to metamodel
+- finish qso and add config files
+- starting QSO
+
+### Fix
+
+- get Lw12 in units of solar mass
+- wrong order for jnp.where
+- xyz in wrong order
+
 ## 10.0.0 (2026-03-13)
 
 ### Feat
