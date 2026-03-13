@@ -1,0 +1,88 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "MOO1142_Xray_base.yaml" #"act_m2_unit.yaml"
+
+# Cluster name
+# Used both for the output path as well as to load presets
+name: "X_MOO1142"
+sim: False # If True use TODs to make noise and add a simulated cluster
+
+paths:
+  subdir: "first_try"
+
+coords:
+  x0: "Angle('11 42 50.39 hours').to(u.radian).value" #circa center of main cluster
+  y0: "Angle('15:27:08.35 degrees').to(u.radian).value" #circa center of main cluster
+
+# Define the model
+model: # Unit conversion to apply at the end
+  # Will be evaled
+  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+  # Structure to include in the model
+  structures:
+    # Name of the first structure
+    main:
+      structure: "gnfw_rs" # What type of structure it is
+      # Parameters for the structure
+      parameters:
+        dx_1:
+          value: 0.0
+        dy_1:
+          value: 0.0
+        dz_1:
+          value: 0.0
+        P0:
+          value: 947
+          to_fit: True
+          priors: [100.0, 1000.0]
+        r_s:
+          value: 4.
+          to_fit: True
+          priors: [1.0, 30.0]
+        gamma:
+          value: 0.93
+          to_fit: False
+          #priors: [0.1, 2.0] 
+        alpha:
+          value: 2.26
+          to_fit: False
+          #priors: [-9.0, 9.0]
+        beta:
+          value: 4.1
+          to_fit: True
+          priors: [1.0, 7.0]
+        z:
+          value: 1.19
+    # Name of the first structure
+    sub:
+      structure: "sph_isobeta" # What type of structure it is
+      # Parameters for the structure
+      parameters:
+        dx_2:
+          value: 33.0
+        dy_2:
+          value: 7.0
+        dz_2:
+          value: 0.0
+        r_1:
+          value: 23.8
+          to_fit: True
+          priors: [10.0, 30.0]
+        theta:
+          value: 0.0
+        beta:
+          value: 2.56
+          to_fit: True
+          priors: [1.0, 6.0]
+        amp:
+          value: 83.0
+          to_fit: True
+          priors: [10.0, 300.0]
+
+metamodel:
+  models:
+    - model 
+  model_map:
+    xray:
+      - model 

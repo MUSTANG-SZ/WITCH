@@ -266,6 +266,28 @@ def fft_deconv(image: ArrayLike, kernel: ArrayLike) -> jax.Array:
     return convolved_map
 
 
+@jax.jit
+def beam_conv(ip: jax.Array, beam: jax.Array) -> jax.Array:
+    bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
+        (ip.shape[1] - beam.shape[1]) / 2
+    )
+    beam = jnp.pad(
+        beam,
+        (
+            (bound0, ip.shape[0] - beam.shape[0] - bound0),
+            (bound1, ip.shape[1] - beam.shape[1] - bound1),
+        ),
+    )
+
+    ip = fft_conv(ip, beam)
+
+    return ip
+
+
+# Lets make a vectorized beam conv
+beam_conv_vec = jax.vmap(beam_conv, in_axes=(0, None))
+
+
 @partial(jax.jit, static_argnums=(1,))
 def tod_hi_pass(tod: jax.Array, N_filt: int) -> jax.Array:
     """
@@ -459,3 +481,14 @@ def bin_map(data: ArrayLike, pixsize: float) -> tuple[np.array, np.array, np.arr
     rs = rs[:-1]
 
     return rs, bin1d, var1d
+
+
+### Fake MPI for saving
+class NullComm:
+    def __getattr__(self, name: str, /):
+        _ = name
+        return self._null_func
+
+    def _null_func(*args, **kwargs):
+        _ = args, kwargs
+        pass

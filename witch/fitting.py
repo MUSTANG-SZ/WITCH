@@ -1,25 +1,25 @@
 import sys
 import time
-from copy import deepcopy
+from copy import copy, deepcopy
 from functools import partial
 from typing import Callable
 
 import jax
 import jax.numpy as jnp
 import mpi4jax
-from jax._src.numpy.ufuncs import isfinite
+import numpy as np
 from mpi4py import MPI
 from tqdm import tqdm
 
-from .containers import Model
-from .dataset import DataSet
+from .containers import MetaModel
 from .objective import joint_objective
+from .utils import NullComm
 
 _cache = {}
 
 
 @jax.jit
-def invsafe(matrix: jax.Array, thresh: float = 1e-14) -> jax.Array:
+def invsafe(matrix: jax.Array, thresh: float = 1e-16) -> jax.Array:
     """
     Safe SVD based psuedo-inversion of the matrix.
     This zeros out modes that are too small when inverting.
@@ -40,13 +40,13 @@ def invsafe(matrix: jax.Array, thresh: float = 1e-14) -> jax.Array:
         Same shape as `matrix`.
     """
     u, s, v = jnp.linalg.svd(matrix, False)
-    s_inv = jnp.array(jnp.where(jnp.abs(s) < thresh * jnp.max(s), 0, 1 / s))
+    s_inv = jnp.array(jnp.where(jnp.abs(s) <= thresh * jnp.max(s), 0, 1 / s))
 
     return jnp.dot(jnp.transpose(v), jnp.dot(jnp.diag(s_inv), jnp.transpose(u)))
 
 
-@jax.jit
-def invscale(matrix: jax.Array, thresh: float = 1e-14) -> jax.Array:
+@partial(jax.jit, static_argnums=(2,))
+def invscale(matrix: jax.Array, thresh: float = 1e-16, do_invsafe=False) -> jax.Array:
     """
     Invert and rescale a matrix by the diagonal.
     This uses `invsafe` for the inversion.
@@ -69,10 +69,12 @@ def invscale(matrix: jax.Array, thresh: float = 1e-14) -> jax.Array:
         Same shape as `matrix`.
     """
     diag = jnp.diag(matrix)
-    vec = jnp.array(jnp.where(diag != 0, 1.0 / jnp.sqrt(jnp.abs(diag)), 1e-10))
+    vec = jnp.array(jnp.where(diag != 0, 1.0 / jnp.sqrt(jnp.abs(diag)), thresh))
     mm = jnp.outer(vec, vec)
 
-    return mm * invsafe(mm * matrix, thresh)
+    if do_invsafe:
+        return mm * invsafe(mm * matrix, thresh)
+    return mm * jnp.linalg.inv(mm * matrix)
 
 
 @jax.jit
@@ -90,8 +92,8 @@ def _prior_pars_fit(
 
 
 def _failure(
-    models,
-    new_models,
+    metamodel,
+    new_metamodel,
     grad,
     new_grad,
     curve,
@@ -100,17 +102,17 @@ def _failure(
     new_delta_chisq,
     lmd,
 ):
-    del new_models
+    del new_metamodel
     del new_grad
     del new_curve
     del new_delta_chisq
     lmd = jnp.where(lmd == 0, 1, 2 * lmd)
-    return models, grad, curve, delta_chisq, lmd
+    return metamodel, grad, curve, delta_chisq, lmd
 
 
 def _success(
-    models,
-    new_models,
+    metamodel,
+    new_metamodel,
     grad,
     new_grad,
     curve,
@@ -119,22 +121,19 @@ def _success(
     new_delta_chisq,
     lmd,
 ):
-    del models
+    del metamodel
     del grad
     del curve
     del delta_chisq
     lmd = jnp.where(lmd < 0.2, 0, lmd / jnp.sqrt(2))
-    return new_models, new_grad, new_curve, new_delta_chisq, lmd
+    return new_metamodel, new_grad, new_curve, new_delta_chisq, lmd
 
 
-@partial(jax.jit, static_argnums=(2, 3, 4))
 def run_lmfit(
-    models: tuple[Model, ...],
-    datasets: tuple[DataSet, ...],
-    n_datasets: int,
+    metamodel: MetaModel,
     maxiter: int = 10,
     chitol: float = 1e-5,
-) -> tuple[tuple[Model, ...], int, float]:
+) -> tuple[MetaModel, int, jax.Array]:
     """
     Fit a set of models to datasets jointly.
     This uses a modified Levenberg–Marquardt fitter with flat priors.
@@ -142,14 +141,8 @@ def run_lmfit(
 
     Parameters
     ----------
-    models : tuple[Model, ...]
-        The model objects that defines the model and grid we are fitting with.
-        Right now we assume that these are all identical but with different prefactors.
-    datasets : tuple[DataSet, ...]
-        The datasets to fit.
-        The `dataset.global_comm` object is used to fit in an MPI aware way.
-    n_datasets : int
-        The number of datasets and models we are fitting.
+    metamodel : MetaModel
+        The MetaModel that describes the models and datasets.
     maxiter : int, default: 10
         The maximum number of iterations to fit.
     chitol : float, default: 1e-5
@@ -164,47 +157,48 @@ def run_lmfit(
     delta_chisq : float
         The final delta chisq.
     """
-    zero = jnp.array(0.0)
-    grad_zero = jnp.zeros(len(models[0].pars))
-    curve_zero = jnp.zeros((len(models[0].pars), len(models[0].pars)))
+    zero = jnp.array(0.0, jnp.float32)
+    chitol = jnp.float32(chitol)
+    tf = np.where(np.array(metamodel.to_fit))[0]
 
+    @jax.jit
     def _cond_func(val):
         i, delta_chisq, lmd, *_ = val
         iterbool = jax.lax.lt(i, maxiter)
         chisqbool = jax.lax.ge(delta_chisq, chitol) + jax.lax.gt(lmd, zero)
         return iterbool * chisqbool
 
+    @jax.jit
     def _body_func(val):
-        i, delta_chisq, lmd, models, curve, grad = val
+        i, delta_chisq, lmd, metamodel, curve, grad = val
         curve_use = curve.at[:].add(lmd * jnp.diag(jnp.diag(curve)))
         # Get the step
-        step = jnp.dot(invscale(curve_use), grad)
+        step = jnp.dot(
+            invscale(curve_use.at[tf, :].get().at[:, tf].get()), grad.at[tf].get()
+        )
         new_pars, to_fit = _prior_pars_fit(
-            models[0].priors,
-            models[0].pars.at[:].add(step),
-            jnp.array(models[0].to_fit),
+            metamodel.priors,
+            metamodel.parameters.at[tf].add(step),
+            jnp.array(metamodel.to_fit),
         )
         # Get errs
-        errs = jnp.where(to_fit, jnp.sqrt(jnp.diag(invscale(curve_use))), 0)
+        errs = jnp.where(
+            to_fit, jnp.sqrt(jnp.diag(invscale(curve_use, do_invsafe=True))), 0
+        )
         # Now lets get an updated model
-        new_models = tuple(
-            deepcopy(model).update(new_pars, model.errs, model.chisq)
-            for model in models
-        )
+        new_metamodel = copy(metamodel).update(new_pars, errs, metamodel.chisq)
         new_chisq, new_grad, new_curve = joint_objective(
-            new_models, datasets, n_datasets, True, True, True
+            new_metamodel, True, True, True
         )
-        new_models = tuple(
-            new_model.update(new_pars, errs, new_chisq) for new_model in new_models
-        )
+        new_metamodel = copy(new_metamodel).update(new_pars, errs, new_chisq)
 
-        new_delta_chisq = models[0].chisq - new_models[0].chisq
-        models, grad, curve, delta_chisq, lmd = jax.lax.cond(
+        new_delta_chisq = jnp.astype(metamodel.chisq - new_metamodel.chisq, jnp.float32)
+        metamodel, grad, curve, delta_chisq, lmd = jax.lax.cond(
             new_delta_chisq > 0,
             _success,
             _failure,
-            models,
-            new_models,
+            metamodel,
+            new_metamodel,
             grad,
             new_grad,
             curve,
@@ -214,18 +208,20 @@ def run_lmfit(
             lmd,
         )
 
-        return (i + 1, delta_chisq, lmd, models, curve, grad)
+        return (i + 1, delta_chisq, lmd, metamodel, curve, grad)
 
     pars, _ = _prior_pars_fit(
-        models[0].priors, models[0].pars, jnp.array(models[0].to_fit)
+        metamodel.priors, metamodel.parameters, jnp.array(metamodel.to_fit)
     )
-    models = tuple(model.update(pars, model.errs, model.chisq) for model in models)
-    _, grad, curve = joint_objective(models, datasets, n_datasets, True, True, True)
-    i, delta_chisq, _, models, *_ = jax.lax.while_loop(
-        _cond_func, _body_func, (0, jnp.inf, zero, models, curve, grad)
+    metamodel = metamodel.update(pars, metamodel.errors, metamodel.chisq)
+    _, grad, curve = joint_objective(metamodel, True, True, True)
+    i, delta_chisq, _, metamodel, *_ = jax.lax.while_loop(
+        _cond_func,
+        _body_func,
+        (0, jnp.astype(jnp.inf, jnp.float32), zero.copy(), metamodel, curve, grad),
     )
 
-    return models, i, delta_chisq
+    return metamodel, i, delta_chisq
 
 
 def hmc(
@@ -234,8 +230,8 @@ def hmc(
     log_prob_grad: Callable[[jax.Array], jax.Array],
     num_steps: int,
     num_leaps: int,
-    step_size: float,
-    comm: MPI.Intracomm,
+    step_size: jax.Array,
+    comm: MPI.Comm | MPI.Intracomm | NullComm,
     key: jax.Array,
 ) -> tuple[jax.Array, jax.Array]:
     """
@@ -267,10 +263,11 @@ def hmc(
         The number of steps to run the chain for.
     num_leaps : int
         The number of leapfrog steps to run at each step of the chain.
-    step_size : float
+    step_size : jax.Array
         The step size to use.
+        Should be a scalar jax array.
         At each leapfrog step the parameters will evolve by `step_size`*`momentum`.
-    comm : MPI.Intracomm
+    comm : MPI.Comm | MPI.Intracomm | NullComm
         The MPI comm object to use.
 
     Returns
@@ -300,8 +297,8 @@ def hmc(
 
     @jax.jit
     def _sample(key, params, step_size):
-        token = mpi4jax.barrier(comm=comm)
-        key, token = mpi4jax.bcast(key, 0, comm=comm, token=token)
+        mpi4jax.barrier(comm=comm)
+        key = mpi4jax.bcast(key, 0, comm=comm)
         key, uniform_key = jax.random.split(key, 2)
 
         # generate random momentum
@@ -327,12 +324,18 @@ def hmc(
         return chain, accept_prob
 
     c_sample = _cache.get("hmc_sample", None)
+    # Suboptimal caching for right now
+    # Can probably fix by moving functions out of local scope
     if c_sample is None:
         if rank == 0:
             print(f"Compiling MC sample function. This can take a few minutes!")
         t0 = time.time()
-        l_sample = _sample.lower(key, params, step_size)
-        c_sample = l_sample.compile()
+        _ = _sample(key.copy(), params.copy(), step_size.copy())
+        jax.block_until_ready(_)
+        # t_sample = _sample.trace(key.copy(), params.copy(), step_size.copy())
+        # l_sample = t_sample.lower()
+        # c_sample = l_sample.compile()
+        c_sample = _sample
         t1 = time.time()
         if rank == 0:
             print(f"Compiled MC sample function in {t1-t0} s")
@@ -358,17 +361,16 @@ def hmc(
 
 
 def run_mcmc(
-    models: tuple[Model, ...],
-    datasets: tuple[DataSet, ...],
+    metamodel: MetaModel,
     num_steps: int = 5000,
     num_leaps: int = 10,
-    step_size: float = 0.02,
+    step_size: jax.Array = jnp.array(0.02),
     sample_which: int = -1,
     burn_in: float = 0.1,
     max_tries: int = 20,
-) -> tuple[tuple[Model, ...], jax.Array]:
+) -> tuple[MetaModel, jax.Array]:
     """
-    Run MCMC using the `emcee` package to estimate the posterior for our model.
+    Run Hamilonian Monte Carlo to estimate the posterior for our model.
     Currently this function only support flat priors, but more will be supported
     down the line. In order to ensure accuracy of the noise model used, it is
     reccomended that you run at least one round of `fit_tods` followed by noise
@@ -379,12 +381,8 @@ def run_mcmc(
 
     Parameters
     ----------
-    models : tuple[Model, ...]
-        The models to run MCMC on.
-        Right now we assume that these are all identical but with different prefactors.
-    datasets : tuple[DataSet, ...]
-        The datasets to compute the model posterior with.
-        The `dataset.global_comm` object is used to fit in an MPI aware way.
+    metamodel : MetaModel
+        The MetaModel that describes the models and datasets.
     num_steps : int, default: 5000
         The number of steps to run MCMC for.
     num_leaps: int, default: 10
@@ -408,8 +406,8 @@ def run_mcmc(
 
     Returns
     -------
-    models : tuple[Model, ...]
-        The models with MCMC estimated parameters and errors.
+    metamodel : MetaModel
+        The metamodel with MCMC estimated parameters and errors.
         The parameters are estimated as the mean of the samples.
         The errors are estimated as the standard deviation.
         This also has the chi-squared of the estimated parameters.
@@ -417,84 +415,76 @@ def run_mcmc(
         Array of samples from running MCMC.
 
     """
-    global_comm = datasets[0].global_comm
-    token = mpi4jax.barrier(comm=global_comm)
+    global_comm = metamodel.global_comm
+    mpi4jax.barrier(comm=global_comm)
     rank = global_comm.Get_rank()
-    n_datasets = len(datasets)
+    step_size = jnp.array(step_size)
 
     if burn_in >= 1.0 or burn_in < 0:
         raise ValueError("Error: burn_in must be in range [0, 1)")
 
-    if sample_which >= 0 and sample_which < models[0].n_rounds:
-        models[0].cur_round = sample_which
-        to_fit = models[0].to_fit
+    if sample_which >= 0 and sample_which < metamodel.n_rounds:
+        metamodel.set_round(sample_which)
+        to_fit = metamodel.to_fit
     elif sample_which == -1:
-        to_fit = models[0].to_fit
+        to_fit = metamodel.to_fit
     elif sample_which == -2:
-        to_fit = models[0].to_fit_ever
+        to_fit = metamodel.to_fit_ever
     else:
-        to_fit = jnp.ones_like(models[0].to_fit_ever, dtype=bool)
+        to_fit = jnp.ones_like(metamodel.to_fit_ever, dtype=bool)
     to_fit = jnp.array(to_fit)
-    models = tuple([model.add_round(jnp.array(to_fit)) for model in models])
+    metamodel = metamodel.add_round(jnp.array(to_fit))
 
-    init_pars = jnp.array(models[0].pars)
-    init_errs = jnp.zeros_like(models[0].pars)
+    init_pars = jnp.array(metamodel.parameters)
+    init_errs = jnp.zeros_like(init_pars)
     final_pars = init_pars.copy()
     final_errs = init_errs.copy()
 
-    prior_l, prior_u = models[0].priors
+    prior_l, prior_u = metamodel.priors
     scale = (jnp.abs(prior_l) + jnp.abs(prior_u)) / 2.0
     scale = jnp.where(jnp.isfinite(scale), scale, init_pars)
     scale = jnp.where(scale == 0, 1, scale)
     init_pars = init_pars.at[:].multiply(1.0 / scale)
 
     @jax.jit
-    def _log_prob(pars, models=models, init_pars=init_pars):
+    def _log_prob(pars, metamodel=metamodel, init_pars=init_pars):
         full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)
         _, in_bounds = _prior_pars_fit(
-            models[0].priors, full_pars, jnp.array(models[0].to_fit)
+            metamodel.priors, full_pars, jnp.array(metamodel.to_fit)
         )
         log_prior = jnp.sum(
-            jnp.where(in_bounds.at[models[0].to_fit].get(), 0, -1 * jnp.inf)
+            jnp.where(
+                jnp.array(jnp.where(metamodel.to_fit, in_bounds, True)), 0, -1 * jnp.inf
+            )
         )
-        temp_models = tuple(
-            deepcopy(model).update(full_pars, init_errs, jnp.array(0))
-            for model in models
-        )
-        jax.block_until_ready(temp_models)
-        chisq, *_ = joint_objective(
-            temp_models, datasets, n_datasets, True, False, False
-        )
-        del temp_models
+        temp_metamodel = copy(metamodel).update(full_pars, init_errs, jnp.array(0))
+        chisq, *_ = joint_objective(temp_metamodel, True, False, False)
         log_like = -0.5 * chisq
         log_like = log_like + log_prior
         return log_like
 
     @jax.jit
-    def _log_prob_grad(pars, models=models, init_pars=init_pars):
+    def _log_prob_grad(pars, metamodel=metamodel, init_pars=init_pars):
         full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)
         _, in_bounds = _prior_pars_fit(
-            models[0].priors, full_pars, jnp.array(models[0].to_fit)
+            metamodel.priors, full_pars, jnp.array(metamodel.to_fit)
         )
-        log_prior = jnp.sum(jnp.where(in_bounds.at[to_fit].get(), 0, -1 * jnp.inf))
-        temp_models = tuple(
-            deepcopy(model).update(full_pars, init_errs, jnp.array(0))
-            for model in models
+        log_prior = jnp.sum(
+            jnp.where(
+                jnp.array(jnp.where(metamodel.to_fit, in_bounds, True)), 0, -1 * jnp.inf
+            )
         )
-        jax.block_until_ready(temp_models)
-        _, grad, _ = joint_objective(
-            temp_models, datasets, n_datasets, False, True, False
-        )
-        del temp_models
+        temp_metamodel = copy(metamodel).update(full_pars, init_errs, jnp.array(0))
+        _, grad, _ = joint_objective(temp_metamodel, False, True, False)
         grad = grad.at[:].multiply(1.0 / scale)
         log_like_grad = grad.at[to_fit].get().ravel()
         log_like_grad = log_like_grad.at[:].add(log_prior)
         return log_like_grad
 
     def _get_step_size(step_size, key, comm, max_tries):
-        token = mpi4jax.barrier(comm=global_comm)
+        mpi4jax.barrier(comm=global_comm)
 
         def _can_interp(probs):
             probs = jnp.array(probs)
@@ -511,7 +501,7 @@ def run_mcmc(
                     return True
             return False
 
-        def _hmc(n_steps, step_size, token):
+        def _hmc(n_steps, step_size):
             _, chain_probs = hmc(
                 init_pars.at[to_fit].get().ravel(),
                 _log_prob,
@@ -525,9 +515,9 @@ def run_mcmc(
             prob = 0.0
             if rank == 0:
                 prob = jnp.mean(chain_probs)
-            prob, token = mpi4jax.bcast(prob, 0, comm=comm, token=token)
+            prob = jnp.array(mpi4jax.bcast(prob, 0, comm=comm))
 
-            return prob, token
+            return prob
 
         if max_tries == 0:
             return step_size
@@ -537,11 +527,11 @@ def run_mcmc(
         step_sizes = []
         probs = []
         for i in range(max_tries):
-            token = mpi4jax.barrier(comm=global_comm, token=token)
+            mpi4jax.barrier(comm=global_comm)
             step_size *= step_fac
             if rank == 0:
                 print(f"Trying step size {step_size}")
-            prob, token = _hmc(n_steps, step_size, token)
+            prob = _hmc(n_steps, step_size)
             step_sizes += [step_size]
             probs += [prob]
 
@@ -579,7 +569,7 @@ def run_mcmc(
                 )
                 sys.stdout.flush()
             return step_sizes[-1]
-        token = mpi4jax.barrier(comm=global_comm, token=token)
+        mpi4jax.barrier(comm=global_comm)
         probs = jnp.array(probs)
         step_sizes = jnp.array(step_sizes)
         msk = jnp.isfinite(probs) + (probs > 0)
@@ -591,8 +581,8 @@ def run_mcmc(
         step_size_interp = jnp.interp(
             jnp.array([0.63]), probs[msk][srt], step_sizes[msk][srt]
         )
-        step_size = float(step_size_interp[0].item())
-        prob, token = _hmc(5, step_size, token)
+        step_size = step_size_interp[0].item()
+        prob = _hmc(5, step_size)
         if rank == 0:
             print(
                 f"Interpolated to get a step size of {step_size} with an acceptance probability {prob:.2%}"
@@ -601,7 +591,7 @@ def run_mcmc(
         return step_size
 
     key = jax.random.PRNGKey(0)
-    key, token = mpi4jax.bcast(key, 0, comm=global_comm, token=token)
+    key = jnp.array(mpi4jax.bcast(key, 0, comm=global_comm))
 
     step_size = _get_step_size(
         step_size=step_size,
@@ -627,19 +617,15 @@ def run_mcmc(
         flat_samples = flat_samples[burn_in:]
         final_pars = final_pars.at[to_fit].set(jnp.median(flat_samples, axis=0).ravel())
         final_errs = final_errs.at[to_fit].set(jnp.std(flat_samples, axis=0).ravel())
-    final_pars, token = mpi4jax.bcast(final_pars, 0, comm=global_comm, token=token)
-    final_errs, _ = mpi4jax.bcast(final_errs, 0, comm=global_comm, token=token)
-    models = tuple(
-        model.update(
-            final_pars.block_until_ready(),
-            final_errs.block_until_ready(),
-            jnp.array(0).block_until_ready(),
-        )
-        for model in models
+    final_pars = jnp.array(mpi4jax.bcast(final_pars, 0, comm=global_comm))
+    final_errs = jnp.array(mpi4jax.bcast(final_errs, 0, comm=global_comm))
+    metamodel = metamodel.update(
+        final_pars.block_until_ready(),
+        final_errs.block_until_ready(),
+        jnp.array(0).block_until_ready(),
     )
-    jax.block_until_ready(models)
-    chisq, *_ = joint_objective(models, datasets, n_datasets, True, False, False)
-    models = tuple(model.update(final_pars, final_errs, chisq) for model in models)
-    jax.block_until_ready(models)
+    chisq, *_ = joint_objective(metamodel, True, False, False)
+    metamodel = metamodel.update(final_pars, final_errs, chisq)
+    jax.block_until_ready(metamodel)
 
-    return models, flat_samples
+    return metamodel, flat_samples

@@ -10,9 +10,6 @@ sim: True # If True use TODs to make noise and add a simulated cluster
 
 # Define the model
 model:
-  # Unit conversion to apply at the end
-  # Will be evaled
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
   # Structure to include in the model
   structures:
     # Name of the first structure
@@ -37,4 +34,9 @@ model:
         beta:
           value: 1.3333 
 
-
+metamodel:
+  models:
+    - model
+  model_map:
+    mustang2:
+      - model
