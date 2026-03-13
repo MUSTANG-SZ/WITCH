@@ -697,13 +697,13 @@ def isobeta(
 
 @jax.jit
 def qso(
-    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
     dx: float,
     dy: float,
     dz: float,
     z: float,
     age: float,
     Lw12: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
 ):
     r"""
     QSO model from Kyle Massingill. This is basically a uniform model where the
@@ -714,12 +714,6 @@ def qso(
     this function does not modify an underlying pressure grid.
     Parameters
     ----------
-    pressure : jax.Array
-        The pressure profile to modify with this ellipsoid.
-        Should be evaluated on the same grid as `xyz`.
-    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
-        Coordinte grid to calculate model on.
-        See `containers.Model.xyz` for details.
     dx : float
         RA of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
@@ -741,6 +735,9 @@ def qso(
     Lw12 : float
         Luminosity of QSO.
         Units: $M_{\odot}$
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
 
     Returns
     -------
@@ -750,8 +747,8 @@ def qso(
 
     beta = 0.8828
     time = age * 1.0e8 * 365.25 * 24 * 3600
-    Omega_b = 0.022 * (1 / h70) ** 2
-    H0_kpc = 79 / (3.09e19)
+    Omega_b = 0.022 * (1 / 0.7) ** 2
+    H0_kpc = 70 / (3.09e19)
     rho_crit = 3 * H0_kpc**2 / (8 * jnp.pi * 6.67e-11)
     bQ = 13
     delta = 180
