@@ -16,21 +16,30 @@ def isobeta_2d_analytical(
     beta: float,
     amp: float,
     xyz: tuple,
-    z_val: float = 0.0,  # actual z coordinate of the slice
 ) -> jnp.ndarray:
     """
-    3D isobeta evaluated at a given z slice.
-    Matches structure.isobeta: amp * (1 + R²/θ² + z²/θ²)^(-3β/2)
+    Definite integral of 3D isobeta from -r_map to +r_map along z.
+
+    ∫_{-z_max}^{z_max} amp * (1 + R²/θ² + z²/θ²)^(-3β/2) dz
+    = 2 * amp * θ * a^(1-3β) * T * 2F1(1/2, 3β/2; 3/2; -T²)
+
+    where a = sqrt(1 + R²/θ²) and T = z_max / (θ * a)
     """
-    x, y, *_ = transform_grid(dx, dy, 0, 1, 1, 1, 0, xyz)
-    x_2d = x[..., 0]
-    y_2d = y[..., 0]
+    from scipy.special import hyp2f1
 
+    x, y, z_arr, *_ = transform_grid(dx, dy, 0, 1, 1, 1, 0, xyz)
+    x_2d = np.array(x[..., 0])
+    y_2d = np.array(y[..., 0])
+
+    z_max = float(np.abs(z_arr[0, 0, -1]))
+
+    n = 1.5 * beta
     r_sq = x_2d**2 + y_2d**2
-    rr = 1 + r_sq / theta**2 + z_val**2 / theta**2
-    power = -1.5 * beta
+    a = np.sqrt(1 + r_sq / theta**2)
+    T = z_max / (theta * a)
 
-    return amp * rr**power
+    result = 2 * amp * theta * a ** (1 - 2 * n) * T * hyp2f1(0.5, n, 1.5, -(T**2))
+    return jnp.array(result)
 
 
 def gaussian_2d_integrated(
@@ -75,29 +84,3 @@ def cylindrical_beta_2d_analytical(
     from witch import structure
 
     return structure.cylindrical_beta_2d(dx, dy, dz, L, theta, phi, P0, r_c, beta, xyz)
-
-
-def sph_isobeta_2d_slice(
-    dx: float,
-    dy: float,
-    r: float,
-    beta: float,
-    amp: float,
-    xyz: tuple,
-    z_val: float = 0.0,
-) -> jnp.ndarray:
-    """
-    3D sph_isobeta evaluated at a given z slice.
-    structure.sph_isobeta: amp * (1 + r²)^(-3β/2)
-    where r is already scaled by transform_grid with scale=r.
-    So at z=z_val: amp * (1 + R²/r² + z_val²/r²)^(-3β/2)
-    """
-    x, y, *_ = transform_grid(dx, dy, 0, 1, 1, 1, 0, xyz)
-    x_2d = x[..., 0]
-    y_2d = y[..., 0]
-
-    r_sq = x_2d**2 + y_2d**2
-    rr = 1 + r_sq / r**2 + z_val**2 / r**2
-    power = -1.5 * beta
-
-    return amp * rr**power

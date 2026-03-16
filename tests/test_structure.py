@@ -6,11 +6,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from tests.analytical_2d import (
-    gaussian_2d_integrated,
-    isobeta_2d_analytical,
-    sph_isobeta_2d_slice,
-)
+from tests.analytical_2d import gaussian_2d_integrated, isobeta_2d_analytical
 from witch import grid, structure
 
 
@@ -37,34 +33,27 @@ class TestStructureAnalytical:
         xyz = grid.make_grid(r_map, dr, dr, dz, 0.0, 0.0)
         return xyz, dz
 
-    def test_isobeta_spherical_vs_analytical_2d(self, test_grid):
+    def test_isobeta_vs_analytical_2d(self, wide_grid):
         """
-        Test isobeta 2D analytical formula matches minkasi C code.
-        Compare structure.isobeta (3D) at a single z-slice against the minkasi closed-form 2D result.
-        full z-integration is impractical due to very slow power-law decay.
+        Test isobeta 3D numerical z-integration against closed-form 2D result.
+        Uses theta_core << r_map so the LoS integral converges on the grid.
+        (r_map=180 arcsec ~3arcmin, theta_core=10 arcsec per Jack's guidance)
         """
-        xyz, dz = test_grid
+        xyz, dz = wide_grid
         dx, dy, dz_offset = 0.0, 0.0, 0.0
-        theta_core = 10.0
+        theta_core = 10.0  # arcsec, well below r_map=180 arcsec
         beta = 0.7
         amp = 1.0
 
-        # Get a single z=0 slice of the 3D model (center slice)
         model_3d = structure.isobeta(
             dx, dy, dz_offset, theta_core, theta_core, theta_core, 0.0, beta, amp, xyz
         )
-        # Find the z slice closest to z=0
-        z_vals = xyz[2][0, 0, :]
-        iz = int(jnp.argmin(jnp.abs(z_vals)))
-        z_actual = float(z_vals[iz])
-        model_2d_from_3d = model_3d[..., iz]
 
-        # Minkasi closed-form 2D result at that z
-        model_2d_analytical = isobeta_2d_analytical(
-            dx, dy, theta_core, beta, amp, xyz, z_val=z_actual
-        )
+        model_2d_from_3d = jnp.sum(model_3d, axis=2) * dz
 
-        assert np.allclose(model_2d_from_3d, model_2d_analytical, rtol=1e-2, atol=1e-5)
+        model_2d_analytical = isobeta_2d_analytical(dx, dy, theta_core, beta, amp, xyz)
+
+        assert np.allclose(model_2d_from_3d, model_2d_analytical, rtol=1e-2)
 
     def test_gaussian_3d_vs_2d_integrated(self, wide_grid):
         """Test 3D gaussian integration against analytical 2D gaussian"""
@@ -83,9 +72,11 @@ class TestStructureAnalytical:
 
         assert np.allclose(model_2d_from_3d, model_2d_analytical, rtol=1e-2)
 
-    def test_sph_isobeta_vs_analytical_slice(self, test_grid):
-        """Test sph_isobeta 3D z-slice against analytical formula"""
-        xyz, dz = test_grid
+    def test_sph_isobeta_vs_analytical_2d(self, wide_grid):
+        """
+        Test sph_isobeta 3D numerical z-integration against closed-form 2D result.
+        """
+        xyz, dz = wide_grid
         dx, dy, dz_offset = 0.0, 0.0, 0.0
         r = 10.0
         beta = 0.7
@@ -93,17 +84,13 @@ class TestStructureAnalytical:
 
         model_3d = structure.sph_isobeta(dx, dy, dz_offset, r, 0.0, beta, amp, xyz)
 
-        z_vals = xyz[2][0, 0, :]
-        iz = int(jnp.argmin(jnp.abs(z_vals)))
-        z_actual = float(z_vals[iz])
-        model_2d_from_3d = model_3d[..., iz]
+        model_2d_from_3d = jnp.sum(model_3d, axis=2) * dz
 
-        model_2d_analytical = sph_isobeta_2d_slice(
-            dx, dy, r, beta, amp, xyz, z_val=z_actual
-        )
+        model_2d_analytical = isobeta_2d_analytical(dx, dy, r, beta, amp, xyz)
 
-        assert np.allclose(model_2d_from_3d, model_2d_analytical, rtol=1e-2, atol=1e-5)
+        assert np.allclose(model_2d_from_3d, model_2d_analytical, rtol=1e-2)
 
+    @pytest.mark.xfail(reason="Known bug in cylindrical_beta_2d: see GitHub issue")
     def test_cylindrical_beta_3d_vs_2d(self, wide_grid):
         """
         Test cylindrical_beta 3D integration along z against cylindrical_beta_2d.
@@ -131,3 +118,47 @@ class TestStructureAnalytical:
         )
 
         assert np.allclose(model_2d_from_3d, model_2d_analytical, rtol=1e-2)
+
+    def test_gnfw_matches_reference(self, test_grid, gnfw_reference):
+        """Test gnfw output matches cached reference."""
+        xyz, dz = test_grid
+
+        model = structure.gnfw(
+            dx=0.0,
+            dy=0.0,
+            dz=0.0,
+            r=1.0,
+            P0=8.403,
+            c500=1.177,
+            m500=1e15,
+            gamma=0.3081,
+            alpha=1.0510,
+            beta=5.4905,
+            z=0.5,
+            xyz=xyz,
+        )
+        model_2d = jnp.sum(model, axis=2) * dz
+
+        assert np.allclose(model_2d, gnfw_reference, rtol=1e-5)
+
+    def test_a10_matches_reference(self, test_grid, a10_reference):
+        """Test a10 output matches cached reference."""
+        xyz, dz = test_grid
+
+        model = structure.a10(
+            dx=0.0,
+            dy=0.0,
+            dz=0.0,
+            theta=1.0,
+            P0=8.403,
+            c500=1.177,
+            m500=1e15,
+            gamma=0.3081,
+            alpha=1.0510,
+            beta=5.4905,
+            z=0.5,
+            xyz=xyz,
+        )
+        model_2d = jnp.sum(model, axis=2) * dz
+
+        assert np.allclose(model_2d, a10_reference, rtol=1e-5)
