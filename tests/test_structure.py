@@ -90,7 +90,7 @@ class TestStructureAnalytical:
 
         assert np.allclose(model_2d_from_3d, model_2d_analytical, rtol=1e-2)
 
-    @pytest.mark.xfail(reason="Known bug in cylindrical_beta_2d: see GitHub issue")
+    @pytest.mark.xfail(reason="Known bug in cylindrical_beta_2d: see issue #178")
     def test_cylindrical_beta_3d_vs_2d(self, wide_grid):
         """
         Test cylindrical_beta 3D integration along z against cylindrical_beta_2d.
@@ -102,7 +102,7 @@ class TestStructureAnalytical:
         dx, dy, dz_offset = 0.0, 0.0, 0.0
         L = 700.0  # so that cutoff never triggers within grid (bc > 2*r_map which equals 600)
         theta = 0.0
-        phi = 0.0  # no tilt, sec(phi)=1
+        phi = 0.0
         P0 = 1.0
         r_c = 10.0
         beta = 0.7
@@ -120,7 +120,9 @@ class TestStructureAnalytical:
         assert np.allclose(model_2d_from_3d, model_2d_analytical, rtol=1e-2)
 
     def test_gnfw_matches_reference(self, test_grid, gnfw_reference):
-        """Test gnfw output matches cached reference."""
+        """
+        Test gnfw output matches cached reference.
+        """
         xyz, dz = test_grid
 
         model = structure.gnfw(
@@ -142,7 +144,9 @@ class TestStructureAnalytical:
         assert np.allclose(model_2d, gnfw_reference, rtol=1e-5)
 
     def test_a10_matches_reference(self, test_grid, a10_reference):
-        """Test a10 output matches cached reference."""
+        """
+        Test a10 output matches cached reference.
+        """
         xyz, dz = test_grid
 
         model = structure.a10(
