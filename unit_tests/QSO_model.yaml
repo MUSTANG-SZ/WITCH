@@ -6,38 +6,35 @@ noise_map: True # Whether to make the noise map
 model_map: True # Whether to make a map of just the model
 
 qso_model:
-  model:
-    # Unit conversion converts from the model units (integrated pressure) to the map units (K_RJ)
-    structures:
-      #The first structure is called a10
-      qso:
-        # The first structure is witch.structures.a10
-        structure: "qso"
-        parameters:
-          dx:
-            value: 0.0
-            to_fit: False
-          dy:
-            value: 0.0
-            to_fit: False
-          dz:
-            value: 0.0
-            to_fit: False
-          z: 
-            value: 2.735
-            to_fit: False
-          age:
-            value: 1
-            to_fit: False
-          Lw12:
-            value: "2.0e12"
-            to_fit: True
+  structures:
+    qso:
+      # The first structure is witch.structures.a10
+      structure: "qso"
+      parameters:
+        dx:
+          value: 0.0
+          to_fit: False
+        dy:
+          value: 0.0
+          to_fit: False
+        dz:
+          value: 0.0
+          to_fit: False
+        z: 
+          value: 2.735
+          to_fit: False
+        age:
+          value: 1
+          to_fit: False
+        Lw12:
+          value: "2.0e12"
+          to_fit: True
 
 metamodel:
   models:
-    - cluster_model
+    - qso_model
   model_map:
     mustang2:
-      - cluster_model
+      - qso_model
 
 
