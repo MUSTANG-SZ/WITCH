@@ -27,7 +27,7 @@ qso_model:
           value: 1
           to_fit: False
         Lw12:
-          value: "2.0e12"
+          value: "2.0e13"
           to_fit: True
 
 metamodel:
