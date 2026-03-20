@@ -35,6 +35,7 @@ datasets:
       get_files: "mf.get_files"
       load_tods: "mf.load_tods"
       get_info: "mf.get_info"
+      make_metadata: "mf.make_metadata"
       make_beam: "mf.make_beam"
       preproc: "mf.preproc"
       postproc: "mf.postproc"
