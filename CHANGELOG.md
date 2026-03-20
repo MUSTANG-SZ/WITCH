@@ -1,3 +1,13 @@
+## 10.2.0 (2026-03-20)
+
+### Feat
+
+- up QSO mass so we can see it
+
+### Fix
+
+- fix QSO yamls
+
 ## 10.1.0 (2026-03-13)
 
 ### Feat
