@@ -4,47 +4,25 @@ from dataclasses import dataclass
 from typing import Self
 
 import jax.numpy as jnp
-from astropy.convolution import convolve_fft
 from astropy.io import fits
 from astropy.wcs import WCS
 from jax import Array, vmap
 from jax.tree_util import register_pytree_node_class
 from jitkasi.solutions import SolutionSet, maps
 from mpi4py import MPI
+from scipy.ndimage import zoom
 
 import witch.utils as wu
 from witch.containers import MetaModel
 from witch.dataset import DataSet, MetaData
 from witch.fitter import print_once
+from witch.utils import fft_conv
 
 from ...objective import poisson_objective
 
+import numpy as np
 
-def convolve(img, PSF):
-    """
-    Parameters
-    ----------
-    img : np.ndarray
-        The map to be smoothed.
-
-    res : float
-        FWHM (resolution) of the smoothing (arcmin).
-
-    dim_pixel : float
-        Pixel size in the map (arcmin).
-
-    Returns
-    -------
-    img_convolved: np.ndarray
-        Same map but smoothed.
-    """
-
-    img_convolved = convolve_fft(img, PSF)
-
-    return img_convolved
-
-
-convolve_vec = vmap(convolve, in_axes=(0, None))
+convolve_vec = vmap(fft_conv, in_axes=(0, None))
 
 
 def get_files(dset_name: str, cfg: dict) -> list:
@@ -77,6 +55,11 @@ def load_maps(
         f: fits.HDUList = fits.open(fname)
         wcs = WCS(f[0].header)  # type: ignore
         dat = jnp.array(f[0].data.copy().T)  # type: ignore
+        ymin = 1
+        ymax = 85
+        xmin = 16
+        xmax = 100
+        dat=dat[xmin:xmax,ymin:ymax]
         f.close()
         imaps += [maps.WCSMap(name, dat, comm, wcs, "nn")]
     mapset = SolutionSet(imaps, comm)
@@ -91,7 +74,6 @@ def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
         "prefactor": prefactor,
         "objective": poisson_objective,
     }
-
 
 def load_exps(dset_name: str, cfg: dict, struct_names: list):
     # def __init__(self, dset_name: str, cfg: dict):
@@ -121,7 +103,15 @@ def load_exps(dset_name: str, cfg: dict, struct_names: list):
                 dat_norm = dat_raw / jnp.max(dat_raw)
                 # set the pixel with zero exposure to nan
                 e_min = 0.03
-                dat = jnp.where(dat_norm > e_min, dat_norm, jnp.nan)
+                dat_mask = jnp.where(dat_norm > e_min, dat_norm, jnp.nan)
+                ymin = 1
+                ymax = 85
+                xmin = 16
+                xmax = 100
+                dat_mask=dat_mask[xmin:xmax,ymin:ymax]
+                #pixelization same as model (300,300)
+                factor = 300 / len(dat_mask)
+                dat = zoom(dat_mask, factor, order=0)
                 # dat = dat.astype(float)
                 f.close()
                 exp_maps += [dat]
@@ -152,7 +142,10 @@ def load_beams(dset_name: str, cfg: dict, struct_names: list):
                 # The actual map
                 f: fits.HDUList = fits.open(fname)
                 wcs = WCS(f[0].header)  # type: ignore
-                dat = jnp.array(f[0].data.copy().T)  # type: ignore
+                dat_raw = jnp.array(f[0].data.copy().T)  # type: ignore
+                #pixelization same as model (300,300)
+                factor = 300 / len(dat_raw)
+                dat = zoom(dat_raw, factor, order=0)
                 f.close()
                 beams += [dat]
     return beams
@@ -174,9 +167,28 @@ def load_back(dset_name: str, cfg: dict):
     # The actual map
     f: fits.HDUList = fits.open(back_fname)
     wcs = WCS(f[0].header)  # type: ignore
-    dat = jnp.array(f[0].data.copy().T)  # type: ignore
+    dat_raw = jnp.array(f[0].data.copy().T)  # type: ignore
+    ymin = 1
+    ymax = 85
+    xmin = 16
+    xmax = 100
+    dat_raw=dat_raw[xmin:xmax,ymin:ymax]
+    #pixelization same as model (300,300)
+    factor = 300 / len(dat_raw)
+    dat = zoom(dat_raw, factor, order=0)
     f.close()
     return dat
+
+def get_prefact(cfg: dict, struct_names: list, info: dict):
+    gen_prefact = info["prefactor"]
+    prefactors = []
+    for struct in struct_names:
+        model = cfg["model"]["structures"][struct]["structure"]
+        if "gnfw" in model:
+            prefactors += [gen_prefact*1] 
+        elif "isobeta" in model:
+            prefactors += [gen_prefact*2]
+    return prefactors
 
 
 @register_pytree_node_class
@@ -184,9 +196,10 @@ def load_back(dset_name: str, cfg: dict):
 class ExpConvProj(MetaData):
     exp_map: Array
     beam_map: Array
+    prefactor: float
 
     def apply(self, model: Array) -> Array:
-        return self.exp_map * convolve(model, self.beam_map)
+        return self.prefactor * self.exp_map * fft_conv(model, self.beam_map)
 
     def apply_grad(self, model_grad: Array) -> Array:
         # Using *c* as convolution below
@@ -199,7 +212,7 @@ class ExpConvProj(MetaData):
     # Functions for making this a pytree
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
-        children = (self.exp_map, self.beam_map)
+        children = (self.exp_map, self.beam_map, self.prefactor)
         aux_data = tuple()
 
         return (children, aux_data)
@@ -245,10 +258,11 @@ def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]
     exp_maps = load_exps(dset_name, cfg, struct_names)
     beam_maps = load_beams(dset_name, cfg, struct_names)
     back_map = load_back(dset_name, cfg)
+    prefactors = get_prefact(cfg, struct_names, info)
 
     metadata = []
     for idx in range(len(struct_names)):
-        metadata += [ExpConvProj(exp_maps[idx], beam_maps[idx])]
+        metadata += [ExpConvProj(exp_maps[idx], beam_maps[idx], prefactors[idx])]
     metadata += [BackgroundProj(back_map)]
 
     return tuple(metadata)
@@ -282,7 +296,7 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
                 hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
                 hdul = fits.HDUList([hdu])
                 hdul.writeto(
-                    os.path.join(outdir, dset.name, f"{imap.name}_residual.fits"),
+                    os.path.join(outdir, dset.name, f"residual.fits"),
                     overwrite=True,
                 )
 
@@ -291,7 +305,7 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
                 hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
                 hdul = fits.HDUList([hdu])
                 hdul.writeto(
-                    os.path.join(outdir, dset.name, f"{imap.name}_truth.fits"),
+                    os.path.join(outdir, dset.name, f"truth.fits"),
                     overwrite=True,
                 )
     # Make Model maps
