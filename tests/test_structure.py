@@ -6,7 +6,11 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from tests.analytical_2d import gaussian_2d_integrated, isobeta_2d_analytical
+from tests.analytical_2d import (
+    add_uniform_2d_analytical,
+    gaussian_2d_integrated,
+    isobeta_2d_analytical,
+)
 from witch import grid, structure
 
 
@@ -166,3 +170,30 @@ class TestStructureAnalytical:
         model_2d = jnp.sum(model, axis=2) * dz
 
         assert np.allclose(model_2d, a10_reference, rtol=1e-5)
+
+    def test_add_uniform_vs_analytical_2d(self):
+        """
+        Test add_uniform 3D integration against closed-form 2D result.
+        Uses a fine grid to minimize boundary discretization error.
+        """
+        dr = 0.5  # finer resolution reduces boundary pixel error
+        dz = 0.5
+        r_map = 60.0
+        xyz = grid.make_grid(r_map, dr, dr, dz, 0.0, 0.0)
+
+        dx, dy, dz_offset = 0.0, 0.0, 0.0
+        r = 20.0
+        amp = 2.0
+
+        n = xyz[0].shape[0]
+        pressure = jnp.ones((n, n, n))
+
+        model_3d = structure.add_uniform(
+            pressure, xyz, dx, dy, dz_offset, r, r, r, 0.0, amp
+        )
+
+        diff_2d = jnp.sum(model_3d - pressure, axis=2) * dz
+
+        model_2d_analytical = add_uniform_2d_analytical(dx, dy, r, amp, xyz)
+
+        assert np.allclose(diff_2d, model_2d_analytical, rtol=1e-2, atol=1.0)

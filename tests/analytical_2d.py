@@ -84,3 +84,25 @@ def cylindrical_beta_2d_analytical(
     from witch import structure
 
     return structure.cylindrical_beta_2d(dx, dy, dz, L, theta, phi, P0, r_c, beta, xyz)
+
+
+def add_uniform_2d_analytical(
+    dx: float,
+    dy: float,
+    r: float,
+    amp: float,
+    xyz: tuple,
+) -> jnp.ndarray:
+    """
+    Closed-form 2D result of the uniform ellipsoid contribution along z.
+    For a sphere of radius r, the LoS integral of the (1+amp)*pressure - pressure = amp*pressure term is just amp * pressure * chord_length.
+    Chord length at projected radius R is 2*sqrt(r^2 - R^2) for R < r, else 0.
+    """
+    x, y, *_ = transform_grid(dx, dy, 0, 1, 1, 1, 0, xyz)
+    x_2d = np.array(x[..., 0])
+    y_2d = np.array(y[..., 0])
+
+    R_sq = x_2d**2 + y_2d**2
+    chord = np.where(R_sq < r**2, 2 * np.sqrt(np.maximum(r**2 - R_sq, 0.0)), 0.0)
+
+    return jnp.array(amp * chord)
