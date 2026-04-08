@@ -1,3 +1,13 @@
+## 10.3.0 (2026-04-08)
+
+### Feat
+
+- finish adding masking to witch
+
+### Fix
+
+- change naming of MS0735 file and updated configs
+
 ## 10.2.0 (2026-03-20)
 
 ### Feat
