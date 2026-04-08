@@ -143,6 +143,9 @@ def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
     noise_kwargs = dset.info["minkasi_noise_kwargs"]
     outdir = dset.info["outdir"]
     copy_noise = dset.info["copy_noise"]
+    thresh = cfg["datasets"]["mustang2"].get("mask", None)
+    if thresh and type(thresh) is not int:
+        thresh = 20  # TODO: dynamically set threshold
     if not cfg.get("noise_map", False):
         return
 
@@ -163,6 +166,7 @@ def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
         os.path.join(outdir, dset.name, "noise"),
         0,
         cfg["datasets"][dset.name]["dograd"],
+        thresh=thresh,
         return_maps=True,
     )
 
@@ -186,10 +190,16 @@ def postproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
     noise_kwargs = dset.info["minkasi_noise_kwargs"]
     outdir = dset.info["outdir"]
     copy_noise = dset.info["copy_noise"]
+    thresh = cfg["datasets"]["mustang2"].get("mask", None)
+    if thresh and type(thresh) is not int:
+        thresh = 20  # TODO: dynamically set threshold
     # Make signal maps
     if cfg.get("sig_map", cfg.get("map", True)):
         todvec_minkasi = to_minkasi(dset.datavec, copy_noise, cfg["mem_starved"])
         print_once("Making signal map")
+        # First make the signal map and use it to re-estimate the TOD noise
+        # Note that we don't want to mask here as otherwise that will leak into
+        # the noise reestimation
         mapset = mm.make_maps(
             todvec_minkasi,
             skymap,
@@ -221,6 +231,20 @@ def postproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
                     **dset.noise_kwargs,
                 )
 
+        if thresh:
+            # If masking, remake the signal map with the mask applied.
+            mm.make_maps(
+                todvec_minkasi,
+                skymap,
+                noise_class,
+                noise_args,
+                noise_kwargs,
+                os.path.join(outdir, dset.name, "signal"),
+                cfg["datasets"][dset.name]["npass"],
+                cfg["datasets"][dset.name]["dograd"],
+                thresh=thresh,
+            )
+
         if cfg.get("ntods_map", False):
 
             if minkasi.nproc > 1:
@@ -233,7 +257,7 @@ def postproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
                 cur_tods = todvec_copy.tods[i * step : (i + 1) * step]
                 cur_vec = TODVec(cur_tods, todvec_copy.comm)
                 cur_vec = to_minkasi(cur_vec, copy_noise, cfg["mem_starved"])
-                mapset = mm.make_maps(
+                mm.make_maps(
                     cur_vec,
                     skymap,
                     noise_class,
@@ -264,6 +288,9 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
     minkasi_noise_class = dset.info["minkasi_noise_class"]
     minkasi_noise_args = dset.info["minkasi_noise_args"]
     minkasi_noise_kwargs = dset.info["minkasi_noise_kwargs"]
+    thresh = cfg["datasets"]["mustang2"].get("mask", None)
+    if thresh and type(thresh) is not int:
+        thresh = 20  # TODO: dynamically set threshold
     outdir = dset.info["outdir"]
     # Residual map (or with noise from residual)
     if cfg.get("res_map", cfg.get("map", True)):
@@ -274,37 +301,48 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
             )
         dataset_ind = metamodel.get_dataset_ind(dset.name)
         todvec_minkasi = to_minkasi(dset.datavec, False)
+
+        # Make signal res map
         for i, tod in enumerate(todvec_minkasi.tods):
             pred = metamodel.model_proj(dataset_ind, i)
-            if cfg["sub"]:
-                tod.info["dat_calib"] -= np.array(pred)
-                tod.set_noise(
-                    minkasi_noise_class, *minkasi_noise_args, **minkasi_noise_kwargs
-                )
-            else:
-                tod.set_noise(
-                    minkasi_noise_class,
-                    tod.info["dat_calib"] - pred,
-                    *minkasi_noise_args,
-                    **minkasi_noise_kwargs,
-                )
+            tod.set_noise(
+                minkasi_noise_class,
+                tod.info["dat_calib"] - pred,
+                *minkasi_noise_args,
+                **minkasi_noise_kwargs,
+            )
 
-        # Make residual maps
-        if cfg["sub"]:
-            print_once("Making residual map")
-            name = "residual"
-        else:
-            print_once("Making signal map with residual noise")
-            name = "signal_res_noise"
+        print_once("Making signal map with residual noise")
         mm.make_maps(
             todvec_minkasi,
             skymap,
             minkasi_noise_class,
             minkasi_noise_args,
             minkasi_noise_kwargs,
-            os.path.join(outdir, dset.name, name),
+            os.path.join(outdir, dset.name, "signal_res_noise"),
             cfg["datasets"][dset.name]["npass"],
             cfg["datasets"][dset.name]["dograd"],
+            thresh=thresh,
+        )
+
+        # Make residual maps
+        for i, tod in enumerate(todvec_minkasi.tods):
+            pred = metamodel.model_proj(dataset_ind, i)
+            tod.info["dat_calib"] -= np.array(pred)
+            tod.set_noise(
+                minkasi_noise_class, *minkasi_noise_args, **minkasi_noise_kwargs
+            )
+        print_once("Making residual map")
+        mm.make_maps(
+            todvec_minkasi,
+            skymap,
+            minkasi_noise_class,
+            minkasi_noise_args,
+            minkasi_noise_kwargs,
+            os.path.join(outdir, dset.name, "residual"),
+            cfg["datasets"][dset.name]["npass"],
+            cfg["datasets"][dset.name]["dograd"],
+            thresh=thresh,
         )
 
     # Make Model maps
@@ -329,6 +367,7 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
             os.path.join(outdir, dset.name, "model"),
             cfg["datasets"][dset.name]["npass"],
             cfg["datasets"][dset.name]["dograd"],
+            thresh=thresh,
         )
         xyz = grid.make_grid_from_wcs(
             model_skymap.wcs,
