@@ -11,9 +11,35 @@ import numpy as np
 from typing_extensions import Unpack
 
 
+def apply_mask(input_mapset: minkasi.maps.Mapset, maskset: minkasi.maps.Mapset):
+    """
+    Apply a mask to a set of input maps.
+
+    Parameters
+    ----------
+    input_mapset : minkasi.maps.Mapset
+        Maps to apply the mask to.
+    maskset : minkasi.maps.Mapset
+        Masks to apply; defined per map
+
+    Returns
+    -------
+    target_mapset : minkasi.maps.Mapset
+        Masked version of input mapset.
+
+    """
+    for i, imap in enumerate(input_mapset.maps):
+        imap.map *= maskset.maps[i].map
+
+    return input_mapset
+
+
 def make_naive(
-    todvec: minkasi.tods.TodVec, skymap: minkasi.maps.MapType, outdir: str
-) -> tuple[minkasi.maps.MapType, minkasi.maps.MapType]:
+    todvec: minkasi.tods.TodVec,
+    skymap: minkasi.maps.MapType,
+    outdir: str,
+    thresh: Optional[int] = None,
+) -> tuple[minkasi.maps.MapType, minkasi.maps.MapType, minkasi.maps.Mapset]:
     """
     Make a naive map where we just bin common mode subtracted TODs.
 
@@ -23,6 +49,8 @@ def make_naive(
         The TODs to mapmake.
     skymap : minkasi.maps.MapType
         Map to use as footprint for outputs.
+    thresh : int
+        If set, mask pixels with value less than thresh durring map-making. Default; None
 
     Returns
     -------
@@ -31,6 +59,8 @@ def make_naive(
     hits : minkasi.maps.MapType
         The hit count map.
         We use this as a preconditioner which helps small-scale convergence quite a bit.
+    maskset : minkasi.maps.Mapset
+        Set of masks for the maps.
     """
     hits = minkasi.mapmaking.make_hits(todvec, skymap)
 
@@ -43,16 +73,28 @@ def make_naive(
         tmp -= np.outer(u[:, 0], s[0] * v[0, :])
         naive.tod2map(tod, tmp)
     naive.mpi_reduce()
+    maskset = None
+    if thresh is not None:
+        mask = hits.copy()
+        mask.map = 1.0 * hits.map > thresh
+        maskset = minkasi.maps.Mapset()
+        maskset.add_map(mask)
+        hits.map *= mask.map
+        naive.map *= mask.map
+
     naive.map[hits.map > 0] = naive.map[hits.map > 0] / hits.map[hits.map > 0]
     if minkasi.myrank == 0:
         naive.write(os.path.join(outdir, "naive.fits"))
         hits.write(os.path.join(outdir, "hits.fits"))
     naive.clear()
-    return naive, hits
+    return naive, hits, maskset
 
 
 def make_weights(
-    todvec: minkasi.tods.TodVec, skymap: minkasi.maps.MapType, outdir: str
+    todvec: minkasi.tods.TodVec,
+    skymap: minkasi.maps.MapType,
+    outdir: str,
+    maskset: Optional[minkasi.maps.Mapset] = None,
 ) -> tuple[minkasi.maps.MapType, minkasi.maps.MapType]:
     """
     Make weights and noise map.
@@ -63,6 +105,8 @@ def make_weights(
         The TODs to mapmake.
     skymap : minkasi.maps.MapType
         Map to use as footprint for outputs.
+    maskset : minkasi.maps.Mapset
+        Set of masks for the maps. Default; None
 
     Returns
     -------
@@ -78,6 +122,10 @@ def make_weights(
     tmp[mask] = 1.0 / np.sqrt(tmp[mask])
     noisemap = weightmap.copy()
     noisemap.map[:] = tmp
+
+    if maskset is not None:
+        noisemap.map *= maskset.maps[0].map
+        weightmap.map *= maskset.maps[0].map
     if minkasi.myrank == 0:
         noisemap.write(os.path.join(outdir, "noise.fits"))
         weightmap.write(os.path.join(outdir, "weights.fits"))
@@ -181,6 +229,7 @@ def solve_map(
     save_iters: list[int],
     outdir: str,
     desc_str: str,
+    maskset: Optional[minkasi.maps.Mapset] = None,
 ) -> minkasi.maps.Mapset:
     """
     Solve for map with PCG.
@@ -203,6 +252,8 @@ def solve_map(
         The output directory
     desc_str : str
         String used to determine outroot.
+    maskset : minkasi.maps.Mapset
+        Set of masks for the maps. Default; None
 
     Returns
     -------
@@ -217,10 +268,20 @@ def solve_map(
     rhs = x0.copy()
     todvec.make_rhs(rhs)
 
+    if maskset is not None:
+        rhs = apply_mask(input_mapset=rhs, maskset=maskset)
+
     # Preconditioner is 1/ hit count map.
     # Helps a lot for convergence.
     precon = x0.copy()
     precon.maps[0].map[:] = ihits.map[:]
+
+    if (
+        maskset is not None
+    ):  # Note in the context of make_maps this is redundant but in principle
+        # someone could use this function independantly so we have to enforce
+        # consistent masking.
+        precon = apply_mask(input_mapset=precon, maskset=maskset)
 
     # run PCG to solve
     # Supressing print here, probably want a verbosity setting on the minkasi side...
@@ -231,6 +292,7 @@ def solve_map(
             todvec,
             prior,
             precon,
+            mask=maskset,
             maxiter=maxiters,
             outroot=os.path.join(outdir, desc_str),
             save_iters=save_iters,
@@ -253,6 +315,7 @@ def make_maps(
     outdir: str,
     npass: int,
     dograd: bool,
+    thresh: Optional[int] = None,
     return_maps: bool = False,
 ):
     """
@@ -278,6 +341,8 @@ def make_maps(
         The number of times to mapmake and then reestimate the noise.
     dograd : bool
         If True make a map based prior to avoid biases from sharp features.
+    thresh : int
+        If set, mask pixels with value less than thresh durring map-making. Default; None
     return_maps : bool
         If True, return the mapset. Default; False
     """
@@ -293,14 +358,19 @@ def make_maps(
                 **noise_kwargs,
             )
 
-    naive, hits = make_naive(todvec, skymap, outdir)
+    naive, hits, maskset = make_naive(
+        todvec=todvec, skymap=skymap, outdir=outdir, thresh=thresh
+    )
 
     # Take 1 over hits map
     ihits = hits.copy()
     ihits.invert()
 
+    if thresh is not None:
+        ihits.map *= maskset.maps[0].map
+
     # Save weights and noise maps
-    _ = make_weights(todvec, skymap, outdir)
+    _ = make_weights(todvec=todvec, skymap=skymap, outdir=outdir, maskset=maskset)
 
     # Setup the mapset
     # For now just include the naive map so we can use it as the initial guess.
@@ -309,7 +379,17 @@ def make_maps(
 
     # run PCG to solve for a first guess
     iters = [5, 25, 100]
-    mapset = solve_map(todvec, mapset, ihits, None, 26, iters, outdir, "initial")
+    mapset = solve_map(
+        todvec=todvec,
+        x0=mapset,
+        ihits=ihits,
+        prior=None,
+        maxiters=26,
+        save_iters=iters,
+        outdir=outdir,
+        desc_str="initial",
+        maskset=maskset,
+    )
 
     # Now we iteratively solve and reestimate the noise
     for niter in range(npass):
@@ -321,7 +401,15 @@ def make_maps(
             mapset = get_grad_prior(todvec, mapset, hits.copy(), thresh=1.8)
         # Solve
         mapset = solve_map(
-            todvec, mapset, ihits, None, maxiter, iters, outdir, f"niter_{niter+1}"
+            todvec,
+            mapset,
+            ihits,
+            None,
+            maxiter,
+            iters,
+            outdir,
+            f"niter_{niter+1}",
+            maskset=maskset,
         )
 
     minkasi.barrier()
