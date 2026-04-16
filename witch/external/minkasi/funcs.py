@@ -155,7 +155,7 @@ def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
     )  # We always take a mem hit here...
     noise_skymap = minkasi.maps.SkyMap(lims, pixsize)
     for i, tod in enumerate(noise_vec.tods):
-        tod.info["dat_calib"] *= (-1) ** i ** ((minkasi.myrank + minkasi.nproc * i) % 2)
+        tod.info["dat_calib"] *= (-1) ** ((minkasi.myrank + minkasi.nproc * i) % 2)
     minkasi.barrier()
     noise_mapset = mm.make_maps(
         noise_vec,
