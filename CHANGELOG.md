@@ -1,3 +1,9 @@
+## 10.3.1 (2026-04-16)
+
+### Fix
+
+- double applying flip to tods when mapmaking noise
+
 ## 10.3.0 (2026-04-08)
 
 ### Feat
