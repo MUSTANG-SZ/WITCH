@@ -10,18 +10,12 @@ sim: False # If True use TODs to make noise and add a simulated cluster
 
 
 paths:
-  subdir: "joint_xray_peak_rs" # Subdirectory to use
+  subdir: "joint_xray_peak_rs_plotting" # Subdirectory to use
 
 mcmc:
   run: False 
   num_steps: 1000
   n_leaps: 4
-
-#nonpara:
-  #to_copy: ["gnfw_rs"]
-  #n_rounds: 4
-  #sig_params: ["P0"]
-
 
 cluster_model:
   structures:
@@ -51,34 +45,7 @@ cluster_model:
           to_fit: True
         z:
           value: 1.19
-    sph_isobeta:
-      structure: "sph_isobeta"
-      parameters:
-        x0:
-          value: -33.423264
-            #priors: [-25., -65.]
-          to_fit: False 
-        y0:
-          value: 7.26858 
-            #priors: [0., 20.]
-          to_fit: False
-        z0:
-          value: 0.0
-        r:
-          value: 10.0
-          to_fit: True
-        theta:
-          value: 0.0
-        beta:
-          value: 3.0
-          to_fit: True
-          priors: [0.0, 10.0]
-        amp:
-          value: 0.05
-          to_fit: True
-          priors: [0.0, 10.0]
-
-ps_model:  
+ps_model:
   structures:
     ps_gauss:
       structure: "gaussian"
@@ -96,10 +63,12 @@ ps_model:
           value: 0.00128582673
           to_fit: True
 
+# Add some info on what metadata to apply
 datasets:
   mustang2:
     point_sources:
       - "ps_model"
+    mask: 20
   act:
     point_sources:
       - "ps_model"
