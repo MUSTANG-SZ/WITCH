@@ -5,11 +5,11 @@
 # not be well constrained for e.g. M2.   #
 ##########################################
 
-import numpy as np
-from pixell import enmap
-from astropy.convolution import convolve, convolve_fft, Gaussian2DKernel
-
 import argparse as argp
+
+import numpy as np
+from astropy.convolution import Gaussian2DKernel, convolve, convolve_fft
+from pixell import enmap
 
 
 def _make_parser() -> argp.ArgumentParser:
