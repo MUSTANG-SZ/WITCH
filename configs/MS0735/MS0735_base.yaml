@@ -63,7 +63,6 @@ datasets:
     npass: 1 # How many passes of mapmaking to run
     freq: "float(90e9)"
     prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_RJ(90e9, cfg['constants']['Te'])*wu.XMpc/wu.me)"
-    mask: 100 
 
 # Setting for the fitter
 fitting:
