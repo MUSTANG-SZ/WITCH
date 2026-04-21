@@ -1,3 +1,9 @@
+## 10.4.0 (2026-04-21)
+
+### Feat
+
+- fix up the model plotting notebook and move it to supported tools
+
 ## 10.3.4 (2026-04-20)
 
 ### Fix
