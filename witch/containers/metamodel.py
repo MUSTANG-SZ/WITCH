@@ -232,7 +232,7 @@ class MetaModel:
         """
         Get the model for a dataset on the computed grid.
         This currently assumes that all models have the same grid.
-        This will not apply any metadata (ie. beam convolution).
+        This does apply metadata (ie. beam convolution+prefactor).
 
         Parameters
         ----------
@@ -244,11 +244,17 @@ class MetaModel:
         model_grid : jax.Array
             The model on the computed grid.
         """
+        dataset_ind = 0
         m_map = self.model_map[dataset_ind]
+        md_map = self.metadata_map[dataset_ind]
+        dset = self.datasets[dataset_ind]
         proj = jnp.zeros_like(self.models[m_map[0]].model)
         for i in m_map:
             model = self.models[i]
+            md = md_map[i]
             ip = model.model
+            for md_idx in md:
+                ip = dset.metadata[md_idx].apply(ip)
             proj = proj.at[:].add(ip)
         return proj
 
