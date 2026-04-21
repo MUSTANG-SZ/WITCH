@@ -15,13 +15,11 @@ import yaml
 from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
-from witch.fitter import *
-from witch.fitter import _run_fit
-from witch.fitter import _mpi_fsplit
-
 from witch import utils as wu
 from witch.containers import Model, Model_xfer
 from witch.dataset import DataSet
+from witch.fitter import *
+from witch.fitter import _mpi_fsplit, _run_fit
 from witch.fitting import run_mcmc
 
 
