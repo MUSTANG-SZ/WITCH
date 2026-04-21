@@ -1,3 +1,9 @@
+## 10.6.0 (2026-04-21)
+
+### Feat
+
+- add example of changing parameters
+
 ## 10.5.0 (2026-04-21)
 
 ### Feat
