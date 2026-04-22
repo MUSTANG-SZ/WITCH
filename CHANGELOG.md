@@ -1,3 +1,9 @@
+## 10.7.0 (2026-04-22)
+
+### Feat
+
+- updating moo1142 configs to include masking
+
 ## 10.6.0 (2026-04-21)
 
 ### Feat
