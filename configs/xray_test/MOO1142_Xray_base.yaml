@@ -53,8 +53,10 @@ coords:
   r_map: "5.0*60" # Radial size of grid in arcseconds 
   dr: "2.0" # Pixel size of grid in x and y in arcseconds
   dz: 2.0 # Pixel size along the LOS, if not provided dr is used
-  x0: "Angle('14:07:06.0 hours').to(u.radian).value"
-  y0: "Angle('10:48:30.00 degrees').to(u.radian).value"
+  #x0: "Angle('14:07:06.0 hours').to(u.radian).value"
+  #y0: "Angle('10:48:30.00 degrees').to(u.radian).value"
+  x0: "Angle('11 42 47.43 hours').to(u.radian).value" #circa center of main cluster
+  y0: "Angle('15:27:13.02 degrees').to(u.radian).value" #circa center of main cluster
 
 # Settings that define the datasets we are working with 
 # For now you can only have one, but this structure is in prep for the future
