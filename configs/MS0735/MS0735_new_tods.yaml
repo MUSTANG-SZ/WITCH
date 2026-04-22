@@ -7,16 +7,16 @@ base: "MS0735_base.yaml"
 # Used both for the output path as well as to load presets
 name: "MS0735"
 sim: False # If True use TODs to make noise and add a simulated cluster
+fit: false
+
+paths:
+  subdir: "new_tods"
 
 # Define the model
-model:
-  # Unit conversion to apply at the end
-  # Will be evaled
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
-  # Structure to include in the model
+cluster_model:
   structures:
     # Name of the first structure
-    ea10:
+    a10:
       structure: "a10" # What type of structure it is
       parameters:
         dx_1: # Name of the first parameter
@@ -47,19 +47,39 @@ model:
           value: 5.4905
         z:
           value: 1.19
+ps_model:  
+  structures:
     ps_gauss:
-      structure: "gaussian"
-      parameters:
-        dx_g:
-          value: 0.0
-          to_fit: True
-          priors: [-5.0, 5.0] 
-        dy_g:
-          value: 0.0
-          to_fit: True
-          priors: [-5.0, 5.0]
-        sigma:
-          value: 4.0
-        amp_g:
-          value: 0.01
-          to_fit: True
+        structure: "gaussian"
+        parameters:
+          dx_g:
+            value: 0.0
+            to_fit: True
+            priors: [-5.0, 5.0] 
+          dy_g:
+            value: 0.0
+            to_fit: True
+            priors: [-5.0, 5.0]
+          sigma:
+            value: 4.0
+          amp_g:
+            value: 0.01
+            to_fit: True
+  
+# Add some info on what metadata to apply
+datasets:
+  mustang2:
+    point_sources:
+      - "ps_model"
+
+metamodel:
+  models:
+    - cluster_model
+    - ps_model
+  model_map:
+    mustang2:
+      - cluster_model
+      - ps_model
+
+
+

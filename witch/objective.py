@@ -15,22 +15,15 @@ import jax
 import jax.numpy as jnp
 import mpi4jax
 from jax.scipy.special import factorial
-from jitkasi.solutions import SolutionSet
-from jitkasi.tod import TODVec
 from mpi4py import MPI
 
-from . import utils as wu
-from .containers import Model
-
 if TYPE_CHECKING:
-    from .dataset import DataSet
+    from .containers import MetaModel
 
 
-@partial(jax.jit, static_argnames=("n_datasets", "do_loglike", "do_grad", "do_curve"))
+@partial(jax.jit, static_argnames=("do_loglike", "do_grad", "do_curve"))
 def joint_objective(
-    models: tuple[Model, ...],
-    datasets: tuple["DataSet", ...],
-    n_datasets: int,
+    metamodel: "MetaModel",
     do_loglike: bool = True,
     do_grad: bool = True,
     do_curve: bool = True,
@@ -41,16 +34,8 @@ def joint_objective(
 
     Parameters
     ----------
-    models : tuple[Model]
-        Tuple of `Model` objects we are using to fit.
-        Should be in the same order as `datasets`.
-        All `Model` objects should have the same structures and parameters.
-    datasets : tuple[DataSet]
-        Tuple of `DataSet` objects to fit.
-        Should be in the same order as `models`.
-        All `DataSet` objects should have the same `global_comm`.
-    n_datasets : int
-        The number of datasets to fit.
+    metamodel : MetaModel
+        The `MetaModel` we are trying to fit.
     do_loglike : bool, default: True
         If True then we will compute the log-likelihood between
         the model and the data.
@@ -75,16 +60,15 @@ def joint_objective(
         If `do_curve` is `False` then this is an array of zeros.
         This is a `(npar, npar)` array.
     """
-    global_comm = datasets[0].global_comm
-    npar = len(models[0].pars)
+    global_comm = metamodel.global_comm
+    npar = len(metamodel.parameters)
     loglike = jnp.array(0)
     grad = jnp.zeros(npar)
     curve = jnp.zeros((npar, npar))
-    for i in range(n_datasets):
-        _loglike, _grad, _curve = datasets[i].objective(
-            models[i],
-            datasets[i].datavec,
-            datasets[i].mode,
+    for i in range(len(metamodel.datasets)):
+        _loglike, _grad, _curve = metamodel.datasets[i].objective(
+            metamodel,
+            i,
             do_loglike,
             do_grad,
             do_curve,
@@ -92,16 +76,13 @@ def joint_objective(
         loglike += _loglike
         grad = grad.at[:].add(_grad)
         curve = curve.at[:].add(_curve)
-    token = mpi4jax.barrier(comm=global_comm)
+    mpi4jax.barrier(comm=global_comm)
     if do_loglike:
-        loglike, token = mpi4jax.allreduce(
-            loglike, MPI.SUM, comm=global_comm, token=token
-        )
+        loglike = mpi4jax.allreduce(loglike, MPI.SUM, comm=global_comm)
     if do_grad:
-        grad, token = mpi4jax.allreduce(grad, MPI.SUM, comm=global_comm, token=token)
+        grad = mpi4jax.allreduce(grad, MPI.SUM, comm=global_comm)
     if do_curve:
-        curve, token = mpi4jax.allreduce(curve, MPI.SUM, comm=global_comm, token=token)
-    _ = token
+        curve = mpi4jax.allreduce(curve, MPI.SUM, comm=global_comm)
 
     return loglike, grad, curve
 
@@ -110,38 +91,32 @@ def joint_objective(
 class ObjectiveFunc(Protocol):
     def __call__(
         self,
-        model: Model,
-        datavec: TODVec | SolutionSet,
-        mode: str = ...,
+        model: "MetaModel",
+        dataset_ind: int,
         do_chisq: bool = ...,
         do_grad: bool = ...,
         do_loglike: bool = ...,
     ) -> tuple[jax.Array, jax.Array, jax.Array]: ...
 
 
-@partial(jax.jit, static_argnames=("mode", "do_loglike", "do_grad", "do_curve"))
+@partial(jax.jit, static_argnames=("dataset_ind", "do_loglike", "do_grad", "do_curve"))
 def chisq_objective(
-    model: Model,
-    datavec: TODVec | SolutionSet,
-    mode: str = "tod",
+    metamodel: "MetaModel",
+    dataset_ind: int,
     do_loglike: bool = True,
     do_grad: bool = True,
     do_curve: bool = True,
 ) -> tuple[jax.Array, jax.Array, jax.Array]:
     """
     Objective function to minimize when fitting a dataset where a Gaussian distribution is reasonible.
-    This is an MPI aware function.
+    This is not an MPI aware function, use `joint_objective` for MPI aware calculation.
 
     Parameters
     ----------
-    model : Model
-        The model object we are using to fit.
-    datavec: TODVec | SolutionSet
-        The data to fit against.
-        This is what we use to compute our fit residuals.
-    mode : str, default: "tod"
-        The type of data we compile this function for.
-        Should be either "tod" or "map".
+    metamodel : MetaModel
+        The metamodel object we are using to fit.
+    dataset_ind: int
+        The index of the dataset within `metamodel` that we are calculating the objective for.
     do_loglike : bool, default: True
         If True then we will compute the chi-squared between
         the model and the data.
@@ -166,9 +141,7 @@ def chisq_objective(
         If `do_curve` is `False` then this is an array of zeros.
         This is a `(npar, npar)` array.
     """
-    if mode not in ["tod", "map"]:
-        raise ValueError("Invalid mode")
-    npar = len(model.pars)
+    npar = len(metamodel.parameters)
     chisq = jnp.array(0)
     grad = jnp.zeros(npar)
     curve = jnp.zeros((npar, npar))
@@ -176,26 +149,21 @@ def chisq_objective(
     zero = jnp.zeros((1, 1))
     only_chisq = not (do_grad or do_curve)
 
-    for data in datavec:
-        if mode == "tod":
-            x = data.x * wu.rad_to_arcsec
-            y = data.y * wu.rad_to_arcsec
-            if only_chisq:
-                pred_dat = model.to_tod(x, y)
-                grad_dat = zero
-            else:
-                pred_dat, grad_dat = model.to_tod_grad(x, y)
+    dataset = metamodel.datasets[dataset_ind]
+    if dataset.mode not in ["tod", "map"]:
+        raise ValueError("Invalid mode")
+    for i, data in enumerate(dataset.datavec):
+        pred_dat = metamodel.model_proj(dataset_ind, i)
+        if only_chisq:
+            grad_dat = zero
         else:
-            x, y = data.xy
-            if only_chisq:
-                pred_dat = model.to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
-                grad_dat = zero
-            else:
-                pred_dat, grad_dat = model.to_map_grad(
-                    x * wu.rad_to_arcsec, y * wu.rad_to_arcsec
-                )
+            grad_dat = metamodel.model_grad_proj(dataset_ind, i)
 
         resid = data.data - pred_dat
+        # if dataset.mode == "tod":
+        #     resid = resid.at[:].add(-1*jnp.mean(resid, axis=-1)[..., None])
+        # else:
+        #     resid = resid.at[:].add(-1*jnp.mean(resid))
         if do_loglike:
             resid_filt = data.noise.apply_noise(resid)
             chisq += jnp.sum(resid * resid_filt)
@@ -220,29 +188,24 @@ def chisq_objective(
     return chisq, grad, curve
 
 
-@partial(jax.jit, static_argnames=("mode", "do_loglike", "do_grad", "do_curve"))
+@partial(jax.jit, static_argnames=("dataset_ind", "do_loglike", "do_grad", "do_curve"))
 def poisson_objective(
-    model: Model,
-    datavec: TODVec | SolutionSet,
-    mode: str = "tod",
+    metamodel: "MetaModel",
+    dataset_ind: int,
     do_loglike: bool = True,
     do_grad: bool = True,
     do_curve: bool = True,
 ) -> tuple[jax.Array, jax.Array, jax.Array]:
     """
     Objective function to minimize when fitting a dataset where a Poisson distribution is reasonible.
-    This is an MPI aware function.
+    This is not an MPI aware function, use `joint_objective` for MPI aware calculation.
 
     Parameters
     ----------
-    model : Model
-        The model object we are using to fit.
-    datavec: TODVec | SolutionSet
-        The data to fit against.
-        This is what we use to compute our fit residuals.
-    mode : str, default: "tod"
-        The type of data we compile this function for.
-        Should be either "tod" or "map".
+    metamodel : MetaModel
+        The metamodel object we are using to fit.
+    dataset_ind: int
+        The index of the dataset within `metamodel` that we are calculating the objective for.
     do_loglike : bool, default: True
         If True then we will compute the log-likelihood between
         the model and the data.
@@ -270,9 +233,7 @@ def poisson_objective(
         This is a `(npar, npar)` array.
         Note that there is a factor of -2 here to make it add with the cruvature of chi-squared.
     """
-    if mode not in ["tod", "map"]:
-        raise ValueError("Invalid mode")
-    npar = len(model.pars)
+    npar = len(metamodel.parameters)
     loglike = jnp.array(0)
     grad = jnp.zeros(npar)
     curve = jnp.zeros((npar, npar))
@@ -280,24 +241,15 @@ def poisson_objective(
     zero = jnp.zeros((1, 1))
     only_loglike = not (do_grad or do_curve)
 
-    for data in datavec:
-        if mode == "tod":
-            x = data.x * wu.rad_to_arcsec
-            y = data.y * wu.rad_to_arcsec
-            if only_loglike:
-                pred_dat = model.to_tod(x, y)
-                grad_dat = zero
-            else:
-                pred_dat, grad_dat = model.to_tod_grad(x, y)
+    dataset = metamodel.datasets[dataset_ind]
+    if dataset.mode not in ["tod", "map"]:
+        raise ValueError("Invalid mode")
+    for i, data in enumerate(dataset.datavec):
+        pred_dat = metamodel.model_proj(dataset_ind, i)
+        if only_loglike:
+            grad_dat = zero
         else:
-            x, y = data.xy
-            if only_loglike:
-                pred_dat = model.to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
-                grad_dat = zero
-            else:
-                pred_dat, grad_dat = model.to_map_grad(
-                    x * wu.rad_to_arcsec, y * wu.rad_to_arcsec
-                )
+            grad_dat = metamodel.model_grad_proj(dataset_ind, i)
 
         resid = (data.data / pred_dat) - 1
         if do_loglike:
@@ -327,5 +279,5 @@ def poisson_objective(
                     jnp.transpose(grad_dat),
                 )
             )
-
+    print("LOGLIKELIHOOD: ", 2 * loglike)
     return -2 * loglike, -2 * grad, -2 * curve

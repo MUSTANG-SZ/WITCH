@@ -11,7 +11,7 @@ import numpy as np
 
 from .grid import transform_grid
 from .powerlaw import broken_power
-from .utils import ap, get_da, get_hz, get_nz, h70
+from .utils import ap, get_da, get_hz, get_nz, h70, pa_to_kevcm3
 
 
 def _get_nonpara(signature, prefix_list=["nonpara_"]):
@@ -693,6 +693,81 @@ def isobeta(
     rrpow = rr**power
 
     return amp * rrpow
+
+
+@jax.jit
+def qso(
+    dx: float,
+    dy: float,
+    dz: float,
+    z: float,
+    age: float,
+    Lw12: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+):
+    r"""
+    QSO model from Kyle Massingill. This is basically a uniform model where the
+    amplitude and radius are parameterized by the luminosity, Lw12, which
+    is just the luminosity in solar units. The function calculates an amplitude
+    and radius from Lw12, and then is simply a constant pressure model with
+    that amplitude within that radius and 0 outside. Note unlike add_uniform
+    this function does not modify an underlying pressure grid.
+    Parameters
+    ----------
+    dx : float
+        RA of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dy : float
+        Dec of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dz : float
+        Line of sight offset of cluster center relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    age : float
+        Age of the outflow.
+        Units: yr x $10^8$
+    z : float
+        Redshift of QSO.
+        Units: redshift
+    Lw12 : float
+        Luminosity of QSO.
+        Units: $M_{\odot}$
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+
+    Returns
+    -------
+    model : jax.Array
+        The QSO model evaluated on the 3D grid
+    """
+
+    beta = 0.8828
+    time = age * 1.0e8 * 365.25 * 24 * 3600
+    Omega_b = 0.022 * (1 / 0.7) ** 2
+    H0_kpc = 70 / (3.09e19)
+    rho_crit = 3 * H0_kpc**2 / (8 * jnp.pi * 6.67e-11)
+    bQ = 13
+    delta = 180
+    Lw12 *= 3.828e26  # Convert from solar luminosity
+    r2 = (
+        beta
+        * (Lw12 * time**3 / Omega_b / rho_crit / (1 + z) ** 2 / (1 + bQ * delta)) ** 0.2
+    )  # m
+    pbub = 0.4 * 0.75 / jnp.pi * Lw12 * time / r2**3
+    pe = pbub / 1.92  # Pascals
+    pe *= pa_to_kevcm3  # keV/cm3
+    r2 /= 3.09e22  # Mpc
+    r2 /= get_da(z=z)
+
+    x, y, z, *_ = transform_grid(dx, dy, dz, 1.0, 1.0, 1.0, 0.0, xyz)
+    r = jnp.sqrt(x**2 + y**2 + z**2)
+    pressure = jnp.where(r <= r2, pe, 0)
+
+    return pressure
 
 
 @jax.jit
@@ -1417,6 +1492,7 @@ N_PAR_SPH_ISOBETA = len(inspect.signature(sph_isobeta).parameters) - 1
 N_PAR_GNFW = len(inspect.signature(gnfw).parameters) - 1
 N_PAR_GNFW_RS = len(inspect.signature(gnfw_rs).parameters) - 1
 N_PAR_EGNFW = len(inspect.signature(egnfw).parameters) - 1
+N_PAR_QSO = len(inspect.signature(qso).parameters) - 1
 N_PAR_A10 = len(inspect.signature(a10).parameters) - 1
 N_PAR_EA10 = len(inspect.signature(ea10).parameters) - 1
 N_PAR_CYLINDRICAL = len(inspect.signature(cylindrical_beta).parameters) - 1
@@ -1427,7 +1503,6 @@ N_PAR_UNIFORM = len(inspect.signature(add_uniform).parameters) - 2
 N_PAR_EXPONENTIAL = len(inspect.signature(add_exponential).parameters) - 2
 N_PAR_POWERLAW = len(inspect.signature(add_powerlaw).parameters) - 2
 N_PAR_NONPARA_POWER = len(inspect.signature(nonpara_power).parameters) - 1
-
 N_NONPARA_POWER = _get_nonpara(inspect.signature(nonpara_power))
 
 # Make a convenience mapping
@@ -1446,6 +1521,7 @@ STRUCT_FUNCS = {
     "gnfw_rs": gnfw_rs,
     "egnfw": egnfw,
     "isobeta": isobeta,
+    "qso": qso,
     "sph_isobeta": sph_isobeta,
     "nonpara_power": nonpara_power,
 }
@@ -1464,6 +1540,7 @@ STRUCT_N_PAR = {
     "gnfw_rs": N_PAR_GNFW_RS,
     "egnfw": N_PAR_EGNFW,
     "isobeta": N_PAR_ISOBETA,
+    "qso": N_PAR_QSO,
     "sph_isobeta": N_PAR_SPH_ISOBETA,
     "nonpara_power": N_PAR_NONPARA_POWER,
 }
@@ -1480,11 +1557,12 @@ STRUCT_STAGE = {
     "powerlaw_cos": 1,
     "uniform": 1,
     "egaussian": 0,
-    "gaussian": 3,
+    "gaussian": 2,
     "gnfw": 0,
     "gnfw_rs": 0,
     "egnfw": 0,
     "isobeta": 0,
+    "qso": 0,
     "sph_isobeta": 0,
     "nonpara_power": -1,
 }

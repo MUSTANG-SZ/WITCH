@@ -8,11 +8,7 @@ base: "MOOJ1142_M2_base.yaml"
 name: "MOOJ1142_M2"
 
 # Define the model
-model:
-  # Unit conversion to apply at the end
-  # Will be evaled
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
-  # Structure to include in the model
+cluster_model:
   structures:
     # Name of the first structure
     a10:
@@ -62,6 +58,8 @@ model:
         z:
           value: 0.97 
           priors: [.9, 1]
+ps_model:
+  structures:
     ps_gauss:
       structure: "gaussian"
       parameters:
@@ -78,3 +76,23 @@ model:
         amp_g:
           value: 0.01
           to_fit: True
+
+datasets:
+  mustang2:
+    point_sources:
+      - "ps_model"
+  act:
+    point_sources:
+      - "ps_model"
+
+metamodel:
+  models:
+    - cluster_model
+    - ps_model
+  model_map:
+    mustang2:
+      - cluster_model
+      - ps_model
+
+
+

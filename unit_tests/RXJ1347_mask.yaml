@@ -1,0 +1,73 @@
+base: "base_unit.yaml" #Specifies the config this file is based on
+name: "RXJ1347" # Name of the cluster
+noise_map: True # Whether to make the noise map
+model_map: True # Whether to make a map of just the model
+
+cluster_model:
+  structures:
+    #The first structure is called a10
+    a10:
+      # The first structure is witch.structures.a10
+      structure: "a10"
+      parameters:
+        dx_1:
+          value: 0.0 # Units: arcsec, defined as an offset from x0 as set in base_unit.yaml
+          to_fit: [True, True, False, True] # Fit on all but the third rounds
+          priors: [-9.0, 9.0] 
+        dy_1:
+          value: 0.0 # Units: arcsec, defined as an offset from y0 as set in base_unit.yaml
+          to_fit: [True, True, False, True]
+          priors: [-9.0, 9.0]
+        dz_1: # Line of sight offset. This is typically unconstrained so generally should be fixed to 0
+          value: 0.0 
+        theta: # Rotation of the model with respect to the positive y axis
+          value: 0.0
+        P0: # Central pressure in units of keV / cm^3
+          value: 8.403
+        c500: # Central concentration
+          value: 1.177 
+        m500: # Cluster mass in M_solar
+          value: "1.5e15"
+          to_fit: [True, False, True, True] 
+        gamma: # Inner profile slope
+          value: .3081 
+        alpha: # Mid profile slope
+          value: 1.551 
+        beta: # Outer profile slope
+          value: 5.4905 
+        z:
+          value: 0.97 
+ps_model:
+  structures:
+    ps_gauss:
+      structure: "gaussian"
+      parameters:
+        dx_g: # Units: arcsec, defined as an offset from x0 as set in base_unit.yaml
+          value: 0.0
+          to_fit: [True, True, False, True]
+          priors: [-9.0, 9.0]
+        dy_g: # Units: arcsec, defined as an offset from y0 as set in base_unit.yaml
+          value: 0.0
+          to_fit: [True, True, False, True]
+          priors: [-9.0, 9.0]
+        sigma: # FWHM of the gaussian in arcsec
+          value: 4
+        amp_g: # Amplitude in map units (K_RJ)
+          value: 0.002
+          to_fit: [True, False, True, True]
+
+# Add some info on what metadata to apply
+datasets:
+  mustang2:
+    point_sources:
+      - "ps_model"
+    mask: 20
+
+metamodel:
+  models:
+    - cluster_model
+    - ps_model
+  model_map:
+    mustang2:
+      - cluster_model
+      - ps_model

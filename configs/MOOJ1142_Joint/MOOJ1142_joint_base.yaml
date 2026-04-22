@@ -10,7 +10,7 @@ noise_map: True
 constants:
   Te: 5.0
   freq: "90e9"
-  z: 0.451
+  z: 1.19 
 
 mcmc:
   run: False
@@ -73,7 +73,7 @@ datasets:
       get_files: "mf.get_files"
       load_tods: "mf.load_tods"
       get_info: "mf.get_info"
-      make_beam: "mf.make_beam"
+      make_metadata: "mf.make_metadata"
       preproc: "mf.preproc"
       postproc: "mf.postproc"
       postfit: "mf.postfit"
@@ -114,7 +114,7 @@ datasets:
       get_files: "amf.get_files"
       load: "amf.load_maps"
       get_info: "amf.get_info"
-      make_beam: "amf.make_beam"
+      make_metadata: "amf.make_metadata"
       preproc: "amf.preproc"
       postproc: "amf.postproc"
       postfit: "amf.postfit"

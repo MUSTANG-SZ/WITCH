@@ -1,0 +1,86 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "MS0735_base.yaml"
+
+# Cluster name
+# Used both for the output path as well as to load presets
+name: "MS0735"
+sim: False # If True use TODs to make noise and add a simulated cluster
+fit: false
+
+paths:
+  subdir: "new_tods_mask"
+
+# Define the model
+cluster_model:
+  structures:
+    # Name of the first structure
+    a10:
+      structure: "a10" # What type of structure it is
+      parameters:
+        dx_1: # Name of the first parameter
+          value: 0.0 # Value to use/start at, will be evaled
+          to_fit: True
+          priors: [-9.0, 9.0]
+        dy_1:
+          value: 0.0
+          to_fit: True
+          priors: [-9.0, 9.0]
+        dz_1:
+          value: 0.0
+        theta:
+          value: 0. 
+        P0:
+          value: 3.202
+        c500:
+          value: 1.083
+        m500:
+          value: "8.4e14"
+          to_fit: True
+        gamma:
+          value: 0.3798
+          to_fit: True 
+        alpha:
+          value: 1.4063
+        beta:
+          value: 5.4905
+        z:
+          value: 1.19
+ps_model:  
+  structures:
+    ps_gauss:
+        structure: "gaussian"
+        parameters:
+          dx_g:
+            value: 0.0
+            to_fit: True
+            priors: [-5.0, 5.0] 
+          dy_g:
+            value: 0.0
+            to_fit: True
+            priors: [-5.0, 5.0]
+          sigma:
+            value: 4.0
+          amp_g:
+            value: 0.01
+            to_fit: True
+  
+# Add some info on what metadata to apply
+datasets:
+  mustang2:
+    mask: 100
+    point_sources:
+      - "ps_model"
+
+metamodel:
+  models:
+    - cluster_model
+    - ps_model
+  model_map:
+    mustang2:
+      - cluster_model
+      - ps_model
+
+
+

@@ -1,3 +1,162 @@
+## 10.6.0 (2026-04-21)
+
+### Feat
+
+- add example of changing parameters
+
+## 10.5.0 (2026-04-21)
+
+### Feat
+
+- new MS0735 configs
+
+## 10.4.0 (2026-04-21)
+
+### Feat
+
+- fix up the model plotting notebook and move it to supported tools
+
+## 10.3.4 (2026-04-20)
+
+### Fix
+
+- remove masking from MS0735 base:
+
+## 10.3.3 (2026-04-20)
+
+### Fix
+
+- add wcs info to snmap
+
+## 10.3.2 (2026-04-16)
+
+### Fix
+
+- update more configs
+- updating MOO1142 configs
+
+## 10.3.1 (2026-04-16)
+
+### Fix
+
+- double applying flip to tods when mapmaking noise
+
+## 10.3.0 (2026-04-08)
+
+### Feat
+
+- finish adding masking to witch
+
+### Fix
+
+- change naming of MS0735 file and updated configs
+
+## 10.2.0 (2026-03-20)
+
+### Feat
+
+- up QSO mass so we can see it
+
+### Fix
+
+- fix QSO yamls
+
+## 10.1.0 (2026-03-13)
+
+### Feat
+
+- update to metamodel
+- finish qso and add config files
+- starting QSO
+
+### Fix
+
+- get Lw12 in units of solar mass
+- wrong order for jnp.where
+- xyz in wrong order
+
+## 10.0.0 (2026-03-13)
+
+### Feat
+
+- don't deepcopy metamodel
+- add ps list to act
+- add metadata for act maps
+- add metadata application and mapping
+- first pass at new metadata system for beam conv
+- first pass at new metadata system for beam conv
+- add metamodel config system
+- working metamodel implementation required several breaking changes to model and dataset code
+- first pass of metamodel
+- add interface to choose which stages of the model to run
+
+### Fix
+
+- bools are ints in python, adjust checkpoint loader logic to match
+- unit test typo
+- nonpara fixes
+- mcmc fixes
+- remove tokens from mpi4jax calls
+- Move prefactor into metadata, don't use invsafe when computing step, and many small fixes
+- lots of fixes:
+- xray metadata fixes
+- reimplement para to non para conversion
+- reimplement structure removal for metamodel
+- reimplement model serialization for metamodel
+- incorrect import name
+
+### Refactor
+
+- make each stage a seperate function
+
+## 9.16.0 (2026-03-11)
+
+### Feat
+
+- no subcluster config for plot comparison
+- Diotima configs
+- AT2026dbl configs
+- Abell 780 configs
+
+### Fix
+
+- wrong redshift for moo1142
+
+## 9.15.0 (2026-02-20)
+
+### Feat
+
+- added unit tests for checkpoint functions, fixed _read_model
+- **fitter.py**: reesimate noise after loading checkpoint
+
+### Fix
+
+- correct _read_checkpoint and reestimate noise with loaded models
+- don't pickle datasets in checkpoints (contains unpicklable MPI objects)
+- use globals() for imports in model.py, add _save_checkpoint function, downgrade to compatible versions
+- **pyproject.toml**: changed jax, mpi4jax, and jitkasi requirements to allow local editable install
+- use globals() for imports to fix eval namespace issue
+
+## 9.14.0 (2026-02-19)
+
+### Feat
+
+- adding act stamping tools
+
+## 9.13.1 (2026-02-19)
+
+### Fix
+
+- add post-proc loop when fit==false
+
+## 9.13.0 (2026-02-19)
+
+### Feat
+
+- updated 1142 configs
+- updating width to including pointing error from Charles
+- update MOO1142 center position and beam shapes
+
 ## 9.12.0 (2025-12-22)
 
 ### Feat

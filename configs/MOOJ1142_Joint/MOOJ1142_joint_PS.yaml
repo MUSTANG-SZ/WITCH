@@ -22,8 +22,7 @@ mcmc:
   #sig_params: ["P0"]
 
 
-model:
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+ps_model:
   structures:
    ps_gauss:
       structure: "gaussian"
@@ -40,3 +39,20 @@ model:
         amp_g:
           value: 0.00135129
           to_fit: False 
+
+datasets:
+  mustang2:
+    point_sources:
+      - "ps_model"
+  act:
+    point_sources:
+      - "ps_model"
+
+metamodel:
+  models:
+    - ps_model
+  model_map:
+    mustang2:
+      - ps_model
+    act:
+      - ps_model

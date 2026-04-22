@@ -94,7 +94,6 @@ ps_model:
         amp_g:
           value: 0.00128582673
           to_fit: True
-
 datasets:
   mustang2:
     point_sources:

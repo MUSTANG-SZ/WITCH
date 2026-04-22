@@ -1,0 +1,18 @@
+base: "Abell780_base.yaml"
+
+# Cluster name
+# Used both for the output path as well as to load presets
+name: "Abell780E"
+
+paths:
+  maps: "Abell780/Abell780E"
+  tods: "Abell780/Abell780E"
+  subdir: "Abell780E"
+
+coords:
+  x0: "(139.525*u.deg).to(u.radian).value"
+  y0: "(-12.03333333*u.deg).to(u.radian).value"
+
+
+
+

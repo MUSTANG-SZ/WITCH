@@ -1,0 +1,20 @@
+base: "AT2026dbl_base.yaml"
+model:
+  structures:
+    ps_gauss:
+      structure: "gaussian"
+      parameters:
+        dx_g:
+          value: 0.
+          to_fit: True
+        dy_g:
+          value: 0
+          to_fit: True
+        sigma:
+          value: 5.1
+          to_fit: True
+        amp_g:
+          value: 0.00528582673
+          to_fit: True 
+
+
