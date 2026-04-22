@@ -9,16 +9,12 @@ name: "X_MOO1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
 paths:
-  subdir: "first_try"
-
-coords:
-  x0: "Angle('11 42 50.39 hours').to(u.radian).value" #circa center of main cluster
-  y0: "Angle('15:27:08.35 degrees').to(u.radian).value" #circa center of main cluster
+  subdir: "new_center"
 
 # Define the model
 model: # Unit conversion to apply at the end
   # Will be evaled
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+  unit_conversion: "float(1)"
   # Structure to include in the model
   structures:
     # Name of the first structure
@@ -60,9 +56,9 @@ model: # Unit conversion to apply at the end
       # Parameters for the structure
       parameters:
         dx_2:
-          value: 33.0
+          value: 32.0
         dy_2:
-          value: 7.0
+          value: 7.2
         dz_2:
           value: 0.0
         r_1:
