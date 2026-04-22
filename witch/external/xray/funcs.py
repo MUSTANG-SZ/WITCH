@@ -54,12 +54,14 @@ def load_maps(
         # The actual map
         f: fits.HDUList = fits.open(fname)
         wcs = WCS(f[0].header)  # type: ignore
-        dat = jnp.array(f[0].data.copy().T)  # type: ignore
+        dat_raw = jnp.array(f[0].data.copy().T)  # type: ignore
         ymin = 1
         ymax = 85
         xmin = 16
         xmax = 100
-        dat=dat[xmin:xmax,ymin:ymax]
+        dat_cut=dat_raw[xmin:xmax,ymin:ymax]
+        factor = 300 / len(dat_cut)
+        dat = zoom(dat_cut, factor, order=0)
         f.close()
         imaps += [maps.WCSMap(name, dat, comm, wcs, "nn")]
     mapset = SolutionSet(imaps, comm)
