@@ -34,7 +34,7 @@ cluster_model:
         dz_1:
           value: 0.0
         P0:
-          value: 0.373
+          value: 1.63 
           to_fit: True
         r_s:
           value: 4.5
