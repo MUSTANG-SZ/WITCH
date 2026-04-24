@@ -28,8 +28,8 @@ paths:
 
 coords:
   r_map: "3.0*60" # Radial size of grid in arcseconds
-  dr: "2.0" # Pixel size of grid in x and y in arcseconds
-  dz: 2.0 # Pixel size along the LOS, if not provided dr is used
+  dr: "4.0" # Pixel size of grid in x and y in arcseconds
+  dz: 4.0 # Pixel size along the LOS, if not provided dr is used
 
 # Settings that define the datasets we are working with
 # For now you can only have one, but this structure is in prep for the future
@@ -48,7 +48,7 @@ datasets:
       get_files: "mf.get_files"
       load_tods: "mf.load_tods"
       get_info: "mf.get_info"
-      make_beam: "mf.make_beam"
+      make_metadata: "mf.make_metadata" 
       preproc: "mf.preproc"
       postproc: "mf.postproc"
       postfit: "mf.postfit"
@@ -73,6 +73,7 @@ datasets:
     npass: 1 # How many passes of mapmaking to run
     freq: "float(90e9)"
     prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_RJ(90e9, cfg['constants']['Te'])*wu.XMpc/wu.me)"
+
 
 # Setting for the fitter
 fitting:
