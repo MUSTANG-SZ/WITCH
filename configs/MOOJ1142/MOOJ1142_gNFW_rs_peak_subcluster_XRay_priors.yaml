@@ -1,16 +1,15 @@
 # Base config to merge into
 # If an absolute path is given then it is used
 # Otherwise it is assumed to me reative to the directory of this file
-base: "MOOJ1142_joint_base.yaml"
+base: "MOOJ1142_base.yaml"
 
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
-
 paths:
-  subdir: "joint_xray_peak_rs_nosubcluster" # Subdirectory to use
+  subdir: "xray_peak_rs_priors" # Subdirectory to use
 
 mcmc:
   run: False 
@@ -22,6 +21,9 @@ mcmc:
   #n_rounds: 4
   #sig_params: ["P0"]
 
+coords:
+  x0: "(175.69766238*u.deg).to(u.radian).value" # eleonora peak
+  y0: "(15.45364413*u.deg).to(u.radian).value" #eleonora peak
 
 cluster_model:
   structures:
@@ -35,19 +37,19 @@ cluster_model:
         dz_1:
           value: 0.0
         P0:
-          value: 0.373
+          value: 1.63 
           to_fit: True
         r_s:
-          value: 26
+          value: 4.5
           to_fit: True
         gamma:
-          value: -0.717
+          value: 0.465
           to_fit: True
         alpha:
-          value: 1.233
+          value: 2.26
           to_fit: True
         beta:
-          value: 3.377
+          value: 2.05
           to_fit: True
         z:
           value: 1.19
@@ -69,12 +71,8 @@ ps_model:
         amp_g:
           value: 0.00128582673
           to_fit: True
-
 datasets:
   mustang2:
-    point_sources:
-      - "ps_model"
-  act:
     point_sources:
       - "ps_model"
 
@@ -86,6 +84,4 @@ metamodel:
     mustang2:
       - cluster_model
       - ps_model
-    act:
-      - cluster_model
-      - ps_model
+
