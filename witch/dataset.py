@@ -16,7 +16,7 @@ from mpi4py import MPI
 
 from . import utils as wu
 from .objective import ObjectiveFunc
-from .utils import beam_conv, beam_conv_vec
+from .utils import fft_conv, beam_conv, beam_conv_vec
 
 DataVec = TODVec | SolutionSet
 
@@ -85,6 +85,7 @@ class MetaData:
         applied : Array
             The model with the metadata applied.
         """
+        #self.prefactor * self.exp_map * fft_conv(model, self.beam_map)
         return model
 
     def apply_grad(self, model_grad: Array) -> Array:

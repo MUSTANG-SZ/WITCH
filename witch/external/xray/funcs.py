@@ -313,19 +313,19 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
     # Make Model maps
     if cfg.get("model_map", cfg.get("map", True)):
         print_once("Making model map")
-        if model is None:
+        if metamodel is None:
             raise ValueError(
                 "Somehow trying to make a model map with no model defined!"
             )
-        for imap in mapset:
+        for imap in dset.datavec:
             x, y = imap.xy
-            pred = model.to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
+            pred = metamodel.to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
             imap.data = pred
 
             hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
             hdul = fits.HDUList([hdu])
             hdul.writeto(
-                os.path.join(outdir, dset_name, f"{imap.name}_truth.fits"),
+                os.path.join(outdir, dset.name, f"{imap.name}_truth.fits"),
                 overwrite=True,
             )
 
