@@ -53,6 +53,32 @@ cluster_model:
           to_fit: True
         z:
           value: 1.19
+    sph_isobeta:
+      structure: "sph_isobeta"
+      parameters:
+        x0:
+          value: -33.423264
+            #priors: [-25., -65.]
+          to_fit: False 
+        y0:
+          value: 7.26858 
+            #priors: [0., 20.]
+          to_fit: False
+        z0:
+          value: 0.0
+        r:
+          value: 23.9
+          to_fit: True
+        theta:
+          value: 0.0
+        beta:
+          value: 2.56
+          to_fit: True
+          priors: [0.0, 10.0]
+        amp:
+          value: 0.05
+          to_fit: True
+          priors: [0.0, 10.0]
 
 ps_model:
   structures:
