@@ -1,3 +1,10 @@
+## 10.9.0 (2026-05-13)
+
+### Feat
+
+- add full cov saving to metamodel/model
+- starting to add covariance tracking everywhere
+
 ## 10.8.0 (2026-05-13)
 
 ### Feat
