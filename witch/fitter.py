@@ -370,7 +370,7 @@ def _run_fit(
     to_fit = np.array(metamodel.to_fit)
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
-    metamodel, i, delta_chisq, cov = run_lmfit(
+    metamodel, i, delta_chisq = run_lmfit(
         metamodel,
         eval(str(cfg["fitting"].get("maxiter", "10"))),
         eval(str(cfg["fitting"].get("chitol", "1e-5"))),

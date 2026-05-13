@@ -224,14 +224,13 @@ def run_lmfit(
         pars=pars, errs=metamodel.errs, cov=metamodel.cov, chisq=metamodel.chisq
     )
     _, grad, curve = joint_objective(metamodel, True, True, True)
-    cov = invscale(curve, do_invsafe=True)
     i, delta_chisq, _, metamodel, cov, *_ = jax.lax.while_loop(
         _cond_func,
         _body_func,
         (0, jnp.astype(jnp.inf, jnp.float32), zero.copy(), metamodel, cov, curve, grad),
     )
 
-    return metamodel, i, delta_chisq, cov
+    return metamodel, i, delta_chisq
 
 
 def hmc(
