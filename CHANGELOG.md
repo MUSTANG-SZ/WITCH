@@ -1,3 +1,10 @@
+## 10.8.0 (2026-05-13)
+
+### Feat
+
+- configs with compton-y
+- updating MOOJ1142 configs
+
 ## 10.7.0 (2026-04-22)
 
 ### Feat
