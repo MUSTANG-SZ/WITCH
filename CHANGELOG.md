@@ -1,3 +1,13 @@
+## 10.10.0 (2026-05-13)
+
+### Feat
+
+- update configs to include X-ray priors
+
+### Fix
+
+- peak subcluster X-ray was missing actual subcluster
+
 ## 10.9.0 (2026-05-13)
 
 ### Feat
