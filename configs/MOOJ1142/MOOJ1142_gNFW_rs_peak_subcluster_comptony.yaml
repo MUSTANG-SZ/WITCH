@@ -1,7 +1,7 @@
 # Base config to merge into
 # If an absolute path is given then it is used
 # Otherwise it is assumed to me reative to the directory of this file
-base: "MOOJ1142_base.yaml"
+base: "MOOJ1142_y_base.yaml"
 
 # Cluster name
 # Used both for the output path as well as to load presets
@@ -9,7 +9,7 @@ name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
 paths:
-  subdir: "xray_peak_rs" # Subdirectory to use
+  subdir: "compton-y_xray_peak_rs" # Subdirectory to use
 
 mcmc:
   run: False 
@@ -37,19 +37,19 @@ cluster_model:
         dz_1:
           value: 0.0
         P0:
-          value: 0.373
+          value: 1.63 
           to_fit: True
         r_s:
-          value: 26
+          value: 4.5
           to_fit: True
         gamma:
-          value: -0.717
+          value: 0.465
           to_fit: True
         alpha:
-          value: 1.233
+          value: 2.26
           to_fit: True
         beta:
-          value: 3.377
+          value: 2.05
           to_fit: True
         z:
           value: 1.19
@@ -67,12 +67,13 @@ cluster_model:
         z0:
           value: 0.0
         r:
-          value: 10.0
+          value: 23.9
+
           to_fit: True
         theta:
           value: 0.0
         beta:
-          value: 3.0
+          value: 2.56
           to_fit: True
           priors: [0.0, 10.0]
         amp:
