@@ -366,7 +366,7 @@ class MetaModel:
         return dataset_ind
 
     def update(
-        self, vals: jax.Array, errs: jax.Array, cov: jax.Array, chisq: jax.Array
+        self, pars: jax.Array, errs: jax.Array, cov: jax.Array, chisq: jax.Array
     ) -> Self:
         """
         Update the parameter values and errors as well as the model chi-squared
@@ -374,7 +374,7 @@ class MetaModel:
 
         Parameters
         ----------
-        vals : jax.Array
+        pars : jax.Array
             The new parameter values.
             Should be in the same order as `pars`.
         errs : jax.Array
@@ -394,13 +394,13 @@ class MetaModel:
             While nominally the metamodel will update in place, returning it
             alows us to use this function in JITed functions.
         """
-        self.parameters = vals
+        self.parameters = pars
         self.errs = errs
         self.cov = cov
         self.chisq = chisq
         self.models = tuple(
             deepcopy(model).update(
-                vals[jnp.array(par_map)],
+                pars[jnp.array(par_map)],
                 errs[jnp.array(par_map)],
                 cov[jnp.array(par_map)],
                 chisq,

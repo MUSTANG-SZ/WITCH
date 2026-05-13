@@ -312,31 +312,6 @@ def _save_model(cfg, metamodel, desc_str, nonpara=False):
         yaml.dump(final, file)
 
 
-def _save_cov(cfg: dict, cov: jax.Array, desc_str: str) -> None:
-    """
-    Save the covariance matrix to a file. Only rank 0 will save.
-
-    Parameters
-    ----------
-    cfg : dict
-        The config dictionary, used to get the output directory.
-    cov : jax.Array
-        The covariance matrix to save.
-    desc_str : str
-        A string to describe the covariance matrix, used in the filename.
-
-    Returns
-    -------
-    None
-    """
-    outdir = cfg["outdir"]
-    if comm.Get_rank() != 0:
-        return
-    cov_path = os.path.join(outdir, f"cov_{desc_str}.pk")
-    with open(cov_path, "wb") as f:
-        pk.dump(cov, f)
-
-
 def _reestimate_noise(metamodel):
     for i, dataset in enumerate(metamodel.datasets):
         for j, data in enumerate(dataset.datavec):
@@ -408,7 +383,6 @@ def _run_fit(
 
     print_once(metamodel)
     _save_model(cfg, metamodel, f"fit{r}", nonpara)
-    _save_cov(cfg, cov, f"fit{r}")
 
     metamodel = _reestimate_noise(metamodel)
     return metamodel
@@ -565,13 +539,17 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
         params = params.at[metamodel.to_fit_ever].multiply(
             par_offset
         )  # Don't start at exactly the right value
-        metamodel = metamodel.update(params, metamodel.errors, metamodel.chisq)
+        metamodel = metamodel.update(
+            pars=params, errs=metamodel.errs, cov=metamodel.cov, chisq=metamodel.chisq
+        )
 
     # Compile objective function
     print_once("Compiling objective function")
     t0 = time.time()
     chisq, *_ = joint_objective(metamodel)
-    metamodel = metamodel.update(metamodel.parameters, metamodel.errors, chisq)
+    metamodel = metamodel.update(
+        pars=metamodel.parameters, errs=metamodel.errs, cov=metamodel.cov, chisq=chisq
+    )
     print_once(f"Took {time.time() - t0} s to compile")
 
     print_once(
@@ -849,15 +827,18 @@ def main():
                 )
                 nonpara_models += [nonpara_model]
             nonpara_models = tuple(nonpara_models)
-            par_map, pars, errs = _compute_par_map_and_pars(mm_cfg, nonpara_models)
+            par_map, pars, errs, cov = _compute_par_map_and_pars(mm_cfg, nonpara_models)
             metadata_map = _compute_metadata_map(nonpara_models, metamodel.datasets)
             nonparametamodel = copy(metamodel)
             nonparametamodel.models = nonpara_models
             nonparametamodel.parameter_map = par_map
             nonparametamodel.parameters = pars
-            nonparametamodel.errors = errs
+            nonparametamodel.errs = errs
+            nonparametamodel.cov = cov
             nonparametamodel.metadata_map = metadata_map
-            nonparametamodel = nonparametamodel.update(pars, errs, metamodel.chisq)
+            nonparametamodel = nonparametamodel.update(
+                pars=pars, errs=errs, cov=nonparametamodel.cov, chisq=metamodel.chisq
+            )
 
             outdir = get_outdir(cfg, nonparametamodel)
             cfg["outdir"] = outdir

@@ -189,11 +189,15 @@ def run_lmfit(
         )
         cov = jnp.where(to_fit, invscale(curve_use, do_invsafe=True), 0)
         # Now lets get an updated model
-        new_metamodel = copy(metamodel).update(new_pars, errs, metamodel.chisq)
+        new_metamodel = copy(metamodel).update(
+            pars=new_pars, errs=errs, cov=cov, chisq=metamodel.chisq
+        )
         new_chisq, new_grad, new_curve = joint_objective(
             new_metamodel, True, True, True
         )
-        new_metamodel = copy(new_metamodel).update(new_pars, errs, new_chisq)
+        new_metamodel = copy(new_metamodel).update(
+            pars=new_pars, errs=errs, cov=cov, chisq=new_chisq
+        )
 
         new_delta_chisq = jnp.astype(metamodel.chisq - new_metamodel.chisq, jnp.float32)
         metamodel, grad, curve, delta_chisq, lmd = jax.lax.cond(
@@ -216,7 +220,9 @@ def run_lmfit(
     pars, _ = _prior_pars_fit(
         metamodel.priors, metamodel.parameters, jnp.array(metamodel.to_fit)
     )
-    metamodel = metamodel.update(pars, metamodel.errors, metamodel.chisq)
+    metamodel = metamodel.update(
+        pars=pars, errs=metamodel.errs, cov=metamodel.cov, chisq=metamodel.chisq
+    )
     _, grad, curve = joint_objective(metamodel, True, True, True)
     cov = invscale(curve, do_invsafe=True)
     i, delta_chisq, _, metamodel, cov, *_ = jax.lax.while_loop(
