@@ -156,6 +156,8 @@ def run_lmfit(
         The number of iterations the fitter ran for.
     delta_chisq : float
         The final delta chisq.
+    curve : jax.Array
+        The final covariance matrix.
     """
     zero = jnp.array(0.0, jnp.float32)
     chitol = jnp.float32(chitol)
@@ -170,7 +172,7 @@ def run_lmfit(
 
     @jax.jit
     def _body_func(val):
-        i, delta_chisq, lmd, metamodel, curve, grad = val
+        i, delta_chisq, lmd, metamodel, cov, curve, grad = val
         curve_use = curve.at[:].add(lmd * jnp.diag(jnp.diag(curve)))
         # Get the step
         step = jnp.dot(
@@ -185,12 +187,17 @@ def run_lmfit(
         errs = jnp.where(
             to_fit, jnp.sqrt(jnp.diag(invscale(curve_use, do_invsafe=True))), 0
         )
+        cov = jnp.where(to_fit, invscale(curve_use, do_invsafe=True), 0)
         # Now lets get an updated model
-        new_metamodel = copy(metamodel).update(new_pars, errs, metamodel.chisq)
+        new_metamodel = copy(metamodel).update(
+            pars=new_pars, errs=errs, cov=cov, chisq=metamodel.chisq
+        )
         new_chisq, new_grad, new_curve = joint_objective(
             new_metamodel, True, True, True
         )
-        new_metamodel = copy(new_metamodel).update(new_pars, errs, new_chisq)
+        new_metamodel = copy(new_metamodel).update(
+            pars=new_pars, errs=errs, cov=cov, chisq=new_chisq
+        )
 
         new_delta_chisq = jnp.astype(metamodel.chisq - new_metamodel.chisq, jnp.float32)
         metamodel, grad, curve, delta_chisq, lmd = jax.lax.cond(
@@ -208,20 +215,23 @@ def run_lmfit(
             lmd,
         )
 
-        return (i + 1, delta_chisq, lmd, metamodel, curve, grad)
+        return (i + 1, delta_chisq, lmd, metamodel, cov, curve, grad)
 
     pars, _ = _prior_pars_fit(
         metamodel.priors, metamodel.parameters, jnp.array(metamodel.to_fit)
     )
-    metamodel = metamodel.update(pars, metamodel.errors, metamodel.chisq)
+    metamodel = metamodel.update(
+        pars=pars, errs=metamodel.errs, cov=metamodel.cov, chisq=metamodel.chisq
+    )
     _, grad, curve = joint_objective(metamodel, True, True, True)
-    i, delta_chisq, _, metamodel, *_ = jax.lax.while_loop(
+    cov = invscale(curve, do_invsafe=True)
+    i, delta_chisq, _, metamodel, cov, *_ = jax.lax.while_loop(
         _cond_func,
         _body_func,
-        (0, jnp.astype(jnp.inf, jnp.float32), zero.copy(), metamodel, curve, grad),
+        (0, jnp.astype(jnp.inf, jnp.float32), zero.copy(), metamodel, cov, curve, grad),
     )
 
-    return metamodel, i, delta_chisq
+    return metamodel, i, delta_chisq, cov
 
 
 def hmc(

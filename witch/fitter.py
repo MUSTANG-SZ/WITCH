@@ -370,7 +370,7 @@ def _run_fit(
     to_fit = np.array(metamodel.to_fit)
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
-    metamodel, i, delta_chisq = run_lmfit(
+    metamodel, i, delta_chisq, cov = run_lmfit(
         metamodel,
         eval(str(cfg["fitting"].get("maxiter", "10"))),
         eval(str(cfg["fitting"].get("chitol", "1e-5"))),
@@ -539,13 +539,17 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
         params = params.at[metamodel.to_fit_ever].multiply(
             par_offset
         )  # Don't start at exactly the right value
-        metamodel = metamodel.update(params, metamodel.errors, metamodel.chisq)
+        metamodel = metamodel.update(
+            pars=params, errs=metamodel.errs, cov=metamodel.cov, chisq=metamodel.chisq
+        )
 
     # Compile objective function
     print_once("Compiling objective function")
     t0 = time.time()
     chisq, *_ = joint_objective(metamodel)
-    metamodel = metamodel.update(metamodel.parameters, metamodel.errors, chisq)
+    metamodel = metamodel.update(
+        pars=metamodel.parameters, errs=metamodel.errs, cov=metamodel.cov, chisq=chisq
+    )
     print_once(f"Took {time.time() - t0} s to compile")
 
     print_once(
@@ -823,15 +827,18 @@ def main():
                 )
                 nonpara_models += [nonpara_model]
             nonpara_models = tuple(nonpara_models)
-            par_map, pars, errs = _compute_par_map_and_pars(mm_cfg, nonpara_models)
+            par_map, pars, errs, cov = _compute_par_map_and_pars(mm_cfg, nonpara_models)
             metadata_map = _compute_metadata_map(nonpara_models, metamodel.datasets)
             nonparametamodel = copy(metamodel)
             nonparametamodel.models = nonpara_models
             nonparametamodel.parameter_map = par_map
             nonparametamodel.parameters = pars
-            nonparametamodel.errors = errs
+            nonparametamodel.errs = errs
+            nonparametamodel.cov = cov
             nonparametamodel.metadata_map = metadata_map
-            nonparametamodel = nonparametamodel.update(pars, errs, metamodel.chisq)
+            nonparametamodel = nonparametamodel.update(
+                pars=pars, errs=errs, cov=nonparametamodel.cov, chisq=metamodel.chisq
+            )
 
             outdir = get_outdir(cfg, nonparametamodel)
             cfg["outdir"] = outdir

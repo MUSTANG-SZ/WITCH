@@ -61,8 +61,10 @@ class MetaModel:
         to apply to `MetaModel.models[i]`.
     parameters : jax.Array
         The parameters of this `MetaModel`.
-    errors : jax.Array
+    errs : jax.Array
         The error currently associated with each element of `MetaModel.parameters`.
+    cov : jax.Array
+        The covariance matrix currently associated with `MetaModel.parameters`.
     chisq : jax.Array
         The log-likelihood of the current state of the `MetaModel`.
     """
@@ -74,7 +76,8 @@ class MetaModel:
     model_map: tuple[tuple[int, ...], ...]
     metadata_map: tuple[tuple[tuple[int, ...], ...], ...]
     parameters: jax.Array
-    errors: jax.Array
+    errs: jax.Array
+    cov: jax.Array
     chisq: jax.Array
 
     def __repr__(self) -> str:
@@ -362,18 +365,23 @@ class MetaModel:
                 break
         return dataset_ind
 
-    def update(self, vals: jax.Array, errs: jax.Array, chisq: jax.Array) -> Self:
+    def update(
+        self, pars: jax.Array, errs: jax.Array, cov: jax.Array, chisq: jax.Array
+    ) -> Self:
         """
         Update the parameter values and errors as well as the model chi-squared
         for all models in the metamodel.
 
         Parameters
         ----------
-        vals : jax.Array
+        pars : jax.Array
             The new parameter values.
             Should be in the same order as `pars`.
         errs : jax.Array
             The new parameter errors.
+            Should be in the same order as `pars`.
+        cov : jax.Array
+            The new parameter covariance matrix.
             Should be in the same order as `pars`.
         chisq : jax.Array
             The new chi-squared.
@@ -386,12 +394,16 @@ class MetaModel:
             While nominally the metamodel will update in place, returning it
             alows us to use this function in JITed functions.
         """
-        self.parameters = vals
-        self.errors = errs
+        self.parameters = pars
+        self.errs = errs
+        self.cov = cov
         self.chisq = chisq
         self.models = tuple(
             deepcopy(model).update(
-                vals[jnp.array(par_map)], errs[jnp.array(par_map)], chisq
+                pars[jnp.array(par_map)],
+                errs[jnp.array(par_map)],
+                cov[jnp.array(par_map)],
+                chisq,
             )
             for model, par_map in zip(self.models, self.parameter_map)
         )
@@ -516,7 +528,9 @@ class MetaModel:
         new_metamodel = self.__class__.from_config(
             self.global_comm, cfg, self.datasets, True
         )
-        new_metamodel = new_metamodel.update(self.parameters, self.errors, self.chisq)
+        new_metamodel = new_metamodel.update(
+            self.parameters, self.errs, self.cov, self.chisq
+        )
         return new_metamodel
 
     @classmethod
@@ -565,7 +579,7 @@ class MetaModel:
             for dset in datasets
         )
 
-        par_map, pars, errs = _compute_par_map_and_pars(metacfg, models)
+        par_map, pars, errs, cov = _compute_par_map_and_pars(metacfg, models)
 
         metadata_map = _compute_metadata_map(models, datasets)
 
@@ -578,6 +592,7 @@ class MetaModel:
             metadata_map,
             pars,
             errs,
+            cov,
             models[0].chisq,
         )
 
@@ -588,7 +603,8 @@ class MetaModel:
             self.models,
             self.datasets,
             self.parameters,
-            self.errors,
+            self.errs,
+            self.cov,
             self.chisq,
         )
         aux_data = (
@@ -603,7 +619,7 @@ class MetaModel:
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
         global_comm, model_map, parameter_map, metadata_map = aux_data
-        models, datasets, parameters, errors, chisq = children
+        models, datasets, parameters, errs, cov, chisq = children
 
         return cls(
             global_comm,
@@ -613,7 +629,8 @@ class MetaModel:
             model_map,
             metadata_map,
             parameters,
-            errors,
+            errs,
+            cov,
             chisq,
         )
 
@@ -654,6 +671,7 @@ def _compute_par_map_and_pars(
     n_pars = int(np.sum(~repeats))
     pars = jnp.zeros(n_pars)
     errs = jnp.zeros(n_pars)
+    cov = jnp.zeros((n_pars, n_pars))
     n = 0
     par_map = []
     for model in models:
@@ -661,11 +679,12 @@ def _compute_par_map_and_pars(
         _par_map = jnp.array(par_idx.at[n : n + npar].get())
         pars = pars.at[_par_map].set(model.pars)
         errs = errs.at[_par_map].set(model.errs)
+        cov = cov.at[_par_map[:, None], _par_map].set(model.cov)
         par_map += [tuple(_par_map)]
         n += npar
     par_map = tuple(par_map)
 
-    return par_map, pars, errs
+    return par_map, pars, errs, cov
 
 
 def _compute_metadata_map(models, datasets):

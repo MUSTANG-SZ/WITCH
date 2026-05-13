@@ -78,6 +78,8 @@ class Model:
     to_run : tuple[bool, bool, bool, bool], default: (True, True, True, True)
         The model stages to run.
         See `core.make_to_run` for details.
+    cov : jax.Array
+        The covariance matrix of the parameters.
     chisq : float, default: np.inf
         The chi-squared of this model relative to some data.
         Used when fitting.
@@ -90,6 +92,9 @@ class Model:
     n_rounds: int
     cur_round: int = 0
     to_run: tuple[bool, bool, bool, bool] = field(default_factory=core.make_to_run)
+    cov: jax.Array = field(
+        default_factory=jnp.array(0.0).copy
+    )  # TODO: Does this have to be initialized with the right shape?
     chisq: jax.Array = field(
         default_factory=jnp.array(jnp.inf).copy
     )  # scalar float array
@@ -420,7 +425,9 @@ class Model:
             *self.pars,
         )
 
-    def update(self, vals: jax.Array, errs: jax.Array, chisq: jax.Array) -> Self:
+    def update(
+        self, vals: jax.Array, errs: jax.Array, cov: jax.Array, chisq: jax.Array
+    ) -> Self:
         """
         Update the parameter values and errors as well as the model chi-squared.
         This also resets the cache on `model` and `model_grad`
@@ -434,6 +441,9 @@ class Model:
         errs : jax.Array
             The new parameter errors.
             Should be in the same order as `pars`.
+        cov : jax.Array
+            The new parameter covariance matrix.
+            Should be in the same order as `pars` and have shape `(n_pars, n_pars)`.
         chisq : jax.Array
             The new chi-squared.
             Should be a scalar float array.
@@ -455,6 +465,8 @@ class Model:
                     par.val = par.val.at[i].set(vals[n])
                     par.err = par.err.at[i].set(errs[n])
                     n += 1
+
+        self.cov = cov
         self.chisq = chisq
 
         return self
