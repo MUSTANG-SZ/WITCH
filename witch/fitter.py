@@ -312,6 +312,31 @@ def _save_model(cfg, metamodel, desc_str, nonpara=False):
         yaml.dump(final, file)
 
 
+def _save_cov(cfg: dict, cov: jax.Array, desc_str: str) -> None:
+    """
+    Save the covariance matrix to a file. Only rank 0 will save.
+
+    Parameters
+    ----------
+    cfg : dict
+        The config dictionary, used to get the output directory.
+    cov : jax.Array
+        The covariance matrix to save.
+    desc_str : str
+        A string to describe the covariance matrix, used in the filename.
+
+    Returns
+    -------
+    None
+    """
+    outdir = cfg["outdir"]
+    if comm.Get_rank() != 0:
+        return
+    cov_path = os.path.join(outdir, f"cov_{desc_str}.pk")
+    with open(cov_path, "wb") as f:
+        pk.dump(cov, f)
+
+
 def _reestimate_noise(metamodel):
     for i, dataset in enumerate(metamodel.datasets):
         for j, data in enumerate(dataset.datavec):
@@ -370,7 +395,7 @@ def _run_fit(
     to_fit = np.array(metamodel.to_fit)
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
-    metamodel, i, delta_chisq = run_lmfit(
+    metamodel, i, delta_chisq, cov = run_lmfit(
         metamodel,
         eval(str(cfg["fitting"].get("maxiter", "10"))),
         eval(str(cfg["fitting"].get("chitol", "1e-5"))),
@@ -383,6 +408,7 @@ def _run_fit(
 
     print_once(metamodel)
     _save_model(cfg, metamodel, f"fit{r}", nonpara)
+    _save_cov(cfg, cov, f"fit{r}")
 
     metamodel = _reestimate_noise(metamodel)
     return metamodel
