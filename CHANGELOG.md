@@ -1,3 +1,9 @@
+## 10.10.1 (2026-05-13)
+
+### Fix
+
+- clean up extraneous cov return in run_lmfit
+
 ## 10.10.0 (2026-05-13)
 
 ### Feat
