@@ -172,7 +172,7 @@ def run_lmfit(
 
     @jax.jit
     def _body_func(val):
-        i, delta_chisq, lmd, metamodel, cov, curve, grad = val
+        i, delta_chisq, lmd, metamodel, curve, grad = val
         curve_use = curve.at[:].add(lmd * jnp.diag(jnp.diag(curve)))
         # Get the step
         step = jnp.dot(
@@ -215,7 +215,7 @@ def run_lmfit(
             lmd,
         )
 
-        return (i + 1, delta_chisq, lmd, metamodel, cov, curve, grad)
+        return (i + 1, delta_chisq, lmd, metamodel, curve, grad)
 
     pars, _ = _prior_pars_fit(
         metamodel.priors, metamodel.parameters, jnp.array(metamodel.to_fit)
@@ -224,10 +224,10 @@ def run_lmfit(
         pars=pars, errs=metamodel.errs, cov=metamodel.cov, chisq=metamodel.chisq
     )
     _, grad, curve = joint_objective(metamodel, True, True, True)
-    i, delta_chisq, _, metamodel, cov, *_ = jax.lax.while_loop(
+    i, delta_chisq, _, metamodel, *_ = jax.lax.while_loop(
         _cond_func,
         _body_func,
-        (0, jnp.astype(jnp.inf, jnp.float32), zero.copy(), metamodel, cov, curve, grad),
+        (0, jnp.astype(jnp.inf, jnp.float32), zero.copy(), metamodel, curve, grad),
     )
 
     return metamodel, i, delta_chisq
