@@ -1,3 +1,9 @@
+## 10.10.2 (2026-05-14)
+
+### Fix
+
+- cov no longer passed by _body_func
+
 ## 10.10.1 (2026-05-13)
 
 ### Fix
