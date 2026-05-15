@@ -156,10 +156,10 @@ def load_beams(dset_name: str, cfg: dict, struct_names: list):
                 f: fits.HDUList = fits.open(fname)
                 dat_raw = jnp.array(f[0].data.copy().T)  # type: ignore
                 # pixelization same as model (300,300)
-                factor = 300 / len(dat_raw)
-                dat = zoom(dat_raw, factor, order=0)
+                #factor = 300 / len(dat_raw)
+                #dat = zoom(dat_raw, factor, order=0)
                 f.close()
-                beams += [dat]
+                beams += [dat_raw/jnp.sum(dat_raw)]
     return beams
 
 
