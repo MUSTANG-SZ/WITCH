@@ -6,6 +6,7 @@ from typing import Self
 import jax.numpy as jnp
 import numpy as np
 from astropy.io import fits
+from astropy.convolution import convolve
 from astropy.wcs import WCS
 from jax import Array, vmap
 from jax.tree_util import register_pytree_node_class
@@ -54,13 +55,18 @@ def load_maps(
         f: fits.HDUList = fits.open(fname)
         wcs = WCS(f[0].header)  # type: ignore
         dat_raw = jnp.array(f[0].data.copy().T)  # type: ignore
-        ymin = 1
-        ymax = 85
-        xmin = 16
-        xmax = 100
-        dat_cut = dat_raw[xmin:xmax, ymin:ymax]
-        factor = 300 / len(dat_cut)
-        dat = zoom(dat_cut, factor, order=0)
+        if dat_raw.shape[0]>dat_raw.shape[1]:
+            diff = (dat_raw.shape[0]-dat_raw.shape[1])//2
+            xmin = diff
+            xmax = dat_raw.shape[0]-diff
+            dat_raw = dat_raw[xmin:xmax,:]
+        elif dat_raw.shape[0]<dat_raw.shape[1]:
+            diff = (dat_raw.shape[1]-dat_raw.shape[0])//2
+            ymin = diff
+            ymax = dat_raw.shape[1]-diff
+            dat_raw = dat_raw[:,ymin:ymax]
+        factor = 300 / len(dat_raw)
+        dat = zoom(dat_raw, factor, order=0)
         f.close()
         imaps += [maps.WCSMap(name, dat, comm, wcs, "nn")]
     mapset = SolutionSet(imaps, comm)
@@ -106,11 +112,16 @@ def load_exps(dset_name: str, cfg: dict, struct_names: list):
                 # set the pixel with zero exposure to nan
                 e_min = 0.03
                 dat_mask = jnp.where(dat_norm > e_min, dat_norm, jnp.nan)
-                ymin = 1
-                ymax = 85
-                xmin = 16
-                xmax = 100
-                dat_mask = dat_mask[xmin:xmax, ymin:ymax]
+                if dat_mask.shape[0]>dat_mask.shape[1]:
+                    diff = (dat_mask.shape[0]-dat_mask.shape[1])//2
+                    xmin = diff
+                    xmax = dat_mask.shape[0]-diff
+                    dat_mask = dat_mask[xmin:xmax,:]
+                elif dat_mask.shape[0]<dat_mask.shape[1]:
+                    diff = (dat_mask.shape[1]-dat_mask.shape[0])//2
+                    ymin = diff
+                    ymax = dat_mask.shape[1]-diff
+                    dat_mask = dat_mask[:,ymin:ymax]
                 # pixelization same as model (300,300)
                 factor = 300 / len(dat_mask)
                 dat = zoom(dat_mask, factor, order=0)
@@ -143,7 +154,6 @@ def load_beams(dset_name: str, cfg: dict, struct_names: list):
                 name = os.path.splitext(os.path.basename(fname))[0]
                 # The actual map
                 f: fits.HDUList = fits.open(fname)
-                wcs = WCS(f[0].header)  # type: ignore
                 dat_raw = jnp.array(f[0].data.copy().T)  # type: ignore
                 # pixelization same as model (300,300)
                 factor = 300 / len(dat_raw)
@@ -170,11 +180,16 @@ def load_back(dset_name: str, cfg: dict):
     f: fits.HDUList = fits.open(back_fname)
     wcs = WCS(f[0].header)  # type: ignore
     dat_raw = jnp.array(f[0].data.copy().T)  # type: ignore
-    ymin = 1
-    ymax = 85
-    xmin = 16
-    xmax = 100
-    dat_raw = dat_raw[xmin:xmax, ymin:ymax]
+    if dat_raw.shape[0]>dat_raw.shape[1]:
+        diff = (dat_raw.shape[0]-dat_raw.shape[1])//2
+        xmin = diff
+        xmax = dat_raw.shape[0]-diff
+        dat_raw = dat_raw[xmin:xmax,:]
+    elif dat_raw.shape[0]<dat_raw.shape[1]:
+        diff = (dat_raw.shape[1]-dat_raw.shape[0])//2
+        ymin = diff
+        ymax = dat_raw.shape[1]-diff
+        dat_raw = dat_raw[:,ymin:ymax]
     # pixelization same as model (300,300)
     factor = 300 / len(dat_raw)
     dat = zoom(dat_raw, factor, order=0)
@@ -202,7 +217,7 @@ class ExpConvProj(MetaData):
     prefactor: float
 
     def apply(self, model: Array) -> Array:
-        return self.prefactor * self.exp_map * fft_conv(model, self.beam_map)
+        return self.prefactor * self.exp_map * convolve(model, self.beam_map)
 
     def apply_grad(self, model_grad: Array) -> Array:
         # Using *c* as convolution below
@@ -311,49 +326,5 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
                     os.path.join(outdir, dset.name, f"truth.fits"),
                     overwrite=True,
                 )
-    # Make Model maps
-    if cfg.get("model_map", cfg.get("map", True)):
-        print_once("Making model map")
-        if metamodel is None:
-            raise ValueError(
-                "Somehow trying to make a model map with no model defined!"
-            )
-        for imap in dset.datavec:
-            x, y = imap.xy
-            pred = metamodel.to_map(x * wu.rad_to_arcsec, y * wu.rad_to_arcsec)
-            imap.data = pred
-
-            hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
-            hdul = fits.HDUList([hdu])
-            hdul.writeto(
-                os.path.join(outdir, dset.name, f"{imap.name}_truth.fits"),
-                overwrite=True,
-            )
 
 
-"""
-def make_metadata(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> tuple:
-    maproot = cfg["paths"].get("data", cfg["paths"]["xmaps"])
-    if not os.path.isabs(maproot):
-        maproot = os.path.join(
-            os.environ.get("WITCH_DATROOT", os.environ["HOME"]), maproot
-        )
-    maproot_dset = os.path.join(maproot, dset_name)
-    if os.path.isdir(maproot_dset):
-        maproot = maproot_dset
-
-    back_glob = cfg["datasets"][dset_name].get("glob", "*back*.fits")
-    back_fname = glob.glob(os.path.join(maproot, back_glob))[0]
-    back_name = os.path.splitext(os.path.basename(back_fname))[0]
-    # The actual map
-    f: fits.HDUList = fits.open(fname)
-    wcs = WCS(f[0].header)  # type: ignore
-    dat = jnp.array(f[0].data.copy().T)  # type: ignore
-    f.close()
-    back_map = [maps.WCSMap(name, dat, comm, wcs, "nn")]
-
-    meta_list = [beams, exp_maps, back_map]
-    metadata = tuple(meta_list)
-    print("type metadata: ", type(metadata[0][0]))
-    return metadata
-"""

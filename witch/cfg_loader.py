@@ -18,6 +18,7 @@ from typing_extensions import Any, Unpack
 from witch import utils as wu
 from witch.containers import Model, Model_xfer
 from witch.dataset import DataSet
+from witch.containers import MetaModel
 from witch.fitter import *
 from witch.fitter import _mpi_fsplit, _run_fit
 from witch.fitting import run_mcmc
