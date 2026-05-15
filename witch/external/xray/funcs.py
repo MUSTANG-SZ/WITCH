@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Self
 
 import jax.numpy as jnp
+import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
 from jax import Array, vmap
@@ -19,8 +20,6 @@ from witch.fitter import print_once
 from witch.utils import fft_conv
 
 from ...objective import poisson_objective
-
-import numpy as np
 
 convolve_vec = vmap(fft_conv, in_axes=(0, None))
 
@@ -59,7 +58,7 @@ def load_maps(
         ymax = 85
         xmin = 16
         xmax = 100
-        dat_cut=dat_raw[xmin:xmax,ymin:ymax]
+        dat_cut = dat_raw[xmin:xmax, ymin:ymax]
         factor = 300 / len(dat_cut)
         dat = zoom(dat_cut, factor, order=0)
         f.close()
@@ -76,6 +75,7 @@ def get_info(dset_name: str, cfg: dict, mapset: SolutionSet) -> dict:
         "prefactor": prefactor,
         "objective": poisson_objective,
     }
+
 
 def load_exps(dset_name: str, cfg: dict, struct_names: list):
     # def __init__(self, dset_name: str, cfg: dict):
@@ -110,8 +110,8 @@ def load_exps(dset_name: str, cfg: dict, struct_names: list):
                 ymax = 85
                 xmin = 16
                 xmax = 100
-                dat_mask=dat_mask[xmin:xmax,ymin:ymax]
-                #pixelization same as model (300,300)
+                dat_mask = dat_mask[xmin:xmax, ymin:ymax]
+                # pixelization same as model (300,300)
                 factor = 300 / len(dat_mask)
                 dat = zoom(dat_mask, factor, order=0)
                 # dat = dat.astype(float)
@@ -145,7 +145,7 @@ def load_beams(dset_name: str, cfg: dict, struct_names: list):
                 f: fits.HDUList = fits.open(fname)
                 wcs = WCS(f[0].header)  # type: ignore
                 dat_raw = jnp.array(f[0].data.copy().T)  # type: ignore
-                #pixelization same as model (300,300)
+                # pixelization same as model (300,300)
                 factor = 300 / len(dat_raw)
                 dat = zoom(dat_raw, factor, order=0)
                 f.close()
@@ -174,12 +174,13 @@ def load_back(dset_name: str, cfg: dict):
     ymax = 85
     xmin = 16
     xmax = 100
-    dat_raw=dat_raw[xmin:xmax,ymin:ymax]
-    #pixelization same as model (300,300)
+    dat_raw = dat_raw[xmin:xmax, ymin:ymax]
+    # pixelization same as model (300,300)
     factor = 300 / len(dat_raw)
     dat = zoom(dat_raw, factor, order=0)
     f.close()
     return dat
+
 
 def get_prefact(cfg: dict, struct_names: list, info: dict):
     gen_prefact = info["prefactor"]
@@ -187,9 +188,9 @@ def get_prefact(cfg: dict, struct_names: list, info: dict):
     for struct in struct_names:
         model = cfg["model"]["structures"][struct]["structure"]
         if "gnfw" in model:
-            prefactors += [gen_prefact*1] 
+            prefactors += [gen_prefact * 1]
         elif "isobeta" in model:
-            prefactors += [gen_prefact*2]
+            prefactors += [gen_prefact * 2]
     return prefactors
 
 
