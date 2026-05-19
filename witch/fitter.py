@@ -309,11 +309,11 @@ def _save_outputs(cfg, metamodel, desc_str):
         return
     res_path = os.path.join(outdir, f"par_results_{desc_str}.dill")
     par_dict = {
-        "par_names": metamodel.par_names,
-        "parameters": metamodel.parameters,
-        "errs": metamodel.errs,
-        "cov": metamodel.cov,
-        "to_fit": metamodel.to_fit,
+        "par_names": np.asarray(metamodel.par_names),
+        "parameters": np.asarray(metamodel.parameters),
+        "errs": np.asarray(metamodel.errs),
+        "cov": np.asarray(metamodel.cov),
+        "to_fit": np.asarray(metamodel.to_fit),
     }
     with open(res_path, "wb") as f:
         pk.dump(par_dict, f)
