@@ -1,3 +1,14 @@
+## 10.11.0 (2026-05-19)
+
+### Feat
+
+- add saving parameters to dictionary
+
+### Fix
+
+- make dict types np arrays
+- wrong pars passed to save_params
+
 ## 10.10.2 (2026-05-14)
 
 ### Fix
