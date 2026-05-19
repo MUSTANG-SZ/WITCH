@@ -286,6 +286,39 @@ def get_outdir(cfg, metamodel, nonpara=False):
     return outdir
 
 
+def _save_outputs(cfg, metamodel, desc_str):
+    """
+    Save parameters and cov, etc of model separately from the model itself.
+    Useful for loading the parameters without needing WITCH.
+
+    Parameters
+    ----------
+    cfg : dict
+        Configuration dictionary for fitting
+    metamodel : MetaModel
+        The metamodel containing the fitted parameters and covariance
+    desc_str : str
+        Description string to append to the output filename
+
+    Returns
+    -------
+    None
+    """
+    outdir = cfg["outdir"]
+    if comm.Get_rank() != 0:
+        return
+    res_path = os.path.join(outdir, f"par_results_{desc_str}.dill")
+    par_dict = {
+        "par_names": metamodel.par_names,
+        "parameters": metamodel.parameters,
+        "errs": metamodel.errs,
+        "cov": metamodel.cov,
+        "to_fit": metamodel.to_fit,
+    }
+    with open(res_path, "wb") as f:
+        pk.dump(par_dict, f)
+
+
 def _save_model(cfg, metamodel, desc_str, nonpara=False):
     outdir = cfg["outdir"]
     if comm.Get_rank() != 0:
@@ -293,6 +326,8 @@ def _save_model(cfg, metamodel, desc_str, nonpara=False):
     res_path = os.path.join(outdir, f"results_{desc_str}.dill")
     print_once("Saving results to", res_path)
     metamodel.save(res_path)
+
+    _save_outputs(cfg, metamodel, desc_str, nonpara)
 
     if nonpara:
         return
