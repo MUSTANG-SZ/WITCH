@@ -327,7 +327,7 @@ def _save_model(cfg, metamodel, desc_str, nonpara=False):
     print_once("Saving results to", res_path)
     metamodel.save(res_path)
 
-    _save_outputs(cfg, metamodel, desc_str, nonpara)
+    _save_outputs(cfg, metamodel, desc_str)
 
     if nonpara:
         return
