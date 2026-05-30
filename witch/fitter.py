@@ -244,7 +244,12 @@ def get_outdir(cfg, model):
 
     name = ""
     if model is not None:
-        name = model.name + ("_ns" * (not cfg["sub"]))
+        model_name = (
+            model.name
+            + "_"
+            + "-".join([structure.name for structure in model.structures])
+        )
+        name = model_name + ("_ns" * (not cfg["sub"]))
     outdir = os.path.join(outroot, cfg["name"], name)
     if "subdir" in cfg["paths"]:
         outdir = os.path.join(outdir, cfg["paths"]["subdir"])
