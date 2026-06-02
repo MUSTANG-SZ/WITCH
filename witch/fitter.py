@@ -250,10 +250,14 @@ def get_outdir(cfg, metamodel, nonpara=False):
 
     name = ""
     if metamodel is not None:
-        name = "+".join([
-            model.name + "_" + "-".join([structure.name for structure in model.structures])
-            for model in metamodel.models
-        ]) + ("_ns" * (not cfg["sub"]))
+        name = "+".join(
+            [
+                model.name
+                + "_"
+                + "-".join([structure.name for structure in model.structures])
+                for model in metamodel.models
+            ]
+        ) + ("_ns" * (not cfg["sub"]))
     outdir = os.path.join(outroot, cfg["name"], name)
 
     if "subdir" in cfg["paths"]:
