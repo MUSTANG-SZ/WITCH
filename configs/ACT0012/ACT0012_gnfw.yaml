@@ -6,17 +6,13 @@ noise_map: True
 model_map: True
 # Cluster name
 # Used both for the output path as well as to load presets
-name: ""
+name: "ACT0012"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
+
 # Define the model
-# Define the model
-model:
-  # Unit conversion to apply at the end
-  # Will be evaled
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
-  # Structure to include in the model
-  structures:  
+cluster_model:
+  structures:
     cl1:
       structure: "gnfw"
       parameters:
@@ -28,12 +24,6 @@ model:
           value: 0.0
         rx_1:
           value: 52.7
-        ry_1:
-          value: 52.7
-        rz_1:
-          value: 52.7
-        theta:
-          value: 0.0
         P0:
           value: 8.403
         c500:
@@ -62,12 +52,6 @@ model:
           value: 0.0
         rx_2:
           value: 44.8
-        ry_2:
-          value: 44.8
-        rz_2:
-          value: 44.8
-        theta :
-          value: 0.0
         P0 :
           value: 8.403
         c500 :
@@ -84,6 +68,8 @@ model:
           value: 4.7256
         z :
           value: 0.35200
+ps_model:
+  structures:
     ps_gaussian_n:
       structure: "gaussian"
       parameters:
@@ -105,3 +91,17 @@ model:
             #0.0093 K -> converto dividendo per 1.41556 K/Jy/beam -> 0.006569 Jy/beam
             to_fit: True
             priors: [0.001, 0.02]
+
+datasets:
+  mustang2:
+    point_sources:
+      - "ps_model"
+
+metamodel:
+  models:
+    - cluster_model
+    - ps_model
+  model_map:
+    mustang2:
+      - cluster_model
+      - ps_model
