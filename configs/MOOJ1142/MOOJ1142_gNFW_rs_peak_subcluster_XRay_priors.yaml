@@ -43,13 +43,13 @@ cluster_model:
           value: 4.5
           to_fit: True
         gamma:
-          value: 0.465
+          value: 0.93
           to_fit: True
         alpha:
           value: 2.26
           to_fit: True
         beta:
-          value: 2.05
+          value: 4.1
           to_fit: True
         z:
           value: 1.19
