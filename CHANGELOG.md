@@ -1,3 +1,9 @@
+## 10.11.2 (2026-06-05)
+
+### Fix
+
+- include structure names in outpath (issue 180)
+
 ## 10.11.1 (2026-06-02)
 
 ### Fix
