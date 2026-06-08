@@ -1,0 +1,66 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "cavity_base.yaml"
+
+# Cluster name
+# Used both for the output path as well as to load presets
+name: "MKW3S"
+sim: True # If True use TODs to make noise and add a simulated cluster
+model_map: True
+noise_map: True
+
+constants:
+  z: 0.045
+
+model:
+  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+  structures:
+    a10:
+      structure: "a10"
+      parameters:
+        dx_1:
+          value: 0.0
+        dy_1:
+          value: 0.0
+        dz_1:
+          value: 0.0
+        theta:
+          value: 0.0
+        P0:
+          value: 3.202 
+        c500:
+          value: 1.083
+        m500:
+          value: "5.1e14"
+          to_fit: True
+        gamma:
+          value: 0.3798
+          to_fit: True
+        alpha:
+          value: 1.4063
+        beta:
+          value: 5.4905
+        z:
+          value: 0.045
+    bubble1:
+      structure: "uniform"
+      parameters:
+        dx:
+          value: 15. #From Timmerman2022. Jet axis arbitrarily set to x
+        dy:
+          value: -80.
+        dz:
+          value: 0.
+        r_1:
+          value: 40.
+        r_2:
+          value: 18.
+        r_3:
+          value: 30.
+        theta:
+          value: 0.
+        amp:
+          value: -1.0
+          to_fit: True
+

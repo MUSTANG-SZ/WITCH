@@ -1,0 +1,107 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "MOOJ1142_base.yaml"
+
+paths:
+  tods: "MOOJ1142_2"
+
+# Cluster name
+# Used both for the output path as well as to load presets
+name: "MOOJ1142"
+sim: False # If True use TODs to make noise and add a simulated cluster
+
+paths:
+  subdir: "xray_peak_rs_priors_2" # Subdirectory to use
+
+
+coords:
+  x0: "(175.69766238*u.deg).to(u.radian).value" # eleonora peak
+  y0: "(15.45364413*u.deg).to(u.radian).value" #eleonora peak
+
+cluster_model:
+  structures:
+    gnfw_rs:
+      structure: "gnfw_rs"
+      parameters:
+        dx_1:
+          value: 0.0
+        dy_1:
+          value: 0.0
+        dz_1:
+          value: 0.0
+        P0:
+          value: 1.63 
+          to_fit: True
+        r_s:
+          value: 4.5
+          to_fit: True
+        gamma:
+          value: 0.465
+          to_fit: True
+        alpha:
+          value: 2.26
+          to_fit: True
+        beta:
+          value: 2.05
+          to_fit: True
+        z:
+          value: 1.19
+    sph_isobeta:
+      structure: "sph_isobeta"
+      parameters:
+        x0:
+          value: -33.423264
+            #priors: [-25., -65.]
+          to_fit: False 
+        y0:
+          value: 7.26858 
+            #priors: [0., 20.]
+          to_fit: False
+        z0:
+          value: 0.0
+        r:
+          value: 23.9
+          to_fit: True
+        theta:
+          value: 0.0
+        beta:
+          value: 2.56
+          to_fit: True
+          priors: [0.0, 10.0]
+        amp:
+          value: 0.05
+          to_fit: True
+          priors: [0.0, 10.0]
+
+ps_model:
+  structures:
+    ps_gauss:
+      structure: "gaussian"
+      parameters:
+        dx_g:
+          value: 1.91
+          to_fit: True
+        dy_g:
+          value: -4.04
+          to_fit: True
+        sigma:
+          value: 5.1
+          to_fit: True
+        amp_g:
+          value: 0.00128582673
+          to_fit: True
+datasets:
+  mustang2:
+    point_sources:
+      - "ps_model"
+
+metamodel:
+  models:
+    - cluster_model
+    - ps_model
+  model_map:
+    mustang2:
+      - cluster_model
+      - ps_model
+
