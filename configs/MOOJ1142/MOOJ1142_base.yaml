@@ -15,7 +15,6 @@ paths:
   # Location of TOD files
   # If an absolute path then that is used directly
   # If a relative path taken relative to MJ_TODROOT
-  tods: "MOOJ1142"
   glob: "Signal_TOD*.fits" # Pattern to search for TODs with
   ndo: False # ?
   odo: False # ?

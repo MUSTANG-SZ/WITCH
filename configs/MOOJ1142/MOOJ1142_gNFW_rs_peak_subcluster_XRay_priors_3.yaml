@@ -3,15 +3,13 @@
 # Otherwise it is assumed to me reative to the directory of this file
 base: "MOOJ1142_base.yaml"
 
-paths:
-  tods: "MOOJ1142_3"
-
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
 paths:
+  tods: "MOOJ1142_3"
   subdir: "xray_peak_rs_priors_3" # Subdirectory to use
 
 
