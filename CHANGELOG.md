@@ -1,3 +1,15 @@
+## 10.12.0 (2026-06-10)
+
+### Feat
+
+- add tool to make data splits and example configs
+
+### Fix
+
+- updating A10 config
+- add base root back to MOOJ1142_base
+- move tods in with other paths arguments
+
 ## 10.11.2 (2026-06-05)
 
 ### Fix
