@@ -2,75 +2,92 @@
 # If an absolute path is given then it is used
 # Otherwise it is assumed to me reative to the directory of this file
 base: "MOOJ1142_base.yaml"
-
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "MOOJ1142"
+sim: False # If True use TODs to make noise and add a simulated cluster
 
 paths:
-  subdir: "xray_peak_A10"
+  tods: "MOOJ1142_1"
+  subdir: "xray_peak_rs_priors_1" # Subdirectory to use
+
 
 coords:
   x0: "(175.69766238*u.deg).to(u.radian).value" # eleonora peak
   y0: "(15.45364413*u.deg).to(u.radian).value" #eleonora peak
 
-
 cluster_model:
   structures:
-    # Name of the first structure
-    a10:
-      structure: "a10" # What type of structure it is
+    gnfw_rs:
+      structure: "gnfw_rs"
       parameters:
-        dx_1: # Name of the first parameter
-          value: 0.0 # Value to use/start at, will be evaled
-          to_fit: True
-          priors: [-9.0, 9.0]
+        dx_1:
+          value: 0.0
         dy_1:
           value: 0.0
-          to_fit: True
-          priors: [-9.0, 9.0]
         dz_1:
           value: 0.0
-        theta:
-          value: 0. 
         P0:
-          value: 3.202
-        c500:
-          value: 1.083
-        m500:
-          value: "8.4e14"
+          value: 1.63 
+          to_fit: True
+        r_s:
+          value: 4.5
           to_fit: True
         gamma:
-          value: 0.3798
-          to_fit: True 
+          value: 0.465
+          to_fit: True
         alpha:
-          value: 1.4063
+          value: 2.26
           to_fit: True
         beta:
-          value: 5.4905
+          value: 2.05
           to_fit: True
         z:
           value: 1.19
+    sph_isobeta:
+      structure: "sph_isobeta"
+      parameters:
+        x0:
+          value: -33.423264
+            #priors: [-25., -65.]
+          to_fit: False 
+        y0:
+          value: 7.26858 
+            #priors: [0., 20.]
+          to_fit: False
+        z0:
+          value: 0.0
+        r:
+          value: 23.9
+          to_fit: True
+        theta:
+          value: 0.0
+        beta:
+          value: 2.56
+          to_fit: True
+          priors: [0.0, 10.0]
+        amp:
+          value: 0.05
+          to_fit: True
+          priors: [0.0, 10.0]
+
 ps_model:
   structures:
     ps_gauss:
       structure: "gaussian"
       parameters:
         dx_g:
-          value: 19.0
+          value: 1.91
           to_fit: True
-          priors: [10.0, 28.0]
         dy_g:
-          value: -4.0
+          value: -4.04
           to_fit: True
-          priors: [-13.0, 5.0]
         sigma:
-          value: 4.0
+          value: 5.1
           to_fit: True
         amp_g:
-          value: 0.01
+          value: 0.00128582673
           to_fit: True
-
 datasets:
   mustang2:
     point_sources:
@@ -84,3 +101,4 @@ metamodel:
     mustang2:
       - cluster_model
       - ps_model
+
