@@ -6,19 +6,20 @@ base: "MOOJ1142_base.yaml"
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "MOOJ1142"
-sim: False # If True use TODs to make noise and add a simulated cluster
 
-# Define the model
-model:
-  # Unit conversion to apply at the end
-  # Will be evaled
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
-  # Structure to include in the model
+paths:
+  subdir: "xray_peak_A10"
+
+coords:
+  x0: "(175.69766238*u.deg).to(u.radian).value" # eleonora peak
+  y0: "(15.45364413*u.deg).to(u.radian).value" #eleonora peak
+
+
+cluster_model:
   structures:
     # Name of the first structure
-    ea10:
+    a10:
       structure: "a10" # What type of structure it is
-
       parameters:
         dx_1: # Name of the first parameter
           value: 0.0 # Value to use/start at, will be evaled
@@ -44,10 +45,14 @@ model:
           to_fit: True 
         alpha:
           value: 1.4063
+          to_fit: True
         beta:
           value: 5.4905
+          to_fit: True
         z:
           value: 1.19
+ps_model:
+  structures:
     ps_gauss:
       structure: "gaussian"
       parameters:
@@ -61,6 +66,21 @@ model:
           priors: [-13.0, 5.0]
         sigma:
           value: 4.0
+          to_fit: True
         amp_g:
           value: 0.01
           to_fit: True
+
+datasets:
+  mustang2:
+    point_sources:
+      - "ps_model"
+
+metamodel:
+  models:
+    - cluster_model
+    - ps_model
+  model_map:
+    mustang2:
+      - cluster_model
+      - ps_model
