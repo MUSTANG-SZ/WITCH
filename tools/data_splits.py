@@ -1,10 +1,11 @@
-import os
 import argparse as ap
-from glob import glob
-from minkasi.tools import presets_by_source as pbs
-from minkasi.tods.io import cut_blacklist
+import os
 import shutil
+from glob import glob
 from pathlib import Path
+
+from minkasi.tods.io import cut_blacklist
+from minkasi.tools import presets_by_source as pbs
 
 
 def _make_parser() -> ap.ArgumentParser:
@@ -26,20 +27,13 @@ def _make_parser() -> ap.ArgumentParser:
     )
 
     parser.add_argument(
-        "-n",
-        "--name",
-        type=str,
-        help="Name of cluster for getting bad TODs."
+        "-n", "--name", type=str, help="Name of cluster for getting bad TODs."
     )
 
-    parser.add_argument(
-        "-s",
-        "--splits",
-        type=int,
-        help="Number of splits to do."
-    )
+    parser.add_argument("-s", "--splits", type=int, help="Number of splits to do.")
 
     return parser
+
 
 def main():
     parser = _make_parser()
@@ -60,10 +54,6 @@ def main():
                 continue
             shutil.copy(fname, cur_odir)
 
+
 if __name__ == "__main__":
     main()
-
-
-
-
-
