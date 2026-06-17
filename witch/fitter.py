@@ -31,6 +31,7 @@ from .dataset import DataSet
 from .fitting import run_lmfit, run_mcmc
 from .nonparametric import para_to_non_para
 from .objective import joint_objective
+from .resampling import MC_resample
 
 comm = MPI.COMM_WORLD.Clone()
 
@@ -838,8 +839,14 @@ def main():
 
     # Now we fit
     to_fit = cfg.get("fit", True)
+    resample = cfg.get("resample", False)
     if to_fit and outdir is not None:
         metamodel = fit_loop(metamodel, cfg, comm)
+        if resample:
+            try:
+                MC_resample(metamodel, cfg, comm)
+            except Exception as e:
+                print(f"Not resampling due to error {e}.")
         for dataset in metamodel.datasets:
             dataset.postfit(dataset, cfg, metamodel)
         if "nonpara" in cfg and cfg["nonpara"]["convert"]:
