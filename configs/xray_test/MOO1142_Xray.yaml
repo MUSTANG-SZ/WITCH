@@ -18,7 +18,7 @@ coords:
 # Define the model
 model: # Unit conversion to apply at the end
   # Will be evaled
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+  unit_conversion: "float(1)"
   # Structure to include in the model
   structures:
     # Name of the first structure
@@ -33,11 +33,11 @@ model: # Unit conversion to apply at the end
         dz_1:
           value: 0.0
         P0:
-          value: 947
+          value: 3.1 
           to_fit: True
           priors: [100.0, 1000.0]
         r_s:
-          value: 4.
+          value: 25 
           to_fit: True
           priors: [1.0, 30.0]
         gamma:
@@ -60,9 +60,9 @@ model: # Unit conversion to apply at the end
       # Parameters for the structure
       parameters:
         dx_2:
-          value: 33.0
+          value: 75 
         dy_2:
-          value: 7.0
+          value: 27.0
         dz_2:
           value: 0.0
         r_1:
@@ -76,7 +76,7 @@ model: # Unit conversion to apply at the end
           to_fit: True
           priors: [1.0, 6.0]
         amp:
-          value: 83.0
+          value: 3 
           to_fit: True
           priors: [10.0, 300.0]
 

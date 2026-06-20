@@ -109,7 +109,7 @@ def load_exps(dset_name: str, cfg: dict, struct_names: list):
                 wcs = WCS(f[0].header)  # type: ignore
                 dat_raw = jnp.array(f[0].data.copy().T)  # type: ignore
                 dat_norm = dat_raw / jnp.max(dat_raw)
-                # set the pixel with zero exposure to nan
+                # set the pixel with exposure < 3% to nan
                 e_min = 0.03
                 dat_mask = jnp.where(dat_norm > e_min, dat_norm, jnp.nan)
                 if dat_mask.shape[0]>dat_mask.shape[1]:
@@ -122,7 +122,7 @@ def load_exps(dset_name: str, cfg: dict, struct_names: list):
                     ymin = diff
                     ymax = dat_mask.shape[1]-diff
                     dat_mask = dat_mask[:,ymin:ymax]
-                # pixelization same as model (300,300)
+                # pixelization same as model = (300,300)
                 factor = 300 / len(dat_mask)
                 dat = zoom(dat_mask, factor, order=0)
                 # dat = dat.astype(float)
@@ -155,11 +155,8 @@ def load_beams(dset_name: str, cfg: dict, struct_names: list):
                 # The actual map
                 f: fits.HDUList = fits.open(fname)
                 dat_raw = jnp.array(f[0].data.copy().T)  # type: ignore
-                # pixelization same as model (300,300)
-                #factor = 300 / len(dat_raw)
-                #dat = zoom(dat_raw, factor, order=0)
                 f.close()
-                beams += [dat_raw/jnp.sum(dat_raw)]
+                beams += [dat_raw] #/jnp.sum(dat_raw)]
     return beams
 
 
@@ -190,7 +187,7 @@ def load_back(dset_name: str, cfg: dict):
         ymin = diff
         ymax = dat_raw.shape[1]-diff
         dat_raw = dat_raw[:,ymin:ymax]
-    # pixelization same as model (300,300)
+    # pixelization same as model = (300,300)
     factor = 300 / len(dat_raw)
     dat = zoom(dat_raw, factor, order=0)
     f.close()
@@ -205,7 +202,7 @@ def get_prefact(cfg: dict, struct_names: list, info: dict):
         if "gnfw" in model:
             prefactors += [gen_prefact * 1]
         elif "isobeta" in model:
-            prefactors += [gen_prefact * 2]
+            prefactors += [gen_prefact * 1]
     return prefactors
 
 
