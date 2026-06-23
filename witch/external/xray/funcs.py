@@ -22,7 +22,7 @@ from witch.utils import fft_conv
 
 from ...objective import poisson_objective
 
-convolve_vec = vmap(fft_conv, in_axes=(0, None))
+convolve_vec = vmap(convolve, in_axes=(0, None))
 
 
 def get_files(dset_name: str, cfg: dict) -> list:
@@ -222,7 +222,9 @@ class ExpConvProj(MetaData):
         # = d/dx_i(exp_map*beam_map *c* model))
         # = exp_map*beam_map *c* d/dx_i(model)
         # = exp_map*beam_map *c* model_grad
-        return convolve_vec(model_grad, self.exp_map * self.beam_map)
+        #return convolve_vec(model_grad, self.exp_map * self.beam_map)
+
+        return self.prefactor * self.exp_map * convolve_vec(model_grad, self.beam_map)
 
     # Functions for making this a pytree
     # Don't call this on your own
