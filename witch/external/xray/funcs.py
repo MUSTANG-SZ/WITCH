@@ -22,7 +22,7 @@ from witch.utils import fft_conv
 
 from ...objective import poisson_objective
 
-convolve_vec = vmap(convolve, in_axes=(0, None))
+convolve_vec = vmap(fft_conv, in_axes=(0, None))
 
 
 def get_files(dset_name: str, cfg: dict) -> list:
@@ -111,7 +111,7 @@ def load_exps(dset_name: str, cfg: dict, struct_names: list):
                 dat_norm = dat_raw / jnp.max(dat_raw)
                 # set the pixel with exposure < 3% to nan
                 e_min = 0.03
-                dat_mask = jnp.where(dat_norm > e_min, dat_norm, jnp.nan)
+                dat_mask = jnp.where(dat_norm > e_min, dat_norm, 0)
                 if dat_mask.shape[0]>dat_mask.shape[1]:
                     diff = (dat_mask.shape[0]-dat_mask.shape[1])//2
                     xmin = diff
@@ -156,7 +156,9 @@ def load_beams(dset_name: str, cfg: dict, struct_names: list):
                 f: fits.HDUList = fits.open(fname)
                 dat_raw = jnp.array(f[0].data.copy().T)  # type: ignore
                 f.close()
-                beams += [dat_raw] #/jnp.sum(dat_raw)]
+                padding = ((100, 99), (100, 99))
+                dat = np.pad(dat_raw, pad_width=padding, mode="constant", constant_values=1e-6)
+                beams += [dat] #/jnp.sum(dat_raw)]
     return beams
 
 
@@ -214,7 +216,7 @@ class ExpConvProj(MetaData):
     prefactor: float
 
     def apply(self, model: Array) -> Array:
-        return self.prefactor * self.exp_map * convolve(model, self.beam_map)
+        return self.prefactor * self.exp_map * fft_conv(model, self.beam_map)
 
     def apply_grad(self, model_grad: Array) -> Array:
         # Using *c* as convolution below
