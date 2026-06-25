@@ -12,13 +12,31 @@ from functools import partial
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 import jax
+from jax import vmap
 import jax.numpy as jnp
 import mpi4jax
 from jax.scipy.special import factorial
 from mpi4py import MPI
+import matplotlib.pyplot as plt
 
 if TYPE_CHECKING:
     from .containers import MetaModel
+
+
+# def stirling(n):
+#     print(n)
+#     if n == 0:
+#         return 1
+#     else:
+#         return n*jnp.log(n)-n
+
+# stirling = np.vectorize(stirling)
+
+@jax.jit
+def stirling(map_data):
+    safe_n = jnp.where(map_data == 0, 1, map_data)
+    stirling_values = jnp.where(map_data == 0, 1, map_data * jnp.log(safe_n) - map_data)
+    return 2 * jnp.nansum(stirling_values)
 
 
 @partial(jax.jit, static_argnames=("do_loglike", "do_grad", "do_curve"))
@@ -246,16 +264,21 @@ def poisson_objective(
         raise ValueError("Invalid mode")
     for i, data in enumerate(dataset.datavec):
         pred_dat = metamodel.model_proj(dataset_ind, i)
+        jax.debug.print('model {}', pred_dat)
         if only_loglike:
             grad_dat = zero
         else:
             grad_dat = metamodel.model_grad_proj(dataset_ind, i)
 
-        resid = (data.data / pred_dat) - 1
+        #QUESTA RIGA VA CAMBIATA PERCHE I PIXEL 0/0 fanno inf
+        #resid = (data.data /pred_dat) -1
+        resid = (data.data - pred_dat) 
+        pred_dat_mask = jnp.where(pred_dat>0.3, pred_dat, jnp.nan)
         if do_loglike:
-            loglike += jnp.sum(
-                data.data * jnp.log(pred_dat) - pred_dat - jnp.log(factorial(data.data))
-            )
+            c0 = stirling(data.data).astype(jnp.int32)
+            loglike += 0.5*( jnp.nansum(pred_dat_mask - data.data*jnp.log(pred_dat_mask)) + c0 )
+            #loglike += jnp.sum(    data.data * jnp.log(pred_dat) - pred_dat - jnp.log(factorial(data.data))
+        
 
         if only_loglike:
             continue
@@ -279,5 +302,6 @@ def poisson_objective(
                     jnp.transpose(grad_dat),
                 )
             )
-    print("LOGLIKELIHOOD: ", 2 * loglike)
+    jax.debug.print("LOGLIKELIHOOD: {}", 2 * loglike)
+    jax.debug.print('GRAD {}', -2*grad)
     return -2 * loglike, -2 * grad, -2 * curve

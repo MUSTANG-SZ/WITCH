@@ -297,10 +297,11 @@ class MetaModel:
             for md_idx in md:
                 ip = dset.metadata[md_idx].apply(ip)
             _proj = _project(ip, x, y, model.xyz)
-            for md_idx in md:
-                _proj = dset.metadata[md_idx].apply_proj(_proj)
-            proj = proj.at[:].add(_proj)
-        return proj
+        #     for md_idx in md:
+        #         _proj = dset.metadata[md_idx].apply_proj(_proj)
+        #     proj = proj.at[:].add(_proj)
+        # return proj
+        return ip
 
     def model_grad_proj(self, dataset_ind: int, datavec_ind: int) -> jax.Array:
         """
@@ -338,11 +339,12 @@ class MetaModel:
             ip_grad = model.model_grad[1]
             for md_idx in md:
                 ip_grad = dset.metadata[md_idx].apply_grad(ip_grad)
-            _proj_grad = _project_vectorized(ip_grad, x, y, model.xyz)
-            for md_idx in md:
-                _proj_grad = dset.metadata[md_idx].apply_grad_proj(_proj_grad)
-            proj_grad = proj_grad.at[jnp.array(par_map)].add(_proj_grad)
-        return proj_grad
+        #     _proj_grad = _project_vectorized(ip_grad, x, y, model.xyz)
+        #     for md_idx in md:
+        #         _proj_grad = dset.metadata[md_idx].apply_grad_proj(_proj_grad)
+        #     proj_grad = proj_grad.at[jnp.array(par_map)].add(_proj_grad)
+        # return proj_grad
+        return ip_grad
 
     def get_dataset_ind(self, dset_name: str) -> int:
         """
