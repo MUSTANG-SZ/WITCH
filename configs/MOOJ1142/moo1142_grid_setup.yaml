@@ -7,35 +7,32 @@ grid:
       gnfw_rs:
         parameters:
           P0:
-            val: 1.63
+            value: 1.63
           r_s: 
-            val: [5., 10. 20.]
+            value: [5., 10., 20.]
           gamma:
-            val: 0.9
+            value: 0.9
           alpha:
-            val: 2.26
+            value: 2.26
           beta:
-            val: "np.linspace(1.0, 4.0, 4)"
+            value: "np.linspace(1.0, 4.0, 4)"
       sph_isobeta:
         parameters:
           r:
-            val: 23.9
+            value: 23.9
           beta:
-            val: 2.56
+            value: 2.56
           amp:
-            val: 0.05
+            value: 0.05
   ps_model:
     structures:
       ps_gauss:
         parameters:
           dx_g:
-            val: 1.91
+            value: 1.91
           dy_g:
-            val: -4.04
+            value: -4.04
           sigma:
-            val: 5.1 
+            value: 5.1
           amp_g:
-            val: 0.00128582673
-       
-
-
+            value: 0.00128582673
