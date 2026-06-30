@@ -1,0 +1,38 @@
+base: "MOOJ1142_gNFW_rs_peak_subcluster_XRay_priors.yaml"
+output_dir: "."
+
+grid:
+  cluster_model:
+    structures:
+      gnfw_rs:
+        parameters:
+          P0:
+            value: 1.63
+          r_s:
+            value: [5., 10. 20.]
+          gamma:
+            value: 0.9
+          alpha:
+            value: 2.26
+          beta:
+            value: "np.linspace(1.0, 4.0, 4)"
+      sph_isobeta:
+        parameters:
+          r:
+            value: 23.9
+          beta:
+            value: 2.56
+          amp:
+            value: 0.05
+  ps_model:
+    structures:
+      ps_gauss:
+        parameters:
+          dx_g:
+            value: 1.91
+          dy_g:
+            value: -4.04
+          sigma:
+            value: 5.1
+          amp_g:
+            value: 0.00128582673
