@@ -8,8 +8,8 @@ grid:
         parameters:
           P0:
             value: 1.63
-          r_s: 
-            value: [5., 10., 20.]
+          r_s:
+            value: [5., 10. 20.]
           gamma:
             value: 0.9
           alpha:
