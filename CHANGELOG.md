@@ -1,3 +1,14 @@
+## 10.13.0 (2026-07-06)
+
+### Feat
+
+- example grid config yaml
+- added grid search script for LM fitter (issue #212)
+
+### Fix
+
+- use value key for consistency, add to_fit=False for unspecified parameters, fix filename spaces
+
 ## 10.12.0 (2026-06-10)
 
 ### Feat
