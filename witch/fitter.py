@@ -430,6 +430,7 @@ def _run_fit(
     return metamodel
 
 
+"""
 def _mcmc_checkpoint_callback(
     updated_metamodel, callback_state, checkpoint_interval, ckpt_dir, nonpara, cfg
 ):
@@ -448,6 +449,7 @@ def _mcmc_checkpoint_callback(
             step_num=step,
         )
         print_once(f"[checkpoint] Saved MCMC checkpoint at step {step} -> {ckpt_path}")
+"""
 
 
 def _run_mcmc(cfg, metamodel, nonpara=False):
@@ -455,10 +457,126 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
     init_pars = np.array(metamodel.parameters.copy())
 
     # Checkpoint settings
-    checkpoint_interval = int(cfg["mcmc"].get("checkpoint_interval", 200))
+    total_steps = int(cfg["mcmc"].get("num_steps", 5000))
+    chunk_size = int(cfg["mcmc"].get("checkpoint_interval", 200))
     ckpt_dir = os.path.join(cfg["outdir"], "checkpoints")
     os.makedirs(ckpt_dir, exist_ok=True)
 
+    # Resume from an existing MCMC checkpoint if requested
+    resume_state = None
+    all_samples = None
+    steps_done = 0
+    load = cfg.get("load_progress", 0)
+    if load != 0:
+        mcmc_ckpts = []
+        for f in os.listdir(ckpt_dir):
+            if f.startswith("mcmc_step_") and (("nonpara" in f) == nonpara):
+                mcmc_ckpts.append(f)
+        if len(mcmc_ckpts) > 0:
+            latest = sorted(
+                mcmc_ckpts, key=lambda x: int(x.split("_")[2].split(".")[0])
+            )[-1]
+            load_path = os.path.join(ckpt_dir, latest)
+            print_once(f"[resume] Loading MCMC checkpoint -> {load_path}")
+            loaded_metamodel, state = type(metamodel).load(load_path)
+            if not metamodel.check_compatibility(loaded_metamodel):
+                raise ValueError("MCMC checkpoint is incompatible!")
+            loaded_metamodel.global_comm = metamodel.global_comm
+            loaded_metamodel.datasets = metamodel.datasets
+            metamodel = _reestimate_noise(loaded_metamodel)
+            resume_state = state.get("mcmc_state", None)
+            steps_done = state.get("step", 0)
+            # Load accumulated samples
+            samps_path = os.path.join(cfg["outdir"], "samples_mcmc_partial.npz")
+            if os.path.exists(samps_path):
+                all_samples = np.load(samps_path)["samples"]
+            print_once(f"[resume] Resuming MCMC from step {steps_done}")
+
+    t1 = time.time()
+
+    # Loop over chunks of MCMC, checkpoint after each
+    while steps_done < total_steps:
+        this_chunk = min(chunk_size, total_steps - steps_done)
+        metamodel, samples, resume_state = run_mcmc(
+            metamodel,
+            num_steps=this_chunk,
+            num_leaps=int(cfg["mcmc"].get("num_leaps", 10)),
+            step_size=jnp.array(float(cfg["mcmc"].get("step_size", 0.02))),
+            sample_which=int(cfg["mcmc"].get("sample_which", -1)),
+            burn_in=float(cfg["mcmc"].get("burn_in", 0.1)),
+            max_tries=int(cfg["mcmc"].get("max_tries", 20)),
+            resume_state=resume_state,
+        )
+        mpi4jax.barrier(comm=comm)
+        steps_done += this_chunk
+
+        # Accumulate samples (rank 0 only has real samples)
+        if comm.Get_rank() == 0:
+            samples = np.array(samples)
+            if all_samples is None:
+                all_samples = samples
+            else:
+                all_samples = np.concatenate([all_samples, samples], axis=0)
+
+            # Save checkpoint and partial samples
+            ckpt_path = os.path.join(
+                ckpt_dir, f"mcmc_step_{steps_done}{'_nonpara'*nonpara}.pkl"
+            )
+            _save_checkpoint(
+                ckpt_path,
+                metamodel,
+                cfg,
+                stage="mcmc",
+                step_num=steps_done,
+            )
+            # Re open to add mcmc_state
+            metamodel.save(
+                ckpt_path,
+                {
+                    "cfg": cfg,
+                    "stage": "mcmc",
+                    "step": steps_done,
+                    "mcmc_state": resume_state,
+                },
+            )
+            samps_path = os.path.join(cfg["outdir"], "samples_mcmc_partial.npz")
+            np.savez_compressed(samps_path, samples=all_samples)
+            print_once(
+                f"[checkpoint] Saved MCMC checkpoint at step {steps_done} -> {ckpt_path}"
+            )
+
+    mpi4jax.barrier(comm=comm)
+    t2 = time.time()
+    print_once(f"Took {t2 - t1}s to run mcmc")
+
+    message = str(metamodel).split("\n")
+    message[1] = "MCMC estimated pars:"
+    print_once("\n".join(message))
+
+    _save_model(cfg, metamodel, "mcmc", nonpara)
+    if comm.Get_rank() == 0:
+        samples = np.array(all_samples)
+        samps_path = os.path.join(cfg["outdir"], f"samples_mcmc.npz")
+        print_once("Saving samples to", samps_path)
+        np.savez_compressed(samps_path, samples=samples)
+        try:
+            to_fit = np.array(metamodel.to_fit)
+            corner.corner(
+                samples,
+                labels=np.array(metamodel.par_names)[to_fit],
+                truths=init_pars[to_fit],
+            )
+            plt.savefig(os.path.join(cfg["outdir"], "corner.png"))
+        except Exception as e:
+            print_once(f"Failed to make corner plot with error: {str(e)}")
+    else:
+        del samples
+
+    metamodel = _reestimate_noise(metamodel)
+    return metamodel
+
+
+"""
     # Tracking container for callback to update
     callback_state = {
         "step": 0,
@@ -472,6 +590,10 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
         nonpara=nonpara,
         cfg=cfg,
     )
+
+    checkpoint_interval = int(cfg["mcmc"].get("checkpoint_interval", 200))
+    ckpt_dir = os.path.join(cfg["outdir"], "checkpoints")
+    os.makedirs(ckpt_dir, exist_ok=True)
 
     t1 = time.time()
     metamodel, samples = run_mcmc(
@@ -517,6 +639,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
 
     metamodel = _reestimate_noise(metamodel)
     return metamodel
+"""
 
 
 def fit_loop(metamodel, cfg, comm, nonpara=False):
