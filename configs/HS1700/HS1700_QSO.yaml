@@ -1,0 +1,144 @@
+base: "HS1700_base.yaml"
+name: "HS1700_6416"
+sim: False
+noise_map: True # Whether to make the noise map
+model_map: True # Whether to make a map of just the model
+
+abell:
+  structures:
+    a10:
+      # The first structure is witch.structures.a10
+      structure: "a10"
+      parameters:
+        dx:
+          value: -137
+          to_fit: True
+          priors: [-250,50]
+        dy:
+          value: 72
+          to_fit: True
+          priors: [10,250]
+        dz:
+          value: 0.0
+          to_fit: False
+        theta:
+          value: 0.0
+        P0:
+          value: 8.4
+          to_fit: True
+          priors: [1,16] 
+        c500:
+          value: 1.0
+        m500:
+          value: 2.2e14
+          to_fit: True
+          priors: [1e14,6e14]
+        gamma:
+          value: 0.3081
+          to_fit: True
+          priors: [0,1]
+        alpha:
+          value: 1.051
+          to_fit: True
+          priors: [0.5,3.0]
+        beta:
+          value: 5.4905
+        z: 
+          value: 0.229
+          to_fit: False
+ps_model:
+  structures:
+    ps1_gauss:    
+      structure: "gaussian"
+      parameters:
+        dx1:
+          value: -29.84
+          to_fit: False
+          priors: [-30,-29]
+        dy1:
+          value: -6.5
+          to_fit: False
+          priors: [-9,1]
+        sigma1:
+          value: 5
+          to_fit: False
+          priors: [1,15]
+        amp1:
+          value: 1.355e-5
+          to_fit: False
+          priors: [5e-6,1e-3]
+    ps2_gauss:
+      structure: "gaussian"
+      parameters:
+        dx2:
+          value: 32
+          to_fit: False
+          priors: [25,35]
+        dy2:
+          value: -25
+          to_fit: False
+          priors: [-30,-20]
+        sigma2:
+          value: 5
+          to_fit: False
+          priors: [1,15]
+        amp2:
+          value: 6.198e-6
+          to_fit: False
+          priors: [5e-6,1e-3]
+    ps_central:
+      structure: "gaussian"
+      parameters:
+        dxc:
+          value: 0
+          to_fit: False
+        dyc:
+          value: 0
+          to_fit: False
+        sigmac:
+          value: 5
+          to_fit: False
+        ampc:
+          value: 9.99e-6
+          to_fit: False
+          priors: [5e-6,1e-3]
+qso_model:
+  structures:
+    qso:
+      structure: "qso"
+      parameters:
+        dx:
+          value: 0.0
+          to_fit: False
+        dy:
+          value: 0.0
+          to_fit: False
+        dz:
+          value: 0.0
+          to_fit: False
+        z:
+          value: 2.735
+          to_fit: False
+        age:
+          value: 1
+          to_fit: False
+        Lw12:
+          value: "2.0e13"
+          to_fit: True
+          priors: [0,1e20]
+
+datasets:
+  mustang2:
+    point_sources:
+      - "ps_model"
+
+metamodel:
+  models:
+    - abell
+    - ps_model
+    - qso_model
+  model_map:
+    mustang2:
+      - abell
+      - ps_model
+      - qso_model

@@ -1,0 +1,73 @@
+base: "HS1700_base.yaml"
+name: "HS1700_6416"
+sim: False
+noise_map: True # Whether to make the noise map
+model_map: True # Whether to make a map of just the model
+
+ps_model:
+  structures:
+    ps1_gauss:    
+      structure: "gaussian"
+      parameters:
+        dx1:
+          value: -29.84
+          to_fit: True 
+          priors: [-30,-29]
+        dy1:
+          value: -6.5
+          to_fit: True
+          priors: [-9,1]
+        sigma1:
+          value: 5
+          to_fit: True
+          priors: [1,15]
+        amp1:
+          value: 1.355e-5
+          to_fit: True
+          priors: [5e-6,1e-3]
+    ps2_gauss:
+      structure: "gaussian"
+      parameters:
+        dx2:
+          value: 32
+          to_fit: True
+          priors: [25,35]
+        dy2:
+          value: -25
+          to_fit: True
+          priors: [-30,-20]
+        sigma2:
+          value: 5
+          to_fit: True
+          priors: [1,15]
+        amp2:
+          value: 6.198e-6
+          to_fit: False
+          priors: [5e-6,1e-3]
+    ps_central:
+      structure: "gaussian"
+      parameters:
+        dxc:
+          value: 0
+          to_fit: True
+        dyc:
+          value: 0
+          to_fit: True
+        sigmac:
+          value: 5
+          to_fit: True
+        ampc:
+          value: 9.99e-6
+          to_fit: True
+          priors: [5e-6,1e-3]
+datasets:
+  mustang2:
+    point_sources:
+      - "ps_model"
+
+metamodel:
+  models:
+    - ps_model
+  model_map:
+    mustang2:
+      - ps_model
