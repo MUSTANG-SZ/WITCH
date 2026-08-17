@@ -2054,7 +2054,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    gNFW pressure profile in 3d based on [Arnaud2010](https://ui.adsabs.harvard.edu/abs/2010A%26A...517A..92A/).</span>
 <span class="sd">    Compared to the function gnfw, this function fixes r1/r2/r3 to r500.</span>
 <span class="sd">    This function does not include smoothing or declination stretch</span>
@@ -2109,7 +2109,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    -------</span>
 <span class="sd">    model : jax.Array</span>
 <span class="sd">        The gnfw model evaluated on the grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">nz</span> <span class="o">=</span> <span class="n">get_nz</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
     <span class="n">hz</span> <span class="o">=</span> <span class="n">get_hz</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
@@ -2596,7 +2596,7 @@ Units: arcsec</p>
     <span class="n">zk</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">z0</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    Add ellipsoid with exponential structure to 3d pressure profile.</span>
 
 <span class="sd">    After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$</span>
@@ -2669,7 +2669,7 @@ Units: arcsec</p>
 <span class="sd">    -------</span>
 <span class="sd">    new_pressure : Array</span>
 <span class="sd">        Pressure profile with ellipsoid added.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">transform_grid</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="n">r_1</span><span class="p">,</span> <span class="n">r_2</span><span class="p">,</span> <span class="n">r_3</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">xyz</span><span class="p">)</span>
 
     <span class="n">exponential</span> <span class="o">=</span> <span class="n">amp</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">exp</span><span class="p">(((</span><span class="n">x</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">*</span> <span class="n">xk</span><span class="p">)</span> <span class="o">+</span> <span class="p">((</span><span class="n">y</span> <span class="o">-</span> <span class="n">y0</span><span class="p">)</span> <span class="o">*</span> <span class="n">yk</span><span class="p">)</span> <span class="o">+</span> <span class="p">((</span><span class="n">z</span> <span class="o">-</span> <span class="n">z0</span><span class="p">)</span> <span class="o">*</span> <span class="n">zk</span><span class="p">))</span>
@@ -3076,7 +3076,7 @@ Units: unitless</p>
     <span class="n">k_r</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">k_phi</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    Add ellipsoid with power law structure to 3d pressure profile.</span>
 
 <span class="sd">    After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$</span>
@@ -3138,7 +3138,7 @@ Units: unitless</p>
 <span class="sd">    -------</span>
 <span class="sd">    new_pressure : Array</span>
 <span class="sd">        Pressure profile with ellipsoid added.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">transform_grid</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="n">r_1</span><span class="p">,</span> <span class="n">r_2</span><span class="p">,</span> <span class="n">r_3</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">xyz</span><span class="p">)</span>
     <span class="n">r</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="n">phi</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">((</span><span class="n">jnp</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">phi0</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">-</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">/</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pi</span>
@@ -3544,7 +3544,7 @@ Units: unitless</p>
     <span class="n">k_r</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">omega</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    Add ellipsoid with radial power law and angular cosine dependant structure to 3d pressure profile.</span>
 
 <span class="sd">    After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$</span>
@@ -3606,7 +3606,7 @@ Units: unitless</p>
 <span class="sd">    -------</span>
 <span class="sd">    new_pressure : Array</span>
 <span class="sd">        Pressure profile with ellipsoid added.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">transform_grid</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="n">r_1</span><span class="p">,</span> <span class="n">r_2</span><span class="p">,</span> <span class="n">r_3</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">xyz</span><span class="p">)</span>
     <span class="n">r</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="n">phi</span> <span class="o">=</span> <span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">phi0</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
@@ -3937,7 +3937,7 @@ Units: unitless</p>
     <span class="n">theta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">amp</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    Add ellipsoid with uniform structure to 3d pressure profile.</span>
 
 <span class="sd">    After transforming the grid the region where $\sqrt{x^2 + y^2 + z^2} \leq 1$</span>
@@ -3988,7 +3988,7 @@ Units: unitless</p>
 <span class="sd">    -------</span>
 <span class="sd">    new_pressure : Array</span>
 <span class="sd">        Pressure profile with ellipsoid added.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">transform_grid</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="n">r_1</span><span class="p">,</span> <span class="n">r_2</span><span class="p">,</span> <span class="n">r_3</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">xyz</span><span class="p">)</span>
 
     <span class="n">new_pressure</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
@@ -4303,7 +4303,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 
 <span class="sd">    This function does not include smoothing or declination stretch</span>
 <span class="sd">    which should be applied at the end.</span>
@@ -4355,7 +4355,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    -------</span>
 <span class="sd">    model : jax.Array</span>
 <span class="sd">        The cylindrical beta model evaluated on the grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">transform_grid</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">xyz</span><span class="p">)</span>
     <span class="n">r</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="n">powerlaw</span> <span class="o">=</span> <span class="n">P0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="p">(</span><span class="n">r</span> <span class="o">/</span> <span class="n">r_c</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mf">3.0</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">beta</span><span class="p">)</span>
@@ -4713,7 +4713,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 
 <span class="sd">    Same as cylindrical_beta but compute 2D profile analytically.</span>
 <span class="sd">    Should be faster than 3D integration. Useful when you are</span>
@@ -4778,7 +4778,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    -------</span>
 <span class="sd">    model : jax.Array</span>
 <span class="sd">        The cylindrical beta model evaluated on the grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">transform_grid</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">xyz</span><span class="p">)</span>
     <span class="n">rr</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
 
@@ -5247,7 +5247,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    Eliptical gNFW pressure profile in 3d based on Arnaud2010.</span>
 <span class="sd">    r_ell is computed in the usual way for an a10 profile, then the axes are</span>
 <span class="sd">    scaled according to r_1, r_2, r_3, with a normalization applied.</span>
@@ -5316,7 +5316,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    -------</span>
 <span class="sd">    model : jax.Array</span>
 <span class="sd">        The gnfw model evaluated on the grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">nz</span> <span class="o">=</span> <span class="n">get_nz</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
     <span class="n">hz</span> <span class="o">=</span> <span class="n">get_hz</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
     <span class="n">da</span> <span class="o">=</span> <span class="n">get_da</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>  <span class="c1"># TODO pass these arguments rather than recompute them everytime???</span>
@@ -5677,7 +5677,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">amp</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    Elliptical gaussian profile in 3d.</span>
 <span class="sd">    This function does not include smoothing or declination stretch</span>
 <span class="sd">    which should be applied at the end.</span>
@@ -5735,7 +5735,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    -------</span>
 <span class="sd">    model : jax.Array</span>
 <span class="sd">        The gaussain model evaluated on the grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">transform_grid</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="n">r_1</span><span class="p">,</span> <span class="n">r_2</span><span class="p">,</span> <span class="n">r_3</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">xyz</span><span class="p">)</span>
 
     <span class="n">rr</span> <span class="o">=</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span>
@@ -6212,7 +6212,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    Elliptical gNFW pressure profile in 3d.</span>
 <span class="sd">    This function does not include smoothing or declination stretch</span>
 <span class="sd">    which should be applied at the end.</span>
@@ -6293,7 +6293,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    -------</span>
 <span class="sd">    model : jax.Array</span>
 <span class="sd">        The gnfw model evaluated on the grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">nz</span> <span class="o">=</span> <span class="n">get_nz</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
     <span class="n">hz</span> <span class="o">=</span> <span class="n">get_hz</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
 
@@ -6530,7 +6530,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">amp</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    Standard gaussian profile in 2d.</span>
 <span class="sd">    This function does not include smoothing or declination stretch</span>
 <span class="sd">    which should be applied at the end. The transform_grid call is</span>
@@ -6570,7 +6570,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    -------</span>
 <span class="sd">    model : jax.Array</span>
 <span class="sd">        The gaussian model evaluated on only the 2d xy grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">transform_grid</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">xyz</span><span class="p">)</span>
     <span class="n">rr</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
     <span class="n">power</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">rr</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
@@ -6976,7 +6976,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    Spherical gNFW pressure profile in 3d.</span>
 <span class="sd">    This function does not include smoothing or declination stretch</span>
 <span class="sd">    which should be applied at the end.</span>
@@ -7046,7 +7046,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    -------</span>
 <span class="sd">    model : jax.Array</span>
 <span class="sd">        The gnfw model evaluated on the grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">nz</span> <span class="o">=</span> <span class="n">get_nz</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
     <span class="n">hz</span> <span class="o">=</span> <span class="n">get_hz</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
 
@@ -7395,7 +7395,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    Spherical gNFW pressure profile in 3d. Fits for r_s directly instead of m500.</span>
 <span class="sd">    This function does not include smoothing or declination stretch</span>
 <span class="sd">    which should be applied at the end.</span>
@@ -7452,7 +7452,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    -------</span>
 <span class="sd">    model : jax.Array</span>
 <span class="sd">        The gnfw model evaluated on the grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">transform_grid</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">xyz</span><span class="p">)</span>
     <span class="n">r</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
 
@@ -7793,7 +7793,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">amp</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    Elliptical isobeta pressure profile in 3d.</span>
 <span class="sd">    This function does not include smoothing or declination stretch</span>
 <span class="sd">    which should be applied at the end.</span>
@@ -7851,7 +7851,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    -------</span>
 <span class="sd">    model : Array</span>
 <span class="sd">        The jax.isobeta model evaluated on the grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">transform_grid</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="n">r_1</span><span class="p">,</span> <span class="n">r_2</span><span class="p">,</span> <span class="n">r_3</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">xyz</span><span class="p">)</span>
 
     <span class="n">rr</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span>
@@ -7972,7 +7972,7 @@ xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
     <span class="n">c</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Function which computes 3D pressure of segmented power laws</span>
 
 <span class="sd">    Parameters:</span>
@@ -8000,7 +8000,7 @@ xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
 <span class="sd">    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]</span>
 <span class="sd">        Coordinte grid to calculate model on.</span>
 <span class="sd">        See `containers.Model.xyz` for details.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">transform_grid</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">xyz</span><span class="p">)</span>
     <span class="n">r</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="n">nonpara_rbins</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nonpara_rbins</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">jnp</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">r</span><span class="p">)]))</span>
@@ -8284,7 +8284,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">Lw12</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    QSO model from Kyle Massingill. This is basically a uniform model where the</span>
 <span class="sd">    amplitude and radius are parameterized by the luminosity, Lw12, which</span>
 <span class="sd">    is just the luminosity in solar units. The function calculates an amplitude</span>
@@ -8322,7 +8322,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    -------</span>
 <span class="sd">    model : jax.Array</span>
 <span class="sd">        The QSO model evaluated on the 3D grid</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">beta</span> <span class="o">=</span> <span class="mf">0.8828</span>
     <span class="n">time</span> <span class="o">=</span> <span class="n">age</span> <span class="o">*</span> <span class="mf">1.0e8</span> <span class="o">*</span> <span class="mf">365.25</span> <span class="o">*</span> <span class="mi">24</span> <span class="o">*</span> <span class="mi">3600</span>
@@ -8633,7 +8633,7 @@ See <code>containers.Model.xyz</code> for details.</p>
     <span class="n">amp</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    Spherical isobeta pressure profile in 3d.</span>
 <span class="sd">    This function does not include smoothing or declination stretch</span>
 <span class="sd">    which should be applied at the end.</span>
@@ -8682,7 +8682,7 @@ See <code>containers.Model.xyz</code> for details.</p>
 <span class="sd">    -------</span>
 <span class="sd">    model : Array</span>
 <span class="sd">        The jax.sph_isobeta model evaluated on the grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">transform_grid</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">xyz</span><span class="p">)</span>
 
     <span class="n">rr</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span>

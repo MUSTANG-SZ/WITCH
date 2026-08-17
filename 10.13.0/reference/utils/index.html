@@ -1680,7 +1680,7 @@ and cosmology as well as some generically useful math functions.</p>
 <span class="normal">119</span>
 <span class="normal">120</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnums</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,))</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">K_CMB2K_RJ</span><span class="p">(</span><span class="n">freq</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Convert from K_CMB to K_RJ.</span>
 
 <span class="sd">    Parameters</span>
@@ -1692,7 +1692,7 @@ and cosmology as well as some generically useful math functions.</p>
 <span class="sd">    -------</span>
 <span class="sd">    K_CMB2K_RJ : float</span>
 <span class="sd">        Conversion factor from K_CMB to K_RJ.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">freq</span> <span class="o">*</span> <span class="n">h</span> <span class="o">/</span> <span class="n">kb</span> <span class="o">/</span> <span class="n">Tcmb</span>
     <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="n">x</span> <span class="o">/</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
 </code></pre></div></td></tr></table></div>
@@ -1867,7 +1867,7 @@ and cosmology as well as some generically useful math functions.</p>
 <span class="normal">421</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">beam_double_gauss</span><span class="p">(</span>
     <span class="n">dr</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">fwhm1</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">amp1</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">fwhm2</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">amp2</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Helper function to generate a double gaussian beam.</span>
 
 <span class="sd">    Parameters</span>
@@ -1886,7 +1886,7 @@ and cosmology as well as some generically useful math functions.</p>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">        beam: Double gaussian beam.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mf">1.5</span> <span class="o">*</span> <span class="n">fwhm1</span> <span class="o">//</span> <span class="p">(</span><span class="n">dr</span><span class="p">),</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">fwhm1</span> <span class="o">//</span> <span class="p">(</span><span class="n">dr</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span><span class="n">dr</span><span class="p">)</span>
     <span class="n">beam_xx</span><span class="p">,</span> <span class="n">beam_yy</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
     <span class="n">beam_rr</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">beam_xx</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">beam_yy</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
@@ -2112,7 +2112,7 @@ Note that if you are using meshgrid, we assume <code>'ij'</code> indexing.</p>
 <span class="k">def</span><span class="w"> </span><span class="nf">bilinear_interp</span><span class="p">(</span>
     <span class="n">x</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">xp</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">yp</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">fp</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    JAX implementation of bilinear interpolation.</span>
 <span class="sd">    Out of bounds values are set to 0.</span>
 <span class="sd">    Using the repeated linear interpolation method here,</span>
@@ -2132,20 +2132,20 @@ Note that if you are using meshgrid, we assume <code>'ij'</code> indexing.</p>
 <span class="sd">        Assumed to be sorted.</span>
 <span class="sd">    fp : jax.Array</span>
 <span class="sd">        Functon values at `(xp, yp)`, should have shape `(len(xp), len(yp))`.</span>
-<span class="sd">        Note that if you are using meshgrid, we assume `&#39;ij&#39;` indexing.</span>
+<span class="sd">        Note that if you are using meshgrid, we assume `'ij'` indexing.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    f : jax.Array</span>
 <span class="sd">        The interpolated values.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;xp must be 1D&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"xp must be 1D"</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">yp</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;yp must be 1D&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"yp must be 1D"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">fp</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">xp</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="n">yp</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">&quot;Incompatible shapes for fp, xp, yp: </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="s2">"Incompatible shapes for fp, xp, yp: </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
             <span class="n">fp</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
             <span class="n">xp</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
             <span class="n">yp</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
@@ -2153,8 +2153,8 @@ Note that if you are using meshgrid, we assume <code>'ij'</code> indexing.</p>
 
     <span class="c1"># Figure out bounds and mapping</span>
     <span class="c1"># This breaks if xp, yp is not sorted</span>
-    <span class="n">ix</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">xp</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">xp</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-    <span class="n">iy</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">yp</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">yp</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">ix</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">xp</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">"right"</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">xp</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">iy</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">yp</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">"right"</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">yp</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
     <span class="n">q_11</span> <span class="o">=</span> <span class="n">fp</span><span class="p">[</span><span class="n">ix</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">iy</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
     <span class="n">q_21</span> <span class="o">=</span> <span class="n">fp</span><span class="p">[</span><span class="n">ix</span><span class="p">,</span> <span class="n">iy</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
     <span class="n">q_12</span> <span class="o">=</span> <span class="n">fp</span><span class="p">[</span><span class="n">ix</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">iy</span><span class="p">]</span>
@@ -2340,7 +2340,7 @@ Note that if you are using meshgrid, we assume <code>'ij'</code> indexing.</p>
 <span class="normal">482</span>
 <span class="normal">483</span>
 <span class="normal">484</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">bin_map</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">pixsize</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Bins data radially.</span>
 
 <span class="sd">    Parameters</span>
@@ -2358,7 +2358,7 @@ Note that if you are using meshgrid, we assume <code>'ij'</code> indexing.</p>
 <span class="sd">        Mean of pixels in bin</span>
 <span class="sd">    var1d : np.array</span>
 <span class="sd">        Variance of pixels in bin</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
         <span class="o">-</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">pixsize</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">pixsize</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
     <span class="p">)</span>
@@ -2505,7 +2505,7 @@ Note that if you are using meshgrid, we assume <code>'ij'</code> indexing.</p>
 <span class="normal">242</span>
 <span class="normal">243</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">fft_conv</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">kernel</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Perform a convolution using FFTs for speed with jax.</span>
 
 <span class="sd">    Parameters</span>
@@ -2519,7 +2519,7 @@ Note that if you are using meshgrid, we assume <code>'ij'</code> indexing.</p>
 <span class="sd">    -------</span>
 <span class="sd">    convolved_map : jax.Array</span>
 <span class="sd">        Image convolved with kernel.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">Fmap</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft2</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">image</span><span class="p">))</span>
     <span class="n">Fkernel</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft2</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">kernel</span><span class="p">))</span>
     <span class="n">convolved_map</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifft2</span><span class="p">(</span><span class="n">Fmap</span> <span class="o">*</span> <span class="n">Fkernel</span><span class="p">)))</span>
@@ -2640,7 +2640,7 @@ Note that if you are using meshgrid, we assume <code>'ij'</code> indexing.</p>
 <span class="normal">266</span>
 <span class="normal">267</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">fft_deconv</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">kernel</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Perform a convolution using FFTs for speed with jax.</span>
 
 <span class="sd">    Parameters</span>
@@ -2654,7 +2654,7 @@ Note that if you are using meshgrid, we assume <code>'ij'</code> indexing.</p>
 <span class="sd">    -------</span>
 <span class="sd">    convolved_map : jax.Array</span>
 <span class="sd">        Image convolved with kernel.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">Fmap</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft2</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">image</span><span class="p">))</span>
     <span class="n">Fkernel</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft2</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">kernel</span><span class="p">))</span>
     <span class="n">convolved_map</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifft2</span><span class="p">(</span><span class="n">Fmap</span> <span class="o">/</span> <span class="n">Fkernel</span><span class="p">)))</span>
@@ -2753,7 +2753,7 @@ Note that if you are using meshgrid, we assume <code>'ij'</code> indexing.</p>
 <span class="normal">179</span>
 <span class="normal">180</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_da</span><span class="p">(</span><span class="n">z</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Get factor to convert from arcseconds to MPc.</span>
 
 <span class="sd">    Parameters</span>
@@ -2765,7 +2765,7 @@ Note that if you are using meshgrid, we assume <code>'ij'</code> indexing.</p>
 <span class="sd">    -------</span>
 <span class="sd">    da : jax.Array</span>
 <span class="sd">        Conversion factor from arcseconds to MPc.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">zline</span><span class="p">,</span> <span class="n">daline</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2860,7 +2860,7 @@ Note that if you are using meshgrid, we assume <code>'ij'</code> indexing.</p>
 <span class="normal">216</span>
 <span class="normal">217</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_hz</span><span class="p">(</span><span class="n">z</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Get the dimensionless hubble constant, h, at a given redshift.</span>
 
 <span class="sd">    Parameters</span>
@@ -2872,7 +2872,7 @@ Note that if you are using meshgrid, we assume <code>'ij'</code> indexing.</p>
 <span class="sd">    -------</span>
 <span class="sd">    hz : jax.Array</span>
 <span class="sd">        h at the given z.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">zline</span><span class="p">,</span> <span class="n">hzline</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2969,7 +2969,7 @@ This is in units of solar masses per cubic Mpc.</p>
 <span class="normal">198</span>
 <span class="normal">199</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_nz</span><span class="p">(</span><span class="n">z</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Get the critical density at a given redshift.</span>
 
 <span class="sd">    Parameters</span>
@@ -2982,7 +2982,7 @@ This is in units of solar masses per cubic Mpc.</p>
 <span class="sd">    nz : jax.Array</span>
 <span class="sd">        Critical density at the given z.</span>
 <span class="sd">        This is in units of solar masses per cubic Mpc.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">zline</span><span class="p">,</span> <span class="n">nzline</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -3102,7 +3102,7 @@ This is in units of solar masses per cubic Mpc.</p>
 <span class="normal">315</span>
 <span class="normal">316</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnums</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,))</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">tod_hi_pass</span><span class="p">(</span><span class="n">tod</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">N_filt</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    High pass a tod with a tophat</span>
 
 <span class="sd">    Parameters</span>
@@ -3116,7 +3116,7 @@ This is in units of solar masses per cubic Mpc.</p>
 <span class="sd">    -------</span>
 <span class="sd">    tod_filtered : jax.Array</span>
 <span class="sd">        High pass filtered TOD</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">mask</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">tod</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
     <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">N_filt</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
 
@@ -3272,7 +3272,7 @@ This is in units of solar masses per cubic Mpc.</p>
 <span class="normal">100</span>
 <span class="normal">101</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnums</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">y2K_CMB</span><span class="p">(</span><span class="n">freq</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">Te</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Convert from compton y to K_CMB.</span>
 
 <span class="sd">    Parameters</span>
@@ -3286,7 +3286,7 @@ This is in units of solar masses per cubic Mpc.</p>
 <span class="sd">    -------</span>
 <span class="sd">    y2K_CMB : float</span>
 <span class="sd">        Conversion factor from compton y to K_CMB.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">freq</span> <span class="o">*</span> <span class="n">h</span> <span class="o">/</span> <span class="n">kb</span> <span class="o">/</span> <span class="n">Tcmb</span>
     <span class="n">xt</span> <span class="o">=</span> <span class="n">x</span> <span class="o">/</span> <span class="n">jnp</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span>
     <span class="n">st</span> <span class="o">=</span> <span class="n">x</span> <span class="o">/</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sinh</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span>
@@ -3436,7 +3436,7 @@ This is in units of solar masses per cubic Mpc.</p>
 <span class="normal">140</span>
 <span class="normal">141</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnums</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">y2K_RJ</span><span class="p">(</span><span class="n">freq</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">Te</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Convert from compton y to K_RJ.</span>
 
 <span class="sd">    Parameters</span>
@@ -3450,7 +3450,7 @@ This is in units of solar masses per cubic Mpc.</p>
 <span class="sd">    -------</span>
 <span class="sd">    y2K_RJ : float</span>
 <span class="sd">        Conversion factor from compton y to K_RJ.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">factor</span> <span class="o">=</span> <span class="n">y2K_CMB</span><span class="p">(</span><span class="n">freq</span><span class="p">,</span> <span class="n">Te</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">factor</span> <span class="o">*</span> <span class="n">K_CMB2K_RJ</span><span class="p">(</span><span class="n">freq</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -3565,7 +3565,7 @@ This is in units of solar masses per cubic Mpc.</p>
 <span class="normal">161</span>
 <span class="normal">162</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnums</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">y2uK_CMB</span><span class="p">(</span><span class="n">freq</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">Te</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Convert from compton y to uK_CMB.</span>
 
 <span class="sd">    Parameters</span>
@@ -3579,7 +3579,7 @@ This is in units of solar masses per cubic Mpc.</p>
 <span class="sd">    -------</span>
 <span class="sd">    y2uK_RJ : float</span>
 <span class="sd">        Conversion factor from compton y to uK_CMB.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">factor</span> <span class="o">=</span> <span class="n">y2K_CMB</span><span class="p">(</span><span class="n">freq</span><span class="p">,</span> <span class="n">Te</span><span class="p">)</span>
     <span class="k">return</span> <span class="mf">1e6</span> <span class="o">*</span> <span class="n">factor</span>
 </code></pre></div></td></tr></table></div>

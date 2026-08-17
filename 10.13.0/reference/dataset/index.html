@@ -2221,7 +2221,7 @@ See <code>MetaData</code> for the rest.</p>
 <span class="normal">211</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_pytree_node_class</span>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">BeamConvAndPrefac</span><span class="p">(</span><span class="n">MetaData</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Apply beam convolution and a prefactor (for unit conversion) to a model.</span>
 <span class="sd">    Only attributes unique to this subclass are listed here.</span>
 <span class="sd">    See `MetaData` for the rest.</span>
@@ -2232,20 +2232,20 @@ See <code>MetaData</code> for the rest.</p>
 <span class="sd">        The beam to convolve both the model and gradient with.</span>
 <span class="sd">    prefactor : jax.Array</span>
 <span class="sd">        Scalary array containing a value to multiply the model and gradients by.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">beam</span><span class="p">:</span> <span class="n">Array</span>
     <span class="n">prefactor</span><span class="p">:</span> <span class="n">Array</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Convolve the model by the beam and then multiply by the prefactor.</span>
 <span class="sd">        See `MetaData.apply` for details on parameters and returns.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">prefactor</span> <span class="o">*</span> <span class="n">beam_conv</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">beam</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">apply_grad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_grad</span><span class="p">:</span> <span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">        Convolve the gradient by the beam and then multiply by the prefactor.</span>
 <span class="sd">        Here we are taking advantage of the following:</span>
 
@@ -2258,11 +2258,11 @@ See <code>MetaData</code> for the rest.</p>
 <span class="sd">        Where $m$ is the model, $x$ is some parameter, $p$ is the prefactor, and $b$ is the beam.</span>
 
 <span class="sd">        See `MetaData.apply_grad` for details on parameters and returns.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">prefactor</span> <span class="o">*</span> <span class="n">beam_conv_vec</span><span class="p">(</span><span class="n">model_grad</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">beam</span><span class="p">)</span>
 
     <span class="c1"># Functions for making this a pytree</span>
-    <span class="c1"># Don&#39;t call this on your own</span>
+    <span class="c1"># Don't call this on your own</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">tree_flatten</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">]:</span>
 
         <span class="n">children</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">beam</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">prefactor</span><span class="p">)</span>
@@ -2314,10 +2314,10 @@ See <code>MetaData.apply</code> for details on parameters and returns.</p>
 <span class="normal">177</span>
 <span class="normal">178</span>
 <span class="normal">179</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Convolve the model by the beam and then multiply by the prefactor.</span>
 <span class="sd">    See `MetaData.apply` for details on parameters and returns.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">prefactor</span> <span class="o">*</span> <span class="n">beam_conv</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">beam</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2365,7 +2365,7 @@ Here we are taking advantage of the following:</p>
 <span class="normal">194</span>
 <span class="normal">195</span>
 <span class="normal">196</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">apply_grad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_grad</span><span class="p">:</span> <span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
 <span class="sd">    Convolve the gradient by the beam and then multiply by the prefactor.</span>
 <span class="sd">    Here we are taking advantage of the following:</span>
 
@@ -2378,7 +2378,7 @@ Here we are taking advantage of the following:</p>
 <span class="sd">    Where $m$ is the model, $x$ is some parameter, $p$ is the prefactor, and $b$ is the beam.</span>
 
 <span class="sd">    See `MetaData.apply_grad` for details on parameters and returns.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">prefactor</span> <span class="o">*</span> <span class="n">beam_conv_vec</span><span class="p">(</span><span class="n">model_grad</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">beam</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2797,7 +2797,7 @@ This field is not part of the initialization function.</p>
 <span class="normal">650</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_pytree_node_class</span>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">DataSet</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Class for storing a dataset.</span>
 
 <span class="sd">    Attributes</span>
@@ -2831,7 +2831,7 @@ This field is not part of the initialization function.</p>
 <span class="sd">    metadata : tuple[MetaData]</span>
 <span class="sd">        Tuple of `MetaData` instances to apply to model.</span>
 <span class="sd">        This field is not part of the initialization function.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">get_files</span><span class="p">:</span> <span class="n">GetFiles</span>
@@ -2856,20 +2856,20 @@ This field is not part of the initialization function.</p>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">postfit</span><span class="p">,</span> <span class="n">PostFit</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;info&quot;</span><span class="p">:</span>
-            <span class="k">if</span> <span class="s2">&quot;mode&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot set dataset info without a &#39;mode&#39; field&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">value</span><span class="p">[</span><span class="s2">&quot;mode&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;tod&quot;</span><span class="p">,</span> <span class="s2">&quot;map&quot;</span><span class="p">]:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Dataset info contained invalid mode&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="s2">&quot;objective&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot set dataset info without an &#39;objective&#39; field&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="s2">&quot;objective&quot;</span><span class="p">],</span> <span class="n">ObjectiveFunc</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Dataset info contained invalid objective function&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">"info"</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">"mode"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Cannot set dataset info without a 'mode' field"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span><span class="p">[</span><span class="s2">"mode"</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"tod"</span><span class="p">,</span> <span class="s2">"map"</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Dataset info contained invalid mode"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s2">"objective"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Cannot set dataset info without an 'objective' field"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="s2">"objective"</span><span class="p">],</span> <span class="n">ObjectiveFunc</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Dataset info contained invalid objective function"</span><span class="p">)</span>
         <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">mode</span><span class="p">(</span><span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the mode for this dataset.</span>
 <span class="sd">        Will be `tod` or `map`.</span>
 
@@ -2877,24 +2877,24 @@ This field is not part of the initialization function.</p>
 <span class="sd">        -------</span>
 <span class="sd">        mode : str</span>
 <span class="sd">            The dataset mode.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;mode&quot;</span><span class="p">]</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"mode"</span><span class="p">]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">objective</span><span class="p">(</span><span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ObjectiveFunc</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the objective function for this dataset.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        objective : ObjectiveFunc</span>
 <span class="sd">            The objective function.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;objective&quot;</span><span class="p">]</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"objective"</span><span class="p">]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">noise_class</span><span class="p">(</span><span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NoiseModel</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the noise class for this dataset.</span>
 
 <span class="sd">        Returns</span>
@@ -2902,12 +2902,12 @@ This field is not part of the initialization function.</p>
 <span class="sd">        noise_class : NoiseModel</span>
 <span class="sd">            The class of the noise model that will be used for this dataset.</span>
 <span class="sd">            This field is not part of the initialization function.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;noise_class&quot;</span><span class="p">]</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"noise_class"</span><span class="p">]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">noise_args</span><span class="p">(</span><span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the noise arguments for this dataset.</span>
 
 <span class="sd">        Returns</span>
@@ -2915,12 +2915,12 @@ This field is not part of the initialization function.</p>
 <span class="sd">        noise_args : tuple</span>
 <span class="sd">            Positional arguments to be used by the noise model.</span>
 <span class="sd">            This field is not part of the initialization function.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;noise_args&quot;</span><span class="p">]</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"noise_args"</span><span class="p">]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">noise_kwargs</span><span class="p">(</span><span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the noise keyword arguments for this dataset.</span>
 
 <span class="sd">        Returns</span>
@@ -2928,11 +2928,11 @@ This field is not part of the initialization function.</p>
 <span class="sd">        noise_kwargs : dict</span>
 <span class="sd">            Keyword arguments to be used by the noise model.</span>
 <span class="sd">            This field is not part of the initialization function.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;noise_kwargs&quot;</span><span class="p">]</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"noise_kwargs"</span><span class="p">]</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">check_completeness</span><span class="p">(</span><span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Check if all fields are actually populated and raise an error if not.</span>
 
 <span class="sd">        Raises</span>
@@ -2942,38 +2942,38 @@ This field is not part of the initialization function.</p>
 <span class="sd">            If `self.info` is missing some required info.</span>
 <span class="sd">            If `self.mode` is not a valid mode.</span>
 <span class="sd">            If `self.objective` is not a valid objective function.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">fname</span>
             <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dataclass_fields__</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">fname</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span>
         <span class="p">]</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Datset is missing the following fields: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Datset is missing the following fields: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="n">required_info</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-            <span class="p">[</span><span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="s2">&quot;objective&quot;</span><span class="p">,</span> <span class="s2">&quot;noise_class&quot;</span><span class="p">,</span> <span class="s2">&quot;noise_args&quot;</span><span class="p">,</span> <span class="s2">&quot;noise_kwargs&quot;</span><span class="p">]</span>
+            <span class="p">[</span><span class="s2">"mode"</span><span class="p">,</span> <span class="s2">"objective"</span><span class="p">,</span> <span class="s2">"noise_class"</span><span class="p">,</span> <span class="s2">"noise_args"</span><span class="p">,</span> <span class="s2">"noise_kwargs"</span><span class="p">]</span>
         <span class="p">)</span>
         <span class="n">contained_info</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
         <span class="n">missing_info</span> <span class="o">=</span> <span class="n">required_info</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">required_info</span><span class="p">,</span> <span class="n">contained_info</span><span class="p">)]</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing_info</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;(Dataset info is missing the following fields: </span><span class="si">{</span><span class="n">missing_info</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"(Dataset info is missing the following fields: </span><span class="si">{</span><span class="n">missing_info</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;mode&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;tod&quot;</span><span class="p">,</span> <span class="s2">&quot;map&quot;</span><span class="p">]:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Dataset info contained invalid mode&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;objective&quot;</span><span class="p">],</span> <span class="n">ObjectiveFunc</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Dataset info contained invalid objective function&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"mode"</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"tod"</span><span class="p">,</span> <span class="s2">"map"</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Dataset info contained invalid mode"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"objective"</span><span class="p">],</span> <span class="n">ObjectiveFunc</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Dataset info contained invalid objective function"</span><span class="p">)</span>
 
     <span class="c1"># Functions for making this a pytree</span>
-    <span class="c1"># Don&#39;t call this on your own</span>
+    <span class="c1"># Don't call this on your own</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">tree_flatten</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">]:</span>
-        <span class="k">if</span> <span class="s2">&quot;datavec&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">"datavec"</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">:</span>
             <span class="n">children</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datavec</span><span class="p">,)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">children</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,)</span>
-        <span class="k">if</span> <span class="s2">&quot;metadata&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">"metadata"</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">:</span>
             <span class="n">children</span> <span class="o">+=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">,)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">children</span> <span class="o">+=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,)</span>
@@ -2988,7 +2988,7 @@ This field is not part of the initialization function.</p>
             <span class="bp">self</span><span class="o">.</span><span class="n">postfit</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">global_comm</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="k">if</span> <span class="s2">&quot;info&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">"info"</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">:</span>
             <span class="n">aux_data</span> <span class="o">+=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">,)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">aux_data</span> <span class="o">+=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,)</span>
@@ -3330,7 +3330,7 @@ If <code>self.objective</code> is not a valid objective function.</p>
 <span class="normal">604</span>
 <span class="normal">605</span>
 <span class="normal">606</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">check_completeness</span><span class="p">(</span><span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Check if all fields are actually populated and raise an error if not.</span>
 
 <span class="sd">    Raises</span>
@@ -3340,29 +3340,29 @@ If <code>self.objective</code> is not a valid objective function.</p>
 <span class="sd">        If `self.info` is missing some required info.</span>
 <span class="sd">        If `self.mode` is not a valid mode.</span>
 <span class="sd">        If `self.objective` is not a valid objective function.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span>
         <span class="n">fname</span>
         <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dataclass_fields__</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">fname</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span>
     <span class="p">]</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Datset is missing the following fields: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Datset is missing the following fields: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="n">required_info</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-        <span class="p">[</span><span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="s2">&quot;objective&quot;</span><span class="p">,</span> <span class="s2">&quot;noise_class&quot;</span><span class="p">,</span> <span class="s2">&quot;noise_args&quot;</span><span class="p">,</span> <span class="s2">&quot;noise_kwargs&quot;</span><span class="p">]</span>
+        <span class="p">[</span><span class="s2">"mode"</span><span class="p">,</span> <span class="s2">"objective"</span><span class="p">,</span> <span class="s2">"noise_class"</span><span class="p">,</span> <span class="s2">"noise_args"</span><span class="p">,</span> <span class="s2">"noise_kwargs"</span><span class="p">]</span>
     <span class="p">)</span>
     <span class="n">contained_info</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
     <span class="n">missing_info</span> <span class="o">=</span> <span class="n">required_info</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">required_info</span><span class="p">,</span> <span class="n">contained_info</span><span class="p">)]</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing_info</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;(Dataset info is missing the following fields: </span><span class="si">{</span><span class="n">missing_info</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"(Dataset info is missing the following fields: </span><span class="si">{</span><span class="n">missing_info</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
 
-    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;mode&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;tod&quot;</span><span class="p">,</span> <span class="s2">&quot;map&quot;</span><span class="p">]:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Dataset info contained invalid mode&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;objective&quot;</span><span class="p">],</span> <span class="n">ObjectiveFunc</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Dataset info contained invalid objective function&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"mode"</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"tod"</span><span class="p">,</span> <span class="s2">"map"</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Dataset info contained invalid mode"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"objective"</span><span class="p">],</span> <span class="n">ObjectiveFunc</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Dataset info contained invalid objective function"</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3437,15 +3437,15 @@ See docstring of <code>__call__</code> for details on the parameters and returns
 <span class="normal">240</span>
 <span class="normal">241</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@runtime_checkable</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">GetFiles</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Function that returns a list of files to be loaded for this dataset.</span>
 <span class="sd">    Technically these do not have the be filepaths, just a list where each</span>
 <span class="sd">    entry is the information needed to load the data.</span>
 <span class="sd">    See docstring of `__call__` for details on the parameters and returns.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="n">dset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        dset_name : str</span>
@@ -3461,7 +3461,7 @@ See docstring of <code>__call__</code> for details on the parameters and returns
 <span class="sd">            The format of the entries are up to the dataset but the number of</span>
 <span class="sd">            entries must match the number of things loaded for MPI planning</span>
 <span class="sd">            purposes.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -3587,7 +3587,7 @@ purposes.</p>
 <span class="normal">239</span>
 <span class="normal">240</span>
 <span class="normal">241</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="n">dset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    dset_name : str</span>
@@ -3603,7 +3603,7 @@ purposes.</p>
 <span class="sd">        The format of the entries are up to the dataset but the number of</span>
 <span class="sd">        entries must match the number of things loaded for MPI planning</span>
 <span class="sd">        purposes.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -3687,7 +3687,7 @@ At the minimum this should contain:</p>
 <span class="normal">309</span>
 <span class="normal">310</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@runtime_checkable</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">GetInfo</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Function that gets information that will be used by other functions for this dataset.</span>
 <span class="sd">    At the minimum this should contain:</span>
 
@@ -3695,10 +3695,10 @@ At the minimum this should contain:</p>
 <span class="sd">    * `objective`: a function pointer to an objective function. See `witch.objective.ObjectiveFunc` for details.</span>
 
 <span class="sd">    See docstring of `__call__` for details on the parameters and returns.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="n">dset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">datavec</span><span class="p">:</span> <span class="n">DataVec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        dset_name : str</span>
@@ -3716,7 +3716,7 @@ At the minimum this should contain:</p>
 <span class="sd">        info : dict</span>
 <span class="sd">            Dictionairy containing information.</span>
 <span class="sd">            Must at least contain `mode` and `objective`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -3859,7 +3859,7 @@ Must at least contain <code>mode</code> and <code>objective</code>.</p>
 <span class="normal">308</span>
 <span class="normal">309</span>
 <span class="normal">310</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="n">dset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">datavec</span><span class="p">:</span> <span class="n">DataVec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    dset_name : str</span>
@@ -3877,7 +3877,7 @@ Must at least contain <code>mode</code> and <code>objective</code>.</p>
 <span class="sd">    info : dict</span>
 <span class="sd">        Dictionairy containing information.</span>
 <span class="sd">        Must at least contain `mode` and `objective`.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -3957,17 +3957,17 @@ See docstring of <code>__call__</code> for details on the parameters and returns
 <span class="normal">274</span>
 <span class="normal">275</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@runtime_checkable</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">Load</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Function that loads data into a `jitkasi` container.</span>
 <span class="sd">    This function is also responsible for updating the comm object to</span>
 <span class="sd">    the local one in any relevant libraries.</span>
 <span class="sd">    See docstring of `__call__` for details on the parameters and returns.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="n">dset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">fnames</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">comm</span><span class="p">:</span> <span class="n">MPI</span><span class="o">.</span><span class="n">Intracomm</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataVec</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        dset_name : str</span>
@@ -3985,7 +3985,7 @@ See docstring of <code>__call__</code> for details on the parameters and returns
 <span class="sd">            The `jitkasi` container for the data.</span>
 <span class="sd">            This is going to be `TODVec` for TODs</span>
 <span class="sd">            and `SolutionSet` for maps.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -4147,7 +4147,7 @@ and <code>SolutionSet</code> for maps.</p>
 <span class="normal">275</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="n">dset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">fnames</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">comm</span><span class="p">:</span> <span class="n">MPI</span><span class="o">.</span><span class="n">Intracomm</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataVec</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    dset_name : str</span>
@@ -4165,7 +4165,7 @@ and <code>SolutionSet</code> for maps.</p>
 <span class="sd">        The `jitkasi` container for the data.</span>
 <span class="sd">        This is going to be `TODVec` for TODs</span>
 <span class="sd">        and `SolutionSet` for maps.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -4239,16 +4239,16 @@ See docstring of <code>__call__</code> for details on the parameters and returns
 <span class="normal">338</span>
 <span class="normal">339</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@runtime_checkable</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">MakeMetadata</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Function that makes the metadata.</span>
-<span class="sd">    If you don&#39;t need it just write a dummy function to return an empty tuple.</span>
+<span class="sd">    If you don't need it just write a dummy function to return an empty tuple.</span>
 <span class="sd">    See docstring of `__call__` for details on the parameters and returns.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="n">dset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">info</span><span class="p">:</span> <span class="nb">dict</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">MetaData</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        dset_name : str</span>
@@ -4262,7 +4262,7 @@ See docstring of <code>__call__</code> for details on the parameters and returns
 <span class="sd">        -------</span>
 <span class="sd">        metadata : tuple[MetaData, ...]</span>
 <span class="sd">            Tuple of MetaData instances.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -4407,7 +4407,7 @@ See docstring of <code>__call__</code> for details on the parameters and returns
 <span class="normal">339</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="n">dset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">info</span><span class="p">:</span> <span class="nb">dict</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">MetaData</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    dset_name : str</span>
@@ -4421,7 +4421,7 @@ See docstring of <code>__call__</code> for details on the parameters and returns
 <span class="sd">    -------</span>
 <span class="sd">    metadata : tuple[MetaData, ...]</span>
 <span class="sd">        Tuple of MetaData instances.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -4640,7 +4640,7 @@ so a model listed in both will be excluded.</p>
 <span class="normal">152</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_pytree_node_class</span>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">MetaData</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Class for storing and applying metdata to a dataset.</span>
 <span class="sd">    You should subclass this for your individual metadata implementation.</span>
 
@@ -4658,13 +4658,13 @@ so a model listed in both will be excluded.</p>
 <span class="sd">        then no models will be excluded by default.</span>
 <span class="sd">        This exclusion list is applied after the inclusion list,</span>
 <span class="sd">        so a model listed in both will be excluded.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">include</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">,</span> <span class="n">kw_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">exclude</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">,</span> <span class="n">kw_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">check_apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_name</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Check based on `self.include` and `self.exclude` if we should</span>
 <span class="sd">        apply this metadata to a given model.</span>
 
@@ -4678,13 +4678,13 @@ so a model listed in both will be excluded.</p>
 <span class="sd">        check : bool</span>
 <span class="sd">            True if this metadata should be applied.</span>
 <span class="sd">            False if not.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">include</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">model_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">include</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">False</span>
         <span class="k">return</span> <span class="n">model_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">exclude</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Apply the metdata to the model.</span>
 <span class="sd">        This is the model prior to projection into the datavector.</span>
 
@@ -4697,11 +4697,11 @@ so a model listed in both will be excluded.</p>
 <span class="sd">        -------</span>
 <span class="sd">        applied : Array</span>
 <span class="sd">            The model with the metadata applied.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">model</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">apply_grad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_grad</span><span class="p">:</span> <span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Apply the metdata to the model gradient.</span>
 <span class="sd">        This is the model gradient prior to projection into the datavector.</span>
 
@@ -4714,11 +4714,11 @@ so a model listed in both will be excluded.</p>
 <span class="sd">        -------</span>
 <span class="sd">        applied : Array</span>
 <span class="sd">            The model gradient with the metadata applied.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">model_grad</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">apply_proj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_proj</span><span class="p">:</span> <span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Apply the metdata to the model.</span>
 <span class="sd">        This is the model after projection into the datavector.</span>
 
@@ -4731,11 +4731,11 @@ so a model listed in both will be excluded.</p>
 <span class="sd">        -------</span>
 <span class="sd">        applied : Array</span>
 <span class="sd">            The model with the metadata applied.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">model_proj</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">apply_grad_proj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_grad_proj</span><span class="p">:</span> <span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Apply the metdata to the model gradient.</span>
 <span class="sd">        This is the model gradient after projection into the datavector.</span>
 
@@ -4748,11 +4748,11 @@ so a model listed in both will be excluded.</p>
 <span class="sd">        -------</span>
 <span class="sd">        applied : Array</span>
 <span class="sd">            The model gradient with the metadata applied.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">model_grad_proj</span>
 
     <span class="c1"># Functions for making this a pytree</span>
-    <span class="c1"># Don&#39;t call this on your own</span>
+    <span class="c1"># Don't call this on your own</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">tree_flatten</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">]:</span>
 
         <span class="k">return</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">(),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">include</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">exclude</span><span class="p">))</span>
@@ -4866,7 +4866,7 @@ This is the model prior to projection into the datavector.</p>
 <span class="normal">86</span>
 <span class="normal">87</span>
 <span class="normal">88</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Apply the metdata to the model.</span>
 <span class="sd">    This is the model prior to projection into the datavector.</span>
 
@@ -4879,7 +4879,7 @@ This is the model prior to projection into the datavector.</p>
 <span class="sd">    -------</span>
 <span class="sd">    applied : Array</span>
 <span class="sd">        The model with the metadata applied.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">model</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -4974,7 +4974,7 @@ This is the model gradient prior to projection into the datavector.</p>
 <span class="normal">103</span>
 <span class="normal">104</span>
 <span class="normal">105</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">apply_grad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_grad</span><span class="p">:</span> <span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Apply the metdata to the model gradient.</span>
 <span class="sd">    This is the model gradient prior to projection into the datavector.</span>
 
@@ -4987,7 +4987,7 @@ This is the model gradient prior to projection into the datavector.</p>
 <span class="sd">    -------</span>
 <span class="sd">    applied : Array</span>
 <span class="sd">        The model gradient with the metadata applied.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">model_grad</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -5082,7 +5082,7 @@ This is the model gradient after projection into the datavector.</p>
 <span class="normal">137</span>
 <span class="normal">138</span>
 <span class="normal">139</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">apply_grad_proj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_grad_proj</span><span class="p">:</span> <span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Apply the metdata to the model gradient.</span>
 <span class="sd">    This is the model gradient after projection into the datavector.</span>
 
@@ -5095,7 +5095,7 @@ This is the model gradient after projection into the datavector.</p>
 <span class="sd">    -------</span>
 <span class="sd">    applied : Array</span>
 <span class="sd">        The model gradient with the metadata applied.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">model_grad_proj</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -5190,7 +5190,7 @@ This is the model after projection into the datavector.</p>
 <span class="normal">120</span>
 <span class="normal">121</span>
 <span class="normal">122</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">apply_proj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_proj</span><span class="p">:</span> <span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Apply the metdata to the model.</span>
 <span class="sd">    This is the model after projection into the datavector.</span>
 
@@ -5203,7 +5203,7 @@ This is the model after projection into the datavector.</p>
 <span class="sd">    -------</span>
 <span class="sd">    applied : Array</span>
 <span class="sd">        The model with the metadata applied.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">model_proj</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -5302,7 +5302,7 @@ False if not.</p>
 <span class="normal">69</span>
 <span class="normal">70</span>
 <span class="normal">71</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">check_apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_name</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Check based on `self.include` and `self.exclude` if we should</span>
 <span class="sd">    apply this metadata to a given model.</span>
 
@@ -5316,7 +5316,7 @@ False if not.</p>
 <span class="sd">    check : bool</span>
 <span class="sd">        True if this metadata should be applied.</span>
 <span class="sd">        False if not.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">include</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">model_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">include</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">False</span>
     <span class="k">return</span> <span class="n">model_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">exclude</span>
@@ -5395,21 +5395,21 @@ See docstring of <code>__call__</code> for details on the parameters and returns
 <span class="normal">432</span>
 <span class="normal">433</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@runtime_checkable</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">PostFit</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Function that runs after all fitting stages are over.</span>
 <span class="sd">    This is where you may want make some visualization or initial analysis of your data</span>
 <span class="sd">    (ie. plot residuals, check statistical significance, etc.)</span>
 <span class="sd">    You can also do nothing if you wish.</span>
 <span class="sd">    See docstring of `__call__` for details on the parameters and returns.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span>
-        <span class="n">dset</span><span class="p">:</span> <span class="s2">&quot;DataSet&quot;</span><span class="p">,</span>
+        <span class="n">dset</span><span class="p">:</span> <span class="s2">"DataSet"</span><span class="p">,</span>
         <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
-        <span class="n">metamodel</span><span class="p">:</span> <span class="s2">&quot;MetaModel&quot;</span><span class="p">,</span>
+        <span class="n">metamodel</span><span class="p">:</span> <span class="s2">"MetaModel"</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        dset : str</span>
@@ -5419,7 +5419,7 @@ See docstring of <code>__call__</code> for details on the parameters and returns
 <span class="sd">        metamodel : MetaModel</span>
 <span class="sd">            The cluster model.</span>
 <span class="sd">            This will contain the final best fit parameters.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -5540,11 +5540,11 @@ This will contain the final best fit parameters.</p>
 <span class="normal">432</span>
 <span class="normal">433</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span>
-    <span class="n">dset</span><span class="p">:</span> <span class="s2">&quot;DataSet&quot;</span><span class="p">,</span>
+    <span class="n">dset</span><span class="p">:</span> <span class="s2">"DataSet"</span><span class="p">,</span>
     <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
-    <span class="n">metamodel</span><span class="p">:</span> <span class="s2">&quot;MetaModel&quot;</span><span class="p">,</span>
+    <span class="n">metamodel</span><span class="p">:</span> <span class="s2">"MetaModel"</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    dset : str</span>
@@ -5554,7 +5554,7 @@ This will contain the final best fit parameters.</p>
 <span class="sd">    metamodel : MetaModel</span>
 <span class="sd">        The cluster model.</span>
 <span class="sd">        This will contain the final best fit parameters.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -5633,22 +5633,22 @@ See docstring of <code>__call__</code> for details on the parameters and returns
 <span class="normal">402</span>
 <span class="normal">403</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@runtime_checkable</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">PostProc</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Function that runs after the data vector is processed.</span>
 <span class="sd">    (see `witch.fitter.process_tods` and `witch.fitter.process_maps`).</span>
 <span class="sd">    This is where you may want make some visualization or initial analysis of your data</span>
 <span class="sd">    (ie. make a map from your TODs, improve the noise model estimation, etc.)</span>
 <span class="sd">    You can also do nothing if you wish.</span>
 <span class="sd">    See docstring of `__call__` for details on the parameters and returns.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span>
-        <span class="n">dset</span><span class="p">:</span> <span class="s2">&quot;DataSet&quot;</span><span class="p">,</span>
+        <span class="n">dset</span><span class="p">:</span> <span class="s2">"DataSet"</span><span class="p">,</span>
         <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
-        <span class="n">metamodel</span><span class="p">:</span> <span class="s2">&quot;MetaModel&quot;</span><span class="p">,</span>
+        <span class="n">metamodel</span><span class="p">:</span> <span class="s2">"MetaModel"</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        dset : str</span>
@@ -5658,7 +5658,7 @@ See docstring of <code>__call__</code> for details on the parameters and returns
 <span class="sd">        metamodel : MetaModel</span>
 <span class="sd">            The cluster model.</span>
 <span class="sd">            At this point this will just be the initial state of the model.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -5779,11 +5779,11 @@ At this point this will just be the initial state of the model.</p>
 <span class="normal">402</span>
 <span class="normal">403</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span>
-    <span class="n">dset</span><span class="p">:</span> <span class="s2">&quot;DataSet&quot;</span><span class="p">,</span>
+    <span class="n">dset</span><span class="p">:</span> <span class="s2">"DataSet"</span><span class="p">,</span>
     <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
-    <span class="n">metamodel</span><span class="p">:</span> <span class="s2">&quot;MetaModel&quot;</span><span class="p">,</span>
+    <span class="n">metamodel</span><span class="p">:</span> <span class="s2">"MetaModel"</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    dset : str</span>
@@ -5793,7 +5793,7 @@ At this point this will just be the initial state of the model.</p>
 <span class="sd">    metamodel : MetaModel</span>
 <span class="sd">        The cluster model.</span>
 <span class="sd">        At this point this will just be the initial state of the model.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -5874,22 +5874,22 @@ See docstring of <code>__call__</code> for details on the parameters and returns
 <span class="normal">371</span>
 <span class="normal">372</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@runtime_checkable</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">PreProc</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Function that runs before the data vector is processed.</span>
 <span class="sd">    (see `witch.fitter.process_tods` and `witch.fitter.process_maps`).</span>
-<span class="sd">    This is where you may want to compute something about the data&#39;s noise properties</span>
+<span class="sd">    This is where you may want to compute something about the data's noise properties</span>
 <span class="sd">    or some other statistic that may be useful to your analysis.</span>
 <span class="sd">    You can also do nothing if you wish.</span>
 <span class="sd">    See docstring of `__call__` for details on the parameters and returns.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span>
-        <span class="n">dset</span><span class="p">:</span> <span class="s2">&quot;DataSet&quot;</span><span class="p">,</span>
+        <span class="n">dset</span><span class="p">:</span> <span class="s2">"DataSet"</span><span class="p">,</span>
         <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
-        <span class="n">metamodel</span><span class="p">:</span> <span class="s2">&quot;MetaModel&quot;</span><span class="p">,</span>
+        <span class="n">metamodel</span><span class="p">:</span> <span class="s2">"MetaModel"</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        dset : str</span>
@@ -5901,7 +5901,7 @@ See docstring of <code>__call__</code> for details on the parameters and returns
 <span class="sd">            At this point this will just be the initial state of the model.</span>
 <span class="sd">        info : dict</span>
 <span class="sd">            Dictionairy containing dataset information.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -6040,11 +6040,11 @@ At this point this will just be the initial state of the model.</p>
 <span class="normal">371</span>
 <span class="normal">372</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span>
-    <span class="n">dset</span><span class="p">:</span> <span class="s2">&quot;DataSet&quot;</span><span class="p">,</span>
+    <span class="n">dset</span><span class="p">:</span> <span class="s2">"DataSet"</span><span class="p">,</span>
     <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
-    <span class="n">metamodel</span><span class="p">:</span> <span class="s2">&quot;MetaModel&quot;</span><span class="p">,</span>
+    <span class="n">metamodel</span><span class="p">:</span> <span class="s2">"MetaModel"</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    dset : str</span>
@@ -6056,7 +6056,7 @@ At this point this will just be the initial state of the model.</p>
 <span class="sd">        At this point this will just be the initial state of the model.</span>
 <span class="sd">    info : dict</span>
 <span class="sd">        Dictionairy containing dataset information.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
             </details>

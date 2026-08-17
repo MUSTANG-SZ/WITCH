@@ -1444,7 +1444,7 @@ c : float
     <span class="n">pows</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span>
     <span class="n">c</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Function which returns a broken powerlaw evaluated at rs.</span>
 
 <span class="sd">    Parameters:</span>
@@ -1460,7 +1460,7 @@ c : float
 <span class="sd">    pows : jax.Array                                                                                                                                                                                                                                                                            Exponents of power laws</span>
 <span class="sd">    c : float</span>
 <span class="sd">        Constant offset for powerlaws</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">cur_c</span> <span class="o">=</span> <span class="n">c</span>  <span class="c1"># TODO: necessary?</span>
     <span class="n">funclist</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">condlist</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
@@ -1554,7 +1554,7 @@ c : float
 <span class="normal">33</span>
 <span class="normal">34</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">power</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">rbin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">cur_amp</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">cur_pow</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">c</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Function which returns the powerlaw, given the bin-edge constraints. Exists to be partialed.</span>
 
 <span class="sd">    Parameters:</span>
@@ -1574,7 +1574,7 @@ c : float
 <span class="sd">    -------</span>
 <span class="sd">    tmp : float</span>
 <span class="sd">        Powerlaw evaluated at x</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">tmp</span> <span class="o">=</span> <span class="n">cur_amp</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="n">cur_pow</span> <span class="o">-</span> <span class="n">rbin</span><span class="o">**</span><span class="n">cur_pow</span><span class="p">)</span> <span class="o">+</span> <span class="n">c</span>
     <span class="k">return</span> <span class="n">tmp</span>
 </code></pre></div></td></tr></table></div>
@@ -1783,10 +1783,10 @@ data.</p>
 <span class="normal">129</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">profile_to_broken_power</span><span class="p">(</span>
     <span class="n">rs</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">ys</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">condlist</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">],</span> <span class="n">rbins</span><span class="p">:</span> <span class="n">ArrayLike</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Estimates a non-parametric broken power profile from a generic profile.</span>
 <span class="sd">    Note this is an estimation only; in partciular since we fit piece-wise</span>
-<span class="sd">    the c&#39;s get messed up. This broken powerlaw should then be fit to the</span>
+<span class="sd">    the c's get messed up. This broken powerlaw should then be fit to the</span>
 <span class="sd">    data.</span>
 
 <span class="sd">    Parameters</span>
@@ -1808,7 +1808,7 @@ data.</p>
 <span class="sd">        Best fit powers for the powerlaws</span>
 <span class="sd">    c : float</span>
 <span class="sd">        Best fit c for only the outermost powerlaw</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">rs</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span> <span class="k">if</span> <span class="n">x</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">1e-1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">rs</span><span class="p">])</span>  <span class="c1"># Dont blow up</span>
 
     <span class="n">rbins</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
@@ -1822,13 +1822,13 @@ data.</p>
         <span class="n">xdata</span> <span class="o">=</span> <span class="n">rs</span><span class="p">[</span><span class="n">condlist</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
         <span class="n">ydata</span> <span class="o">=</span> <span class="n">ys</span><span class="p">[</span><span class="n">condlist</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
         <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">condlist</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">popt</span><span class="p">,</span> <span class="n">pcov</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span><span class="n">power</span><span class="p">,</span> <span class="n">xdata</span><span class="p">,</span> <span class="n">ydata</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;trf&quot;</span><span class="p">)</span>
+            <span class="n">popt</span><span class="p">,</span> <span class="n">pcov</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span><span class="n">power</span><span class="p">,</span> <span class="n">xdata</span><span class="p">,</span> <span class="n">ydata</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"trf"</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">popt</span><span class="p">,</span> <span class="n">pcov</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span>
                 <span class="n">power</span><span class="p">,</span>
                 <span class="n">xdata</span><span class="p">,</span>
                 <span class="n">ydata</span><span class="p">,</span>
-                <span class="n">method</span><span class="o">=</span><span class="s2">&quot;trf&quot;</span><span class="p">,</span>
+                <span class="n">method</span><span class="o">=</span><span class="s2">"trf"</span><span class="p">,</span>
                 <span class="n">p0</span><span class="o">=</span><span class="p">[</span><span class="n">rbins</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">i</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">ydata</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e5</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>

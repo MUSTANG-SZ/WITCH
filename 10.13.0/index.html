@@ -1555,7 +1555,7 @@ the model, respectively. </p>
 <p>The <code>model</code> contains the actual specification for the model that will be fit to the data. At the top, <code>unit_conversion</code> defines the conversion
 from the units of the model (typically pressure in something like keV / cm^3) to map units (K Rayleigh–Jeans for MUSTANG-2). If you are
 only fitting MUSTANG-2, you should stick to using the default specified in <code>RXJ1347_a10</code>. This unit conversion,
-<div class="highlight"><pre><span></span><code>float(wu.get_da(constants[&#39;z&#39;])*wu.y2K_RJ(constants[&#39;freq&#39;], constants[&#39;Te&#39;])*wu.XMpc/wu.me)
+<div class="highlight"><pre><span></span><code>float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)
 </code></pre></div>
 first gets the angular dymeter distance to convert from radians to Mpc, then multiplies by the conversion from Compton-y to K RJ, then finally
 multiplies by the Thompson scattering cross section divided by the mass of the elctron, which is the conversion from integrated pressure

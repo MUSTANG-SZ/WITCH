@@ -1743,7 +1743,7 @@ returned.</p>
     <span class="n">comm</span><span class="p">:</span> <span class="n">MPI</span><span class="o">.</span><span class="n">Comm</span> <span class="o">|</span> <span class="n">MPI</span><span class="o">.</span><span class="n">Intracomm</span> <span class="o">|</span> <span class="n">NullComm</span><span class="p">,</span>
     <span class="n">key</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Runs Hamilonian Monte Carlo using a leapfrog integrator to approximate Hamilonian dynamics.</span>
 <span class="sd">    This is a naive implementaion that will be replaced in the future.</span>
 
@@ -1787,7 +1787,7 @@ returned.</p>
 <span class="sd">        Note that on tasks with rank other than 0 the actual</span>
 <span class="sd">        chain is not returned, instead a dummy array of size `(0,)` is</span>
 <span class="sd">        returned.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">rank</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span>
     <span class="n">vnorm</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span>
         <span class="n">partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
@@ -1832,12 +1832,12 @@ returned.</p>
         <span class="n">accept_prob</span> <span class="o">=</span> <span class="n">accept_prob</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">prob</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">chain</span><span class="p">,</span> <span class="n">accept_prob</span>
 
-    <span class="n">c_sample</span> <span class="o">=</span> <span class="n">_cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;hmc_sample&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">c_sample</span> <span class="o">=</span> <span class="n">_cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"hmc_sample"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="c1"># Suboptimal caching for right now</span>
     <span class="c1"># Can probably fix by moving functions out of local scope</span>
     <span class="k">if</span> <span class="n">c_sample</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Compiling MC sample function. This can take a few minutes!&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Compiling MC sample function. This can take a few minutes!"</span><span class="p">)</span>
         <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
         <span class="n">_</span> <span class="o">=</span> <span class="n">_sample</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="n">params</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="n">step_size</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
         <span class="n">jax</span><span class="o">.</span><span class="n">block_until_ready</span><span class="p">(</span><span class="n">_</span><span class="p">)</span>
@@ -1847,11 +1847,11 @@ returned.</p>
         <span class="n">c_sample</span> <span class="o">=</span> <span class="n">_sample</span>
         <span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Compiled MC sample function in </span><span class="si">{</span><span class="n">t1</span><span class="o">-</span><span class="n">t0</span><span class="si">}</span><span class="s2"> s&quot;</span><span class="p">)</span>
-        <span class="n">_cache</span><span class="p">[</span><span class="s2">&quot;hmc_sample&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">c_sample</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Compiled MC sample function in </span><span class="si">{</span><span class="n">t1</span><span class="o">-</span><span class="n">t0</span><span class="si">}</span><span class="s2"> s"</span><span class="p">)</span>
+        <span class="n">_cache</span><span class="p">[</span><span class="s2">"hmc_sample"</span><span class="p">]</span> <span class="o">=</span> <span class="n">c_sample</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Using cached sample function&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"Using cached sample function"</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">chain</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_steps</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)))</span>
@@ -1864,7 +1864,7 @@ returned.</p>
         <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">chain</span><span class="p">,</span> <span class="n">accept_prob</span> <span class="o">=</span> <span class="n">_update</span><span class="p">(</span><span class="n">chain</span><span class="p">,</span> <span class="n">accept_prob</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">prob</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Accepted </span><span class="si">{</span><span class="n">accept_prob</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.2%</span><span class="si">}</span><span class="s2"> of samples&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Accepted </span><span class="si">{</span><span class="n">accept_prob</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.2%</span><span class="si">}</span><span class="s2"> of samples"</span><span class="p">)</span>
         <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">chain</span><span class="p">,</span> <span class="n">accept_prob</span>
 </code></pre></div></td></tr></table></div>
@@ -1989,7 +1989,7 @@ Same shape as <code>matrix</code>.</p>
 <span class="normal">44</span>
 <span class="normal">45</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">invsafe</span><span class="p">(</span><span class="n">matrix</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">thresh</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-16</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Safe SVD based psuedo-inversion of the matrix.</span>
 <span class="sd">    This zeros out modes that are too small when inverting.</span>
 <span class="sd">    Use with caution in cases where you really care about what the inverse is.</span>
@@ -2007,7 +2007,7 @@ Same shape as <code>matrix</code>.</p>
 <span class="sd">    invmat: jax.Array</span>
 <span class="sd">        The inverted matrix.</span>
 <span class="sd">        Same shape as `matrix`.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">u</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
     <span class="n">s_inv</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">thresh</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">s</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">s</span><span class="p">))</span>
 
@@ -2154,7 +2154,7 @@ Same shape as <code>matrix</code>.</p>
 <span class="normal">76</span>
 <span class="normal">77</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnums</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">invscale</span><span class="p">(</span><span class="n">matrix</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">thresh</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-16</span><span class="p">,</span> <span class="n">do_invsafe</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Invert and rescale a matrix by the diagonal.</span>
 <span class="sd">    This uses `invsafe` for the inversion.</span>
 
@@ -2174,7 +2174,7 @@ Same shape as <code>matrix</code>.</p>
 <span class="sd">    invmat: jax.Array</span>
 <span class="sd">        The inverted and rescaled matrix.</span>
 <span class="sd">        Same shape as `matrix`.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">diag</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span>
     <span class="n">vec</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">diag</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">diag</span><span class="p">)),</span> <span class="n">thresh</span><span class="p">))</span>
     <span class="n">mm</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">vec</span><span class="p">,</span> <span class="n">vec</span><span class="p">)</span>
@@ -2433,7 +2433,7 @@ This function is MPI aware.</p>
     <span class="n">maxiter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
     <span class="n">chitol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">MetaModel</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Fit a set of models to datasets jointly.</span>
 <span class="sd">    This uses a modified Levenberg–Marquardt fitter with flat priors.</span>
 <span class="sd">    This function is MPI aware.</span>
@@ -2457,7 +2457,7 @@ This function is MPI aware.</p>
 <span class="sd">        The final delta chisq.</span>
 <span class="sd">    curve : jax.Array</span>
 <span class="sd">        The final covariance matrix.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">zero</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
     <span class="n">chitol</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">chitol</span><span class="p">)</span>
     <span class="n">tf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">metamodel</span><span class="o">.</span><span class="n">to_fit</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
@@ -3033,7 +3033,7 @@ This also has the chi-squared of the estimated parameters.</p>
     <span class="n">burn_in</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
     <span class="n">max_tries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">MetaModel</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Run Hamilonian Monte Carlo to estimate the posterior for our model.</span>
 <span class="sd">    Currently this function only support flat priors, but more will be supported</span>
 <span class="sd">    down the line. In order to ensure accuracy of the noise model used, it is</span>
@@ -3078,14 +3078,14 @@ This also has the chi-squared of the estimated parameters.</p>
 <span class="sd">    flat_samples : jax.Array</span>
 <span class="sd">        Array of samples from running MCMC.</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">global_comm</span> <span class="o">=</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">global_comm</span>
     <span class="n">mpi4jax</span><span class="o">.</span><span class="n">barrier</span><span class="p">(</span><span class="n">comm</span><span class="o">=</span><span class="n">global_comm</span><span class="p">)</span>
     <span class="n">rank</span> <span class="o">=</span> <span class="n">global_comm</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span>
     <span class="n">step_size</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">step_size</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">burn_in</span> <span class="o">&gt;=</span> <span class="mf">1.0</span> <span class="ow">or</span> <span class="n">burn_in</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Error: burn_in must be in range [0, 1)&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Error: burn_in must be in range [0, 1)"</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">sample_which</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">sample_which</span> <span class="o">&lt;</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">n_rounds</span><span class="p">:</span>
         <span class="n">metamodel</span><span class="o">.</span><span class="n">set_round</span><span class="p">(</span><span class="n">sample_which</span><span class="p">)</span>
@@ -3194,7 +3194,7 @@ This also has the chi-squared of the estimated parameters.</p>
             <span class="n">mpi4jax</span><span class="o">.</span><span class="n">barrier</span><span class="p">(</span><span class="n">comm</span><span class="o">=</span><span class="n">global_comm</span><span class="p">)</span>
             <span class="n">step_size</span> <span class="o">*=</span> <span class="n">step_fac</span>
             <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Trying step size </span><span class="si">{</span><span class="n">step_size</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Trying step size </span><span class="si">{</span><span class="n">step_size</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="n">prob</span> <span class="o">=</span> <span class="n">_hmc</span><span class="p">(</span><span class="n">n_steps</span><span class="p">,</span> <span class="n">step_size</span><span class="p">)</span>
             <span class="n">step_sizes</span> <span class="o">+=</span> <span class="p">[</span><span class="n">step_size</span><span class="p">]</span>
             <span class="n">probs</span> <span class="o">+=</span> <span class="p">[</span><span class="n">prob</span><span class="p">]</span>
@@ -3225,11 +3225,11 @@ This also has the chi-squared of the estimated parameters.</p>
                 <span class="n">step_fac</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mf">1.5</span>
                 <span class="n">n_steps</span> <span class="o">=</span> <span class="mi">10</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unclear what to do with probability </span><span class="si">{</span><span class="n">prob</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unclear what to do with probability </span><span class="si">{</span><span class="n">prob</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">probs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.60</span> <span class="ow">and</span> <span class="n">probs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.66</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Final step size of </span><span class="si">{</span><span class="n">step_size</span><span class="si">}</span><span class="s2"> with an accept probability of </span><span class="si">{</span><span class="n">probs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">, took </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> tries to find.&quot;</span>
+                    <span class="sa">f</span><span class="s2">"Final step size of </span><span class="si">{</span><span class="n">step_size</span><span class="si">}</span><span class="s2"> with an accept probability of </span><span class="si">{</span><span class="n">probs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">, took </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> tries to find."</span>
                 <span class="p">)</span>
                 <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
             <span class="k">return</span> <span class="n">step_sizes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -3240,7 +3240,7 @@ This also has the chi-squared of the estimated parameters.</p>
         <span class="n">srt</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">probs</span><span class="p">[</span><span class="n">msk</span><span class="p">])</span>
         <span class="k">if</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">msk</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;No finite non-zero step sizes found! Manual intervention is needed!&quot;</span>
+                <span class="s2">"No finite non-zero step sizes found! Manual intervention is needed!"</span>
             <span class="p">)</span>
         <span class="n">step_size_interp</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.63</span><span class="p">]),</span> <span class="n">probs</span><span class="p">[</span><span class="n">msk</span><span class="p">][</span><span class="n">srt</span><span class="p">],</span> <span class="n">step_sizes</span><span class="p">[</span><span class="n">msk</span><span class="p">][</span><span class="n">srt</span><span class="p">]</span>
@@ -3249,7 +3249,7 @@ This also has the chi-squared of the estimated parameters.</p>
         <span class="n">prob</span> <span class="o">=</span> <span class="n">_hmc</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">step_size</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Interpolated to get a step size of </span><span class="si">{</span><span class="n">step_size</span><span class="si">}</span><span class="s2"> with an acceptance probability </span><span class="si">{</span><span class="n">prob</span><span class="si">:</span><span class="s2">.2%</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"Interpolated to get a step size of </span><span class="si">{</span><span class="n">step_size</span><span class="si">}</span><span class="s2"> with an acceptance probability </span><span class="si">{</span><span class="n">prob</span><span class="si">:</span><span class="s2">.2%</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
             <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">step_size</span>

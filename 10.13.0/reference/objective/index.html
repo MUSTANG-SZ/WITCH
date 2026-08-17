@@ -1632,15 +1632,15 @@ This is a <code>(npar, npar)</code> array.</p>
 <span class="normal">185</span>
 <span class="normal">186</span>
 <span class="normal">187</span>
-<span class="normal">188</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnames</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;dataset_ind&quot;</span><span class="p">,</span> <span class="s2">&quot;do_loglike&quot;</span><span class="p">,</span> <span class="s2">&quot;do_grad&quot;</span><span class="p">,</span> <span class="s2">&quot;do_curve&quot;</span><span class="p">))</span>
+<span class="normal">188</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnames</span><span class="o">=</span><span class="p">(</span><span class="s2">"dataset_ind"</span><span class="p">,</span> <span class="s2">"do_loglike"</span><span class="p">,</span> <span class="s2">"do_grad"</span><span class="p">,</span> <span class="s2">"do_curve"</span><span class="p">))</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">chisq_objective</span><span class="p">(</span>
-    <span class="n">metamodel</span><span class="p">:</span> <span class="s2">&quot;MetaModel&quot;</span><span class="p">,</span>
+    <span class="n">metamodel</span><span class="p">:</span> <span class="s2">"MetaModel"</span><span class="p">,</span>
     <span class="n">dataset_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">do_loglike</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">do_grad</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">do_curve</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Objective function to minimize when fitting a dataset where a Gaussian distribution is reasonible.</span>
 <span class="sd">    This is not an MPI aware function, use `joint_objective` for MPI aware calculation.</span>
 
@@ -1673,7 +1673,7 @@ This is a <code>(npar, npar)</code> array.</p>
 <span class="sd">        The curvature of the parameter space at the current values.</span>
 <span class="sd">        If `do_curve` is `False` then this is an array of zeros.</span>
 <span class="sd">        This is a `(npar, npar)` array.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">npar</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">metamodel</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
     <span class="n">chisq</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
     <span class="n">grad</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">npar</span><span class="p">)</span>
@@ -1683,8 +1683,8 @@ This is a <code>(npar, npar)</code> array.</p>
     <span class="n">only_chisq</span> <span class="o">=</span> <span class="ow">not</span> <span class="p">(</span><span class="n">do_grad</span> <span class="ow">or</span> <span class="n">do_curve</span><span class="p">)</span>
 
     <span class="n">dataset</span> <span class="o">=</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;tod&quot;</span><span class="p">,</span> <span class="s2">&quot;map&quot;</span><span class="p">]:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid mode&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"tod"</span><span class="p">,</span> <span class="s2">"map"</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Invalid mode"</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">datavec</span><span class="p">):</span>
         <span class="n">pred_dat</span> <span class="o">=</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">model_proj</span><span class="p">(</span><span class="n">dataset_ind</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">only_chisq</span><span class="p">:</span>
@@ -1693,7 +1693,7 @@ This is a <code>(npar, npar)</code> array.</p>
             <span class="n">grad_dat</span> <span class="o">=</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">model_grad_proj</span><span class="p">(</span><span class="n">dataset_ind</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
 
         <span class="n">resid</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">data</span> <span class="o">-</span> <span class="n">pred_dat</span>
-        <span class="c1"># if dataset.mode == &quot;tod&quot;:</span>
+        <span class="c1"># if dataset.mode == "tod":</span>
         <span class="c1">#     resid = resid.at[:].add(-1*jnp.mean(resid, axis=-1)[..., None])</span>
         <span class="c1"># else:</span>
         <span class="c1">#     resid = resid.at[:].add(-1*jnp.mean(resid))</span>
@@ -1939,14 +1939,14 @@ This is a <code>(npar, npar)</code> array.</p>
 <span class="normal">84</span>
 <span class="normal">85</span>
 <span class="normal">86</span>
-<span class="normal">87</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnames</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;do_loglike&quot;</span><span class="p">,</span> <span class="s2">&quot;do_grad&quot;</span><span class="p">,</span> <span class="s2">&quot;do_curve&quot;</span><span class="p">))</span>
+<span class="normal">87</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnames</span><span class="o">=</span><span class="p">(</span><span class="s2">"do_loglike"</span><span class="p">,</span> <span class="s2">"do_grad"</span><span class="p">,</span> <span class="s2">"do_curve"</span><span class="p">))</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">joint_objective</span><span class="p">(</span>
-    <span class="n">metamodel</span><span class="p">:</span> <span class="s2">&quot;MetaModel&quot;</span><span class="p">,</span>
+    <span class="n">metamodel</span><span class="p">:</span> <span class="s2">"MetaModel"</span><span class="p">,</span>
     <span class="n">do_loglike</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">do_grad</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">do_curve</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Compute the objective for multiple datasets in an MPI aware way.</span>
 
 
@@ -1977,7 +1977,7 @@ This is a <code>(npar, npar)</code> array.</p>
 <span class="sd">        The curvature of the parameter space at the current values.</span>
 <span class="sd">        If `do_curve` is `False` then this is an array of zeros.</span>
 <span class="sd">        This is a `(npar, npar)` array.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">global_comm</span> <span class="o">=</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">global_comm</span>
     <span class="n">npar</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">metamodel</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
     <span class="n">loglike</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
@@ -2272,15 +2272,15 @@ Note that there is a factor of -2 here to make it add with the cruvature of chi-
 <span class="normal">280</span>
 <span class="normal">281</span>
 <span class="normal">282</span>
-<span class="normal">283</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnames</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;dataset_ind&quot;</span><span class="p">,</span> <span class="s2">&quot;do_loglike&quot;</span><span class="p">,</span> <span class="s2">&quot;do_grad&quot;</span><span class="p">,</span> <span class="s2">&quot;do_curve&quot;</span><span class="p">))</span>
+<span class="normal">283</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnames</span><span class="o">=</span><span class="p">(</span><span class="s2">"dataset_ind"</span><span class="p">,</span> <span class="s2">"do_loglike"</span><span class="p">,</span> <span class="s2">"do_grad"</span><span class="p">,</span> <span class="s2">"do_curve"</span><span class="p">))</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">poisson_objective</span><span class="p">(</span>
-    <span class="n">metamodel</span><span class="p">:</span> <span class="s2">&quot;MetaModel&quot;</span><span class="p">,</span>
+    <span class="n">metamodel</span><span class="p">:</span> <span class="s2">"MetaModel"</span><span class="p">,</span>
     <span class="n">dataset_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">do_loglike</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">do_grad</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">do_curve</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Objective function to minimize when fitting a dataset where a Poisson distribution is reasonible.</span>
 <span class="sd">    This is not an MPI aware function, use `joint_objective` for MPI aware calculation.</span>
 
@@ -2316,7 +2316,7 @@ Note that there is a factor of -2 here to make it add with the cruvature of chi-
 <span class="sd">        If `do_curve` is `False` then this is an array of zeros.</span>
 <span class="sd">        This is a `(npar, npar)` array.</span>
 <span class="sd">        Note that there is a factor of -2 here to make it add with the cruvature of chi-squared.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">npar</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">metamodel</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
     <span class="n">loglike</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
     <span class="n">grad</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">npar</span><span class="p">)</span>
@@ -2326,8 +2326,8 @@ Note that there is a factor of -2 here to make it add with the cruvature of chi-
     <span class="n">only_loglike</span> <span class="o">=</span> <span class="ow">not</span> <span class="p">(</span><span class="n">do_grad</span> <span class="ow">or</span> <span class="n">do_curve</span><span class="p">)</span>
 
     <span class="n">dataset</span> <span class="o">=</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;tod&quot;</span><span class="p">,</span> <span class="s2">&quot;map&quot;</span><span class="p">]:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid mode&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"tod"</span><span class="p">,</span> <span class="s2">"map"</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Invalid mode"</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">datavec</span><span class="p">):</span>
         <span class="n">pred_dat</span> <span class="o">=</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">model_proj</span><span class="p">(</span><span class="n">dataset_ind</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">only_loglike</span><span class="p">:</span>
@@ -2363,7 +2363,7 @@ Note that there is a factor of -2 here to make it add with the cruvature of chi-
                     <span class="n">jnp</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">grad_dat</span><span class="p">),</span>
                 <span class="p">)</span>
             <span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;LOGLIKELIHOOD: &quot;</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">loglike</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"LOGLIKELIHOOD: "</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">loglike</span><span class="p">)</span>
     <span class="k">return</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">loglike</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">grad</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">curve</span>
 </code></pre></div></td></tr></table></div>
             </details>

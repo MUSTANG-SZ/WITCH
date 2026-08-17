@@ -1353,7 +1353,7 @@
 
 
 <h2 id="witch.plotting.plot_cluster" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">plot_cluster</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">fits_path</span><span class="p">,</span> <span class="n">root</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pix_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ra</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;mJy&#39;</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;mustang&#39;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">plot_r</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">ncontours</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">hdu_int</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">downsample</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">smooth</span><span class="o">=</span><span class="mf">9.0</span><span class="p">,</span> <span class="n">convention</span><span class="o">=</span><span class="s1">&#39;calabretta&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">plot_cluster</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">fits_path</span><span class="p">,</span> <span class="n">root</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pix_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ra</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">'mJy'</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">'mustang'</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">plot_r</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">ncontours</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">hdu_int</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">downsample</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">smooth</span><span class="o">=</span><span class="mf">9.0</span><span class="p">,</span> <span class="n">convention</span><span class="o">=</span><span class="s1">'calabretta'</span><span class="p">)</span></code>
 
 </h2>
 
@@ -1929,9 +1929,9 @@ TODO: This function could probably use an args/kwargs, but there are an enourmou
     <span class="n">pix_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">ra</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">dec</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">units</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;mJy&quot;</span><span class="p">,</span>
+    <span class="n">units</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"mJy"</span><span class="p">,</span>
     <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">cmap</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;mustang&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"mustang"</span><span class="p">,</span>
     <span class="n">bound</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span>
     <span class="n">plot_r</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -1940,9 +1940,9 @@ TODO: This function could probably use an args/kwargs, but there are an enourmou
     <span class="n">hdu_int</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
     <span class="n">downsample</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="n">smooth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">9.0</span><span class="p">,</span>
-    <span class="n">convention</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;calabretta&quot;</span><span class="p">,</span>
+    <span class="n">convention</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"calabretta"</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Function for doing core plotting.</span>
 <span class="sd">    TODO: This function could probably use an args/kwargs, but there are an enourmous number of keyword args within so that might be difficult.</span>
 
@@ -1987,18 +1987,18 @@ TODO: This function could probably use an args/kwargs, but there are an enourmou
 <span class="sd">    -------</span>
 <span class="sd">    img: aplpy.FITSFigure</span>
 <span class="sd">        FITSFigure plot of the cluster</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">fits_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">fits_path</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">root</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">fits_path</span><span class="p">)[</span><span class="mi">0</span><span class="p">])[</span>
             <span class="mi">0</span>
-        <span class="p">]</span>  <span class="c1"># TODO: There&#39;s gotta be a better way!</span>
+        <span class="p">]</span>  <span class="c1"># TODO: There's gotta be a better way!</span>
 
-    <span class="n">cfg_path</span> <span class="o">=</span> <span class="n">root</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="s2">&quot;config.yaml&quot;</span>
+    <span class="n">cfg_path</span> <span class="o">=</span> <span class="n">root</span> <span class="o">+</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="s2">"config.yaml"</span>
     <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">({},</span> <span class="n">cfg_path</span><span class="p">)</span>
     <span class="c1"># Do imports</span>
-    <span class="k">for</span> <span class="n">module</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;imports&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">module</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"imports"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="n">mod</span> <span class="o">=</span> <span class="n">import_module</span><span class="p">(</span><span class="n">module</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="nb">locals</span><span class="p">()[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">mod</span>
@@ -2006,22 +2006,22 @@ TODO: This function could probably use an args/kwargs, but there are an enourmou
             <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
                 <span class="nb">locals</span><span class="p">()[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Expect import name to be a string or a list&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"Expect import name to be a string or a list"</span><span class="p">)</span>
 
     <span class="n">res_path</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">root</span>
-        <span class="o">+</span> <span class="s2">&quot;/&quot;</span>
-        <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">sorted</span><span class="p">([</span><span class="n">file</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="k">if</span> <span class="s2">&quot;.dill&quot;</span> <span class="ow">in</span> <span class="n">file</span><span class="p">])[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="o">+</span> <span class="s2">"/"</span>
+        <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">sorted</span><span class="p">([</span><span class="n">file</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="k">if</span> <span class="s2">".dill"</span> <span class="ow">in</span> <span class="n">file</span><span class="p">])[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
     <span class="p">)</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">res_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">res_path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">results</span> <span class="o">=</span> <span class="n">pk</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">pix_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">pix_size</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">pix_size</span> <span class="o">*</span> <span class="n">rad_to_arcsec</span>
 
     <span class="k">if</span> <span class="n">ra</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">dec</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">ra</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">][</span><span class="s2">&quot;x0&quot;</span><span class="p">])</span>
-        <span class="n">dec</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">][</span><span class="s2">&quot;y0&quot;</span><span class="p">])</span>
+        <span class="n">ra</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">][</span><span class="s2">"x0"</span><span class="p">])</span>
+        <span class="n">dec</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">][</span><span class="s2">"y0"</span><span class="p">])</span>
         <span class="n">ra</span><span class="p">,</span> <span class="n">dec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rad2deg</span><span class="p">(</span>
             <span class="p">[</span><span class="n">ra</span><span class="p">,</span> <span class="n">dec</span><span class="p">]</span>
         <span class="p">)</span>  <span class="c1"># TODO: Currently center on config center, which is fine but should probably be fit center</span>
@@ -2047,20 +2047,20 @@ TODO: This function could probably use an args/kwargs, but there are an enourmou
         <span class="n">smooth</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="n">convention</span><span class="o">=</span><span class="n">convention</span><span class="p">,</span>
     <span class="p">)</span>  <span class="c1"># Smooth here does something whack</span>
-    <span class="n">img</span><span class="o">.</span><span class="n">set_theme</span><span class="p">(</span><span class="s2">&quot;publication&quot;</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">set_theme</span><span class="p">(</span><span class="s2">"publication"</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">units</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">units</span> <span class="o">==</span> <span class="s2">&quot;snr&quot;</span><span class="p">:</span>
-            <span class="n">cbar_label</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;$\sigma$&quot;</span>
-        <span class="k">elif</span> <span class="n">units</span> <span class="o">==</span> <span class="s2">&quot;uK_cmb&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">units</span> <span class="o">==</span> <span class="s2">"snr"</span><span class="p">:</span>
+            <span class="n">cbar_label</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">"$\sigma$"</span>
+        <span class="k">elif</span> <span class="n">units</span> <span class="o">==</span> <span class="s2">"uK_cmb"</span><span class="p">:</span>
             <span class="n">img</span><span class="o">.</span><span class="n">_data</span> <span class="o">*=</span> <span class="mf">1e6</span>
-            <span class="n">cbar_label</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;$uK_</span><span class="si">{CMB}</span><span class="s2">$&quot;</span>
-        <span class="k">elif</span> <span class="n">units</span> <span class="o">==</span> <span class="s2">&quot;uK_RJ&quot;</span><span class="p">:</span>
+            <span class="n">cbar_label</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">"$uK_</span><span class="si">{CMB}</span><span class="s2">$"</span>
+        <span class="k">elif</span> <span class="n">units</span> <span class="o">==</span> <span class="s2">"uK_RJ"</span><span class="p">:</span>
             <span class="n">img</span><span class="o">.</span><span class="n">_data</span> <span class="o">*=</span> <span class="mf">1e6</span>
-            <span class="n">cbar_label</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;$uK_</span><span class="si">{RJ}</span><span class="s2">$&quot;</span>
-        <span class="k">elif</span> <span class="n">units</span> <span class="o">==</span> <span class="s2">&quot;uJy/beam&quot;</span><span class="p">:</span>
+            <span class="n">cbar_label</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">"$uK_</span><span class="si">{RJ}</span><span class="s2">$"</span>
+        <span class="k">elif</span> <span class="n">units</span> <span class="o">==</span> <span class="s2">"uJy/beam"</span><span class="p">:</span>
             <span class="n">img</span><span class="o">.</span><span class="n">_data</span> <span class="o">*=</span> <span class="mf">0.7</span> <span class="o">*</span> <span class="mf">1e6</span>
-            <span class="n">cbar_label</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;$\mu Jy/beam$&quot;</span>
+            <span class="n">cbar_label</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">"$\mu Jy/beam$"</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">cbar_label</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">units</span><span class="p">)</span>
 
@@ -2075,97 +2075,97 @@ TODO: This function could probably use an args/kwargs, but there are an enourmou
         <span class="n">order</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">bound</span><span class="p">)))</span>
         <span class="n">bound</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">bound</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">order</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
 
-    <span class="n">img</span><span class="o">.</span><span class="n">show_colorscale</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">stretch</span><span class="o">=</span><span class="s2">&quot;linear&quot;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=-</span><span class="n">bound</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">bound</span><span class="p">,</span> <span class="n">smooth</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">show_colorscale</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">stretch</span><span class="o">=</span><span class="s2">"linear"</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=-</span><span class="n">bound</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">bound</span><span class="p">,</span> <span class="n">smooth</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
     <span class="n">img</span><span class="o">.</span><span class="n">recenter</span><span class="p">(</span><span class="n">ra</span><span class="p">,</span> <span class="n">dec</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="n">radius</span> <span class="o">/</span> <span class="mf">60.0</span><span class="p">)</span>
-    <span class="n">img</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;in&quot;</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">"both"</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">"both"</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s2">"in"</span><span class="p">)</span>
 
-    <span class="n">matplotlib</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;lines.linewidth&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">3.0</span>
+    <span class="n">matplotlib</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">"lines.linewidth"</span><span class="p">]</span> <span class="o">=</span> <span class="mf">3.0</span>
     <span class="n">img</span><span class="o">.</span><span class="n">add_scalebar</span><span class="p">(</span>
-        <span class="mf">0.5</span> <span class="o">/</span> <span class="mf">60.0</span><span class="p">,</span> <span class="s1">&#39;30&quot;&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span>
+        <span class="mf">0.5</span> <span class="o">/</span> <span class="mf">60.0</span><span class="p">,</span> <span class="s1">'30"'</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"black"</span>
     <span class="p">)</span>  <span class="c1"># Adds a 30 arcsec scalebar to the image</span>
 
-    <span class="n">matplotlib</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;lines.linewidth&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.0</span>
+    <span class="n">matplotlib</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">"lines.linewidth"</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.0</span>
 
     <span class="n">img</span><span class="o">.</span><span class="n">add_beam</span><span class="p">(</span>
         <span class="n">major</span><span class="o">=</span><span class="mf">9.0</span> <span class="o">/</span> <span class="mf">3600.0</span><span class="p">,</span> <span class="n">minor</span><span class="o">=</span><span class="mf">9.0</span> <span class="o">/</span> <span class="mf">3600.0</span><span class="p">,</span> <span class="n">angle</span><span class="o">=</span><span class="mi">0</span>
     <span class="p">)</span>  <span class="c1"># TODO: For now hard-coded to M2 beam but may want some flexibility later</span>
-    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_color</span><span class="p">(</span><span class="s2">&quot;white&quot;</span><span class="p">)</span>
-    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_edgecolor</span><span class="p">(</span><span class="s2">&quot;green&quot;</span><span class="p">)</span>
-    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_facecolor</span><span class="p">(</span><span class="s2">&quot;white&quot;</span><span class="p">)</span>
-    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_corner</span><span class="p">(</span><span class="s2">&quot;bottom left&quot;</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_color</span><span class="p">(</span><span class="s2">"white"</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_edgecolor</span><span class="p">(</span><span class="s2">"green"</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_facecolor</span><span class="p">(</span><span class="s2">"white"</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_corner</span><span class="p">(</span><span class="s2">"bottom left"</span><span class="p">)</span>
 
     <span class="n">img</span><span class="o">.</span><span class="n">show_markers</span><span class="p">(</span>
         <span class="n">ra</span><span class="p">,</span>
         <span class="n">dec</span><span class="p">,</span>
-        <span class="n">facecolor</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+        <span class="n">facecolor</span><span class="o">=</span><span class="s2">"black"</span><span class="p">,</span>
         <span class="n">edgecolor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">,</span>
+        <span class="n">marker</span><span class="o">=</span><span class="s2">"+"</span><span class="p">,</span>
         <span class="n">s</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
         <span class="n">linewidths</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
         <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="n">units</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">img</span><span class="o">.</span><span class="n">add_colorbar</span><span class="p">(</span><span class="s2">&quot;right&quot;</span><span class="p">)</span>
+        <span class="n">img</span><span class="o">.</span><span class="n">add_colorbar</span><span class="p">(</span><span class="s2">"right"</span><span class="p">)</span>
         <span class="n">img</span><span class="o">.</span><span class="n">colorbar</span><span class="o">.</span><span class="n">set_width</span><span class="p">(</span><span class="mf">0.12</span><span class="p">)</span>
         <span class="n">img</span><span class="o">.</span><span class="n">colorbar</span><span class="o">.</span><span class="n">set_axis_label_text</span><span class="p">(</span><span class="n">cbar_label</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">ncontours</span><span class="p">:</span>
-        <span class="n">matplotlib</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;lines.linewidth&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span>
+        <span class="n">matplotlib</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">"lines.linewidth"</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span>
         <span class="n">clevels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">bound</span><span class="p">,</span> <span class="n">bound</span><span class="p">,</span> <span class="n">ncontours</span><span class="p">)</span>
         <span class="n">img</span><span class="o">.</span><span class="n">show_contour</span><span class="p">(</span>
             <span class="n">fits_path</span><span class="p">,</span>
-            <span class="n">colors</span><span class="o">=</span><span class="s2">&quot;gray&quot;</span><span class="p">,</span>
+            <span class="n">colors</span><span class="o">=</span><span class="s2">"gray"</span><span class="p">,</span>
             <span class="n">levels</span><span class="o">=</span><span class="n">clevels</span><span class="p">,</span>
             <span class="n">returnlevels</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">convention</span><span class="o">=</span><span class="s2">&quot;calabretta&quot;</span><span class="p">,</span>
+            <span class="n">convention</span><span class="o">=</span><span class="s2">"calabretta"</span><span class="p">,</span>
             <span class="n">smooth</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
         <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">plot_r</span><span class="p">:</span>  <span class="c1"># TODO: Allow passing of r500 values, make this a subfunction</span>
-        <span class="k">if</span> <span class="s2">&quot;a10&quot;</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">][</span><span class="s2">&quot;structures&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="n">mod_type</span> <span class="o">=</span> <span class="s2">&quot;a10&quot;</span>
-        <span class="k">elif</span> <span class="s2">&quot;ea10&quot;</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">][</span><span class="s2">&quot;structures&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="n">mod_type</span> <span class="o">=</span> <span class="s2">&quot;ea10&quot;</span>
-        <span class="k">elif</span> <span class="s2">&quot;gnfw_rs&quot;</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">][</span><span class="s2">&quot;structures&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="n">mod_type</span> <span class="o">=</span> <span class="s2">&quot;gnfw_rs&quot;</span>
+        <span class="k">if</span> <span class="s2">"a10"</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">"model"</span><span class="p">][</span><span class="s2">"structures"</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">mod_type</span> <span class="o">=</span> <span class="s2">"a10"</span>
+        <span class="k">elif</span> <span class="s2">"ea10"</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">"model"</span><span class="p">][</span><span class="s2">"structures"</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">mod_type</span> <span class="o">=</span> <span class="s2">"ea10"</span>
+        <span class="k">elif</span> <span class="s2">"gnfw_rs"</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">"model"</span><span class="p">][</span><span class="s2">"structures"</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">mod_type</span> <span class="o">=</span> <span class="s2">"gnfw_rs"</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;For R500, must have structure type gnfw_rs, A10, or EA10&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"For R500, must have structure type gnfw_rs, A10, or EA10"</span><span class="p">)</span>
 
         <span class="c1"># Get index of structure of interest. TODO: currently only plots first</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">structures</span><span class="p">)):</span>
             <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">structures</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="o">==</span> <span class="n">mod_type</span><span class="p">:</span>
                 <span class="k">break</span>
 
-        <span class="k">if</span> <span class="n">mod_type</span> <span class="o">==</span> <span class="s2">&quot;ea10&quot;</span> <span class="ow">or</span> <span class="n">mod_type</span> <span class="o">==</span> <span class="s2">&quot;a10&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">mod_type</span> <span class="o">==</span> <span class="s2">"ea10"</span> <span class="ow">or</span> <span class="n">mod_type</span> <span class="o">==</span> <span class="s2">"a10"</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">structures</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
-                <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">parameter</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span> <span class="o">==</span> <span class="s2">&quot;m500&quot;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">parameter</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span> <span class="o">==</span> <span class="s2">"m500"</span><span class="p">:</span>
                     <span class="n">m500</span> <span class="o">=</span> <span class="n">parameter</span><span class="o">.</span><span class="n">val</span>
                     <span class="k">break</span>
 
-            <span class="n">z</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;constants&quot;</span><span class="p">][</span><span class="s2">&quot;z&quot;</span><span class="p">])</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"constants"</span><span class="p">][</span><span class="s2">"z"</span><span class="p">])</span>
             <span class="n">nz</span> <span class="o">=</span> <span class="n">get_nz</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
 
             <span class="n">r500</span> <span class="o">=</span> <span class="p">(</span><span class="n">m500</span> <span class="o">/</span> <span class="p">(</span><span class="mf">4.00</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">3.00</span><span class="p">)</span> <span class="o">/</span> <span class="mf">5.00e02</span> <span class="o">/</span> <span class="n">nz</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mf">1.00</span> <span class="o">/</span> <span class="mf">3.00</span><span class="p">)</span>
             <span class="n">da</span> <span class="o">=</span> <span class="n">get_da</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
             <span class="n">r500</span> <span class="o">/=</span> <span class="n">da</span>
-            <span class="k">if</span> <span class="n">plot_r</span> <span class="o">==</span> <span class="s2">&quot;rs&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">plot_r</span> <span class="o">==</span> <span class="s2">"rs"</span><span class="p">:</span>
                 <span class="n">r500</span> <span class="o">/=</span> <span class="nb">float</span><span class="p">(</span>
-                    <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">][</span><span class="s2">&quot;structures&quot;</span><span class="p">][</span><span class="n">mod_type</span><span class="p">][</span><span class="s2">&quot;parameters&quot;</span><span class="p">][</span><span class="s2">&quot;c500&quot;</span><span class="p">][</span><span class="s2">&quot;value&quot;</span><span class="p">]</span>
+                    <span class="n">cfg</span><span class="p">[</span><span class="s2">"model"</span><span class="p">][</span><span class="s2">"structures"</span><span class="p">][</span><span class="n">mod_type</span><span class="p">][</span><span class="s2">"parameters"</span><span class="p">][</span><span class="s2">"c500"</span><span class="p">][</span><span class="s2">"value"</span><span class="p">]</span>
                 <span class="p">)</span>  <span class="c1"># Convert to rs</span>
             <span class="n">img</span><span class="o">.</span><span class="n">show_circles</span><span class="p">(</span>
-                <span class="n">ra</span><span class="p">,</span> <span class="n">dec</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="n">r500</span> <span class="o">/</span> <span class="mi">3600</span><span class="p">,</span> <span class="n">coords_frame</span><span class="o">=</span><span class="s2">&quot;world&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;green&quot;</span>
+                <span class="n">ra</span><span class="p">,</span> <span class="n">dec</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="n">r500</span> <span class="o">/</span> <span class="mi">3600</span><span class="p">,</span> <span class="n">coords_frame</span><span class="o">=</span><span class="s2">"world"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"green"</span>
             <span class="p">)</span>
 
-        <span class="k">elif</span> <span class="n">mod_type</span> <span class="o">==</span> <span class="s2">&quot;gnfw_rs&quot;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">mod_type</span> <span class="o">==</span> <span class="s2">"gnfw_rs"</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">structures</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
                 <span class="k">if</span> <span class="p">(</span>
-                    <span class="nb">str</span><span class="p">(</span><span class="n">parameter</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span> <span class="o">==</span> <span class="s2">&quot;rs&quot;</span>
-                    <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">parameter</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span> <span class="o">==</span> <span class="s2">&quot;r_s&quot;</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">parameter</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span> <span class="o">==</span> <span class="s2">"rs"</span>
+                    <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">parameter</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span> <span class="o">==</span> <span class="s2">"r_s"</span>
                 <span class="p">):</span>
                     <span class="n">rs</span> <span class="o">=</span> <span class="n">parameter</span><span class="o">.</span><span class="n">val</span>
                     <span class="k">break</span>
             <span class="n">img</span><span class="o">.</span><span class="n">show_circles</span><span class="p">(</span>
-                <span class="n">ra</span><span class="p">,</span> <span class="n">dec</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="n">rs</span> <span class="o">/</span> <span class="mi">3600</span><span class="p">,</span> <span class="n">coords_frame</span><span class="o">=</span><span class="s2">&quot;world&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;green&quot;</span>
+                <span class="n">ra</span><span class="p">,</span> <span class="n">dec</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="n">rs</span> <span class="o">/</span> <span class="mi">3600</span><span class="p">,</span> <span class="n">coords_frame</span><span class="o">=</span><span class="s2">"world"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"green"</span>
             <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">img</span>
@@ -2179,7 +2179,7 @@ TODO: This function could probably use an args/kwargs, but there are an enourmou
 
 
 <h2 id="witch.plotting.plot_cluster_act" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">plot_cluster_act</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">fits_path</span><span class="p">,</span> <span class="n">cfg_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ra</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;mJy&#39;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">plot_r</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">ncontours</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">hdu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">downsample</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">smooth</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span> <span class="n">convention</span><span class="o">=</span><span class="s1">&#39;calabretta&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">plot_cluster_act</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">fits_path</span><span class="p">,</span> <span class="n">cfg_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ra</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">'mJy'</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">plot_r</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">ncontours</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">hdu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">downsample</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">smooth</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span> <span class="n">convention</span><span class="o">=</span><span class="s1">'calabretta'</span><span class="p">)</span></code>
 
 </h2>
 
@@ -2680,7 +2680,7 @@ TODO: This function could probably use an args/kwargs, but there are an enourmou
     <span class="n">cfg_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">ra</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">dec</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">units</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;mJy&quot;</span><span class="p">,</span>
+    <span class="n">units</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"mJy"</span><span class="p">,</span>
     <span class="n">bound</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span>
     <span class="n">plot_r</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -2689,9 +2689,9 @@ TODO: This function could probably use an args/kwargs, but there are an enourmou
     <span class="n">hdu</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
     <span class="n">downsample</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="n">smooth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">60.0</span><span class="p">,</span>
-    <span class="n">convention</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;calabretta&quot;</span><span class="p">,</span>
+    <span class="n">convention</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"calabretta"</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Function for doing core plotting.</span>
 <span class="sd">    TODO: This function could probably use an args/kwargs, but there are an enourmous number of keyword args within so that might be difficult.</span>
 
@@ -2732,18 +2732,18 @@ TODO: This function could probably use an args/kwargs, but there are an enourmou
 <span class="sd">    -------</span>
 <span class="sd">    img: aplpy.FITSFigure</span>
 <span class="sd">        FITSFigure plot of the cluster</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">cfg_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">({},</span> <span class="n">cfg_path</span><span class="p">)</span>
-        <span class="n">ra</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">][</span><span class="s2">&quot;x0&quot;</span><span class="p">])</span>
-        <span class="n">dec</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">][</span><span class="s2">&quot;y0&quot;</span><span class="p">])</span>
+        <span class="n">ra</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">][</span><span class="s2">"x0"</span><span class="p">])</span>
+        <span class="n">dec</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">][</span><span class="s2">"y0"</span><span class="p">])</span>
         <span class="n">ra</span><span class="p">,</span> <span class="n">dec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rad2deg</span><span class="p">(</span>
             <span class="p">[</span><span class="n">ra</span><span class="p">,</span> <span class="n">dec</span><span class="p">]</span>
         <span class="p">)</span>  <span class="c1"># TODO: Currently center on config center, which is fine but should probably be fit center</span>
     <span class="k">elif</span> <span class="n">ra</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">dec</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Either cfg_path or both ra and dec must be specified.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Either cfg_path or both ra and dec must be specified."</span><span class="p">)</span>
     <span class="n">cur_hdu</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">fits_path</span><span class="p">)</span>
-    <span class="n">pix_size</span> <span class="o">=</span> <span class="n">cur_hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;CDELT1&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3600</span>
+    <span class="n">pix_size</span> <span class="o">=</span> <span class="n">cur_hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">"CDELT1"</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3600</span>
 
     <span class="n">smooth</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span>
         <span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">smooth</span> <span class="o">/</span> <span class="n">pix_size</span><span class="p">)</span>
@@ -2760,30 +2760,30 @@ TODO: This function could probably use an args/kwargs, but there are an enourmou
         <span class="n">smooth</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="n">convention</span><span class="o">=</span><span class="n">convention</span><span class="p">,</span>
     <span class="p">)</span>  <span class="c1"># Smooth here does something whack</span>
-    <span class="n">img</span><span class="o">.</span><span class="n">set_theme</span><span class="p">(</span><span class="s2">&quot;publication&quot;</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">set_theme</span><span class="p">(</span><span class="s2">"publication"</span><span class="p">)</span>
 
     <span class="n">beam_fwhm</span> <span class="o">=</span> <span class="mf">2.2</span>
     <span class="n">fwhm_to_sigma</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mi">8</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span> <span class="o">**</span> <span class="mf">0.5</span>
     <span class="n">beam_sigma</span> <span class="o">=</span> <span class="n">beam_fwhm</span> <span class="o">*</span> <span class="n">fwhm_to_sigma</span>
     <span class="n">omega_B</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">beam_sigma</span><span class="o">**</span><span class="mi">2</span>
 
-    <span class="k">if</span> <span class="n">units</span> <span class="o">==</span> <span class="s2">&quot;snr&quot;</span><span class="p">:</span>
-        <span class="n">cbar_label</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;$\sigma$&quot;</span>
-    <span class="k">elif</span> <span class="n">units</span> <span class="o">==</span> <span class="s2">&quot;uK&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">units</span> <span class="o">==</span> <span class="s2">"snr"</span><span class="p">:</span>
+        <span class="n">cbar_label</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">"$\sigma$"</span>
+    <span class="k">elif</span> <span class="n">units</span> <span class="o">==</span> <span class="s2">"uK"</span><span class="p">:</span>
         <span class="n">img</span><span class="o">.</span><span class="n">_data</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">omega_B</span><span class="p">)</span>
-        <span class="n">cbar_label</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;$uK_</span><span class="si">{CMB}</span><span class="s2">$&quot;</span>
+        <span class="n">cbar_label</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">"$uK_</span><span class="si">{CMB}</span><span class="s2">$"</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">cbar_label</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">units</span><span class="p">)</span>
 
-    <span class="n">cmap</span> <span class="o">=</span> <span class="s2">&quot;mymap&quot;</span>
+    <span class="n">cmap</span> <span class="o">=</span> <span class="s2">"mymap"</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">cm</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span>
             <span class="n">cmap</span>
-        <span class="p">)</span>  <span class="c1"># Stops these anoying messages if you&#39;ve already registered mymap</span>
+        <span class="p">)</span>  <span class="c1"># Stops these anoying messages if you've already registered mymap</span>
 
     <span class="k">except</span><span class="p">:</span>
-        <span class="n">bottom</span> <span class="o">=</span> <span class="n">cm</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s2">&quot;Oranges&quot;</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
-        <span class="n">top</span> <span class="o">=</span> <span class="n">cm</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s2">&quot;Blues_r&quot;</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+        <span class="n">bottom</span> <span class="o">=</span> <span class="n">cm</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s2">"Oranges"</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+        <span class="n">top</span> <span class="o">=</span> <span class="n">cm</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s2">"Blues_r"</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
         <span class="n">newcolors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span>
             <span class="p">(</span><span class="n">top</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">128</span><span class="p">)),</span> <span class="n">bottom</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">128</span><span class="p">)))</span>
         <span class="p">)</span>
@@ -2800,82 +2800,82 @@ TODO: This function could probably use an args/kwargs, but there are an enourmou
         <span class="n">order</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">bound</span><span class="p">)))</span>
         <span class="n">bound</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">bound</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">order</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
 
-    <span class="n">img</span><span class="o">.</span><span class="n">show_colorscale</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">stretch</span><span class="o">=</span><span class="s2">&quot;linear&quot;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=-</span><span class="n">bound</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">bound</span><span class="p">,</span> <span class="n">smooth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">show_colorscale</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">stretch</span><span class="o">=</span><span class="s2">"linear"</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=-</span><span class="n">bound</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">bound</span><span class="p">,</span> <span class="n">smooth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="n">img</span><span class="o">.</span><span class="n">recenter</span><span class="p">(</span><span class="n">ra</span><span class="p">,</span> <span class="n">dec</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="n">radius</span> <span class="o">/</span> <span class="mf">60.0</span><span class="p">)</span>
-    <span class="n">img</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;in&quot;</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">"both"</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">"both"</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s2">"in"</span><span class="p">)</span>
 
-    <span class="n">matplotlib</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;lines.linewidth&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">3.0</span>
+    <span class="n">matplotlib</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">"lines.linewidth"</span><span class="p">]</span> <span class="o">=</span> <span class="mf">3.0</span>
     <span class="n">img</span><span class="o">.</span><span class="n">add_scalebar</span><span class="p">(</span>
-        <span class="mf">0.5</span> <span class="o">/</span> <span class="mf">60.0</span><span class="p">,</span> <span class="s1">&#39;30&quot;&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span>
+        <span class="mf">0.5</span> <span class="o">/</span> <span class="mf">60.0</span><span class="p">,</span> <span class="s1">'30"'</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"black"</span>
     <span class="p">)</span>  <span class="c1"># Adds a 30 arcsec scalebar to the image</span>
 
-    <span class="n">matplotlib</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;lines.linewidth&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.0</span>
+    <span class="n">matplotlib</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">"lines.linewidth"</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.0</span>
 
     <span class="n">img</span><span class="o">.</span><span class="n">add_beam</span><span class="p">(</span>
         <span class="n">major</span><span class="o">=</span><span class="mf">120.0</span> <span class="o">/</span> <span class="mf">3600.0</span><span class="p">,</span> <span class="n">minor</span><span class="o">=</span><span class="mf">120.0</span> <span class="o">/</span> <span class="mf">3600.0</span><span class="p">,</span> <span class="n">angle</span><span class="o">=</span><span class="mi">0</span>
     <span class="p">)</span>  <span class="c1"># TODO: For now hard-coded to M2 beam but may want some flexibility later</span>
-    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_color</span><span class="p">(</span><span class="s2">&quot;white&quot;</span><span class="p">)</span>
-    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_edgecolor</span><span class="p">(</span><span class="s2">&quot;green&quot;</span><span class="p">)</span>
-    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_facecolor</span><span class="p">(</span><span class="s2">&quot;white&quot;</span><span class="p">)</span>
-    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_corner</span><span class="p">(</span><span class="s2">&quot;bottom left&quot;</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_color</span><span class="p">(</span><span class="s2">"white"</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_edgecolor</span><span class="p">(</span><span class="s2">"green"</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_facecolor</span><span class="p">(</span><span class="s2">"white"</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">beam</span><span class="o">.</span><span class="n">set_corner</span><span class="p">(</span><span class="s2">"bottom left"</span><span class="p">)</span>
 
     <span class="n">img</span><span class="o">.</span><span class="n">show_markers</span><span class="p">(</span>
         <span class="n">ra</span><span class="p">,</span>
         <span class="n">dec</span><span class="p">,</span>
-        <span class="n">facecolor</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+        <span class="n">facecolor</span><span class="o">=</span><span class="s2">"black"</span><span class="p">,</span>
         <span class="n">edgecolor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">,</span>
+        <span class="n">marker</span><span class="o">=</span><span class="s2">"+"</span><span class="p">,</span>
         <span class="n">s</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
         <span class="n">linewidths</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
         <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="n">img</span><span class="o">.</span><span class="n">add_colorbar</span><span class="p">(</span><span class="s2">&quot;right&quot;</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">add_colorbar</span><span class="p">(</span><span class="s2">"right"</span><span class="p">)</span>
     <span class="n">img</span><span class="o">.</span><span class="n">colorbar</span><span class="o">.</span><span class="n">set_width</span><span class="p">(</span><span class="mf">0.12</span><span class="p">)</span>
     <span class="n">img</span><span class="o">.</span><span class="n">colorbar</span><span class="o">.</span><span class="n">set_axis_label_text</span><span class="p">(</span><span class="n">cbar_label</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">ncontours</span><span class="p">:</span>
-        <span class="n">matplotlib</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;lines.linewidth&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span>
+        <span class="n">matplotlib</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">"lines.linewidth"</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span>
         <span class="n">clevels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">bound</span><span class="p">,</span> <span class="n">bound</span><span class="p">,</span> <span class="n">ncontours</span><span class="p">)</span>
         <span class="n">img</span><span class="o">.</span><span class="n">show_contour</span><span class="p">(</span>
             <span class="n">fits_path</span><span class="p">,</span>
-            <span class="n">colors</span><span class="o">=</span><span class="s2">&quot;gray&quot;</span><span class="p">,</span>
+            <span class="n">colors</span><span class="o">=</span><span class="s2">"gray"</span><span class="p">,</span>
             <span class="n">levels</span><span class="o">=</span><span class="n">clevels</span><span class="p">,</span>
             <span class="n">returnlevels</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">convention</span><span class="o">=</span><span class="s2">&quot;calabretta&quot;</span><span class="p">,</span>
+            <span class="n">convention</span><span class="o">=</span><span class="s2">"calabretta"</span><span class="p">,</span>
             <span class="n">smooth</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
         <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">plot_r</span><span class="p">:</span>  <span class="c1"># TODO: Allow passing of r500 values, make this a subfunction</span>
-        <span class="k">if</span> <span class="s2">&quot;a10&quot;</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">][</span><span class="s2">&quot;structures&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="n">mod_type</span> <span class="o">=</span> <span class="s2">&quot;a10&quot;</span>
-        <span class="k">elif</span> <span class="s2">&quot;ea10&quot;</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">][</span><span class="s2">&quot;structures&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="n">mod_type</span> <span class="o">=</span> <span class="s2">&quot;ea10&quot;</span>
+        <span class="k">if</span> <span class="s2">"a10"</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">"model"</span><span class="p">][</span><span class="s2">"structures"</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">mod_type</span> <span class="o">=</span> <span class="s2">"a10"</span>
+        <span class="k">elif</span> <span class="s2">"ea10"</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">"model"</span><span class="p">][</span><span class="s2">"structures"</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">mod_type</span> <span class="o">=</span> <span class="s2">"ea10"</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">ModelError</span><span class="p">(</span><span class="s2">&quot;For R500, must have structure type A10 or EA10&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">ModelError</span><span class="p">(</span><span class="s2">"For R500, must have structure type A10 or EA10"</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">structures</span><span class="p">)):</span>
             <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">structures</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="o">==</span> <span class="n">mod_type</span><span class="p">:</span>
                 <span class="k">break</span>
 
         <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">structures</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">parameter</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span> <span class="o">==</span> <span class="s2">&quot;m500&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">parameter</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span> <span class="o">==</span> <span class="s2">"m500"</span><span class="p">:</span>
                 <span class="n">m500</span> <span class="o">=</span> <span class="n">parameter</span><span class="o">.</span><span class="n">val</span>
                 <span class="k">break</span>
 
-        <span class="n">z</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;constants&quot;</span><span class="p">][</span><span class="s2">&quot;z&quot;</span><span class="p">])</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"constants"</span><span class="p">][</span><span class="s2">"z"</span><span class="p">])</span>
         <span class="n">nz</span> <span class="o">=</span> <span class="n">get_nz</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
 
         <span class="n">r500</span> <span class="o">=</span> <span class="p">(</span><span class="n">m500</span> <span class="o">/</span> <span class="p">(</span><span class="mf">4.00</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">3.00</span><span class="p">)</span> <span class="o">/</span> <span class="mf">5.00e02</span> <span class="o">/</span> <span class="n">nz</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mf">1.00</span> <span class="o">/</span> <span class="mf">3.00</span><span class="p">)</span>
         <span class="n">da</span> <span class="o">=</span> <span class="n">get_da</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
         <span class="n">r500</span> <span class="o">/=</span> <span class="n">da</span>
-        <span class="k">if</span> <span class="n">plot_r</span> <span class="o">==</span> <span class="s2">&quot;rs&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">plot_r</span> <span class="o">==</span> <span class="s2">"rs"</span><span class="p">:</span>
             <span class="n">r500</span> <span class="o">/=</span> <span class="nb">float</span><span class="p">(</span>
-                <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">][</span><span class="s2">&quot;structures&quot;</span><span class="p">][</span><span class="n">mod_type</span><span class="p">][</span><span class="s2">&quot;parameters&quot;</span><span class="p">][</span><span class="s2">&quot;c500&quot;</span><span class="p">][</span><span class="s2">&quot;value&quot;</span><span class="p">]</span>
+                <span class="n">cfg</span><span class="p">[</span><span class="s2">"model"</span><span class="p">][</span><span class="s2">"structures"</span><span class="p">][</span><span class="n">mod_type</span><span class="p">][</span><span class="s2">"parameters"</span><span class="p">][</span><span class="s2">"c500"</span><span class="p">][</span><span class="s2">"value"</span><span class="p">]</span>
             <span class="p">)</span>  <span class="c1"># Convert to rs</span>
         <span class="n">img</span><span class="o">.</span><span class="n">show_circles</span><span class="p">(</span>
-            <span class="n">ra</span><span class="p">,</span> <span class="n">dec</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="n">r500</span> <span class="o">/</span> <span class="mi">3600</span><span class="p">,</span> <span class="n">coords_frame</span><span class="o">=</span><span class="s2">&quot;world&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;green&quot;</span>
+            <span class="n">ra</span><span class="p">,</span> <span class="n">dec</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="n">r500</span> <span class="o">/</span> <span class="mi">3600</span><span class="p">,</span> <span class="n">coords_frame</span><span class="o">=</span><span class="s2">"world"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"green"</span>
         <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">img</span>

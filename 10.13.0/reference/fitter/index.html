@@ -1402,9 +1402,9 @@ You typically want to run the <code>witcher</code> command instead of this.</p>
 <span class="normal">643</span>
 <span class="normal">644</span>
 <span class="normal">645</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">deep_merge</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Based on https://gist.github.com/angstwad/bf22d1822c38a92ec0a9?permalink_comment_id=3517209</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">bk</span><span class="p">,</span> <span class="n">bv</span> <span class="ow">in</span> <span class="n">b</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="n">av</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">bk</span><span class="p">)</span>
@@ -1454,17 +1454,17 @@ so we merge the original into the newly loaded one.</p>
 <span class="normal">661</span>
 <span class="normal">662</span>
 <span class="normal">663</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_config</span><span class="p">(</span><span class="n">start_cfg</span><span class="p">,</span> <span class="n">cfg_path</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    We want to load a config and if it has the key &quot;base&quot;,</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    We want to load a config and if it has the key "base",</span>
 <span class="sd">    load that as well and merge them.</span>
 <span class="sd">    We only want to take things from base that are not in the original config</span>
 <span class="sd">    so we merge the original into the newly loaded one.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">cfg_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
         <span class="n">new_cfg</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
     <span class="n">cfg</span> <span class="o">=</span> <span class="n">deep_merge</span><span class="p">(</span><span class="n">new_cfg</span><span class="p">,</span> <span class="n">start_cfg</span><span class="p">)</span>
-    <span class="k">if</span> <span class="s2">&quot;base&quot;</span> <span class="ow">in</span> <span class="n">new_cfg</span><span class="p">:</span>
-        <span class="n">base_path</span> <span class="o">=</span> <span class="n">new_cfg</span><span class="p">[</span><span class="s2">&quot;base&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s2">"base"</span> <span class="ow">in</span> <span class="n">new_cfg</span><span class="p">:</span>
+        <span class="n">base_path</span> <span class="o">=</span> <span class="n">new_cfg</span><span class="p">[</span><span class="s2">"base"</span><span class="p">]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">base_path</span><span class="p">):</span>
             <span class="n">base_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">cfg_path</span><span class="p">),</span> <span class="n">base_path</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">load_config</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">base_path</span><span class="p">)</span>
@@ -1536,7 +1536,7 @@ Only the rank 0 process will print.</p>
 <span class="normal">48</span>
 <span class="normal">49</span>
 <span class="normal">50</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">print_once</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="o">...</span><span class="p">]]):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Helper function to print only once when running with MPI.</span>
 <span class="sd">    Only the rank 0 process will print.</span>
 
@@ -1544,7 +1544,7 @@ Only the rank 0 process will print.</p>
 <span class="sd">    ----------</span>
 <span class="sd">    *args : Unpack[tuple[Any, ...]]</span>
 <span class="sd">        Arguments to pass to print.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
         <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>

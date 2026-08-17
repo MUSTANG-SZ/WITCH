@@ -1659,7 +1659,7 @@ Has shape (1, 1, <code>int(2*r_map / dr)</code>).</p>
     <span class="n">x0</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
     <span class="n">y0</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Grid</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Make coordinate grids to build models in.</span>
 <span class="sd">    All grids are sparse and are `int(2*r_map / dr)` in each the non-sparse dimension.</span>
 
@@ -1695,7 +1695,7 @@ Has shape (1, 1, <code>int(2*r_map / dr)</code>).</p>
 <span class="sd">        Origin of grid in RA, in same units as r_map.</span>
 <span class="sd">    y0 : float</span>
 <span class="sd">        Origin of grid in Dec, in same units as r_map.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">dy</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">dy</span> <span class="o">=</span> <span class="n">dx</span>
     <span class="k">if</span> <span class="n">dz</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1709,7 +1709,7 @@ Has shape (1, 1, <code>int(2*r_map / dr)</code>).</p>
     <span class="p">)</span>
     <span class="n">y</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">r_map</span><span class="p">,</span> <span class="n">r_map</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">r_map</span> <span class="o">/</span> <span class="n">dy</span><span class="p">))</span> <span class="o">+</span> <span class="n">y0</span>
     <span class="n">z</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">r_map</span><span class="p">,</span> <span class="n">r_map</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">r_map</span> <span class="o">/</span> <span class="n">dz</span><span class="p">))</span>
-    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">&quot;ij&quot;</span><span class="p">)</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">"ij"</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -2029,7 +2029,7 @@ Has shape (1, 1, <code>int(2*z_map / dz)</code>).</p>
     <span class="n">x0</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">y0</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Grid</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Make coordinate grids to build models in from a minkasi skymap.</span>
 <span class="sd">    All grids are sparse and match the input map and xy and have size `int(2*z_map/dz)` in z.</span>
 <span class="sd">    Unlike `make_grid` here we assume things are radians.</span>
@@ -2067,21 +2067,21 @@ Has shape (1, 1, <code>int(2*z_map / dz)</code>).</p>
 <span class="sd">        Origin of grid in RA, in radians.</span>
 <span class="sd">    y0 : float</span>
 <span class="sd">        Origin of grid in Dec, in radians.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># make grid</span>
     <span class="n">_x</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">_y</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">ny</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">_z</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">z_map</span><span class="p">,</span> <span class="n">z_map</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">z_map</span> <span class="o">/</span> <span class="n">dz</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">_x</span><span class="p">,</span> <span class="n">_y</span><span class="p">,</span> <span class="n">_z</span><span class="p">,</span> <span class="n">sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">&quot;ij&quot;</span><span class="p">)</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">_x</span><span class="p">,</span> <span class="n">_y</span><span class="p">,</span> <span class="n">_z</span><span class="p">,</span> <span class="n">sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">"ij"</span><span class="p">)</span>
 
-    <span class="c1"># Pad so we don&#39;t need to broadcast</span>
+    <span class="c1"># Pad so we don't need to broadcast</span>
     <span class="n">x_flat</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
     <span class="n">y_flat</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
     <span class="n">len_diff</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_flat</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_flat</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">len_diff</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">y_flat</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">y_flat</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">len_diff</span><span class="p">),</span> <span class="s2">&quot;edge&quot;</span><span class="p">)</span>
+        <span class="n">y_flat</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">y_flat</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">len_diff</span><span class="p">),</span> <span class="s2">"edge"</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">len_diff</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">x_flat</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">x_flat</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">len_diff</span><span class="p">)),</span> <span class="s2">&quot;edge&quot;</span><span class="p">)</span>
+        <span class="n">x_flat</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">x_flat</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">len_diff</span><span class="p">)),</span> <span class="s2">"edge"</span><span class="p">)</span>
 
     <span class="c1"># Convert x and y to ra/dec</span>
     <span class="n">ra_dec</span> <span class="o">=</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs_pix2world</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="n">x_flat</span><span class="p">,</span> <span class="n">y_flat</span><span class="p">)),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ra_dec_order</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -2101,7 +2101,7 @@ Has shape (1, 1, <code>int(2*z_map / dz)</code>).</p>
         <span class="n">y0</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">dec</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">dec</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span>
 
     <span class="k">if</span> <span class="n">x0</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">y0</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Origin still None&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"Origin still None"</span><span class="p">)</span>
 
     <span class="c1"># Sparse indexing to save mem</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">at</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">ra</span> <span class="o">*</span> <span class="n">rad_to_arcsec</span><span class="p">)</span>
@@ -2300,7 +2300,7 @@ Has shape (1, 1, <code>int(2*z_map / dz)</code>).</p>
     <span class="n">grid</span><span class="p">:</span> <span class="n">Grid</span><span class="p">,</span>
     <span class="n">conv_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Convert RA/Dec TODs to index space.</span>
 
 <span class="sd">    Parameters</span>
@@ -2320,7 +2320,7 @@ Has shape (1, 1, <code>int(2*z_map / dz)</code>).</p>
 <span class="sd">        The RA TOD in index space</span>
 <span class="sd">    idy : jax.Array</span>
 <span class="sd">        The Dec TOD in index space.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span> <span class="o">=</span> <span class="n">grid</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
     <span class="n">dx</span> <span class="o">=</span> <span class="p">(</span><span class="n">xi</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">yi</span><span class="p">)</span>
     <span class="n">dy</span> <span class="o">=</span> <span class="n">yi</span> <span class="o">-</span> <span class="n">y0</span>
@@ -2597,7 +2597,7 @@ Note that the <code>Grid</code> type is an alias for <code>tuple[jax.Array, jax.
     <span class="n">theta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">xyz</span><span class="p">:</span> <span class="n">Grid</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Shift, rotate, and apply ellipticity to coordinate grid.</span>
 <span class="sd">    Note that the `Grid` type is an alias for `tuple[jax.Array, jax.Array, jax.Array, float, float]`.</span>
 
@@ -2624,7 +2624,7 @@ Note that the <code>Grid</code> type is an alias for <code>tuple[jax.Array, jax.
 <span class="sd">    -------</span>
 <span class="sd">    trasnformed : Grid</span>
 <span class="sd">        Transformed coordinate grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># Get origin</span>
     <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span> <span class="o">=</span> <span class="n">xyz</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">xyz</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
     <span class="c1"># Shift origin</span>

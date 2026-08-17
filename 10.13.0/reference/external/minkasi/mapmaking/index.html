@@ -1572,7 +1572,7 @@
 <span class="normal">32</span>
 <span class="normal">33</span>
 <span class="normal">34</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">apply_mask</span><span class="p">(</span><span class="n">input_mapset</span><span class="p">:</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">maps</span><span class="o">.</span><span class="n">Mapset</span><span class="p">,</span> <span class="n">maskset</span><span class="p">:</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">maps</span><span class="o">.</span><span class="n">Mapset</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Apply a mask to a set of input maps.</span>
 
 <span class="sd">    Parameters</span>
@@ -1587,7 +1587,7 @@
 <span class="sd">    target_mapset : minkasi.maps.Mapset</span>
 <span class="sd">        Masked version of input mapset.</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">imap</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">input_mapset</span><span class="o">.</span><span class="n">maps</span><span class="p">):</span>
         <span class="n">imap</span><span class="o">.</span><span class="n">map</span> <span class="o">*=</span> <span class="n">maskset</span><span class="o">.</span><span class="n">maps</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">map</span>
 
@@ -1789,7 +1789,7 @@ We assume that the first element is the map we care about.</p>
     <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="nb">tuple</span><span class="p">],</span>
     <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">maps</span><span class="o">.</span><span class="n">Mapset</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Make a gradient based prior from a map.</span>
 <span class="sd">    This helps avoid errors due to sharp features.</span>
 
@@ -1811,18 +1811,18 @@ We assume that the first element is the map we care about.</p>
 <span class="sd">    -------</span>
 <span class="sd">    new_mapset : minkasi.maps.Mapset</span>
 <span class="sd">        A mapset with the original map and a cleared prior map.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">gradmap</span><span class="o">.</span><span class="n">map</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">mapmaking</span><span class="o">.</span><span class="n">noise</span><span class="o">.</span><span class="n">get_grad_mask_2d</span><span class="p">(</span>
         <span class="n">mapset</span><span class="o">.</span><span class="n">maps</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">todvec</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
     <span class="p">)</span>
     <span class="n">prior</span> <span class="o">=</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">mapmaking</span><span class="o">.</span><span class="n">timestream</span><span class="o">.</span><span class="n">tsModel</span><span class="p">(</span><span class="n">todvec</span><span class="p">,</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">tods</span><span class="o">.</span><span class="n">cuts</span><span class="o">.</span><span class="n">CutsCompact</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">tod</span> <span class="ow">in</span> <span class="n">todvec</span><span class="o">.</span><span class="n">tods</span><span class="p">:</span>
-        <span class="n">prior</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;fname&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">tod</span><span class="o">.</span><span class="n">prior_from_skymap</span><span class="p">(</span><span class="n">gradmap</span><span class="p">)</span>
+        <span class="n">prior</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"fname"</span><span class="p">]]</span> <span class="o">=</span> <span class="n">tod</span><span class="o">.</span><span class="n">prior_from_skymap</span><span class="p">(</span><span class="n">gradmap</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span>
-            <span class="s2">&quot;prior on tod &quot;</span>
-            <span class="o">+</span> <span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;fname&quot;</span><span class="p">]</span>
-            <span class="o">+</span> <span class="s2">&quot; length is &quot;</span>
-            <span class="o">+</span> <span class="nb">repr</span><span class="p">(</span><span class="n">prior</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;fname&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">map</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+            <span class="s2">"prior on tod "</span>
+            <span class="o">+</span> <span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"fname"</span><span class="p">]</span>
+            <span class="o">+</span> <span class="s2">" length is "</span>
+            <span class="o">+</span> <span class="nb">repr</span><span class="p">(</span><span class="n">prior</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"fname"</span><span class="p">]]</span><span class="o">.</span><span class="n">map</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
         <span class="p">)</span>
 
     <span class="n">new_mapset</span> <span class="o">=</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">maps</span><span class="o">.</span><span class="n">Mapset</span><span class="p">()</span>
@@ -2152,7 +2152,7 @@ The contents don't matter only the shape and WCS info.</p>
     <span class="n">thresh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">return_maps</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Make a minkasi map with multple passes and noise reestimation.</span>
 <span class="sd">    Unless you are an expert this will usually be all you need.</span>
 
@@ -2162,7 +2162,7 @@ The contents don't matter only the shape and WCS info.</p>
 <span class="sd">        The tods to mapmake.</span>
 <span class="sd">    skymap : minkasi.maps.MapType</span>
 <span class="sd">        Map to use as a template.</span>
-<span class="sd">        The contents don&#39;t matter only the shape and WCS info.</span>
+<span class="sd">        The contents don't matter only the shape and WCS info.</span>
 <span class="sd">    noise_class : minkasi.mapmaking.noise.NoiseModelType</span>
 <span class="sd">        The noise model to use on the TODs.</span>
 <span class="sd">    noise_args : tuple</span>
@@ -2179,15 +2179,15 @@ The contents don't matter only the shape and WCS info.</p>
 <span class="sd">        If set, mask pixels with value less than thresh durring map-making. Default; None</span>
 <span class="sd">    return_maps : bool</span>
 <span class="sd">        If True, return the mapset. Default; False</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">for</span> <span class="n">tod</span> <span class="ow">in</span> <span class="n">todvec</span><span class="o">.</span><span class="n">tods</span><span class="p">:</span>
-        <span class="k">if</span> <span class="s2">&quot;ipix&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">"ipix"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">:</span>
             <span class="n">ipix</span> <span class="o">=</span> <span class="n">skymap</span><span class="o">.</span><span class="n">get_pix</span><span class="p">(</span><span class="n">tod</span><span class="p">)</span>
-            <span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;ipix&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ipix</span>
+            <span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"ipix"</span><span class="p">]</span> <span class="o">=</span> <span class="n">ipix</span>
         <span class="k">if</span> <span class="n">tod</span><span class="o">.</span><span class="n">noise</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">tod</span><span class="o">.</span><span class="n">set_noise</span><span class="p">(</span>
                 <span class="n">noise_class</span><span class="p">,</span>
-                <span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;dat_calib&quot;</span><span class="p">],</span>
+                <span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"dat_calib"</span><span class="p">],</span>
                 <span class="o">*</span><span class="n">noise_args</span><span class="p">,</span>
                 <span class="o">**</span><span class="n">noise_kwargs</span><span class="p">,</span>
             <span class="p">)</span>
@@ -2221,7 +2221,7 @@ The contents don't matter only the shape and WCS info.</p>
         <span class="n">maxiters</span><span class="o">=</span><span class="mi">26</span><span class="p">,</span>
         <span class="n">save_iters</span><span class="o">=</span><span class="n">iters</span><span class="p">,</span>
         <span class="n">outdir</span><span class="o">=</span><span class="n">outdir</span><span class="p">,</span>
-        <span class="n">desc_str</span><span class="o">=</span><span class="s2">&quot;initial&quot;</span><span class="p">,</span>
+        <span class="n">desc_str</span><span class="o">=</span><span class="s2">"initial"</span><span class="p">,</span>
         <span class="n">maskset</span><span class="o">=</span><span class="n">maskset</span><span class="p">,</span>
     <span class="p">)</span>
 
@@ -2242,7 +2242,7 @@ The contents don't matter only the shape and WCS info.</p>
             <span class="n">maxiter</span><span class="p">,</span>
             <span class="n">iters</span><span class="p">,</span>
             <span class="n">outdir</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s2">&quot;niter_</span><span class="si">{</span><span class="n">niter</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"niter_</span><span class="si">{</span><span class="n">niter</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
             <span class="n">maskset</span><span class="o">=</span><span class="n">maskset</span><span class="p">,</span>
         <span class="p">)</span>
 
@@ -2438,7 +2438,7 @@ We use this as a preconditioner which helps small-scale convergence quite a bit.
     <span class="n">outdir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">thresh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">minkasi</span><span class="o">.</span><span class="n">maps</span><span class="o">.</span><span class="n">MapType</span><span class="p">,</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">maps</span><span class="o">.</span><span class="n">MapType</span><span class="p">,</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">maps</span><span class="o">.</span><span class="n">Mapset</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Make a naive map where we just bin common mode subtracted TODs.</span>
 
 <span class="sd">    Parameters</span>
@@ -2459,14 +2459,14 @@ We use this as a preconditioner which helps small-scale convergence quite a bit.
 <span class="sd">        We use this as a preconditioner which helps small-scale convergence quite a bit.</span>
 <span class="sd">    maskset : minkasi.maps.Mapset</span>
 <span class="sd">        Set of masks for the maps.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">hits</span> <span class="o">=</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">mapmaking</span><span class="o">.</span><span class="n">make_hits</span><span class="p">(</span><span class="n">todvec</span><span class="p">,</span> <span class="n">skymap</span><span class="p">)</span>
 
     <span class="c1"># Make a naive map where we just bin the CM subbed tods</span>
     <span class="n">naive</span> <span class="o">=</span> <span class="n">skymap</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="n">naive</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">tod</span> <span class="ow">in</span> <span class="n">todvec</span><span class="o">.</span><span class="n">tods</span><span class="p">:</span>
-        <span class="n">tmp</span> <span class="o">=</span> <span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;dat_calib&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"dat_calib"</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">u</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
         <span class="n">tmp</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">u</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:])</span>
         <span class="n">naive</span><span class="o">.</span><span class="n">tod2map</span><span class="p">(</span><span class="n">tod</span><span class="p">,</span> <span class="n">tmp</span><span class="p">)</span>
@@ -2482,8 +2482,8 @@ We use this as a preconditioner which helps small-scale convergence quite a bit.
 
     <span class="n">naive</span><span class="o">.</span><span class="n">map</span><span class="p">[</span><span class="n">hits</span><span class="o">.</span><span class="n">map</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">naive</span><span class="o">.</span><span class="n">map</span><span class="p">[</span><span class="n">hits</span><span class="o">.</span><span class="n">map</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">hits</span><span class="o">.</span><span class="n">map</span><span class="p">[</span><span class="n">hits</span><span class="o">.</span><span class="n">map</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">myrank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">naive</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="s2">&quot;naive.fits&quot;</span><span class="p">))</span>
-        <span class="n">hits</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="s2">&quot;hits.fits&quot;</span><span class="p">))</span>
+        <span class="n">naive</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="s2">"naive.fits"</span><span class="p">))</span>
+        <span class="n">hits</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="s2">"hits.fits"</span><span class="p">))</span>
     <span class="n">naive</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">naive</span><span class="p">,</span> <span class="n">hits</span><span class="p">,</span> <span class="n">maskset</span>
 </code></pre></div></td></tr></table></div>
@@ -2651,7 +2651,7 @@ This is just 1/sqrt(weights).</p>
     <span class="n">outdir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">maskset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">minkasi</span><span class="o">.</span><span class="n">maps</span><span class="o">.</span><span class="n">Mapset</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">minkasi</span><span class="o">.</span><span class="n">maps</span><span class="o">.</span><span class="n">MapType</span><span class="p">,</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">maps</span><span class="o">.</span><span class="n">MapType</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Make weights and noise map.</span>
 
 <span class="sd">    Parameters</span>
@@ -2670,7 +2670,7 @@ This is just 1/sqrt(weights).</p>
 <span class="sd">    noisemap : minkasi.maps.MapType</span>
 <span class="sd">        The noise map.</span>
 <span class="sd">        This is just 1/sqrt(weights).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">weightmap</span> <span class="o">=</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">mapmaking</span><span class="o">.</span><span class="n">make_hits</span><span class="p">(</span><span class="n">todvec</span><span class="p">,</span> <span class="n">skymap</span><span class="p">,</span> <span class="n">do_weights</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">mask</span> <span class="o">=</span> <span class="n">weightmap</span><span class="o">.</span><span class="n">map</span> <span class="o">&gt;</span> <span class="mi">0</span>
     <span class="n">tmp</span> <span class="o">=</span> <span class="n">weightmap</span><span class="o">.</span><span class="n">map</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
@@ -2682,8 +2682,8 @@ This is just 1/sqrt(weights).</p>
         <span class="n">noisemap</span><span class="o">.</span><span class="n">map</span> <span class="o">*=</span> <span class="n">maskset</span><span class="o">.</span><span class="n">maps</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">map</span>
         <span class="n">weightmap</span><span class="o">.</span><span class="n">map</span> <span class="o">*=</span> <span class="n">maskset</span><span class="o">.</span><span class="n">maps</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">map</span>
     <span class="k">if</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">myrank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">noisemap</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="s2">&quot;noise.fits&quot;</span><span class="p">))</span>
-        <span class="n">weightmap</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="s2">&quot;weights.fits&quot;</span><span class="p">))</span>
+        <span class="n">noisemap</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="s2">"noise.fits"</span><span class="p">))</span>
+        <span class="n">weightmap</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="s2">"weights.fits"</span><span class="p">))</span>
 
     <span class="k">return</span> <span class="n">weightmap</span><span class="p">,</span> <span class="n">noisemap</span>
 </code></pre></div></td></tr></table></div>
@@ -2842,7 +2842,7 @@ This is just 1/sqrt(weights).</p>
     <span class="n">noise_args</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span>
     <span class="n">noise_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Use the current guess at the map to reestimate the noise:</span>
 
 <span class="sd">    Parameters</span>
@@ -2857,14 +2857,14 @@ This is just 1/sqrt(weights).</p>
 <span class="sd">        Additional arguments to pass to `minkasi.tods.Tod.set_noise`.</span>
 <span class="sd">    noise_kwargs : dict</span>
 <span class="sd">        Additional keyword arguments to pass to `minkasi.tods.Tod.set_noise`.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">for</span> <span class="n">tod</span> <span class="ow">in</span> <span class="n">todvec</span><span class="o">.</span><span class="n">tods</span><span class="p">:</span>
-        <span class="n">mat</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">*</span> <span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;dat_calib&quot;</span><span class="p">]</span>
+        <span class="n">mat</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">*</span> <span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"dat_calib"</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">mm</span> <span class="ow">in</span> <span class="n">mapset</span><span class="o">.</span><span class="n">maps</span><span class="p">:</span>
             <span class="n">mm</span><span class="o">.</span><span class="n">map2tod</span><span class="p">(</span><span class="n">tod</span><span class="p">,</span> <span class="n">mat</span><span class="p">)</span>
         <span class="n">tod</span><span class="o">.</span><span class="n">set_noise</span><span class="p">(</span>
             <span class="n">noise_class</span><span class="p">,</span>
-            <span class="n">dat</span><span class="o">=</span><span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;dat_calib&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">mat</span><span class="p">,</span>
+            <span class="n">dat</span><span class="o">=</span><span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"dat_calib"</span><span class="p">]</span> <span class="o">-</span> <span class="n">mat</span><span class="p">,</span>
             <span class="o">*</span><span class="n">noise_args</span><span class="p">,</span>
             <span class="o">**</span><span class="n">noise_kwargs</span><span class="p">,</span>
         <span class="p">)</span>
@@ -3166,7 +3166,7 @@ This is just 1/sqrt(weights).</p>
     <span class="n">desc_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">maskset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">minkasi</span><span class="o">.</span><span class="n">maps</span><span class="o">.</span><span class="n">Mapset</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">maps</span><span class="o">.</span><span class="n">Mapset</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Solve for map with PCG.</span>
 
 <span class="sd">    Parameters</span>
@@ -3194,9 +3194,9 @@ This is just 1/sqrt(weights).</p>
 <span class="sd">    -------</span>
 <span class="sd">    mapset : minkasi.maps.Mapset</span>
 <span class="sd">        The mapset with the solved map.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># make A^T N^1 d.  TODs need to understand what to do with maps</span>
-    <span class="c1"># but maps don&#39;t necessarily need to understand what to do with TODs,</span>
+    <span class="c1"># but maps don't necessarily need to understand what to do with TODs,</span>
     <span class="c1"># hence putting make_rhs in the vector of TODs.</span>
     <span class="c1"># Again, make_rhs is MPI-aware, so this should do the right thing</span>
     <span class="c1"># if you run with many processes.</span>
@@ -3220,7 +3220,7 @@ This is just 1/sqrt(weights).</p>
 
     <span class="c1"># run PCG to solve</span>
     <span class="c1"># Supressing print here, probably want a verbosity setting on the minkasi side...</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">devnull</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">,</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">redirect_stdout</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">devnull</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">,</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">redirect_stdout</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
         <span class="n">mapset</span> <span class="o">=</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">mapmaking</span><span class="o">.</span><span class="n">run_pcg_wprior</span><span class="p">(</span>
             <span class="n">rhs</span><span class="p">,</span>
             <span class="n">x0</span><span class="p">,</span>
@@ -3235,7 +3235,7 @@ This is just 1/sqrt(weights).</p>
 
     <span class="k">if</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">myrank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">mapset</span><span class="o">.</span><span class="n">maps</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">desc_str</span><span class="si">}</span><span class="s2">.fits&quot;</span><span class="p">)</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">desc_str</span><span class="si">}</span><span class="s2">.fits"</span><span class="p">)</span>
         <span class="p">)</span>  <span class="c1"># and write out the map as a FITS file</span>
 
     <span class="k">return</span> <span class="n">mapset</span>

@@ -1544,7 +1544,7 @@ Should be the tuple <code>(lower_bound, upper_bound)</code>.</p>
 <span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_pytree_node_class</span>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">Parameter</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Dataclass to represent a single parameter of a model.</span>
 
 <span class="sd">    Attributes</span>
@@ -1554,7 +1554,7 @@ Should be the tuple <code>(lower_bound, upper_bound)</code>.</p>
 <span class="sd">        This is used only for display purposes.</span>
 <span class="sd">    fit : jax.Array</span>
 <span class="sd">        Should be array with length `Model.n_rounds`.</span>
-<span class="sd">        `fit[i]` is True if we want to fit this parameter in the `i`&#39;th round.</span>
+<span class="sd">        `fit[i]` is True if we want to fit this parameter in the `i`'th round.</span>
 <span class="sd">    val : float</span>
 <span class="sd">        The value of the parameter.</span>
 <span class="sd">    err : float</span>
@@ -1562,7 +1562,7 @@ Should be the tuple <code>(lower_bound, upper_bound)</code>.</p>
 <span class="sd">    prior : tuple[float, float]</span>
 <span class="sd">        The prior on this parameter.</span>
 <span class="sd">        Should be the tuple `(lower_bound, upper_bound)`.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">fit</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>  <span class="c1"># 1d bool array</span>
@@ -1572,7 +1572,7 @@ Should be the tuple <code>(lower_bound, upper_bound)</code>.</p>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">fit_ever</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>  <span class="c1"># jax.Array:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Check if this parameter is set to ever be fit.</span>
 
 <span class="sd">        Returns</span>
@@ -1580,11 +1580,11 @@ Should be the tuple <code>(lower_bound, upper_bound)</code>.</p>
 <span class="sd">        fit_ever : jax.Array</span>
 <span class="sd">            Single element jax boolean array.</span>
 <span class="sd">            True if this parameter is ever fit.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
 
     <span class="c1"># Functions for making this a pytree</span>
-    <span class="c1"># Don&#39;t call this on your own</span>
+    <span class="c1"># Don't call this on your own</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">tree_flatten</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">]:</span>
         <span class="n">children</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">val</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">err</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">prior</span><span class="p">)</span>
         <span class="n">aux_data</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="p">)</span>
@@ -1829,7 +1829,7 @@ If we have the wrong number of parameters.</p>
 <span class="normal">125</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_pytree_node_class</span>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">Structure</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Dataclass to represent a structure within the model.</span>
 
 <span class="sd">    Attributes</span>
@@ -1848,7 +1848,7 @@ If we have the wrong number of parameters.</p>
 <span class="sd">    ValueError</span>
 <span class="sd">        If `structure` is not a valid structure.</span>
 <span class="sd">        If we have the wrong number of parameters.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">structure</span><span class="p">:</span> <span class="nb">str</span>
@@ -1859,15 +1859,15 @@ If we have the wrong number of parameters.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">structure</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">structure</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
         <span class="c1"># Check that this is a valid structure</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">structure</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">STRUCT_N_PAR</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has invalid structure: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">structure</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has invalid structure: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">structure</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="c1"># Check that we have the correct number of params</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span> <span class="o">!=</span> <span class="n">STRUCT_N_PAR</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">structure</span><span class="p">]:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has incorrect number of parameters, expected </span><span class="si">{</span><span class="n">STRUCT_N_PAR</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">structure</span><span class="p">]</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">structure</span><span class="si">}</span><span class="s2"> but was given </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has incorrect number of parameters, expected </span><span class="si">{</span><span class="n">STRUCT_N_PAR</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">structure</span><span class="p">]</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">structure</span><span class="si">}</span><span class="s2"> but was given </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
 
     <span class="c1"># Functions for making this a pytree</span>
-    <span class="c1"># Don&#39;t call this on your own</span>
+    <span class="c1"># Don't call this on your own</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">tree_flatten</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">]:</span>
         <span class="n">children</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
         <span class="n">aux_data</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">structure</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rbins</span><span class="p">)</span>

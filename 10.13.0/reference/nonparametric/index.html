@@ -1577,7 +1577,7 @@
 <span class="normal">112</span>
 <span class="normal">113</span>
 <span class="normal">114</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">bin_map</span><span class="p">(</span><span class="n">hdu</span><span class="p">,</span> <span class="n">rbins</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">y0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cunit</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Radially bin a map into rbins. Code adapted from CLASS</span>
 
 <span class="sd">    Parameters</span>
@@ -1595,61 +1595,61 @@
 <span class="sd">        Bin center values</span>
 <span class="sd">    var1d : NDArray[np.floating]</span>
 <span class="sd">        Bin variance estimate</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">if</span> <span class="n">cunit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">cunit</span> <span class="o">=</span> <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;CUNIT1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            <span class="n">cunit</span> <span class="o">=</span> <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">"CUNIT1"</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
         <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">e</span>
 
     <span class="k">if</span> <span class="p">(</span>
-        <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;rad&quot;</span>
-        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;radian&quot;</span>
-        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;radians&quot;</span>
+        <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"rad"</span>
+        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"radian"</span>
+        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"radians"</span>
     <span class="p">):</span>
         <span class="n">pixunits</span> <span class="o">=</span> <span class="mi">1</span>
     <span class="k">elif</span> <span class="p">(</span>
-        <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;deg&quot;</span>
-        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;degree&quot;</span>
-        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;degrees&quot;</span>
+        <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"deg"</span>
+        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"degree"</span>
+        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"degrees"</span>
     <span class="p">):</span>
         <span class="n">pixunits</span> <span class="o">=</span> <span class="n">wu</span><span class="o">.</span><span class="n">rad_to_deg</span>
     <span class="k">elif</span> <span class="p">(</span>
-        <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;arcmin&quot;</span>
-        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;arcminute&quot;</span>
-        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;arcminutes&quot;</span>
+        <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"arcmin"</span>
+        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"arcminute"</span>
+        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"arcminutes"</span>
     <span class="p">):</span>
         <span class="n">pixunits</span> <span class="o">=</span> <span class="n">wu</span><span class="o">.</span><span class="n">rad_to_arcmin</span>
     <span class="k">elif</span> <span class="p">(</span>
-        <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;arcsec&quot;</span>
-        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;arcsecond&quot;</span>
-        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;arcseconds&quot;</span>
+        <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"arcsec"</span>
+        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"arcsecond"</span>
+        <span class="ow">or</span> <span class="n">cunit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"arcseconds"</span>
     <span class="p">):</span>
         <span class="n">pixunits</span> <span class="o">=</span> <span class="n">wu</span><span class="o">.</span><span class="n">rad_to_arcsec</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Error: cunit </span><span class="si">{}</span><span class="s2"> is not a valid pixel unit&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cunit</span><span class="p">))</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Error: cunit </span><span class="si">{}</span><span class="s2"> is not a valid pixel unit"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cunit</span><span class="p">))</span>
 
-    <span class="n">pixsize</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;CDELT1&quot;</span><span class="p">])</span> <span class="o">/</span> <span class="n">pixunits</span>
-    <span class="n">x0</span> <span class="o">=</span> <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;CRVAL1&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">pixunits</span>
-    <span class="n">y0</span> <span class="o">=</span> <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;CRVAL2&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">pixunits</span>
+    <span class="n">pixsize</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">"CDELT1"</span><span class="p">])</span> <span class="o">/</span> <span class="n">pixunits</span>
+    <span class="n">x0</span> <span class="o">=</span> <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">"CRVAL1"</span><span class="p">]</span> <span class="o">/</span> <span class="n">pixunits</span>
+    <span class="n">y0</span> <span class="o">=</span> <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">"CRVAL2"</span><span class="p">]</span> <span class="o">/</span> <span class="n">pixunits</span>
 
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;CDELT1&quot;</span><span class="p">])</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;CDELT2&quot;</span><span class="p">]):</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">"CDELT1"</span><span class="p">])</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">"CDELT2"</span><span class="p">]):</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="s2">&quot;Warning: non-square pixels: RA: </span><span class="si">{}</span><span class="s2"> Dec</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;CDELT1&quot;</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;CDELT2&quot;</span><span class="p">])</span>
+            <span class="s2">"Warning: non-square pixels: RA: </span><span class="si">{}</span><span class="s2"> Dec</span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">"CDELT1"</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">"CDELT2"</span><span class="p">])</span>
             <span class="p">)</span>
         <span class="p">)</span>
 
     <span class="c1"># The offset is redundent if the binning center is taken to be the map center but frequently it is not</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
-        <span class="o">-</span><span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">pixsize</span> <span class="o">+</span> <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;CRVAL1&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">pixunits</span><span class="p">,</span>
-        <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">pixsize</span> <span class="o">+</span> <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;CRVAL1&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">pixunits</span><span class="p">,</span>
+        <span class="o">-</span><span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">pixsize</span> <span class="o">+</span> <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">"CRVAL1"</span><span class="p">]</span> <span class="o">/</span> <span class="n">pixunits</span><span class="p">,</span>
+        <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">pixsize</span> <span class="o">+</span> <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">"CRVAL1"</span><span class="p">]</span> <span class="o">/</span> <span class="n">pixunits</span><span class="p">,</span>
         <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
     <span class="p">)</span>
     <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
-        <span class="o">-</span><span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">pixsize</span> <span class="o">+</span> <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;CRVAL2&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">pixunits</span><span class="p">,</span>
-        <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">pixsize</span> <span class="o">+</span> <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;CRVAL2&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">pixunits</span><span class="p">,</span>
+        <span class="o">-</span><span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">pixsize</span> <span class="o">+</span> <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">"CRVAL2"</span><span class="p">]</span> <span class="o">/</span> <span class="n">pixunits</span><span class="p">,</span>
+        <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">pixsize</span> <span class="o">+</span> <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">"CRVAL2"</span><span class="p">]</span> <span class="o">/</span> <span class="n">pixunits</span><span class="p">,</span>
         <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
     <span class="p">)</span>
 
@@ -1892,7 +1892,7 @@ Only first match will be used.</p>
     <span class="n">sig_params</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
     <span class="n">default</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Function which returns a good set of rbins for a non-parametric fit given the significance of the underlying parametric model.</span>
 
 <span class="sd">    Parameters</span>
@@ -1913,7 +1913,7 @@ Only first match will be used.</p>
 <span class="sd">    -------</span>
 <span class="sd">    rbins: tuple[int, ...]</span>
 <span class="sd">        rbins for nonparametric fit</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">sig</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="k">for</span> <span class="n">par</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">structures</span><span class="p">[</span><span class="n">struct_num</span><span class="p">]</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">par</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
@@ -1921,7 +1921,7 @@ Only first match will be used.</p>
             <span class="k">break</span>
     <span class="k">if</span> <span class="n">sig</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="s2">&quot;Warning: model does not contain any valid significance parameters </span><span class="si">{}</span><span class="s2">. Returning default bins.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="s2">"Warning: model does not contain any valid significance parameters </span><span class="si">{}</span><span class="s2">. Returning default bins."</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                 <span class="n">sig_params</span>
             <span class="p">)</span>
         <span class="p">)</span>
@@ -1929,7 +1929,7 @@ Only first match will be used.</p>
 
     <span class="k">if</span> <span class="n">sig</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="s2">&quot;Warning, significance </span><span class="si">{}</span><span class="s2"> too low to calculate bins. Returning default bins.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="s2">"Warning, significance </span><span class="si">{}</span><span class="s2"> too low to calculate bins. Returning default bins."</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                 <span class="n">sig</span>
             <span class="p">)</span>
         <span class="p">)</span>
@@ -2347,7 +2347,7 @@ Only first match will be used.</p>
     <span class="n">default</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
     <span class="n">mm_cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Model</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Function which approximately converts cluster profiles into a non-parametric form. Note this is</span>
 <span class="sd">    only approximate and should be fit afterwords.</span>
 
@@ -2378,10 +2378,10 @@ Only first match will be used.</p>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
 <span class="sd">        If there are no models to copy</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">cur_model</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span>
         <span class="n">model</span>
-    <span class="p">)</span>  <span class="c1"># Make a copy of model, we don&#39;t want to lose structures</span>
+    <span class="p">)</span>  <span class="c1"># Make a copy of model, we don't want to lose structures</span>
     <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># Make sure we keep at least one struct</span>
     <span class="n">to_remove</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="n">cur_model</span><span class="o">.</span><span class="n">structures</span><span class="p">:</span>
@@ -2389,7 +2389,7 @@ Only first match will be used.</p>
             <span class="n">to_remove</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">structure</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">to_remove</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">cur_model</span><span class="o">.</span><span class="n">structures</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Error: no model structures in </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">to_copy</span><span class="p">))</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Error: no model structures in </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">to_copy</span><span class="p">))</span>
     <span class="k">for</span> <span class="n">struct</span> <span class="ow">in</span> <span class="n">to_remove</span><span class="p">:</span>
         <span class="n">cur_model</span><span class="o">.</span><span class="n">remove_struct</span><span class="p">(</span><span class="n">struct</span><span class="p">)</span>
     <span class="n">params</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cur_model</span><span class="o">.</span><span class="n">pars</span><span class="p">)</span>
@@ -2419,52 +2419,52 @@ Only first match will be used.</p>
     <span class="k">if</span> <span class="n">n_rounds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">n_rounds</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">n_rounds</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_rounds</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Non int n_rounds&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Non int n_rounds"</span><span class="p">)</span>
     <span class="n">parameters</span> <span class="o">=</span> <span class="p">[</span>
         <span class="n">Parameter</span><span class="p">(</span>
-            <span class="s2">&quot;rbins&quot;</span><span class="p">,</span>
+            <span class="s2">"rbins"</span><span class="p">,</span>
             <span class="nb">tuple</span><span class="p">([</span><span class="kc">False</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_rounds</span><span class="p">),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">rbins</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)),</span>  <span class="c1"># Drop last bin</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">rbins</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">priors</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
         <span class="p">),</span>
         <span class="n">Parameter</span><span class="p">(</span>
-            <span class="s2">&quot;amps&quot;</span><span class="p">,</span>
+            <span class="s2">"amps"</span><span class="p">,</span>
             <span class="nb">tuple</span><span class="p">([</span><span class="kc">True</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_rounds</span><span class="p">),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">amps</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">amps</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">priors</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
         <span class="p">),</span>
         <span class="n">Parameter</span><span class="p">(</span>
-            <span class="s2">&quot;pows&quot;</span><span class="p">,</span>
+            <span class="s2">"pows"</span><span class="p">,</span>
             <span class="nb">tuple</span><span class="p">([</span><span class="kc">True</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_rounds</span><span class="p">),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pows</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pows</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">priors</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
         <span class="p">),</span>
         <span class="n">Parameter</span><span class="p">(</span>
-            <span class="s2">&quot;dx&quot;</span><span class="p">,</span>  <span class="c1"># TODO: miscentering</span>
+            <span class="s2">"dx"</span><span class="p">,</span>  <span class="c1"># TODO: miscentering</span>
             <span class="nb">tuple</span><span class="p">([</span><span class="kc">False</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_rounds</span><span class="p">),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mi">0</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">priors</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
         <span class="p">),</span>
         <span class="n">Parameter</span><span class="p">(</span>
-            <span class="s2">&quot;dy&quot;</span><span class="p">,</span>  <span class="c1"># TODO: miscentering</span>
+            <span class="s2">"dy"</span><span class="p">,</span>  <span class="c1"># TODO: miscentering</span>
             <span class="nb">tuple</span><span class="p">([</span><span class="kc">False</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_rounds</span><span class="p">),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mi">0</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">priors</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
         <span class="p">),</span>
         <span class="n">Parameter</span><span class="p">(</span>
-            <span class="s2">&quot;dz&quot;</span><span class="p">,</span>  <span class="c1"># TODO: miscentering</span>
+            <span class="s2">"dz"</span><span class="p">,</span>  <span class="c1"># TODO: miscentering</span>
             <span class="nb">tuple</span><span class="p">([</span><span class="kc">False</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_rounds</span><span class="p">),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mi">0</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">priors</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
         <span class="p">),</span>
         <span class="n">Parameter</span><span class="p">(</span>
-            <span class="s2">&quot;c&quot;</span><span class="p">,</span>
+            <span class="s2">"c"</span><span class="p">,</span>
             <span class="nb">tuple</span><span class="p">([</span><span class="kc">True</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_rounds</span><span class="p">),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)),</span>
             <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mi">0</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
@@ -2473,13 +2473,13 @@ Only first match will be used.</p>
     <span class="p">]</span>
 
     <span class="n">structure</span> <span class="o">=</span> <span class="n">Structure</span><span class="p">(</span>
-        <span class="s2">&quot;nonpara_power&quot;</span><span class="p">,</span> <span class="s2">&quot;nonpara_power&quot;</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">n_rbins</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">rbins</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="s2">"nonpara_power"</span><span class="p">,</span> <span class="s2">"nonpara_power"</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">n_rbins</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">rbins</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
     <span class="p">)</span>
     <span class="n">structures</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">structures</span><span class="p">)</span>
-    <span class="k">if</span> <span class="s2">&quot;parameter_map&quot;</span> <span class="ow">in</span> <span class="n">mm_cfg</span><span class="p">:</span>
-        <span class="n">mm_cfg</span><span class="p">[</span><span class="s2">&quot;parameter_map&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pm</span> <span class="k">if</span> <span class="sa">f</span><span class="s2">&quot;.</span><span class="si">{</span><span class="n">structures</span><span class="p">[</span><span class="n">struct_num</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.&quot;</span> <span class="ow">in</span> <span class="n">p</span><span class="p">]</span>
-            <span class="k">for</span> <span class="n">pm</span> <span class="ow">in</span> <span class="n">mm_cfg</span><span class="p">[</span><span class="s2">&quot;parameter_map&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s2">"parameter_map"</span> <span class="ow">in</span> <span class="n">mm_cfg</span><span class="p">:</span>
+        <span class="n">mm_cfg</span><span class="p">[</span><span class="s2">"parameter_map"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pm</span> <span class="k">if</span> <span class="sa">f</span><span class="s2">".</span><span class="si">{</span><span class="n">structures</span><span class="p">[</span><span class="n">struct_num</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">."</span> <span class="ow">in</span> <span class="n">p</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">pm</span> <span class="ow">in</span> <span class="n">mm_cfg</span><span class="p">[</span><span class="s2">"parameter_map"</span><span class="p">]</span>
         <span class="p">]</span>
     <span class="n">structures</span><span class="p">[</span><span class="n">struct_num</span><span class="p">]</span> <span class="o">=</span> <span class="n">structure</span>
 

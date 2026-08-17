@@ -2635,7 +2635,7 @@ Used when fitting.</p>
 <span class="normal">698</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_pytree_node_class</span>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">Model</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Dataclass to describe a model.</span>
 <span class="sd">    This includes some caching features that improve performance when fitting.</span>
 <span class="sd">    Note that because of the caching dynamically modifying what structures compose</span>
@@ -2673,7 +2673,7 @@ Used when fitting.</p>
 <span class="sd">    chisq : float, default: np.inf</span>
 <span class="sd">        The chi-squared of this model relative to some data.</span>
 <span class="sd">        Used when fitting.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">structures</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Structure</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
@@ -2690,8 +2690,8 @@ Used when fitting.</p>
     <span class="p">)</span>  <span class="c1"># scalar float array</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">check_compatibility</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Check whether &#39;other&#39; (a model loaded from a checkpoint) is compatible with the current model defined in config.</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Check whether 'other' (a model loaded from a checkpoint) is compatible with the current model defined in config.</span>
 <span class="sd">        Checks that structures, xyz, and dz are equal.</span>
 
 <span class="sd">        Arguments</span>
@@ -2704,15 +2704,15 @@ Used when fitting.</p>
 <span class="sd">        compatible : bool</span>
 <span class="sd">            True if compatible,</span>
 <span class="sd">            False if not.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="c1"># Structure name match</span>
         <span class="n">struct_names</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">)</span>
         <span class="n">ostruct_names</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">structures</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">struct_names</span> <span class="o">!=</span> <span class="n">ostruct_names</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Model structure mismatch. &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;Config structures = </span><span class="si">{</span><span class="n">struct_names</span><span class="si">}</span><span class="s2">, &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;Checkpoint structures = </span><span class="si">{</span><span class="n">ostruct_names</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"Model structure mismatch. "</span>
+                <span class="sa">f</span><span class="s2">"Config structures = </span><span class="si">{</span><span class="n">struct_names</span><span class="si">}</span><span class="s2">, "</span>
+                <span class="sa">f</span><span class="s2">"Checkpoint structures = </span><span class="si">{</span><span class="n">ostruct_names</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="kc">False</span>
 
@@ -2722,76 +2722,76 @@ Used when fitting.</p>
             <span class="n">other_params</span> <span class="o">=</span> <span class="n">other_struct</span><span class="o">.</span><span class="n">parameters</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">self_params</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">other_params</span><span class="p">):</span>
                 <span class="nb">print</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Parameter count mismatch in structure &#39;</span><span class="si">{</span><span class="n">self_struct</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;: &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">self_params</span><span class="p">)</span><span class="si">}</span><span class="s2"> (config) vs </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">other_params</span><span class="p">)</span><span class="si">}</span><span class="s2"> (ckpt)&quot;</span>
+                    <span class="sa">f</span><span class="s2">"Parameter count mismatch in structure '</span><span class="si">{</span><span class="n">self_struct</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">': "</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">self_params</span><span class="p">)</span><span class="si">}</span><span class="s2"> (config) vs </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">other_params</span><span class="p">)</span><span class="si">}</span><span class="s2"> (ckpt)"</span>
                 <span class="p">)</span>
                 <span class="k">return</span> <span class="kc">False</span>
 
         <span class="c1"># Parameter order match</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">par_names</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">par_names</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Parameter ordering mismatch between config and checkpoint models&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"Parameter ordering mismatch between config and checkpoint models"</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">False</span>
 
         <span class="c1"># xyz compatibility</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">xyz</span><span class="p">):</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;parameter ordering mismatch between config and checkpoint models&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"parameter ordering mismatch between config and checkpoint models"</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">False</span>
 
         <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">xyz</span><span class="p">):</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>  <span class="c1"># check the two float elements</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;xyz element type mismatch&quot;</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">"xyz element type mismatch"</span><span class="p">)</span>
                     <span class="k">return</span> <span class="kc">False</span>
             <span class="k">else</span><span class="p">:</span>  <span class="c1"># jax arrays</span>
                 <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;xyz[i] array shape mismatch: </span><span class="si">{</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"xyz[i] array shape mismatch: </span><span class="si">{</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                     <span class="k">return</span> <span class="kc">False</span>
 
         <span class="c1"># dz compatibility</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dz</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">dz</span><span class="p">:</span>  <span class="c1"># Checks same numerical value</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;dz value mismatch: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dz</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">dz</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"dz value mismatch: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dz</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">dz</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">False</span>
 
         <span class="k">return</span> <span class="kc">True</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;cur_round&quot;</span> <span class="ow">or</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;xyz&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;model_grad&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;n_rounds&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;to_fit_ever&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">"cur_round"</span> <span class="ow">or</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">"xyz"</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"model_grad"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">"n_rounds"</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"to_fit_ever"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="n">rep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;:</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="n">rep</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Round </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cur_round</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> out of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rounds</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">rep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">":</span><span class="se">\n</span><span class="s2">"</span>
+        <span class="n">rep</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"Round </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cur_round</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> out of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rounds</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
         <span class="k">for</span> <span class="n">struct</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">:</span>
-            <span class="n">rep</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">rep</span> <span class="o">+=</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">":</span><span class="se">\n</span><span class="s2">"</span>
             <span class="k">for</span> <span class="n">par</span> <span class="ow">in</span> <span class="n">struct</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
                 <span class="n">rep</span> <span class="o">+=</span> <span class="p">(</span>
-                    <span class="s2">&quot;</span><span class="se">\t\t</span><span class="s2">&quot;</span>
+                    <span class="s2">"</span><span class="se">\t\t</span><span class="s2">"</span>
                     <span class="o">+</span> <span class="n">par</span><span class="o">.</span><span class="n">name</span>
-                    <span class="o">+</span> <span class="s2">&quot;*&quot;</span> <span class="o">*</span> <span class="n">par</span><span class="o">.</span><span class="n">fit</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">cur_round</span><span class="p">]</span>
-                    <span class="o">+</span> <span class="s2">&quot; [&quot;</span>
+                    <span class="o">+</span> <span class="s2">"*"</span> <span class="o">*</span> <span class="n">par</span><span class="o">.</span><span class="n">fit</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">cur_round</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="s2">" ["</span>
                     <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">par</span><span class="o">.</span><span class="n">prior</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-                    <span class="o">+</span> <span class="s2">&quot;, &quot;</span>
+                    <span class="o">+</span> <span class="s2">", "</span>
                     <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">par</span><span class="o">.</span><span class="n">prior</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-                    <span class="o">+</span> <span class="s2">&quot;]&quot;</span>
-                    <span class="o">+</span> <span class="s2">&quot; = &quot;</span>
+                    <span class="o">+</span> <span class="s2">"]"</span>
+                    <span class="o">+</span> <span class="s2">" = "</span>
                     <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">par</span><span class="o">.</span><span class="n">val</span><span class="p">)</span>
-                    <span class="o">+</span> <span class="s2">&quot; ± &quot;</span>
+                    <span class="o">+</span> <span class="s2">" ± "</span>
                     <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">par</span><span class="o">.</span><span class="n">err</span><span class="p">)</span>
-                    <span class="o">+</span> <span class="s2">&quot; (&quot;</span>
+                    <span class="o">+</span> <span class="s2">" ("</span>
                     <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">par</span><span class="o">.</span><span class="n">val</span> <span class="o">/</span> <span class="n">par</span><span class="o">.</span><span class="n">err</span><span class="p">))</span>
-                    <span class="o">+</span> <span class="s2">&quot; σ)&quot;</span>
-                    <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="o">+</span> <span class="s2">" σ)"</span>
+                    <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>
                 <span class="p">)</span>
-        <span class="n">rep</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;chisq is </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">chisq</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">rep</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"chisq is </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">chisq</span><span class="si">}</span><span class="s2">"</span>
         <span class="k">return</span> <span class="n">rep</span>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">n_struct</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Number of each type of structures in the model.</span>
 <span class="sd">        Note that this is cached.</span>
 
@@ -2800,7 +2800,7 @@ Used when fitting.</p>
 <span class="sd">        n_struct : list[int]</span>
 <span class="sd">            `n_struct[i]` is the number of `core.ORDER[i]`</span>
 <span class="sd">            structures in this model.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">n_struct</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">ORDER</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">:</span>
             <span class="n">idx</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">ORDER</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">structure</span><span class="o">.</span><span class="n">structure</span><span class="p">)</span>
@@ -2809,7 +2809,7 @@ Used when fitting.</p>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">n_rbins</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Number of r bins for nonparametric structures.</span>
 <span class="sd">        Note that this is cached.</span>
 
@@ -2817,21 +2817,21 @@ Used when fitting.</p>
 <span class="sd">        -------</span>
 <span class="sd">        n_rbins : list[int]</span>
 <span class="sd">            `n_rbins[i]` is the number of rbins in this structure.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">n_rbins</span> <span class="o">=</span> <span class="p">[</span><span class="n">structure</span><span class="o">.</span><span class="n">n_rbins</span> <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">]</span>
 
         <span class="k">return</span> <span class="n">n_rbins</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">pars</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the current parameter values.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        pars :  jax.Array</span>
 <span class="sd">            The parameter values in the order expected by `core.model`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">pars</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
         <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">structure</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
@@ -2840,7 +2840,7 @@ Used when fitting.</p>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">par_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the names of all parameters.</span>
 <span class="sd">        Note that this is cached.</span>
 
@@ -2848,13 +2848,13 @@ Used when fitting.</p>
 <span class="sd">        -------</span>
 <span class="sd">        par_names : list[str]</span>
 <span class="sd">            Parameter names in the same order as `pars`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">par_names</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">structure</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parameter</span><span class="o">.</span><span class="n">val</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">parameter</span><span class="o">.</span><span class="n">val</span><span class="p">)):</span>
-                        <span class="n">par_names</span> <span class="o">+=</span> <span class="p">[</span><span class="n">parameter</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span>
+                        <span class="n">par_names</span> <span class="o">+=</span> <span class="p">[</span><span class="n">parameter</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">"_</span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">par_names</span> <span class="o">+=</span> <span class="p">[</span><span class="n">parameter</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
 
@@ -2862,7 +2862,7 @@ Used when fitting.</p>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">par_struct_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the struct names of all parameters.</span>
 <span class="sd">        Note that this is cached.</span>
 
@@ -2870,7 +2870,7 @@ Used when fitting.</p>
 <span class="sd">        -------</span>
 <span class="sd">        par_struct_names : list[str]</span>
 <span class="sd">            Parameter struct names in the same order as `pars`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">par_struct_names</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">structure</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
@@ -2880,21 +2880,21 @@ Used when fitting.</p>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">struct_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the names of all structures in this model</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">struct</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">struct</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">errs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the current parameter errors.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        errs : jax.Array</span>
 <span class="sd">            The errors in the same order as vals.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">errs</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
         <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">structure</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
@@ -2903,7 +2903,7 @@ Used when fitting.</p>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">priors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the priors for all parameters.</span>
 <span class="sd">        Note that this is cached.</span>
 
@@ -2913,7 +2913,7 @@ Used when fitting.</p>
 <span class="sd">            Parameter priors in the same order as `pars`.</span>
 <span class="sd">            This is a tuple with the first element being an array</span>
 <span class="sd">            of lower bounds and the second being upper.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">lower</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">upper</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">:</span>
@@ -2925,16 +2925,16 @@ Used when fitting.</p>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">]:</span>  <span class="c1"># jax.Array:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get which parameters we want to fit for the current round.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        to_fit : jax.Array</span>
-<span class="sd">            `to_fit[i]` is True if we want to fit the `i`&#39;th parameter</span>
+<span class="sd">            `to_fit[i]` is True if we want to fit the `i`'th parameter</span>
 <span class="sd">            in the current round.</span>
 <span class="sd">            This is in the same order as `pars`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="n">to_fit</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">:</span>
@@ -2946,16 +2946,16 @@ Used when fitting.</p>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_fit_ever</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Check which parameters we ever fit.</span>
 <span class="sd">        Note that this is cached.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        to_fit_ever : jax.Array</span>
-<span class="sd">            `to_fit[i]` is True if we ever want to fit the `i`&#39;th parameter.</span>
+<span class="sd">            `to_fit[i]` is True if we ever want to fit the `i`'th parameter.</span>
 <span class="sd">            This is in the same order as `pars`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">to_fit</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">structure</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
@@ -2970,7 +2970,7 @@ Used when fitting.</p>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">model</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        The evaluated model, see `core.model` for details.</span>
 <span class="sd">        Note that this is cached, but is automatically reset whenever</span>
 <span class="sd">        `update` is called or `cur_round` or `xyz` changes.</span>
@@ -2979,7 +2979,7 @@ Used when fitting.</p>
 <span class="sd">        -------</span>
 <span class="sd">        model : jax.Array</span>
 <span class="sd">            The model evaluted on `xyz` with the current values of `pars`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">core</span><span class="o">.</span><span class="n">model</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="p">,</span>
             <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_struct</span><span class="p">),</span>
@@ -2991,7 +2991,7 @@ Used when fitting.</p>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">model_grad</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        The evaluated model and its gradient, see `core.model_grad` for details.</span>
 <span class="sd">        Note that this is cached, but is automatically reset whenever</span>
 <span class="sd">        `update` is called or `cur_round` changes.</span>
@@ -3003,7 +3003,7 @@ Used when fitting.</p>
 <span class="sd">        grad : jax.Array</span>
 <span class="sd">            The gradient evaluted on `xyz` with the current values of `pars`.</span>
 <span class="sd">            Has shape `(len(pars),) + model.shape`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">argnums</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">to_fit</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">core</span><span class="o">.</span><span class="n">ARGNUM_SHIFT</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">core</span><span class="o">.</span><span class="n">model_grad</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="p">,</span>
@@ -3018,7 +3018,7 @@ Used when fitting.</p>
     <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">vals</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">errs</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">cov</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">chisq</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Update the parameter values and errors as well as the model chi-squared.</span>
 <span class="sd">        This also resets the cache on `model` and `model_grad`</span>
 <span class="sd">        if `vals` is different than `self.pars`.</span>
@@ -3044,10 +3044,10 @@ Used when fitting.</p>
 <span class="sd">            The updated model.</span>
 <span class="sd">            While nominally the model will update in place, returning it</span>
 <span class="sd">            alows us to use this function in JITed functions.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pars</span><span class="p">,</span> <span class="n">vals</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;model_grad&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"model_grad"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">for</span> <span class="n">struct</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">par</span> <span class="ow">in</span> <span class="n">struct</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
@@ -3062,7 +3062,7 @@ Used when fitting.</p>
         <span class="k">return</span> <span class="bp">self</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">add_round</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">to_fit</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Add an additional round to the model.</span>
 
 <span class="sd">        Parameters</span>
@@ -3077,7 +3077,7 @@ Used when fitting.</p>
 <span class="sd">            The updated model with the new round.</span>
 <span class="sd">            While nominally the model will update in place, returning it</span>
 <span class="sd">            alows us to use this function in JITed functions.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">n_rounds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rounds</span> <span class="o">+</span> <span class="mi">1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cur_round</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cur_round</span> <span class="o">+</span> <span class="mi">1</span>
         <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span>
@@ -3088,28 +3088,28 @@ Used when fitting.</p>
         <span class="k">return</span> <span class="bp">self</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">remove_struct</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">struct_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Remove structure by name.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        struct_name : str</span>
 <span class="sd">            Name of struct to be removed.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">structures</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
             <span class="n">structure</span> <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span> <span class="k">if</span> <span class="n">structure</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="n">struct_name</span>
         <span class="p">)</span>
 
-        <span class="n">to_pop</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;to_fit_ever&quot;</span><span class="p">,</span> <span class="s2">&quot;n_struct&quot;</span><span class="p">,</span> <span class="s2">&quot;priors&quot;</span><span class="p">,</span> <span class="s2">&quot;par_names&quot;</span><span class="p">]</span>
+        <span class="n">to_pop</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"to_fit_ever"</span><span class="p">,</span> <span class="s2">"n_struct"</span><span class="p">,</span> <span class="s2">"priors"</span><span class="p">,</span> <span class="s2">"par_names"</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">to_pop</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">:</span>  <span class="c1"># Pop keys if they are in dict</span>
                 <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;model_grad&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"model_grad"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Serialize the model to a file with dill.</span>
 
 <span class="sd">        Parameters</span>
@@ -3117,13 +3117,13 @@ Used when fitting.</p>
 <span class="sd">        path : str</span>
 <span class="sd">            The file to save to.</span>
 <span class="sd">            Does not check to see if the path is valid.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="sd">        """</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">dill</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Load the model from a file with dill.</span>
 
 <span class="sd">        Parameters</span>
@@ -3136,40 +3136,40 @@ Used when fitting.</p>
 <span class="sd">        -------</span>
 <span class="sd">        model : Model</span>
 <span class="sd">            The loaded model.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="sd">        """</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">dill</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_cfg</span><span class="p">(</span>
         <span class="bp">cls</span><span class="p">,</span>
         <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
-        <span class="n">model_field</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;model&quot;</span><span class="p">,</span>
+        <span class="n">model_field</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"model"</span><span class="p">,</span>
         <span class="n">generate_name</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">remove_structs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Create an instance of model from a witcher config.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        cfg : dict</span>
 <span class="sd">            The config loaded into a dict.</span>
-<span class="sd">        model_field : str, default: &quot;model&quot;</span>
+<span class="sd">        model_field : str, default: "model"</span>
 <span class="sd">            The name of the model in the config.</span>
 <span class="sd">        generate_name : bool, default: True</span>
 <span class="sd">            If True generate a name for the model.</span>
 <span class="sd">            If False use `model_field`.</span>
 <span class="sd">        remove_structs : bool, default: False</span>
-<span class="sd">            If True then don&#39;t include structures marked for removal.</span>
+<span class="sd">            If True then don't include structures marked for removal.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        model : Model</span>
 <span class="sd">            The model described by the config.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="c1"># Do imports</span>
-        <span class="k">for</span> <span class="n">module</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;imports&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">module</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"imports"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">mod</span> <span class="o">=</span> <span class="n">import_module</span><span class="p">(</span><span class="n">module</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
                 <span class="nb">globals</span><span class="p">()[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">mod</span>
@@ -3177,24 +3177,24 @@ Used when fitting.</p>
                 <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
                     <span class="nb">globals</span><span class="p">()[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Expect import name to be a string or a list&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"Expect import name to be a string or a list"</span><span class="p">)</span>
 
         <span class="c1"># Load constants</span>
         <span class="n">constants</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="n">name</span><span class="p">:</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">const</span><span class="p">))</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">const</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;constants&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="n">name</span><span class="p">:</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">const</span><span class="p">))</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">const</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"constants"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
         <span class="p">}</span>
         <span class="n">constants</span> <span class="o">=</span> <span class="n">constants</span>
 
         <span class="c1"># Get jax device</span>
-        <span class="n">dev_id</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;jax_device&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">dev_id</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"jax_device"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">device</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">devices</span><span class="p">()[</span><span class="n">dev_id</span><span class="p">]</span>
 
         <span class="c1"># Setup coordindate stuff</span>
-        <span class="n">r_map</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">][</span><span class="s2">&quot;r_map&quot;</span><span class="p">]))</span>
-        <span class="n">dr</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">][</span><span class="s2">&quot;dr&quot;</span><span class="p">]))</span>
-        <span class="n">dz</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dz&quot;</span><span class="p">,</span> <span class="n">dr</span><span class="p">)))</span>
-        <span class="n">x0</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">][</span><span class="s2">&quot;x0&quot;</span><span class="p">]))</span>
-        <span class="n">y0</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">][</span><span class="s2">&quot;y0&quot;</span><span class="p">]))</span>
+        <span class="n">r_map</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">][</span><span class="s2">"r_map"</span><span class="p">]))</span>
+        <span class="n">dr</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">][</span><span class="s2">"dr"</span><span class="p">]))</span>
+        <span class="n">dz</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dz"</span><span class="p">,</span> <span class="n">dr</span><span class="p">)))</span>
+        <span class="n">x0</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">][</span><span class="s2">"x0"</span><span class="p">]))</span>
+        <span class="n">y0</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">][</span><span class="s2">"y0"</span><span class="p">]))</span>
 
         <span class="n">xyz_host</span> <span class="o">=</span> <span class="n">wg</span><span class="o">.</span><span class="n">make_grid</span><span class="p">(</span>
             <span class="n">r_map</span><span class="p">,</span> <span class="n">dr</span><span class="p">,</span> <span class="n">dr</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="n">x0</span> <span class="o">*</span> <span class="n">wg</span><span class="o">.</span><span class="n">rad_to_arcsec</span><span class="p">,</span> <span class="n">y0</span> <span class="o">*</span> <span class="n">wg</span><span class="o">.</span><span class="n">rad_to_arcsec</span>
@@ -3204,24 +3204,24 @@ Used when fitting.</p>
         <span class="n">xyz</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">block_until_ready</span><span class="p">()</span>
         <span class="n">xyz</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">block_until_ready</span><span class="p">()</span>
 
-        <span class="n">n_rounds</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;n_rounds&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">n_rounds</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"n_rounds"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
         <span class="n">structures</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">structure</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="n">model_field</span><span class="p">][</span><span class="s2">&quot;structures&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">structure</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;to_remove&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="n">remove_structs</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">structure</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="n">model_field</span><span class="p">][</span><span class="s2">"structures"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">structure</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"to_remove"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="n">remove_structs</span><span class="p">:</span>
                 <span class="k">continue</span>
-            <span class="n">n_rbins</span> <span class="o">=</span> <span class="n">structure</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;n_rbins&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">n_rbins</span> <span class="o">=</span> <span class="n">structure</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"n_rbins"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
             <span class="n">parameters</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">for</span> <span class="n">par_name</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">structure</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="n">val</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">param</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">]))</span>
-                <span class="n">fit</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;to_fit&quot;</span><span class="p">,</span> <span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_rounds</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">par_name</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">structure</span><span class="p">[</span><span class="s2">"parameters"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">val</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">param</span><span class="p">[</span><span class="s2">"value"</span><span class="p">]))</span>
+                <span class="n">fit</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"to_fit"</span><span class="p">,</span> <span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_rounds</span><span class="p">))</span>
                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
                     <span class="n">fit</span> <span class="o">=</span> <span class="p">[</span><span class="n">fit</span><span class="p">]</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_rounds</span><span class="p">)</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fit</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_rounds</span><span class="p">):</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;to_fit has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">fit</span><span class="p">)</span><span class="si">}</span><span class="s2"> entries but we only have </span><span class="si">{</span><span class="n">n_rounds</span><span class="si">}</span><span class="s2"> rounds&quot;</span>
+                        <span class="sa">f</span><span class="s2">"to_fit has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">fit</span><span class="p">)</span><span class="si">}</span><span class="s2"> entries but we only have </span><span class="si">{</span><span class="n">n_rounds</span><span class="si">}</span><span class="s2"> rounds"</span>
                     <span class="p">)</span>
-                <span class="n">priors</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;priors&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="n">priors</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"priors"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">priors</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">priors</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">priors</span><span class="p">))</span>
                 <span class="k">else</span><span class="p">:</span>
@@ -3238,7 +3238,7 @@ Used when fitting.</p>
             <span class="n">structures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                 <span class="n">Structure</span><span class="p">(</span>
                     <span class="n">name</span><span class="p">,</span>
-                    <span class="n">structure</span><span class="p">[</span><span class="s2">&quot;structure&quot;</span><span class="p">],</span>
+                    <span class="n">structure</span><span class="p">[</span><span class="s2">"structure"</span><span class="p">],</span>
                     <span class="n">parameters</span><span class="p">,</span>
                     <span class="n">n_rbins</span><span class="o">=</span><span class="n">n_rbins</span><span class="p">,</span>
                 <span class="p">)</span>
@@ -3246,7 +3246,7 @@ Used when fitting.</p>
 
         <span class="n">name</span> <span class="o">=</span> <span class="n">model_field</span>
         <span class="k">if</span> <span class="n">generate_name</span><span class="p">:</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">structure</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="n">structures</span><span class="p">])</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s2">"-"</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">structure</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="n">structures</span><span class="p">])</span>
 
         <span class="c1"># Make sure the structure is in the order that core expects</span>
         <span class="n">structure_idx</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span>
@@ -3259,7 +3259,7 @@ Used when fitting.</p>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">structures</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="n">n_rounds</span><span class="p">)</span>
 
     <span class="c1"># Functions for making this a pytree</span>
-    <span class="c1"># Don&#39;t call this on your own</span>
+    <span class="c1"># Don't call this on your own</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">tree_flatten</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">]:</span>
         <span class="n">children</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">chisq</span><span class="p">)</span>
         <span class="n">aux_data</span> <span class="o">=</span> <span class="p">(</span>
@@ -3958,7 +3958,7 @@ alows us to use this function in JITed functions.</p>
 <span class="normal">496</span>
 <span class="normal">497</span>
 <span class="normal">498</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add_round</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">to_fit</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Add an additional round to the model.</span>
 
 <span class="sd">    Parameters</span>
@@ -3973,7 +3973,7 @@ alows us to use this function in JITed functions.</p>
 <span class="sd">        The updated model with the new round.</span>
 <span class="sd">        While nominally the model will update in place, returning it</span>
 <span class="sd">        alows us to use this function in JITed functions.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">n_rounds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rounds</span> <span class="o">+</span> <span class="mi">1</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">cur_round</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cur_round</span> <span class="o">+</span> <span class="mi">1</span>
     <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span>
@@ -4099,8 +4099,8 @@ False if not.</p>
 <span class="normal">163</span>
 <span class="normal">164</span>
 <span class="normal">165</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">check_compatibility</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Check whether &#39;other&#39; (a model loaded from a checkpoint) is compatible with the current model defined in config.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Check whether 'other' (a model loaded from a checkpoint) is compatible with the current model defined in config.</span>
 <span class="sd">    Checks that structures, xyz, and dz are equal.</span>
 
 <span class="sd">    Arguments</span>
@@ -4113,15 +4113,15 @@ False if not.</p>
 <span class="sd">    compatible : bool</span>
 <span class="sd">        True if compatible,</span>
 <span class="sd">        False if not.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># Structure name match</span>
     <span class="n">struct_names</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">)</span>
     <span class="n">ostruct_names</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">structures</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">struct_names</span> <span class="o">!=</span> <span class="n">ostruct_names</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Model structure mismatch. &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;Config structures = </span><span class="si">{</span><span class="n">struct_names</span><span class="si">}</span><span class="s2">, &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;Checkpoint structures = </span><span class="si">{</span><span class="n">ostruct_names</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"Model structure mismatch. "</span>
+            <span class="sa">f</span><span class="s2">"Config structures = </span><span class="si">{</span><span class="n">struct_names</span><span class="si">}</span><span class="s2">, "</span>
+            <span class="sa">f</span><span class="s2">"Checkpoint structures = </span><span class="si">{</span><span class="n">ostruct_names</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="kc">False</span>
 
@@ -4131,34 +4131,34 @@ False if not.</p>
         <span class="n">other_params</span> <span class="o">=</span> <span class="n">other_struct</span><span class="o">.</span><span class="n">parameters</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">self_params</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">other_params</span><span class="p">):</span>
             <span class="nb">print</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Parameter count mismatch in structure &#39;</span><span class="si">{</span><span class="n">self_struct</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;: &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">self_params</span><span class="p">)</span><span class="si">}</span><span class="s2"> (config) vs </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">other_params</span><span class="p">)</span><span class="si">}</span><span class="s2"> (ckpt)&quot;</span>
+                <span class="sa">f</span><span class="s2">"Parameter count mismatch in structure '</span><span class="si">{</span><span class="n">self_struct</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">': "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">self_params</span><span class="p">)</span><span class="si">}</span><span class="s2"> (config) vs </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">other_params</span><span class="p">)</span><span class="si">}</span><span class="s2"> (ckpt)"</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="kc">False</span>
 
     <span class="c1"># Parameter order match</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">par_names</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">par_names</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Parameter ordering mismatch between config and checkpoint models&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Parameter ordering mismatch between config and checkpoint models"</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">False</span>
 
     <span class="c1"># xyz compatibility</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">xyz</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;parameter ordering mismatch between config and checkpoint models&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"parameter ordering mismatch between config and checkpoint models"</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">False</span>
 
     <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">xyz</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>  <span class="c1"># check the two float elements</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;xyz element type mismatch&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">"xyz element type mismatch"</span><span class="p">)</span>
                 <span class="k">return</span> <span class="kc">False</span>
         <span class="k">else</span><span class="p">:</span>  <span class="c1"># jax arrays</span>
             <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;xyz[i] array shape mismatch: </span><span class="si">{</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"xyz[i] array shape mismatch: </span><span class="si">{</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                 <span class="k">return</span> <span class="kc">False</span>
 
     <span class="c1"># dz compatibility</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dz</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">dz</span><span class="p">:</span>  <span class="c1"># Checks same numerical value</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;dz value mismatch: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dz</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">dz</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"dz value mismatch: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dz</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">dz</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">False</span>
 
     <span class="k">return</span> <span class="kc">True</span>
@@ -4172,7 +4172,7 @@ False if not.</p>
 
 
 <h3 id="witch.containers.model.Model.from_cfg" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">from_cfg</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">model_field</span><span class="o">=</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="n">generate_name</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">remove_structs</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">from_cfg</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">model_field</span><span class="o">=</span><span class="s1">'model'</span><span class="p">,</span> <span class="n">generate_name</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">remove_structs</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -4416,32 +4416,32 @@ If False use <code>model_field</code>.</p>
 <span class="k">def</span><span class="w"> </span><span class="nf">from_cfg</span><span class="p">(</span>
     <span class="bp">cls</span><span class="p">,</span>
     <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
-    <span class="n">model_field</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;model&quot;</span><span class="p">,</span>
+    <span class="n">model_field</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"model"</span><span class="p">,</span>
     <span class="n">generate_name</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">remove_structs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Create an instance of model from a witcher config.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    cfg : dict</span>
 <span class="sd">        The config loaded into a dict.</span>
-<span class="sd">    model_field : str, default: &quot;model&quot;</span>
+<span class="sd">    model_field : str, default: "model"</span>
 <span class="sd">        The name of the model in the config.</span>
 <span class="sd">    generate_name : bool, default: True</span>
 <span class="sd">        If True generate a name for the model.</span>
 <span class="sd">        If False use `model_field`.</span>
 <span class="sd">    remove_structs : bool, default: False</span>
-<span class="sd">        If True then don&#39;t include structures marked for removal.</span>
+<span class="sd">        If True then don't include structures marked for removal.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    model : Model</span>
 <span class="sd">        The model described by the config.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># Do imports</span>
-    <span class="k">for</span> <span class="n">module</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;imports&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">module</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"imports"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="n">mod</span> <span class="o">=</span> <span class="n">import_module</span><span class="p">(</span><span class="n">module</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="nb">globals</span><span class="p">()[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">mod</span>
@@ -4449,24 +4449,24 @@ If False use <code>model_field</code>.</p>
             <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
                 <span class="nb">globals</span><span class="p">()[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Expect import name to be a string or a list&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"Expect import name to be a string or a list"</span><span class="p">)</span>
 
     <span class="c1"># Load constants</span>
     <span class="n">constants</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="n">name</span><span class="p">:</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">const</span><span class="p">))</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">const</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;constants&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">const</span><span class="p">))</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">const</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"constants"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
     <span class="p">}</span>
     <span class="n">constants</span> <span class="o">=</span> <span class="n">constants</span>
 
     <span class="c1"># Get jax device</span>
-    <span class="n">dev_id</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;jax_device&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">dev_id</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"jax_device"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">device</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">devices</span><span class="p">()[</span><span class="n">dev_id</span><span class="p">]</span>
 
     <span class="c1"># Setup coordindate stuff</span>
-    <span class="n">r_map</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">][</span><span class="s2">&quot;r_map&quot;</span><span class="p">]))</span>
-    <span class="n">dr</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">][</span><span class="s2">&quot;dr&quot;</span><span class="p">]))</span>
-    <span class="n">dz</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dz&quot;</span><span class="p">,</span> <span class="n">dr</span><span class="p">)))</span>
-    <span class="n">x0</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">][</span><span class="s2">&quot;x0&quot;</span><span class="p">]))</span>
-    <span class="n">y0</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;coords&quot;</span><span class="p">][</span><span class="s2">&quot;y0&quot;</span><span class="p">]))</span>
+    <span class="n">r_map</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">][</span><span class="s2">"r_map"</span><span class="p">]))</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">][</span><span class="s2">"dr"</span><span class="p">]))</span>
+    <span class="n">dz</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dz"</span><span class="p">,</span> <span class="n">dr</span><span class="p">)))</span>
+    <span class="n">x0</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">][</span><span class="s2">"x0"</span><span class="p">]))</span>
+    <span class="n">y0</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">][</span><span class="s2">"y0"</span><span class="p">]))</span>
 
     <span class="n">xyz_host</span> <span class="o">=</span> <span class="n">wg</span><span class="o">.</span><span class="n">make_grid</span><span class="p">(</span>
         <span class="n">r_map</span><span class="p">,</span> <span class="n">dr</span><span class="p">,</span> <span class="n">dr</span><span class="p">,</span> <span class="n">dz</span><span class="p">,</span> <span class="n">x0</span> <span class="o">*</span> <span class="n">wg</span><span class="o">.</span><span class="n">rad_to_arcsec</span><span class="p">,</span> <span class="n">y0</span> <span class="o">*</span> <span class="n">wg</span><span class="o">.</span><span class="n">rad_to_arcsec</span>
@@ -4476,24 +4476,24 @@ If False use <code>model_field</code>.</p>
     <span class="n">xyz</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">block_until_ready</span><span class="p">()</span>
     <span class="n">xyz</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">block_until_ready</span><span class="p">()</span>
 
-    <span class="n">n_rounds</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;n_rounds&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">n_rounds</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"n_rounds"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
     <span class="n">structures</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">structure</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="n">model_field</span><span class="p">][</span><span class="s2">&quot;structures&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="k">if</span> <span class="n">structure</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;to_remove&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="n">remove_structs</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">structure</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="n">model_field</span><span class="p">][</span><span class="s2">"structures"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">structure</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"to_remove"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="n">remove_structs</span><span class="p">:</span>
             <span class="k">continue</span>
-        <span class="n">n_rbins</span> <span class="o">=</span> <span class="n">structure</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;n_rbins&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">n_rbins</span> <span class="o">=</span> <span class="n">structure</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"n_rbins"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">parameters</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">par_name</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">structure</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">val</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">param</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">]))</span>
-            <span class="n">fit</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;to_fit&quot;</span><span class="p">,</span> <span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_rounds</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">par_name</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">structure</span><span class="p">[</span><span class="s2">"parameters"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">param</span><span class="p">[</span><span class="s2">"value"</span><span class="p">]))</span>
+            <span class="n">fit</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"to_fit"</span><span class="p">,</span> <span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_rounds</span><span class="p">))</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
                 <span class="n">fit</span> <span class="o">=</span> <span class="p">[</span><span class="n">fit</span><span class="p">]</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_rounds</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fit</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_rounds</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;to_fit has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">fit</span><span class="p">)</span><span class="si">}</span><span class="s2"> entries but we only have </span><span class="si">{</span><span class="n">n_rounds</span><span class="si">}</span><span class="s2"> rounds&quot;</span>
+                    <span class="sa">f</span><span class="s2">"to_fit has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">fit</span><span class="p">)</span><span class="si">}</span><span class="s2"> entries but we only have </span><span class="si">{</span><span class="n">n_rounds</span><span class="si">}</span><span class="s2"> rounds"</span>
                 <span class="p">)</span>
-            <span class="n">priors</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;priors&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">priors</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"priors"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">priors</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">priors</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">priors</span><span class="p">))</span>
             <span class="k">else</span><span class="p">:</span>
@@ -4510,7 +4510,7 @@ If False use <code>model_field</code>.</p>
         <span class="n">structures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
             <span class="n">Structure</span><span class="p">(</span>
                 <span class="n">name</span><span class="p">,</span>
-                <span class="n">structure</span><span class="p">[</span><span class="s2">&quot;structure&quot;</span><span class="p">],</span>
+                <span class="n">structure</span><span class="p">[</span><span class="s2">"structure"</span><span class="p">],</span>
                 <span class="n">parameters</span><span class="p">,</span>
                 <span class="n">n_rbins</span><span class="o">=</span><span class="n">n_rbins</span><span class="p">,</span>
             <span class="p">)</span>
@@ -4518,7 +4518,7 @@ If False use <code>model_field</code>.</p>
 
     <span class="n">name</span> <span class="o">=</span> <span class="n">model_field</span>
     <span class="k">if</span> <span class="n">generate_name</span><span class="p">:</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">structure</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="n">structures</span><span class="p">])</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">"-"</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">structure</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="n">structures</span><span class="p">])</span>
 
     <span class="c1"># Make sure the structure is in the order that core expects</span>
     <span class="n">structure_idx</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span>
@@ -4634,7 +4634,7 @@ Does not check to see if the path is valid.</p>
 <span class="normal">550</span>
 <span class="normal">551</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Load the model from a file with dill.</span>
 
 <span class="sd">    Parameters</span>
@@ -4647,8 +4647,8 @@ Does not check to see if the path is valid.</p>
 <span class="sd">    -------</span>
 <span class="sd">    model : Model</span>
 <span class="sd">        The loaded model.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="sd">    """</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">dill</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -4723,25 +4723,25 @@ Does not check to see if the path is valid.</p>
 <span class="normal">517</span>
 <span class="normal">518</span>
 <span class="normal">519</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">remove_struct</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">struct_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Remove structure by name.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    struct_name : str</span>
 <span class="sd">        Name of struct to be removed.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">structures</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
         <span class="n">structure</span> <span class="k">for</span> <span class="n">structure</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span> <span class="k">if</span> <span class="n">structure</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="n">struct_name</span>
     <span class="p">)</span>
 
-    <span class="n">to_pop</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;to_fit_ever&quot;</span><span class="p">,</span> <span class="s2">&quot;n_struct&quot;</span><span class="p">,</span> <span class="s2">&quot;priors&quot;</span><span class="p">,</span> <span class="s2">&quot;par_names&quot;</span><span class="p">]</span>
+    <span class="n">to_pop</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"to_fit_ever"</span><span class="p">,</span> <span class="s2">"n_struct"</span><span class="p">,</span> <span class="s2">"priors"</span><span class="p">,</span> <span class="s2">"par_names"</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">to_pop</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">:</span>  <span class="c1"># Pop keys if they are in dict</span>
             <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
-    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;model_grad&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"model_grad"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -4808,7 +4808,7 @@ Does not check to see if the path is valid.</p>
 <span class="normal">530</span>
 <span class="normal">531</span>
 <span class="normal">532</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Serialize the model to a file with dill.</span>
 
 <span class="sd">    Parameters</span>
@@ -4816,8 +4816,8 @@ Does not check to see if the path is valid.</p>
 <span class="sd">    path : str</span>
 <span class="sd">        The file to save to.</span>
 <span class="sd">        Does not check to see if the path is valid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="sd">    """</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">dill</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -5003,7 +5003,7 @@ alows us to use this function in JITed functions.</p>
 <span class="normal">472</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">vals</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">errs</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">cov</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">chisq</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Update the parameter values and errors as well as the model chi-squared.</span>
 <span class="sd">    This also resets the cache on `model` and `model_grad`</span>
 <span class="sd">    if `vals` is different than `self.pars`.</span>
@@ -5029,10 +5029,10 @@ alows us to use this function in JITed functions.</p>
 <span class="sd">        The updated model.</span>
 <span class="sd">        While nominally the model will update in place, returning it</span>
 <span class="sd">        alows us to use this function in JITed functions.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pars</span><span class="p">,</span> <span class="n">vals</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;model_grad&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"model_grad"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="k">for</span> <span class="n">struct</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">structures</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">par</span> <span class="ow">in</span> <span class="n">struct</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
@@ -5234,7 +5234,7 @@ alows us to use this function in JITed functions.</p>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">model_grad</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        The evaluated model and its gradient, see `core.model_grad` for details.</span>
 <span class="sd">        Note that this is cached, but is automatically reset whenever</span>
 <span class="sd">        `update` is called or `cur_round` changes. Currently computing</span>
@@ -5243,10 +5243,10 @@ alows us to use this function in JITed functions.</p>
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        None</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="s2">&quot;Error; Grad cannot currently be computed on Models with transfer function&quot;</span>
+            <span class="s2">"Error; Grad cannot currently be computed on Models with transfer function"</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>  <span class="c1"># Shouldnt get here</span>
 </code></pre></div></td></tr></table></div>

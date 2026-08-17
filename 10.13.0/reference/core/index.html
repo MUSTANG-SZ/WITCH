@@ -1829,7 +1829,7 @@ This is 2D structure.</p>
     <span class="n">stage_1</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">stage_2</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Constructs the `to_run` tuple needed for calls to `model` and `model_grad` in the correct order.</span>
 <span class="sd">    This is genrally prefered over manual construction, if you need to contsruct manualy the order of parameters in</span>
 <span class="sd">    this function is the order of the `to_run` tuple.</span>
@@ -1854,7 +1854,7 @@ This is 2D structure.</p>
 <span class="sd">    -------</span>
 <span class="sd">    to_run : tuple[bool, bool, bool, bool, bool, bool]</span>
 <span class="sd">        Which stages to run in the order needed for `model` and `model_grad`.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="p">(</span><span class="n">stage_m1</span><span class="p">,</span> <span class="n">stage_0</span><span class="p">,</span> <span class="n">stage_1</span><span class="p">,</span> <span class="n">stage_2</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2030,7 +2030,7 @@ Should be in the same order as <code>order</code>.</p>
     <span class="n">n_rbins</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
     <span class="n">params</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Generate a 3D profile from params on xyz.</span>
 
 <span class="sd">    Parameters</span>
@@ -2050,7 +2050,7 @@ Should be in the same order as <code>order</code>.</p>
 <span class="sd">    -------</span>
 <span class="sd">    pressure : jax.Array</span>
 <span class="sd">        The 3D model with the specified substructure evaluated on the grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">params</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
     <span class="n">params</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>  <span class="c1"># Fixes strange bug with params having dim (1,n)</span>
 
@@ -2247,7 +2247,7 @@ No stage 3 structures are included.</p>
     <span class="n">dz</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="o">*</span><span class="n">pars</span><span class="p">:</span> <span class="n">Unpack</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]],</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Only returns the second stage of the model. Used for visualizing shocks, etc.</span>
 <span class="sd">    that can otherwise be hard to see in a model plot</span>
 
@@ -2270,7 +2270,7 @@ No stage 3 structures are included.</p>
 <span class="sd">    model : jax.Array</span>
 <span class="sd">        The model with the specified substructure evaluated on the grid.</span>
 <span class="sd">        No stage 3 structures are included.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">params</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span>
     <span class="n">params</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>  <span class="c1"># Fixes strange bug with params having dim (1,n)</span>
 

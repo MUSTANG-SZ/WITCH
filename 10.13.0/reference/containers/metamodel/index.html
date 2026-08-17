@@ -2520,7 +2520,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="normal">635</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_pytree_node_class</span>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">MetaModel</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Class that manages multiple models and datasets at once.</span>
 <span class="sd">    This enables computing a single model for multiple datasets</span>
 <span class="sd">    as well as multiple models with shared parameters.</span>
@@ -2556,7 +2556,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">        The covariance matrix currently associated with `MetaModel.parameters`.</span>
 <span class="sd">    chisq : jax.Array</span>
 <span class="sd">        The log-likelihood of the current state of the `MetaModel`.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">global_comm</span><span class="p">:</span> <span class="n">MPI</span><span class="o">.</span><span class="n">Comm</span> <span class="o">|</span> <span class="n">MPI</span><span class="o">.</span><span class="n">Intracomm</span> <span class="o">|</span> <span class="n">wu</span><span class="o">.</span><span class="n">NullComm</span>
     <span class="n">models</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Model</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
@@ -2574,14 +2574,14 @@ to apply to <code>MetaModel.models[i]</code>.</p>
         <span class="n">rep</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">reprs</span><span class="p">:</span>
-            <span class="n">message</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
             <span class="n">rep</span> <span class="o">+=</span> <span class="n">message</span><span class="p">[</span><span class="n">idx</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">rep</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">rep</span><span class="p">)</span>
-        <span class="n">rep</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">chisq is </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">chisq</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">rep</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">rep</span><span class="p">)</span>
+        <span class="n">rep</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">chisq is </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">chisq</span><span class="si">}</span><span class="s2">"</span>
         <span class="k">return</span> <span class="n">rep</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">check_compatibility</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Check if another `MetaModel` instance is compatible with this one.</span>
 <span class="sd">        Used for checkpointing.</span>
 
@@ -2595,7 +2595,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">        compatible : bool</span>
 <span class="sd">            True if compatible,</span>
 <span class="sd">            False if not.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="c1"># Check models</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">models</span><span class="p">):</span>
             <span class="k">return</span> <span class="kc">False</span>
@@ -2622,30 +2622,30 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">par_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the parameter names in the same order as `self.parameters`.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        par_name : jax.Array</span>
 <span class="sd">            String array of parameter names.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">par_names</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;U128&quot;</span><span class="p">)</span>
+<span class="sd">        """</span>
+        <span class="n">par_names</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"U128"</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">):</span>
-            <span class="n">par_names</span><span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">par_names</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;U128&quot;</span><span class="p">)</span>
+            <span class="n">par_names</span><span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">par_names</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"U128"</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">par_names</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get which parameters will  be fit this round in the same order `self.parameters`.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        to_fit : jax.Array</span>
 <span class="sd">            Boolean array that is True for parameters that will be fit this round.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">to_fit</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">):</span>
             <span class="n">to_fit</span> <span class="o">=</span> <span class="n">to_fit</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">to_fit</span><span class="p">))</span>
@@ -2654,14 +2654,14 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_fit_ever</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get which parameters will ever be fit in the same order `self.parameters`.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        to_fit_ever : jax.Array</span>
 <span class="sd">            Boolean array that is True for parameters that will be fit.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">to_fit_ever</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">):</span>
             <span class="n">to_fit_ever</span> <span class="o">=</span> <span class="n">to_fit_ever</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
@@ -2672,7 +2672,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">priors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get priors in the same order as `self.parameters`.</span>
 
 <span class="sd">        Returns</span>
@@ -2681,7 +2681,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">            Lower bound of prior ranges.</span>
 <span class="sd">        priors_high : jax.Array</span>
 <span class="sd">            Higher bound of prior ranges.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">priors_low</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
         <span class="n">priors_high</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">):</span>
@@ -2692,14 +2692,14 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">cur_round</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the current round of fitting.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        cur_round : int</span>
 <span class="sd">            The current fitting round.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">cur_rounds</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">model</span><span class="o">.</span><span class="n">cur_round</span> <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">])</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
         <span class="n">cur_round</span> <span class="o">=</span> <span class="n">cur_rounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
@@ -2707,21 +2707,21 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">n_rounds</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the total rounds of fitting.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        n_rounds : int</span>
 <span class="sd">            The total fitting rounds.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">n_rounds_all</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">model</span><span class="o">.</span><span class="n">n_rounds</span> <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">])</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
         <span class="n">n_rounds</span> <span class="o">=</span> <span class="n">n_rounds_all</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
         <span class="k">return</span> <span class="n">n_rounds</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">model_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the model for a dataset on the computed grid.</span>
 <span class="sd">        This currently assumes that all models have the same grid.</span>
 <span class="sd">        This does apply metadata (ie. beam convolution+prefactor).</span>
@@ -2735,7 +2735,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">        -------</span>
 <span class="sd">        model_grid : jax.Array</span>
 <span class="sd">            The model on the computed grid.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">dataset_ind</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">m_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
         <span class="n">md_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
@@ -2751,7 +2751,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
         <span class="k">return</span> <span class="n">proj</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">model_proj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">datavec_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Project the models held in the metamodel to some data in a dataset.</span>
 
 <span class="sd">        Parameters</span>
@@ -2766,12 +2766,12 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">        model_proj : jax.Array</span>
 <span class="sd">            The metamodel projected into an array that matches the shape of</span>
 <span class="sd">            `self.datasets[dataset_ind].datavec[datavec_ind]`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">dset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
         <span class="n">m_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
         <span class="n">md_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">dset</span><span class="o">.</span><span class="n">datavec</span><span class="p">[</span><span class="n">datavec_ind</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">dset</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;tod&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dset</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">"tod"</span><span class="p">:</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">x</span>
             <span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">y</span>
         <span class="k">else</span><span class="p">:</span>
@@ -2792,7 +2792,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
         <span class="k">return</span> <span class="n">proj</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">model_grad_proj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">datavec_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Project the models held in the metamodel to some data in a dataset.</span>
 
 <span class="sd">        Parameters</span>
@@ -2807,12 +2807,12 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">        model_grad_proj : jax.Array</span>
 <span class="sd">            The metamodel gradients projected into an array with `len(self.parameters)` elements</span>
 <span class="sd">            where each element matches the shape of `self.datasets[dataset_ind].datavec[datavec_ind]`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">dset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
         <span class="n">m_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
         <span class="n">md_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">dset</span><span class="o">.</span><span class="n">datavec</span><span class="p">[</span><span class="n">datavec_ind</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">dset</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;tod&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dset</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">"tod"</span><span class="p">:</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">x</span>
             <span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">y</span>
         <span class="k">else</span><span class="p">:</span>
@@ -2834,7 +2834,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
         <span class="k">return</span> <span class="n">proj_grad</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">get_dataset_ind</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the index of a dataset</span>
 
 <span class="sd">        Parameters</span>
@@ -2846,7 +2846,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">        -------</span>
 <span class="sd">        dataset_ind : int</span>
 <span class="sd">            The index of the dataset.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">dataset_ind</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dset</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">dset_name</span> <span class="o">==</span> <span class="n">dset</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
@@ -2857,7 +2857,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
     <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">errs</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">cov</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">chisq</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Update the parameter values and errors as well as the model chi-squared</span>
 <span class="sd">        for all models in the metamodel.</span>
 
@@ -2882,7 +2882,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">            The updated metamodel.</span>
 <span class="sd">            While nominally the metamodel will update in place, returning it</span>
 <span class="sd">            alows us to use this function in JITed functions.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span> <span class="o">=</span> <span class="n">pars</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">errs</span> <span class="o">=</span> <span class="n">errs</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cov</span> <span class="o">=</span> <span class="n">cov</span>
@@ -2900,7 +2900,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
         <span class="k">return</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">add_round</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">to_fit</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Add an additional round to the metamodel.</span>
 
 <span class="sd">        Parameters</span>
@@ -2915,10 +2915,10 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">            The updated metamodel with the new round.</span>
 <span class="sd">            While nominally the model will update in place, returning it</span>
 <span class="sd">            alows us to use this function in JITed functions.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;n_rounds&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;to_fit&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;to_fit_ever&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"n_rounds"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"to_fit"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"to_fit_ever"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
             <span class="n">model</span><span class="o">.</span><span class="n">add_round</span><span class="p">(</span><span class="n">to_fit</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)])</span>
             <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">)</span>
@@ -2927,7 +2927,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
         <span class="k">return</span> <span class="bp">self</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">set_round</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_round</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Set the round of the metamodel.</span>
 
 <span class="sd">        Parameters</span>
@@ -2941,18 +2941,18 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">            The updated metamodel with the round updated.</span>
 <span class="sd">            While nominally the model will update in place, returning it</span>
 <span class="sd">            alows us to use this function in JITed functions.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">new_round</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rounds</span> <span class="ow">or</span> <span class="n">new_round</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Trying to set a round that doesn&#39;t exist!&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;cur_round&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;to_fit&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Trying to set a round that doesn't exist!"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"cur_round"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"to_fit"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">:</span>
             <span class="n">model</span><span class="o">.</span><span class="n">cur_round</span> <span class="o">=</span> <span class="n">new_round</span>
 
         <span class="k">return</span> <span class="bp">self</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Serialize the model to a file with dill.</span>
 
 <span class="sd">        Parameters</span>
@@ -2962,7 +2962,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">            Does not check to see if the path is valid.</span>
 <span class="sd">        state : dict</span>
 <span class="sd">            Dictionary of metadata to understand the state when we are saving.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">datavecs</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">comms</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">gcomm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">global_comm</span>
@@ -2972,7 +2972,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
             <span class="n">dataset</span><span class="o">.</span><span class="n">datavec</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="n">dataset</span><span class="o">.</span><span class="n">global_comm</span> <span class="o">=</span> <span class="n">wu</span><span class="o">.</span><span class="n">NullComm</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">global_comm</span> <span class="o">=</span> <span class="n">wu</span><span class="o">.</span><span class="n">NullComm</span><span class="p">()</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">dill</span><span class="o">.</span><span class="n">dump</span><span class="p">((</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="n">f</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">datavec</span><span class="p">,</span> <span class="n">comm</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">,</span> <span class="n">datavecs</span><span class="p">,</span> <span class="n">comms</span><span class="p">):</span>
             <span class="n">dataset</span><span class="o">.</span><span class="n">datavec</span> <span class="o">=</span> <span class="n">datavec</span>
@@ -2981,7 +2981,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Self</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Load the model from a file with dill.</span>
 
 <span class="sd">        Parameters</span>
@@ -2996,12 +2996,12 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">            The loaded model.</span>
 <span class="sd">        state : dict</span>
 <span class="sd">            Dictionary of metadata to understand the state from when we saved.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="sd">        """</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">dill</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">remove_structs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cfg</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Create a new metamodel with marked structures removed.</span>
 
 <span class="sd">        Parameters</span>
@@ -3013,7 +3013,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">        -------</span>
 <span class="sd">        metamodel : MetaModel</span>
 <span class="sd">            The metamodel described with structures removed.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">new_metamodel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">global_comm</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">,</span> <span class="kc">True</span>
         <span class="p">)</span>
@@ -3030,7 +3030,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
         <span class="n">datasets</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DataSet</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
         <span class="n">remove_structs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Create an instance of metamodel from a witcher config.</span>
 
 <span class="sd">        Parameters</span>
@@ -3042,17 +3042,17 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">        datasets : tuple[DataSet]</span>
 <span class="sd">            The datasets to associate with this model</span>
 <span class="sd">        remove_structs : bool, default: False</span>
-<span class="sd">            If True don&#39;t include structures marked for removal.</span>
+<span class="sd">            If True don't include structures marked for removal.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        metamodel : MetaModel</span>
 <span class="sd">            The metamodel described by the config.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">metacfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metamodel&quot;</span><span class="p">,</span> <span class="p">{})</span>
+<span class="sd">        """</span>
+        <span class="n">metacfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"metamodel"</span><span class="p">,</span> <span class="p">{})</span>
 
         <span class="c1"># First lets load all the models</span>
-        <span class="n">mlist</span> <span class="o">=</span> <span class="n">metacfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;models&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">])</span>
+        <span class="n">mlist</span> <span class="o">=</span> <span class="n">metacfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"models"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"model"</span><span class="p">])</span>
         <span class="n">models</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
             <span class="n">Model</span><span class="o">.</span><span class="n">from_cfg</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">model_field</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="n">remove_structs</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">model_field</span> <span class="ow">in</span> <span class="n">mlist</span>
@@ -3060,7 +3060,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
         <span class="n">model_ind</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_field</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">model_field</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mlist</span><span class="p">)}</span>
 
         <span class="c1"># Now lets make the model map</span>
-        <span class="n">mmap</span> <span class="o">=</span> <span class="n">metacfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_map&quot;</span><span class="p">,</span> <span class="p">{</span><span class="n">dset</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">mlist</span> <span class="k">for</span> <span class="n">dset</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">})</span>
+        <span class="n">mmap</span> <span class="o">=</span> <span class="n">metacfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_map"</span><span class="p">,</span> <span class="p">{</span><span class="n">dset</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">mlist</span> <span class="k">for</span> <span class="n">dset</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">})</span>
         <span class="n">model_map</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
             <span class="nb">tuple</span><span class="p">(</span>
                 <span class="nb">sorted</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">model_ind</span><span class="p">[</span><span class="n">model_field</span><span class="p">]</span> <span class="k">for</span> <span class="n">model_field</span> <span class="ow">in</span> <span class="n">mmap</span><span class="p">[</span><span class="n">dset</span><span class="o">.</span><span class="n">name</span><span class="p">]))</span>
@@ -3086,7 +3086,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
         <span class="p">)</span>
 
     <span class="c1"># Functons for making this a pytree</span>
-    <span class="c1"># Don&#39;t call this on your own</span>
+    <span class="c1"># Don't call this on your own</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">tree_flatten</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">]:</span>
         <span class="n">children</span> <span class="o">=</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span>
@@ -3527,7 +3527,7 @@ alows us to use this function in JITed functions.</p>
 <span class="normal">436</span>
 <span class="normal">437</span>
 <span class="normal">438</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add_round</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">to_fit</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Add an additional round to the metamodel.</span>
 
 <span class="sd">    Parameters</span>
@@ -3542,10 +3542,10 @@ alows us to use this function in JITed functions.</p>
 <span class="sd">        The updated metamodel with the new round.</span>
 <span class="sd">        While nominally the model will update in place, returning it</span>
 <span class="sd">        alows us to use this function in JITed functions.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;n_rounds&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;to_fit&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;to_fit_ever&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"n_rounds"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"to_fit"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"to_fit_ever"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
         <span class="n">model</span><span class="o">.</span><span class="n">add_round</span><span class="p">(</span><span class="n">to_fit</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)])</span>
         <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">)</span>
@@ -3644,7 +3644,7 @@ False if not.</p>
 <span class="normal">130</span>
 <span class="normal">131</span>
 <span class="normal">132</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">check_compatibility</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Check if another `MetaModel` instance is compatible with this one.</span>
 <span class="sd">    Used for checkpointing.</span>
 
@@ -3658,7 +3658,7 @@ False if not.</p>
 <span class="sd">    compatible : bool</span>
 <span class="sd">        True if compatible,</span>
 <span class="sd">        False if not.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># Check models</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">models</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">False</span>
@@ -3889,7 +3889,7 @@ False if not.</p>
     <span class="n">datasets</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DataSet</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
     <span class="n">remove_structs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Create an instance of metamodel from a witcher config.</span>
 
 <span class="sd">    Parameters</span>
@@ -3901,17 +3901,17 @@ False if not.</p>
 <span class="sd">    datasets : tuple[DataSet]</span>
 <span class="sd">        The datasets to associate with this model</span>
 <span class="sd">    remove_structs : bool, default: False</span>
-<span class="sd">        If True don&#39;t include structures marked for removal.</span>
+<span class="sd">        If True don't include structures marked for removal.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    metamodel : MetaModel</span>
 <span class="sd">        The metamodel described by the config.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">metacfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metamodel&quot;</span><span class="p">,</span> <span class="p">{})</span>
+<span class="sd">    """</span>
+    <span class="n">metacfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"metamodel"</span><span class="p">,</span> <span class="p">{})</span>
 
     <span class="c1"># First lets load all the models</span>
-    <span class="n">mlist</span> <span class="o">=</span> <span class="n">metacfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;models&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">])</span>
+    <span class="n">mlist</span> <span class="o">=</span> <span class="n">metacfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"models"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"model"</span><span class="p">])</span>
     <span class="n">models</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
         <span class="n">Model</span><span class="o">.</span><span class="n">from_cfg</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">model_field</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="n">remove_structs</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">model_field</span> <span class="ow">in</span> <span class="n">mlist</span>
@@ -3919,7 +3919,7 @@ False if not.</p>
     <span class="n">model_ind</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_field</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">model_field</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mlist</span><span class="p">)}</span>
 
     <span class="c1"># Now lets make the model map</span>
-    <span class="n">mmap</span> <span class="o">=</span> <span class="n">metacfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_map&quot;</span><span class="p">,</span> <span class="p">{</span><span class="n">dset</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">mlist</span> <span class="k">for</span> <span class="n">dset</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">})</span>
+    <span class="n">mmap</span> <span class="o">=</span> <span class="n">metacfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_map"</span><span class="p">,</span> <span class="p">{</span><span class="n">dset</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">mlist</span> <span class="k">for</span> <span class="n">dset</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">})</span>
     <span class="n">model_map</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
         <span class="nb">tuple</span><span class="p">(</span>
             <span class="nb">sorted</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">model_ind</span><span class="p">[</span><span class="n">model_field</span><span class="p">]</span> <span class="k">for</span> <span class="n">model_field</span> <span class="ow">in</span> <span class="n">mmap</span><span class="p">[</span><span class="n">dset</span><span class="o">.</span><span class="n">name</span><span class="p">]))</span>
@@ -4039,7 +4039,7 @@ False if not.</p>
 <span class="normal">364</span>
 <span class="normal">365</span>
 <span class="normal">366</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_dataset_ind</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Get the index of a dataset</span>
 
 <span class="sd">    Parameters</span>
@@ -4051,7 +4051,7 @@ False if not.</p>
 <span class="sd">    -------</span>
 <span class="sd">    dataset_ind : int</span>
 <span class="sd">        The index of the dataset.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">dataset_ind</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dset</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">dset_name</span> <span class="o">==</span> <span class="n">dset</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
@@ -4175,7 +4175,7 @@ Does not check to see if the path is valid.</p>
 <span class="normal">511</span>
 <span class="normal">512</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Self</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Load the model from a file with dill.</span>
 
 <span class="sd">    Parameters</span>
@@ -4190,8 +4190,8 @@ Does not check to see if the path is valid.</p>
 <span class="sd">        The loaded model.</span>
 <span class="sd">    state : dict</span>
 <span class="sd">        Dictionary of metadata to understand the state from when we saved.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="sd">    """</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">dill</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -4327,7 +4327,7 @@ where each element matches the shape of <code>self.datasets[dataset_ind].datavec
 <span class="normal">343</span>
 <span class="normal">344</span>
 <span class="normal">345</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">model_grad_proj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">datavec_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Project the models held in the metamodel to some data in a dataset.</span>
 
 <span class="sd">    Parameters</span>
@@ -4342,12 +4342,12 @@ where each element matches the shape of <code>self.datasets[dataset_ind].datavec
 <span class="sd">    model_grad_proj : jax.Array</span>
 <span class="sd">        The metamodel gradients projected into an array with `len(self.parameters)` elements</span>
 <span class="sd">        where each element matches the shape of `self.datasets[dataset_ind].datavec[datavec_ind]`.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">dset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
     <span class="n">m_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
     <span class="n">md_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">dset</span><span class="o">.</span><span class="n">datavec</span><span class="p">[</span><span class="n">datavec_ind</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">dset</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;tod&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">dset</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">"tod"</span><span class="p">:</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">x</span>
         <span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">y</span>
     <span class="k">else</span><span class="p">:</span>
@@ -4474,7 +4474,7 @@ This does apply metadata (ie. beam convolution+prefactor).</p>
 <span class="normal">260</span>
 <span class="normal">261</span>
 <span class="normal">262</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">model_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Get the model for a dataset on the computed grid.</span>
 <span class="sd">    This currently assumes that all models have the same grid.</span>
 <span class="sd">    This does apply metadata (ie. beam convolution+prefactor).</span>
@@ -4488,7 +4488,7 @@ This does apply metadata (ie. beam convolution+prefactor).</p>
 <span class="sd">    -------</span>
 <span class="sd">    model_grid : jax.Array</span>
 <span class="sd">        The model on the computed grid.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">dataset_ind</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">m_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
     <span class="n">md_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
@@ -4635,7 +4635,7 @@ This does apply metadata (ie. beam convolution+prefactor).</p>
 <span class="normal">301</span>
 <span class="normal">302</span>
 <span class="normal">303</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">model_proj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">datavec_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Project the models held in the metamodel to some data in a dataset.</span>
 
 <span class="sd">    Parameters</span>
@@ -4650,12 +4650,12 @@ This does apply metadata (ie. beam convolution+prefactor).</p>
 <span class="sd">    model_proj : jax.Array</span>
 <span class="sd">        The metamodel projected into an array that matches the shape of</span>
 <span class="sd">        `self.datasets[dataset_ind].datavec[datavec_ind]`.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">dset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
     <span class="n">m_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
     <span class="n">md_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">dset</span><span class="o">.</span><span class="n">datavec</span><span class="p">[</span><span class="n">datavec_ind</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">dset</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;tod&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">dset</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">"tod"</span><span class="p">:</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">x</span>
         <span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">y</span>
     <span class="k">else</span><span class="p">:</span>
@@ -4776,7 +4776,7 @@ This does apply metadata (ie. beam convolution+prefactor).</p>
 <span class="normal">532</span>
 <span class="normal">533</span>
 <span class="normal">534</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">remove_structs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cfg</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Create a new metamodel with marked structures removed.</span>
 
 <span class="sd">    Parameters</span>
@@ -4788,7 +4788,7 @@ This does apply metadata (ie. beam convolution+prefactor).</p>
 <span class="sd">    -------</span>
 <span class="sd">    metamodel : MetaModel</span>
 <span class="sd">        The metamodel described with structures removed.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">new_metamodel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">global_comm</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">,</span> <span class="kc">True</span>
     <span class="p">)</span>
@@ -4893,7 +4893,7 @@ Does not check to see if the path is valid.</p>
 <span class="normal">489</span>
 <span class="normal">490</span>
 <span class="normal">491</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Serialize the model to a file with dill.</span>
 
 <span class="sd">    Parameters</span>
@@ -4903,7 +4903,7 @@ Does not check to see if the path is valid.</p>
 <span class="sd">        Does not check to see if the path is valid.</span>
 <span class="sd">    state : dict</span>
 <span class="sd">        Dictionary of metadata to understand the state when we are saving.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">datavecs</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">comms</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">gcomm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">global_comm</span>
@@ -4913,7 +4913,7 @@ Does not check to see if the path is valid.</p>
         <span class="n">dataset</span><span class="o">.</span><span class="n">datavec</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">dataset</span><span class="o">.</span><span class="n">global_comm</span> <span class="o">=</span> <span class="n">wu</span><span class="o">.</span><span class="n">NullComm</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">global_comm</span> <span class="o">=</span> <span class="n">wu</span><span class="o">.</span><span class="n">NullComm</span><span class="p">()</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">dill</span><span class="o">.</span><span class="n">dump</span><span class="p">((</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">),</span> <span class="n">f</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">datavec</span><span class="p">,</span> <span class="n">comm</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">,</span> <span class="n">datavecs</span><span class="p">,</span> <span class="n">comms</span><span class="p">):</span>
         <span class="n">dataset</span><span class="o">.</span><span class="n">datavec</span> <span class="o">=</span> <span class="n">datavec</span>
@@ -5026,7 +5026,7 @@ alows us to use this function in JITed functions.</p>
 <span class="normal">461</span>
 <span class="normal">462</span>
 <span class="normal">463</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_round</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_round</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Set the round of the metamodel.</span>
 
 <span class="sd">    Parameters</span>
@@ -5040,11 +5040,11 @@ alows us to use this function in JITed functions.</p>
 <span class="sd">        The updated metamodel with the round updated.</span>
 <span class="sd">        While nominally the model will update in place, returning it</span>
 <span class="sd">        alows us to use this function in JITed functions.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">new_round</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rounds</span> <span class="ow">or</span> <span class="n">new_round</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Trying to set a round that doesn&#39;t exist!&quot;</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;cur_round&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;to_fit&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Trying to set a round that doesn't exist!"</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"cur_round"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"to_fit"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">:</span>
         <span class="n">model</span><span class="o">.</span><span class="n">cur_round</span> <span class="o">=</span> <span class="n">new_round</span>
 
@@ -5231,7 +5231,7 @@ alows us to use this function in JITed functions.</p>
 <span class="normal">411</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">errs</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">cov</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">chisq</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Update the parameter values and errors as well as the model chi-squared</span>
 <span class="sd">    for all models in the metamodel.</span>
 
@@ -5256,7 +5256,7 @@ alows us to use this function in JITed functions.</p>
 <span class="sd">        The updated metamodel.</span>
 <span class="sd">        While nominally the metamodel will update in place, returning it</span>
 <span class="sd">        alows us to use this function in JITed functions.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span> <span class="o">=</span> <span class="n">pars</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">errs</span> <span class="o">=</span> <span class="n">errs</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">cov</span> <span class="o">=</span> <span class="n">cov</span>
