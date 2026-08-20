@@ -3,6 +3,7 @@ sub: True # If True the cluster before mapmaking, overridden by command line
 n_rounds: 4 # How many rounds of fitting to try
 model_map: True
 
+
 constants:
   Te: 5.0
   freq: "90e9"
@@ -52,6 +53,7 @@ datasets:
     npass: 1 # How many passes of mapmaking to run
     freq: "float(90e9)"
     prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_RJ(90e9, cfg['constants']['Te'])*wu.XMpc/wu.me)"
+    ntod: 50
 
 
 # Setting for the fitter
