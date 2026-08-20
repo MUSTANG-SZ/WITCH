@@ -171,7 +171,7 @@ def make_grid_from_wcs(
     return x, y, z, float(x0), float(y0)
 
 
-@jax.jit
+#@jax.jit
 def transform_grid(
     dx: float,
     dy: float,

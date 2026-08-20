@@ -444,5 +444,5 @@ model_static = _get_static(model_sig)
 model_grad_static = _get_static(model_grad_sig)
 
 # Now JIT
-model = jax.jit(model, static_argnums=model_static)
-model_grad = jax.jit(model_grad, static_argnums=model_grad_static)
+#model = jax.jit(model, static_argnums=model_static)
+#model_grad = jax.jit(model_grad, static_argnums=model_grad_static)

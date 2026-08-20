@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from .containers import MetaModel
 
 
-@partial(jax.jit, static_argnames=("do_loglike", "do_grad", "do_curve"))
+#@partial(jax.jit, static_argnames=("do_loglike", "do_grad", "do_curve"))
 def joint_objective(
     metamodel: "MetaModel",
     do_loglike: bool = True,
@@ -99,7 +99,7 @@ class ObjectiveFunc(Protocol):
     ) -> tuple[jax.Array, jax.Array, jax.Array]: ...
 
 
-@partial(jax.jit, static_argnames=("dataset_ind", "do_loglike", "do_grad", "do_curve"))
+#@partial(jax.jit, static_argnames=("dataset_ind", "do_loglike", "do_grad", "do_curve"))
 def chisq_objective(
     metamodel: "MetaModel",
     dataset_ind: int,
@@ -188,7 +188,7 @@ def chisq_objective(
     return chisq, grad, curve
 
 
-@partial(jax.jit, static_argnames=("dataset_ind", "do_loglike", "do_grad", "do_curve"))
+#@partial(jax.jit, static_argnames=("dataset_ind", "do_loglike", "do_grad", "do_curve"))
 def poisson_objective(
     metamodel: "MetaModel",
     dataset_ind: int,

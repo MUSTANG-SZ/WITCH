@@ -7,7 +7,7 @@ from jax.typing import ArrayLike
 from scipy.optimize import curve_fit
 
 
-@jax.jit
+#@jax.jit
 def power(x: float, rbin: float, cur_amp: float, cur_pow: float, c: float):
     """
     Function which returns the powerlaw, given the bin-edge constraints. Exists to be partialed.
@@ -34,7 +34,7 @@ def power(x: float, rbin: float, cur_amp: float, cur_pow: float, c: float):
     return tmp
 
 
-@jax.jit
+#@jax.jit
 def broken_power(
     rs: jax.Array,
     condlist: tuple,

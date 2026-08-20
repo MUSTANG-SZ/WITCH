@@ -22,7 +22,7 @@ def _get_nonpara(signature, prefix_list=["nonpara_"]):
     return int(np.sum(static_msk))
 
 
-@jax.jit
+#@jax.jit
 def gnfw(
     dx: float,
     dy: float,
@@ -128,7 +128,7 @@ def gnfw(
     return P500 * P0 / denominator
 
 
-@jax.jit
+#@jax.jit
 def _gnfw_rs_driver(
     r: jax.Array, P0: float, r_s: float, gamma: float, alpha: float, beta: float
 ):
@@ -138,7 +138,7 @@ def _gnfw_rs_driver(
     return P0 / denominator
 
 
-@jax.jit
+#@jax.jit
 def gnfw_rs(
     dx: float,
     dy: float,
@@ -215,7 +215,7 @@ def gnfw_rs(
     return _gnfw_rs_driver(r, P0, r_s, gamma, alpha, beta)
 
 
-@jax.jit
+#@jax.jit
 def egnfw(
     dx: float,
     dy: float,
@@ -335,7 +335,7 @@ def egnfw(
     return P500 * P0 / denominator
 
 
-@jax.jit
+#@jax.jit
 def a10(
     dx: float,
     dy: float,
@@ -429,7 +429,7 @@ def a10(
     return P500 * P0 / denominator
 
 
-@jax.jit
+#@jax.jit
 def ea10(
     dx: float,
     dy: float,
@@ -544,7 +544,7 @@ def ea10(
     return P500 * P0 / denominator
 
 
-@jax.jit
+#@jax.jit
 def sph_isobeta(
     dx: float,
     dy: float,
@@ -614,7 +614,7 @@ def sph_isobeta(
     return amp * rrpow
 
 
-@jax.jit
+#@jax.jit
 def isobeta(
     dx: float,
     dy: float,
@@ -695,7 +695,7 @@ def isobeta(
     return amp * rrpow
 
 
-@jax.jit
+#@jax.jit
 def qso(
     dx: float,
     dy: float,
@@ -770,7 +770,7 @@ def qso(
     return pressure
 
 
-@jax.jit
+#@jax.jit
 def cylindrical_beta(
     dx: float,
     dy: float,
@@ -844,7 +844,7 @@ def cylindrical_beta(
     return pressure
 
 
-@jax.jit
+#@jax.jit
 def cylindrical_beta_2d(
     dx: float,
     dy: float,
@@ -935,7 +935,7 @@ def cylindrical_beta_2d(
     return gamma_term * 1 / jnp.cos(phi) * (P0 * r_c) * r_term
 
 
-@jax.jit
+#@jax.jit
 def egaussian(
     dx: float,
     dy: float,
@@ -1015,7 +1015,7 @@ def egaussian(
     return amp * jnp.exp(power)
 
 
-@jax.jit
+#@jax.jit
 def gaussian(
     dx: float,
     dy: float,
@@ -1071,7 +1071,7 @@ def gaussian(
     return amp * jnp.exp(power)
 
 
-@jax.jit
+#@jax.jit
 def add_uniform(
     pressure: jax.Array,
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
@@ -1144,7 +1144,7 @@ def add_uniform(
     return new_pressure
 
 
-@jax.jit
+#@jax.jit
 def add_exponential(
     pressure: jax.Array,
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
@@ -1247,7 +1247,7 @@ def add_exponential(
     return new_pressure
 
 
-@jax.jit
+#@jax.jit
 def add_powerlaw(
     pressure: jax.Array,
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
@@ -1339,7 +1339,7 @@ def add_powerlaw(
     return new_pressure
 
 
-@jax.jit
+#@jax.jit
 def add_powerlaw_cos(
     pressure: jax.Array,
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
@@ -1427,7 +1427,7 @@ def add_powerlaw_cos(
     return new_pressure
 
 
-@jax.jit
+#@jax.jit
 def nonpara_power(
     nonpara_rbins: jax.Array,
     nonpara_amps: jax.Array,
