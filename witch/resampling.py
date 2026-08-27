@@ -12,8 +12,6 @@ from .objective import joint_objective
 
 def MC_resample(
     metamodel: MetaModel,
-    cfg: dict,
-    comm: MPI.Comm | MPI.Intracomm | NullComm,
     nresamps: int = 3000,
 ) -> float:
     """
@@ -25,10 +23,6 @@ def MC_resample(
     ----------
     metamodel : MetaModel
         Metamodel containing our fit model/parameters
-    cfg : dict
-        Configuration file for fit
-    comm : MPI.Comm | MPI.Intracomm | NullComm
-        The MPI comm object to use.
     nresamps : int, default; 3000
         Number of points to resample at.
 
@@ -50,22 +44,21 @@ def MC_resample(
         nsamps=nresamps,
     ).T
     inv_cov = np.linalg.inv(metamodel.cov[metamodel.to_fit].T[metamodel.to_fit])
+    base_loglike, _, _ = joint_objective(metamodel=metamodel, do_loglike=True, do_grad=False, do_curve=False)
     for i in range(nresamps):
-        cur_pars = copy(metamodel.parameters)
-        cur_pars.at[metamodel.to_fit].set(samps[i])
+        cur_pars = copy(metamodel.parameters).at[metamodel.to_fit].set(samps[i])
         cur_meta = copy(metamodel).update(
             pars=cur_pars, errs=metamodel.errs, cov=metamodel.cov, chisq=metamodel.chisq
         )
-        l_exact = np.exp(
-            joint_objective(
-                metamodel=cur_meta, do_loglike=True, do_grad=True, do_curve=False
+        loglike, _, _ = joint_objective(
+                metamodel=cur_meta, do_loglike=True, do_grad=False, do_curve=False
             )
-        )
+        l_exact = np.exp(-1/2*(loglike-base_loglike))
         delta_p = samps[i] - metamodel.parameters[metamodel.to_fit]
         l_gauss = np.exp(-1 / 2 * np.dot(delta_p.T, np.dot(inv_cov, delta_p)))
         likelihood_chain[i] = l_exact / l_gauss
 
-    return np.mean(likelihood_chain)
+    return samps, likelihood_chain
 
 
 def draw_samps(par_means: jax.Array, cov: jax.Array, nsamps: int = 3000) -> jax.Array:
