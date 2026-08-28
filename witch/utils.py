@@ -3,8 +3,6 @@ A set of utility functions and constants used for unit conversions
 and cosmology as well as some generically useful math functions.
 """
 
-from functools import partial
-
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -45,7 +43,7 @@ hzline = jnp.array((cosmo.H(zline) / cosmo.H0).value)
 
 # Unit conversions
 # --------------------------------------------------------
-#@partial(jax.jit, static_argnums=(0, 1))
+# @partial(jax.jit, static_argnums=(0, 1))
 def y2K_CMB(freq: float, Te: float) -> float:
     """
     Convert from compton y to K_CMB.
@@ -101,7 +99,7 @@ def y2K_CMB(freq: float, Te: float) -> float:
     return factor * Tcmb
 
 
-#@partial(jax.jit, static_argnums=(0,))
+# @partial(jax.jit, static_argnums=(0,))
 def K_CMB2K_RJ(freq: float) -> float:
     """
     Convert from K_CMB to K_RJ.
@@ -120,7 +118,7 @@ def K_CMB2K_RJ(freq: float) -> float:
     return jnp.exp(x) * x * x / jnp.expm1(x) ** 2
 
 
-#@partial(jax.jit, static_argnums=(0, 1))
+# @partial(jax.jit, static_argnums=(0, 1))
 def y2K_RJ(freq: float, Te: float) -> float:
     """
     Convert from compton y to K_RJ.
@@ -141,7 +139,7 @@ def y2K_RJ(freq: float, Te: float) -> float:
     return factor * K_CMB2K_RJ(freq)
 
 
-#@partial(jax.jit, static_argnums=(0, 1))
+# @partial(jax.jit, static_argnums=(0, 1))
 def y2uK_CMB(freq: float, Te: float) -> float:
     """
     Convert from compton y to uK_CMB.
@@ -162,7 +160,7 @@ def y2uK_CMB(freq: float, Te: float) -> float:
     return 1e6 * factor
 
 
-#@jax.jit
+# @jax.jit
 def get_da(z: ArrayLike) -> jax.Array:
     """
     Get factor to convert from arcseconds to MPc.
@@ -180,7 +178,7 @@ def get_da(z: ArrayLike) -> jax.Array:
     return jnp.interp(z, zline, daline)
 
 
-#@jax.jit
+# @jax.jit
 def get_nz(z: ArrayLike) -> jax.Array:
     """
     Get the critical density at a given redshift.
@@ -199,7 +197,7 @@ def get_nz(z: ArrayLike) -> jax.Array:
     return jnp.interp(z, zline, nzline)
 
 
-#@jax.jit
+# @jax.jit
 def get_hz(z: ArrayLike) -> jax.Array:
     """
     Get the dimensionless hubble constant, h, at a given redshift.
@@ -219,7 +217,7 @@ def get_hz(z: ArrayLike) -> jax.Array:
 
 # FFT Operations
 # -----------------------------------------------------------
-#@jax.jit
+# @jax.jit
 def fft_conv(image: ArrayLike, kernel: ArrayLike) -> jax.Array:
     """
     Perform a convolution using FFTs for speed with jax.
@@ -243,7 +241,7 @@ def fft_conv(image: ArrayLike, kernel: ArrayLike) -> jax.Array:
     return convolved_map
 
 
-#@jax.jit
+# @jax.jit
 def fft_deconv(image: ArrayLike, kernel: ArrayLike) -> jax.Array:
     """
     Perform a convolution using FFTs for speed with jax.
@@ -267,7 +265,7 @@ def fft_deconv(image: ArrayLike, kernel: ArrayLike) -> jax.Array:
     return convolved_map
 
 
-#@jax.jit
+# @jax.jit
 def beam_conv(ip: jax.Array, beam: jax.Array) -> jax.Array:
     bound0, bound1 = int((ip.shape[0] - beam.shape[0]) / 2), int(
         (ip.shape[1] - beam.shape[1]) / 2
@@ -289,7 +287,7 @@ def beam_conv(ip: jax.Array, beam: jax.Array) -> jax.Array:
 beam_conv_vec = jax.vmap(beam_conv, in_axes=(0, None))
 
 
-#@partial(jax.jit, static_argnums=(1,))
+# @partial(jax.jit, static_argnums=(1,))
 def tod_hi_pass(tod: jax.Array, N_filt: int) -> jax.Array:
     """
     High pass a tod with a tophat
@@ -318,7 +316,7 @@ def tod_hi_pass(tod: jax.Array, N_filt: int) -> jax.Array:
 
 # Model building tools
 # -----------------------------------------------------------
-#@jax.jit
+# @jax.jit
 def bilinear_interp(
     x: jax.Array, y: jax.Array, xp: jax.Array, yp: jax.Array, fp: jax.Array
 ) -> jax.Array:

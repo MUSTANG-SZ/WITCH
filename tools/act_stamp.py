@@ -1,7 +1,6 @@
 import astropy.units as u
 import numpy as np
-from astropy.coordinates import Angle
-from pixell import enmap, reproject, utils
+from pixell import enmap, utils
 
 # ra = Angle('14:07:06.0 hours').to(u.rad).value
 # dec = Angle('10:48:30.00 degrees').to(u.rad).value

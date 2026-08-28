@@ -24,7 +24,6 @@ import yaml
 from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
-from . import utils as wu
 from .containers import MetaModel, Model_xfer
 from .containers.metamodel import _compute_metadata_map, _compute_par_map_and_pars
 from .dataset import DataSet
@@ -498,7 +497,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
     _save_model(cfg, metamodel, "mcmc", nonpara)
     if comm.Get_rank() == 0:
         samples = np.array(samples)
-        samps_path = os.path.join(cfg["outdir"], f"samples_mcmc.npz")
+        samps_path = os.path.join(cfg["outdir"], "samples_mcmc.npz")
         print_once("Saving samples to", samps_path)
         np.savez_compressed(samps_path, samples=samples)
         try:
@@ -557,7 +556,7 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             )
             load_path = None
     else:
-        print_once(f"[resume] Not resuming from previous checkpoint")
+        print_once("[resume] Not resuming from previous checkpoint")
 
     # Actually load and validate checkpoint if we found valid path
     if load_path is not None:
@@ -844,7 +843,17 @@ def main():
         metamodel = fit_loop(metamodel, cfg, comm)
         if resample:
             try:
-                MC_resample(metamodel, cfg, comm)
+                samps, likelihood_chain = MC_resample(metamodel=metamodel)
+                outdir = cfg["outdir"]
+                if comm.Get_rank() != 0:
+                    return
+                res_path = os.path.join(outdir, "resample_results.dill")
+                par_dict = {
+                    samps: samps,
+                    likelihood_chain: likelihood_chain,
+                }
+                with open(res_path, "wb") as f:
+                    pk.dump(par_dict, f)
             except Exception as e:
                 print(f"Not resampling due to error {e}.")
         for dataset in metamodel.datasets:

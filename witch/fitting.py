@@ -1,6 +1,6 @@
 import sys
 import time
-from copy import copy, deepcopy
+from copy import copy
 from functools import partial
 from typing import Callable
 
@@ -18,7 +18,7 @@ from .utils import NullComm
 _cache = {}
 
 
-#@jax.jit
+# @jax.jit
 def invsafe(matrix: jax.Array, thresh: float = 1e-16) -> jax.Array:
     """
     Safe SVD based psuedo-inversion of the matrix.
@@ -45,7 +45,7 @@ def invsafe(matrix: jax.Array, thresh: float = 1e-16) -> jax.Array:
     return jnp.dot(jnp.transpose(v), jnp.dot(jnp.diag(s_inv), jnp.transpose(u)))
 
 
-#@partial(jax.jit, static_argnums=(2,))
+# @partial(jax.jit, static_argnums=(2,))
 def invscale(matrix: jax.Array, thresh: float = 1e-16, do_invsafe=False) -> jax.Array:
     """
     Invert and rescale a matrix by the diagonal.
@@ -77,7 +77,7 @@ def invscale(matrix: jax.Array, thresh: float = 1e-16, do_invsafe=False) -> jax.
     return mm * jnp.linalg.inv(mm * matrix)
 
 
-#@jax.jit
+# @jax.jit
 def _prior_pars_fit(
     priors: tuple[jax.Array, jax.Array], pars: jax.Array, to_fit: jax.Array
 ) -> tuple[jax.Array, jax.Array]:
@@ -163,14 +163,14 @@ def run_lmfit(
     chitol = jnp.float32(chitol)
     tf = np.where(np.array(metamodel.to_fit))[0]
 
-    #@jax.jit
+    # @jax.jit
     def _cond_func(val):
         i, delta_chisq, lmd, *_ = val
         iterbool = jax.lax.lt(i, maxiter)
         chisqbool = jax.lax.ge(delta_chisq, chitol) + jax.lax.gt(lmd, zero)
         return iterbool * chisqbool
 
-    #@jax.jit
+    # @jax.jit
     def _body_func(val):
         i, delta_chisq, lmd, metamodel, curve, grad = val
         curve_use = curve.at[:].add(lmd * jnp.diag(jnp.diag(curve)))
@@ -295,7 +295,7 @@ def hmc(
     npar = len(params)
     ones = jnp.ones(npar, dtype=bool)
 
-    #@partial(jax.jit, inline=True)
+    # @partial(jax.jit, inline=True)
     def _leap(_, args):
         params, momentum, step_size = args
         momentum = momentum.at[:].add(0.5 * step_size * log_prob_grad(params))  # kick
@@ -304,7 +304,7 @@ def hmc(
 
         return params, momentum, step_size
 
-    #@jax.jit
+    # @jax.jit
     def _sample(key, params, step_size):
         mpi4jax.barrier(comm=comm)
         key = mpi4jax.bcast(key, 0, comm=comm)
@@ -326,7 +326,7 @@ def hmc(
 
         return key, params, accept_prob
 
-    #@partial(jax.jit, donate_argnums=(0, 1))
+    # @partial(jax.jit, donate_argnums=(0, 1))
     def _update(chain, accept_prob, params, prob, i):
         chain = chain.at[i].set(params)
         accept_prob = accept_prob.at[i].set(prob)
@@ -337,7 +337,7 @@ def hmc(
     # Can probably fix by moving functions out of local scope
     if c_sample is None:
         if rank == 0:
-            print(f"Compiling MC sample function. This can take a few minutes!")
+            print("Compiling MC sample function. This can take a few minutes!")
         t0 = time.time()
         _ = _sample(key.copy(), params.copy(), step_size.copy())
         jax.block_until_ready(_)
@@ -455,7 +455,7 @@ def run_mcmc(
     scale = jnp.where(scale == 0, 1, scale)
     init_pars = init_pars.at[:].multiply(1.0 / scale)
 
-    #@jax.jit
+    # @jax.jit
     def _log_prob(pars, metamodel=metamodel, init_pars=init_pars):
         full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)
@@ -473,7 +473,7 @@ def run_mcmc(
         log_like = log_like + log_prior
         return log_like
 
-    #@jax.jit
+    # @jax.jit
     def _log_prob_grad(pars, metamodel=metamodel, init_pars=init_pars):
         full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)

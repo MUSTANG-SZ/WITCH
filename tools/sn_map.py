@@ -8,7 +8,7 @@
 import argparse as argp
 
 import numpy as np
-from astropy.convolution import Gaussian2DKernel, convolve, convolve_fft
+from astropy.convolution import Gaussian2DKernel, convolve
 from pixell import enmap
 
 

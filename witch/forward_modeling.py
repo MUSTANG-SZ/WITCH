@@ -2,20 +2,15 @@
 Functions for performing forward modeling
 """
 
-import functools
-
-import jax
 import jax.numpy as jnp
-import minkasi.maps.skymap as skymap
 import minkasi.tods.core as todcore
 import numpy as np
 from minkasi.maps.mapset import Mapset
 
 from .core import model
-from .utils import make_grid
 
 
-#@jax.jit
+# @jax.jit
 def get_chis(m, idx, idy, rhs, v, weight, dd=None):
     r"""
     A faster, but more importantly much less memory intensive, way to get chis.
@@ -149,7 +144,7 @@ def sample(model_params, xyz, beam, params, tods):  # , model_params, xyz, beam)
     return log_like
 
 
-#jget_chis = jax.jit(get_chis)
+# jget_chis = jax.jit(get_chis)
 
 
 def make_tod_stuff(todvec, skymap, lims=None, pixsize=2.0 / 3600 * np.pi / 180):

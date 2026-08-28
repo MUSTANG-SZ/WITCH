@@ -3,17 +3,15 @@ import jax.numpy as jnp
 import jax
 from copy import copy
 
-from mpi4py import MPI
 
 from .containers import MetaModel
-from .utils import NullComm
 from .objective import joint_objective
 
 
 def MC_resample(
     metamodel: MetaModel,
     nresamps: int = 3000,
-) -> float:
+) -> (np.ndarray, np.ndarray):
     """
     Use Monte Carlo resampling to estimate whether ML parameters are accurate or not.
     See section 5 here for details:
@@ -28,8 +26,10 @@ def MC_resample(
 
     Returns
     -------
-    likelihood_ratio : float
-        Average ratio of L_exact/L_gauss
+    samps : np.ndarray
+        Array of resampled parameters
+    likelihood_chain : np.ndarray
+        Array of likelihood ratios
     """
     if not np.any(metamodel.cov):
         raise RuntimeError(
@@ -44,16 +44,18 @@ def MC_resample(
         nsamps=nresamps,
     ).T
     inv_cov = np.linalg.inv(metamodel.cov[metamodel.to_fit].T[metamodel.to_fit])
-    base_loglike, _, _ = joint_objective(metamodel=metamodel, do_loglike=True, do_grad=False, do_curve=False)
+    base_loglike, _, _ = joint_objective(
+        metamodel=metamodel, do_loglike=True, do_grad=False, do_curve=False
+    )
     for i in range(nresamps):
         cur_pars = copy(metamodel.parameters).at[metamodel.to_fit].set(samps[i])
         cur_meta = copy(metamodel).update(
             pars=cur_pars, errs=metamodel.errs, cov=metamodel.cov, chisq=metamodel.chisq
         )
         loglike, _, _ = joint_objective(
-                metamodel=cur_meta, do_loglike=True, do_grad=False, do_curve=False
-            )
-        l_exact = np.exp(-1/2*(loglike-base_loglike))
+            metamodel=cur_meta, do_loglike=True, do_grad=False, do_curve=False
+        )
+        l_exact = np.exp(-1 / 2 * (loglike - base_loglike))
         delta_p = samps[i] - metamodel.parameters[metamodel.to_fit]
         l_gauss = np.exp(-1 / 2 * np.dot(delta_p.T, np.dot(inv_cov, delta_p)))
         likelihood_chain[i] = l_exact / l_gauss
