@@ -467,7 +467,9 @@ def run_mcmc(
                 jnp.array(jnp.where(metamodel.to_fit, in_bounds, True)), 0, -1 * jnp.inf
             )
         )
-        temp_metamodel = copy(metamodel).update(full_pars, init_errs, jnp.array(0))
+        temp_metamodel = copy(metamodel).update(
+            full_pars, init_errs, metamodel.cov, jnp.array(0)
+        )
         chisq, *_ = joint_objective(temp_metamodel, True, False, False)
         log_like = -0.5 * chisq
         log_like = log_like + log_prior
@@ -485,7 +487,9 @@ def run_mcmc(
                 jnp.array(jnp.where(metamodel.to_fit, in_bounds, True)), 0, -1 * jnp.inf
             )
         )
-        temp_metamodel = copy(metamodel).update(full_pars, init_errs, jnp.array(0))
+        temp_metamodel = copy(metamodel).update(
+            full_pars, init_errs, metamodel.cov, jnp.array(0)
+        )
         _, grad, _ = joint_objective(temp_metamodel, False, True, False)
         grad = grad.at[:].multiply(1.0 / scale)
         log_like_grad = grad.at[to_fit].get().ravel()
@@ -631,10 +635,11 @@ def run_mcmc(
     metamodel = metamodel.update(
         final_pars.block_until_ready(),
         final_errs.block_until_ready(),
+        metamodel.cov,
         jnp.array(0).block_until_ready(),
     )
     chisq, *_ = joint_objective(metamodel, True, False, False)
-    metamodel = metamodel.update(final_pars, final_errs, chisq)
+    metamodel = metamodel.update(final_pars, final_errs, metamodel.cov, chisq)
     jax.block_until_ready(metamodel)
 
     return metamodel, flat_samples
