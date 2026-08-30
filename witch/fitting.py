@@ -377,7 +377,8 @@ def run_mcmc(
     sample_which: int = -1,
     burn_in: float = 0.1,
     max_tries: int = 20,
-) -> tuple[MetaModel, jax.Array]:
+    resume_state: dict = None,
+) -> tuple[MetaModel, jax.Array, dict]:
     """
     Run Hamilonian Monte Carlo to estimate the posterior for our model.
     Currently this function only support flat priors, but more will be supported
@@ -599,6 +600,45 @@ def run_mcmc(
             sys.stdout.flush()
         return step_size
 
+    # Determine chunk index for generating a different key for each chunk
+    # On a fresh run, this is 0; otherwise, we continue from where we left off
+    if resume_state is not None:
+        chunk_index = resume_state["chunk_index"]
+        step_size = jnp.array(resume_state["step_size"])
+        start_pars = jnp.array(resume_state["params"])
+        # Overwrite starting pos with where chain left off
+        init_pars = init_pars.at[to_fit].set(
+            start_pars.at[to_fit].get() / scale.at[to_fit].get()
+        )
+    else:
+        chunk_index = 0
+
+    base_key = jax.random.PRNGKey(0)
+    base_key = jnp.array(mpi4jax.bcast(base_key, 0, comm=global_comm))
+    """
+    Derive independent key for this chunk. HMC redraws momentum every step, so
+    a per chunk key is statistically valid and avoids threading the key out of hmc.
+    """
+    key = jax.random.fold_in(base_key, chunk_index)
+
+    # Only tune step size on first chunk
+    if resume_state is None:
+        step_size = _get_step_size(
+            step_size=step_size, key=key, comm=global_comm, max_tries=max_tries
+        )
+
+    chain, _ = hmc(
+        init_pars.at[to_fit].get().ravel(),
+        _log_prob,
+        _log_prob_grad,
+        num_steps=num_steps,
+        num_leaps=num_leaps,
+        step_size=step_size,
+        comm=global_comm,
+        key=key,
+    )
+
+    """
     key = jax.random.PRNGKey(0)
     key = jnp.array(mpi4jax.bcast(key, 0, comm=global_comm))
 
@@ -619,6 +659,7 @@ def run_mcmc(
         comm=global_comm,
         key=key,
     )
+    """
     flat_samples = chain.at[:].multiply(scale.at[to_fit].get())
 
     if rank == 0:
@@ -637,4 +678,19 @@ def run_mcmc(
     metamodel = metamodel.update(final_pars, final_errs, chisq)
     jax.block_until_ready(metamodel)
 
+    # Build state needed to resume from this chunk later
+    out_state = {
+        "chunk_index": chunk_index + 1,
+        "step_size": float(step_size),
+        "params": np.array(final_pars),
+    }
+
+    return metamodel, flat_samples, out_state
+
+    """
+    chisq, *_ = joint_objective(metamodel, True, False, False)
+    metamodel = metamodel.update(final_pars, final_errs, chisq)
+    jax.block_until_ready(metamodel)
+
     return metamodel, flat_samples
+    """
