@@ -58,16 +58,15 @@ def load_cfg(cfg):
     for module, name in cfg.get("imports", {}).items():
         mod = import_module(module)
         if isinstance(name, str):
-            locals()[name] = mod
+            globals()[name] = mod
         elif isinstance(name, list):
             for n in name:
                 locals()[n] = getattr(mod, n)
         else:
             raise TypeError("Expect import name to be a string or a list")
 
-    # Get the functions needed to work with out dataset
+    # Get the functions needed to work with our dataset
     dset_names = list(cfg["datasets"].keys())
-    models = []
     datasets = []
     outdir = None
     # First lets plan how to split things up among mpi tasks
@@ -98,6 +97,18 @@ def load_cfg(cfg):
         preproc = eval(cfg["datasets"][dset_name]["funcs"]["preproc"])
         postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
         postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
+
+        # Get data, info, and metadata
+        datavec = load(dset_name, cfg, fnames[dset_name], comms_local[dset_name])
+        info = get_info(dset_name, cfg, datavec)
+        metadata = make_metadata(dset_name, cfg, info)
+
+        # Setup noise
+        noise_class = eval(str(cfg["datasets"][dset_name]["noise"]["class"]))
+        noise_args = tuple(eval(str(cfg["datasets"][dset_name]["noise"]["args"])))
+        noise_kwargs = eval(str(cfg["datasets"][dset_name]["noise"]["kwargs"]))
+
+        # Init dataset
         dataset = DataSet(
             dset_name,
             get_files,
@@ -108,27 +119,20 @@ def load_cfg(cfg):
             postproc,
             postfit,
             comm,
+            info,
         )
 
-        # Get data
-        dataset.datavec = load(
-            dset_name, cfg, fnames[dset_name], comms_local[dset_name]
+        # Init the data container
+        dataset.data = DataSetData(
+            dset_name,
+            info["mode"],
+            info["objective"],
+            datavec,
+            metadata,
+            noise_class,
+            noise_args,
+            noise_kwargs,
         )
-
-        # Get any info we need specific to an expiriment
-        dataset.info = get_info(dset_name, cfg, dataset.datavec)
-
-        # Get the metadata
-        metadata = make_metadata(dset_name, cfg, dataset.info)
-        dataset.metadata = metadata
-
-        # Setup noise
-        noise_class = eval(str(cfg["datasets"][dset_name]["noise"]["class"]))
-        noise_args = tuple(eval(str(cfg["datasets"][dset_name]["noise"]["args"])))
-        noise_kwargs = eval(str(cfg["datasets"][dset_name]["noise"]["kwargs"]))
-        dataset.info["noise_class"] = noise_class
-        dataset.info["noise_args"] = noise_args
-        dataset.info["noise_kwargs"] = noise_kwargs
 
         if "base" in cfg.keys():
             del cfg[
@@ -142,7 +146,7 @@ def load_cfg(cfg):
         metamodel = MetaModel.from_config(
             comm,
             cfg,
-            datasets,
+            tuple(dataset.data for dataset in datasets),
         )
     else:
         if "model" in cfg:
@@ -152,10 +156,11 @@ def load_cfg(cfg):
         metamodel = MetaModel(
             comm,
             tuple(),
-            datasets,
+            tuple(dataset.data for dataset in datasets),
             tuple(),
             tuple(),
             tuple(),
+            jnp.zeros(0),
             jnp.zeros(0),
             jnp.zeros(0),
             jnp.zeros(0),
@@ -168,18 +173,19 @@ def load_cfg(cfg):
     cfg["outdir"] = outdir
 
     # Now process
-    for dataset in metamodel.datasets:
+    for dataset in datasets:
         os.makedirs(os.path.join(outdir, dataset.name), exist_ok=True)
         dataset.info["outdir"] = outdir
         comm.barrier()
         dataset.preproc(dataset, cfg, metamodel)
         comm.barrier()
         if dataset.mode == "tod":
-            dataset.datavec = process_tods(cfg, dataset, metamodel)
+            dataset.data.datavec = process_tods(cfg, dataset, metamodel)
         elif dataset.mode == "map":
-            dataset.datavec = process_maps(cfg, dataset, metamodel)
+            dataset.data.datavec = process_maps(cfg, dataset, metamodel)
         comm.barrier()
         dataset = jax.block_until_ready(dataset)
         dataset.postproc(dataset, cfg, metamodel)
+    metamodel.datasets = tuple(dataset.data for dataset in datasets)
 
     return datasets, outdir, dset_names, metamodel
