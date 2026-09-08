@@ -1,6 +1,6 @@
 import sys
 import time
-from copy import copy, deepcopy
+from copy import copy
 from functools import partial
 from typing import Callable
 
@@ -467,7 +467,9 @@ def run_mcmc(
                 jnp.array(jnp.where(metamodel.to_fit, in_bounds, True)), 0, -1 * jnp.inf
             )
         )
-        temp_metamodel = copy(metamodel).update(full_pars, init_errs, jnp.array(0))
+        temp_metamodel = copy(metamodel).update(
+            full_pars, init_errs, jnp.array(0), jnp.array(0)
+        )
         chisq, *_ = joint_objective(temp_metamodel, True, False, False)
         log_like = -0.5 * chisq
         log_like = log_like + log_prior
@@ -485,7 +487,9 @@ def run_mcmc(
                 jnp.array(jnp.where(metamodel.to_fit, in_bounds, True)), 0, -1 * jnp.inf
             )
         )
-        temp_metamodel = copy(metamodel).update(full_pars, init_errs, jnp.array(0))
+        temp_metamodel = copy(metamodel).update(
+            full_pars, init_errs, jnp.array(0), jnp.array(0)
+        )
         _, grad, _ = joint_objective(temp_metamodel, False, True, False)
         grad = grad.at[:].multiply(1.0 / scale)
         log_like_grad = grad.at[to_fit].get().ravel()
@@ -628,13 +632,15 @@ def run_mcmc(
         final_errs = final_errs.at[to_fit].set(jnp.std(flat_samples, axis=0).ravel())
     final_pars = jnp.array(mpi4jax.bcast(final_pars, 0, comm=global_comm))
     final_errs = jnp.array(mpi4jax.bcast(final_errs, 0, comm=global_comm))
+    cov = cov = jnp.cov(flat_samples, rowvar=False)
     metamodel = metamodel.update(
         final_pars.block_until_ready(),
         final_errs.block_until_ready(),
         jnp.array(0).block_until_ready(),
+        jnp.array(0).block_until_ready(),
     )
     chisq, *_ = joint_objective(metamodel, True, False, False)
-    metamodel = metamodel.update(final_pars, final_errs, chisq)
+    metamodel = metamodel.update(final_pars, final_errs, cov, chisq)
     jax.block_until_ready(metamodel)
 
     return metamodel, flat_samples

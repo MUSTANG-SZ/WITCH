@@ -4,6 +4,7 @@ the spec of the required functions for all datasets.
 """
 
 from dataclasses import dataclass, field
+from inspect import Parameter
 from typing import TYPE_CHECKING, Protocol, Self, runtime_checkable
 
 import numpy as np
@@ -435,9 +436,81 @@ class PostFit(Protocol):
 
 @register_pytree_node_class
 @dataclass
+class DataSetData:
+    """
+    Class for storing the data associated with a dataset.
+    This is the minimal amount needed when actually fitting.
+
+    Attributes
+    ----------
+    name : str
+        The name of the dataset.
+    mode : str
+        The mode of the dataset, should be "tod" or "map".
+    objective : ObjectiveFunc
+        The objective function to use.
+    datavec : DataVec
+        The data vector for this data.
+        This will be a `jitkasi` container class.
+        This field is not part of the initialization function.
+    metadata : tuple[MetaData]
+        Tuple of `MetaData` instances to apply to model.
+        This field is not part of the initialization function.
+    noise_class : NoiseModel
+        The noise model class used by this dataset.
+    noise_args : tuple
+        Positional arguments used when computing the noise model.
+    noise_kwargs : dict
+        Keyword arguments used when computing the noise model.
+    """
+
+    name: str
+    mode: str
+    objective: ObjectiveFunc
+    datavec: DataVec
+    metadata: tuple[MetaData, ...]
+    noise_class: NoiseModel
+    noise_args: tuple
+    noise_kwargs: dict
+
+    # Functions for making this a pytree
+    # Don't call this on your own
+    def tree_flatten(self) -> tuple[tuple, tuple]:
+        children = (self.datavec, self.metadata)
+        aux_data = (
+            self.name,
+            self.mode,
+            self.objective,
+            self.noise_class,
+            self.noise_args,
+            self.noise_kwargs,
+        )
+
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children) -> Self:
+        datavec, metadata = children
+        name, mode, objective, noise_class, noise_args, noise_kwargs = aux_data
+        return cls(
+            name,
+            mode,
+            objective,
+            datavec,
+            metadata,
+            noise_class,
+            noise_args,
+            noise_kwargs,
+        )
+
+
+@register_pytree_node_class
+@dataclass
 class DataSet:
     """
     Class for storing a dataset.
+    Note that all atributes of `DataSet.data` are exposed as
+    properties here, see `DataSetData` for details.
 
     Attributes
     ----------
@@ -463,13 +536,8 @@ class DataSet:
     info : dict
         The info dict for this dataset.
         This field is not part of the initialization function.
-    datavec : DataVec
-        The data vector for this data.
-        This will be a `jitkasi` container class.
-        This field is not part of the initialization function.
-    metadata : tuple[MetaData]
-        Tuple of `MetaData` instances to apply to model.
-        This field is not part of the initialization function.
+    data : DataSetData
+        The data needed for fitting. See `DataSetData` for details.
     """
 
     name: str
@@ -481,9 +549,8 @@ class DataSet:
     postproc: PostProc
     postfit: PostFit
     global_comm: MPI.Comm | MPI.Intracomm | wu.NullComm
-    info: dict = field(init=False)
-    datavec: DataVec = field(init=False)
-    metadata: tuple[MetaData, ...] = field(init=False)
+    info: dict = field(default_factory=dict)
+    data: DataSetData = field(init=False)
 
     def __post_init__(self: Self):
         assert isinstance(self.get_files, GetFiles)
@@ -494,81 +561,33 @@ class DataSet:
         assert isinstance(self.postproc, PostProc)
         assert isinstance(self.postfit, PostFit)
 
-    def __setattr__(self, name, value):
-        if name == "info":
-            if "mode" not in value:
-                raise ValueError("Cannot set dataset info without a 'mode' field")
-            if value["mode"] not in ["tod", "map"]:
-                raise ValueError("Dataset info contained invalid mode")
-            if "objective" not in value:
-                raise ValueError("Cannot set dataset info without an 'objective' field")
-            if not isinstance(value["objective"], ObjectiveFunc):
-                raise ValueError("Dataset info contained invalid objective function")
-        return super().__setattr__(name, value)
+    @property
+    def mode(self):
+        return self.data.mode
 
     @property
-    def mode(self: Self) -> str:
-        """
-        Get the mode for this dataset.
-        Will be `tod` or `map`.
-
-        Returns
-        -------
-        mode : str
-            The dataset mode.
-        """
-        return self.info["mode"]
+    def objective(self):
+        return self.data.objective
 
     @property
-    def objective(self: Self) -> ObjectiveFunc:
-        """
-        Get the objective function for this dataset.
-
-        Returns
-        -------
-        objective : ObjectiveFunc
-            The objective function.
-        """
-        return self.info["objective"]
+    def datavec(self):
+        return self.data.datavec
 
     @property
-    def noise_class(self: Self) -> NoiseModel:
-        """
-        Get the noise class for this dataset.
-
-        Returns
-        -------
-        noise_class : NoiseModel
-            The class of the noise model that will be used for this dataset.
-            This field is not part of the initialization function.
-        """
-        return self.info["noise_class"]
+    def metadata(self):
+        return self.data.metadata
 
     @property
-    def noise_args(self: Self) -> tuple:
-        """
-        Get the noise arguments for this dataset.
-
-        Returns
-        -------
-        noise_args : tuple
-            Positional arguments to be used by the noise model.
-            This field is not part of the initialization function.
-        """
-        return self.info["noise_args"]
+    def noise_class(self):
+        return self.data.noise_class
 
     @property
-    def noise_kwargs(self: Self) -> tuple:
-        """
-        Get the noise keyword arguments for this dataset.
+    def noise_args(self):
+        return self.data.noise_args
 
-        Returns
-        -------
-        noise_kwargs : dict
-            Keyword arguments to be used by the noise model.
-            This field is not part of the initialization function.
-        """
-        return self.info["noise_kwargs"]
+    @property
+    def noise_kwargs(self):
+        return self.data.noise_kwargs
 
     def check_completeness(self: Self):
         """
@@ -578,7 +597,6 @@ class DataSet:
         ------
         ValueError
             If the dataset is missing some fields.
-            If `self.info` is missing some required info.
             If `self.mode` is not a valid mode.
             If `self.objective` is not a valid objective function.
         """
@@ -590,17 +608,7 @@ class DataSet:
         if len(missing) > 0:
             raise ValueError(f"Datset is missing the following fields: {missing}")
 
-        required_info = np.array(
-            ["mode", "objective", "noise_class", "noise_args", "noise_kwargs"]
-        )
-        contained_info = list(self.info.keys())
-        missing_info = required_info[~np.isin(required_info, contained_info)]
-        if len(missing_info) > 0:
-            raise ValueError(
-                f"(Dataset info is missing the following fields: {missing_info}"
-            )
-
-        if self.info["mode"] not in ["tod", "map"]:
+        if self.data.mode not in ["tod", "map"]:
             raise ValueError("Dataset info contained invalid mode")
         if not isinstance(self.info["objective"], ObjectiveFunc):
             raise ValueError("Dataset info contained invalid objective function")
@@ -608,14 +616,9 @@ class DataSet:
     # Functions for making this a pytree
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
-        if "datavec" in self.__dict__:
-            children = (self.datavec,)
-        else:
-            children = (None,)
-        if "metadata" in self.__dict__:
-            children += (self.metadata,)
-        else:
-            children += (None,)
+        children = tuple()
+        if "data" in self.__dict__:
+            children = (self.data,)
         aux_data = (
             self.name,
             self.get_files,
@@ -627,24 +630,12 @@ class DataSet:
             self.postfit,
             self.global_comm,
         )
-        if "info" in self.__dict__:
-            aux_data += (self.info,)
-        else:
-            aux_data += (None,)
 
         return (children, aux_data)
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        datavec, metadata = children
-        name = aux_data[0]
-        funcs_comm = aux_data[1:9]
-        info = aux_data[9]
-        dataset = cls(name, *funcs_comm)
-        if datavec is not None:
-            dataset.datavec = datavec
-        if info is not None:
-            dataset.info = info
-        if metadata is not None:
-            dataset.metadata = metadata
+        dataset = cls(*aux_data)
+        if len(children) > 0:
+            dataset.data = children[0]
         return dataset
