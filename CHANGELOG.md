@@ -1,3 +1,9 @@
+## 10.13.1 (2026-09-08)
+
+### Fix
+
+- only mock mpi4py when unavailable to avoid dirtying test session
+
 ## 10.13.0 (2026-07-06)
 
 ### Feat
