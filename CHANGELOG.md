@@ -1,3 +1,9 @@
+## 11.0.0 (2026-09-08)
+
+### Fix
+
+- switch to a more minimal dataset when fitting
+
 ## 10.13.1 (2026-09-08)
 
 ### Fix
