@@ -3,7 +3,7 @@ import jax.numpy as jnp
 import jax
 from copy import copy
 
-
+from .fitting import invsafe
 from .containers import MetaModel
 from .objective import joint_objective
 
@@ -38,17 +38,21 @@ def MC_resample(
     likelihood_chain = np.zeros(
         nresamps
     )  # Contains the likelihood_ratio, L_exact/L_gaussian
-    samps = draw_samps(
+    samps = np.ones((nresamps, len(metamodel.to_fit)))
+    samps *= np.array(metamodel.parameters)
+    temp_samps = draw_samps(
         par_means=metamodel.parameters[metamodel.to_fit],
         cov=metamodel.cov[metamodel.to_fit].T[metamodel.to_fit],
         nsamps=nresamps,
     ).T
-    inv_cov = np.linalg.inv(metamodel.cov[metamodel.to_fit].T[metamodel.to_fit])
+    samps[..., metamodel.to_fit] = temp_samps
+
+    inv_cov = invsafe(metamodel.cov)
     base_loglike, _, _ = joint_objective(
         metamodel=metamodel, do_loglike=True, do_grad=False, do_curve=False
     )
     for i in range(nresamps):
-        cur_pars = copy(metamodel.parameters).at[metamodel.to_fit].set(samps[i])
+        cur_pars = copy(metamodel.parameters).at[:].set(samps[i])
         cur_meta = copy(metamodel).update(
             pars=cur_pars, errs=metamodel.errs, cov=metamodel.cov, chisq=metamodel.chisq
         )
@@ -56,7 +60,7 @@ def MC_resample(
             metamodel=cur_meta, do_loglike=True, do_grad=False, do_curve=False
         )
         l_exact = np.exp(-1 / 2 * (loglike - base_loglike))
-        delta_p = samps[i] - metamodel.parameters[metamodel.to_fit]
+        delta_p = samps[i] - metamodel.parameters
         l_gauss = np.exp(-1 / 2 * np.dot(delta_p.T, np.dot(inv_cov, delta_p)))
         likelihood_chain[i] = l_exact / l_gauss
 
@@ -87,7 +91,7 @@ def draw_samps(par_means: jax.Array, cov: jax.Array, nsamps: int = 3000) -> jax.
     key = jax.random.key(seed=42)
     X = jax.random.multivariate_normal(key=key, mean=par_means, cov=cov, shape=nsamps).T
     for n in range(X.shape[0]):
-        X.at[n].set(X[n] - X[n].mean())
+        X = X.at[n].set(X[n] - X[n].mean())
 
     # Make each variable in X orthogonal to one another
     L_inv = jnp.linalg.cholesky(jnp.cov(X))
@@ -100,6 +104,6 @@ def draw_samps(par_means: jax.Array, cov: jax.Array, nsamps: int = 3000) -> jax.
 
     # Add the mean back into each variable
     for n in range(X.shape[0]):
-        X.at[n].set(X[n] + par_means[n])
+        X = X.at[n].set(X[n] + par_means[n])
 
     return X
