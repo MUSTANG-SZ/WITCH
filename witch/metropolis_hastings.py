@@ -106,7 +106,7 @@ def calc_like_dataset(metamodel, pars, dataset_ind=0):
 
 
 @partial(jax.jit, static_argnames=("prior_type",))
-def draw_samp(metamodel, key, bound=2, prior_type="uniform"):
+def draw_samp(metamodel, key, bound=2, prior_type="uniform", err_scale=1.0):
     """
     Draw a masked proposal from a uniform or normal distribution.
 
@@ -141,8 +141,10 @@ def draw_samp(metamodel, key, bound=2, prior_type="uniform"):
         upper = jnp.where(unbounded, pars * bound, upper)
         new_pars = jax.random.uniform(key, shape=pars.shape, minval=lower, maxval=upper)
     elif prior_type == "normal":
+        # For normal proposals, sample around current pars using metamodel.errs
+        # scaled by `err_scale` (passed from the chain runner/CLI).
         errs = jnp.asarray(metamodel.errs)
-        new_pars = pars + errs * jax.random.normal(key, shape=pars.shape)
+        new_pars = pars + errs * err_scale * jax.random.normal(key, shape=pars.shape)
     else:
         raise ValueError(f"Unknown prior type: {prior_type}")
 
@@ -158,6 +160,7 @@ def metropolis_hastings(
     calc_like_func=calc_like_dataset,
     dataset_ind=0,
     prior_type="uniform",
+    prior_err_scale=1.0,
 ):
     """
     Run one Metropolis-Hastings chain using log-likelihoods.
@@ -197,11 +200,31 @@ def metropolis_hastings(
     accepted_count = 0
     key = jax.random.key(seed)
     rng = np.random.default_rng(seed)
-    p_current = calc_like_func(
+    # Compute current log-posterior (log likelihood + log prior when gaussian priors used)
+    p_like_current = calc_like_func(
         metamodel=metamodel,
         pars=current_state,
         dataset_ind=dataset_ind,
     )
+    # helper to compute log prior (supports gaussian via metamodel.errs and uniform bounds)
+    def _log_prior(meta, pars, err_scale=1.0):
+        lower = jnp.asarray(meta.priors[0])
+        upper = jnp.asarray(meta.priors[1])
+        # If any prior is finite, treat as uniform (already handled by bounds)
+        # For gaussian-style priors we assume metamodel.errs provides 1-sigma and
+        # that gaussian priors are desired when prior_type == 'normal'.
+        if prior_type == "normal":
+            errs = jnp.asarray(meta.errs) * err_scale
+            # avoid division by zero
+            errs = jnp.where(errs <= 0, jnp.inf, errs)
+            # Gaussian log-prior (up to additive constant)
+            return -0.5 * jnp.sum(((pars - jnp.asarray(meta.parameters)) / errs) ** 2)
+        else:
+            # Uniform priors: return 0 if inside bounds else -inf
+            inside = jnp.logical_and(pars >= lower, pars <= upper)
+            return jnp.where(jnp.all(inside), 0.0, -jnp.inf)
+
+    p_current = p_like_current + _log_prior(metamodel, current_state, prior_err_scale)
 
     for i in tqdm(
         range(num_samples),
@@ -215,21 +238,23 @@ def metropolis_hastings(
             key=sample_key,
             bound=bound,
             prior_type=prior_type,
+            err_scale=prior_err_scale,
         )
 
         # Compare log acceptance probabilities to avoid exponentiating likelihoods.
-        p_candidate = calc_like_func(
+        p_like_candidate = calc_like_func(
             metamodel=metamodel,
             pars=candidate,
             dataset_ind=dataset_ind,
         )
+        p_candidate = p_like_candidate + _log_prior(metamodel, candidate, prior_err_scale)
 
-        current_loglike = float(p_current)
-        candidate_loglike = float(p_candidate)
-        if np.isneginf(current_loglike):
+        current_logpost = float(p_current)
+        candidate_logpost = float(p_candidate)
+        if np.isneginf(current_logpost):
             accept = False
-        elif np.isfinite(candidate_loglike):
-            log_alpha = min(0.0, candidate_loglike - current_loglike)
+        elif np.isfinite(candidate_logpost):
+            log_alpha = min(0.0, candidate_logpost - current_logpost)
             accept = np.log(rng.random()) < log_alpha
         else:
             accept = False
@@ -247,7 +272,7 @@ def metropolis_hastings(
 
 
 def run_chains_serial(
-    metamodel, num_samples, num_chains, bound=2, seed=0, prior_type="uniform"
+    metamodel, num_samples, num_chains, bound=2, seed=0, prior_type="uniform", prior_err_scale=1.0
 ):
     """
     Run multiple chains serially with the MPI-aware joint likelihood.
@@ -256,7 +281,7 @@ def run_chains_serial(
     must be called in the same order by all ranks.
     """
     jax.block_until_ready(calc_like_joint(metamodel, metamodel.parameters))
-    jax.block_until_ready(draw_samp(metamodel, jax.random.key(seed), bound, prior_type))
+    jax.block_until_ready(draw_samp(metamodel, jax.random.key(seed), bound, prior_type, prior_err_scale))
 
     chains = []
     for chain_id in range(num_chains):
@@ -270,6 +295,7 @@ def run_chains_serial(
                 calc_like_joint,
                 0,
                 prior_type,
+                prior_err_scale,
             )
         )
     return chains
@@ -283,6 +309,7 @@ def run_chains_parallel(
     seed=0,
     dataset_ind=0,
     prior_type="uniform",
+    prior_err_scale=1.0,
 ):
     """
     Run independent chains concurrently for one dataset.
@@ -295,7 +322,7 @@ def run_chains_parallel(
     jax.block_until_ready(
         calc_like_dataset(metamodel, metamodel.parameters, dataset_ind)
     )
-    jax.block_until_ready(draw_samp(metamodel, jax.random.key(seed), bound, prior_type))
+    jax.block_until_ready(draw_samp(metamodel, jax.random.key(seed), bound, prior_type, prior_err_scale))
 
     with ThreadPoolExecutor(max_workers=num_chains) as executor:
         futures = [
@@ -309,6 +336,7 @@ def run_chains_parallel(
                 calc_like_dataset,
                 dataset_ind,
                 prior_type,
+                prior_err_scale,
             )
             for chain_id in range(num_chains)
         ]

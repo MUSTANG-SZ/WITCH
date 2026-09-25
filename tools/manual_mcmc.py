@@ -60,6 +60,12 @@ def parse_args():
         help="Sampling prior: uniform bounds or normal errors from the metamodel.",
     )
     parser.add_argument(
+        "--prior-err-scale",
+        type=float,
+        default=1.0,
+        help="Scale factor to multiply gaussian prior errors (and normal proposal widths).",
+    )
+    parser.add_argument(
         "--output",
         default="mcmc_chains.npz",
         help="Output filename relative to WITCH outdir, or an absolute path.",
@@ -89,6 +95,7 @@ def main():
             num_chains=args.num_chains,
             bound=args.bound,
             prior_type=args.prior_type,
+            prior_err_scale=args.prior_err_scale,
         )
     else:
         chains = run_chains_parallel(
@@ -98,6 +105,7 @@ def main():
             bound=args.bound,
             dataset_ind=args.dataset_index,
             prior_type=args.prior_type,
+            prior_err_scale=args.prior_err_scale,
         )
     # Get the acceptance_rates from the chains
     acceptance_rates = [acceptance_rate for _, acceptance_rate in chains]
