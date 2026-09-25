@@ -1,3 +1,26 @@
+## 11.0.0 (2026-09-08)
+
+### Fix
+
+- switch to a more minimal dataset when fitting
+
+## 10.13.1 (2026-09-08)
+
+### Fix
+
+- only mock mpi4py when unavailable to avoid dirtying test session
+
+## 10.13.0 (2026-07-06)
+
+### Feat
+
+- example grid config yaml
+- added grid search script for LM fitter (issue #212)
+
+### Fix
+
+- use value key for consistency, add to_fit=False for unspecified parameters, fix filename spaces
+
 ## 10.12.0 (2026-06-10)
 
 ### Feat

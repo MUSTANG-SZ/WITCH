@@ -15,7 +15,7 @@ from jax.tree_util import register_pytree_node_class
 from mpi4py import MPI
 
 from .. import utils as wu
-from ..dataset import DataSet
+from ..dataset import DataSetData
 from .model import Model
 
 
@@ -42,8 +42,8 @@ class MetaModel:
         The MPI communicator used for all datasets.
     models : tuple[Model, ...]
         Tuple of models to fit together.
-    datasets : tuple[DataSet]
-        Tuple of datasets to fit together.
+    datasets : tuple[DataSetData]
+        Tuple of dataset data to fit together.
     parameter_map : tuple[tuple[int, ...], ...]
         Structure to map the parameters held in `MetaModel`
         to each individual `Model` instance.
@@ -71,7 +71,7 @@ class MetaModel:
 
     global_comm: MPI.Comm | MPI.Intracomm | wu.NullComm
     models: tuple[Model, ...]
-    datasets: tuple[DataSet, ...]
+    datasets: tuple[DataSetData, ...]
     parameter_map: tuple[tuple[int, ...], ...]
     model_map: tuple[tuple[int, ...], ...]
     metadata_map: tuple[tuple[tuple[int, ...], ...], ...]
@@ -475,19 +475,15 @@ class MetaModel:
             Dictionary of metadata to understand the state when we are saving.
         """
         datavecs = []
-        comms = []
         gcomm = self.global_comm
         for dataset in self.datasets:
             datavecs += [dataset.datavec]
-            comms += [dataset.global_comm]
             dataset.datavec = None
-            dataset.global_comm = wu.NullComm()
         self.global_comm = wu.NullComm()
         with open(path, "wb") as f:
             dill.dump((self, state), f)
-        for dataset, datavec, comm in zip(self.datasets, datavecs, comms):
+        for dataset, datavec in zip(self.datasets, datavecs):
             dataset.datavec = datavec
-            dataset.global_comm = comm
         self.global_comm = gcomm
 
     @classmethod
@@ -538,7 +534,7 @@ class MetaModel:
         cls,
         global_comm: MPI.Comm | MPI.Intracomm | wu.NullComm,
         cfg: dict,
-        datasets: tuple[DataSet, ...],
+        datasets: tuple[DataSetData, ...],
         remove_structs: bool = False,
     ) -> Self:
         """
@@ -550,8 +546,8 @@ class MetaModel:
             The communicator for this metamodel.
         cfg : dict
             The config loaded into a dict.
-        datasets : tuple[DataSet]
-            The datasets to associate with this model
+        datasets : tuple[DataSetData]
+            The dataset data to associate with this model
         remove_structs : bool, default: False
             If True don't include structures marked for removal.
 

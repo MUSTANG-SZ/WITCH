@@ -13,8 +13,12 @@ import dill as pk
 import numpy as np
 import pytest
 
-sys.modules["mpi4py"] = MagicMock()
-sys.modules["mpi4py.MPI"] = MagicMock()
+# Only mock mpi4py if it isn't actually available
+try:
+    import mpi4py
+except:
+    sys.modules["mpi4py"] = MagicMock()
+    sys.modules["mpi4py.MPI"] = MagicMock()
 
 from witch.fitter import _read_checkpoint, _read_model, _save_checkpoint
 

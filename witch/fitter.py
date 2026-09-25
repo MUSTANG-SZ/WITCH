@@ -26,7 +26,7 @@ from typing_extensions import Any, Unpack
 
 from .containers import MetaModel, Model_xfer
 from .containers.metamodel import _compute_metadata_map, _compute_par_map_and_pars
-from .dataset import DataSet
+from .dataset import DataSet, DataSetData
 from .fitting import run_lmfit, run_mcmc
 from .nonparametric import para_to_non_para
 from .objective import joint_objective
@@ -751,6 +751,18 @@ def main():
         preproc = eval(cfg["datasets"][dset_name]["funcs"]["preproc"])
         postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
         postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
+
+        # Get data, info, and metadata
+        datavec = load(dset_name, cfg, fnames[dset_name], comms_local[dset_name])
+        info = get_info(dset_name, cfg, datavec)
+        metadata = make_metadata(dset_name, cfg, info)
+
+        # Setup noise
+        noise_class = eval(str(cfg["datasets"][dset_name]["noise"]["class"]))
+        noise_args = tuple(eval(str(cfg["datasets"][dset_name]["noise"]["args"])))
+        noise_kwargs = eval(str(cfg["datasets"][dset_name]["noise"]["kwargs"]))
+
+        # Init dataset
         dataset = DataSet(
             dset_name,
             get_files,
@@ -761,27 +773,20 @@ def main():
             postproc,
             postfit,
             comm,
+            info,
         )
 
-        # Get data
-        dataset.datavec = load(
-            dset_name, cfg, fnames[dset_name], comms_local[dset_name]
+        # Init the data container
+        dataset.data = DataSetData(
+            dset_name,
+            info["mode"],
+            info["objective"],
+            datavec,
+            metadata,
+            noise_class,
+            noise_args,
+            noise_kwargs,
         )
-
-        # Get any info we need specific to an expiriment
-        dataset.info = get_info(dset_name, cfg, dataset.datavec)
-
-        # Get the metadata
-        metadata = make_metadata(dset_name, cfg, dataset.info)
-        dataset.metadata = metadata
-
-        # Setup noise
-        noise_class = eval(str(cfg["datasets"][dset_name]["noise"]["class"]))
-        noise_args = tuple(eval(str(cfg["datasets"][dset_name]["noise"]["args"])))
-        noise_kwargs = eval(str(cfg["datasets"][dset_name]["noise"]["kwargs"]))
-        dataset.info["noise_class"] = noise_class
-        dataset.info["noise_args"] = noise_args
-        dataset.info["noise_kwargs"] = noise_kwargs
 
         if "base" in cfg.keys():
             del cfg[
@@ -795,7 +800,7 @@ def main():
         metamodel = MetaModel.from_config(
             comm,
             cfg,
-            datasets,
+            tuple(dataset.data for dataset in datasets),
         )
     else:
         if "model" in cfg:
@@ -805,10 +810,11 @@ def main():
         metamodel = MetaModel(
             comm,
             tuple(),
-            datasets,
+            tuple(dataset.data for dataset in datasets),
             tuple(),
             tuple(),
             tuple(),
+            jnp.zeros(0),
             jnp.zeros(0),
             jnp.zeros(0),
             jnp.zeros(0),
@@ -821,19 +827,20 @@ def main():
     cfg["outdir"] = outdir
 
     # Now process
-    for dataset in metamodel.datasets:
+    for dataset in datasets:
         os.makedirs(os.path.join(outdir, dataset.name), exist_ok=True)
         dataset.info["outdir"] = outdir
         comm.barrier()
         dataset.preproc(dataset, cfg, metamodel)
         comm.barrier()
         if dataset.mode == "tod":
-            dataset.datavec = process_tods(cfg, dataset, metamodel)
+            dataset.data.datavec = process_tods(cfg, dataset, metamodel)
         elif dataset.mode == "map":
-            dataset.datavec = process_maps(cfg, dataset, metamodel)
+            dataset.data.datavec = process_maps(cfg, dataset, metamodel)
         comm.barrier()
         dataset = jax.block_until_ready(dataset)
         dataset.postproc(dataset, cfg, metamodel)
+    metamodel.datasets = tuple(dataset.data for dataset in datasets)
     comm.barrier()
 
     # Now we fit
@@ -841,23 +848,10 @@ def main():
     resample = cfg.get("resample", False)
     if to_fit and outdir is not None:
         metamodel = fit_loop(metamodel, cfg, comm)
-        if resample:
-            try:
-                samps, likelihood_chain = MC_resample(metamodel=metamodel)
-                outdir = cfg["outdir"]
-                if comm.Get_rank() != 0:
-                    return
-                res_path = os.path.join(outdir, "resample_results.dill")
-                par_dict = {
-                    samps: samps,
-                    likelihood_chain: likelihood_chain,
-                }
-                with open(res_path, "wb") as f:
-                    pk.dump(par_dict, f)
-            except Exception as e:
-                print(f"Not resampling due to error {e}.")
-        for dataset in metamodel.datasets:
+        for dataset, mdata in zip(datasets, metamodel.datasets):
+            dataset.data = mdata
             dataset.postfit(dataset, cfg, metamodel)
+        metamodel.datasets = tuple(dataset.data for dataset in datasets)
         if "nonpara" in cfg and cfg["nonpara"]["convert"]:
             print_once("Setting up nonparametric model")
             n_rounds = cfg["nonpara"].get("n_rounds", None)
@@ -900,16 +894,20 @@ def main():
 
             outdir = get_outdir(cfg, nonparametamodel)
             cfg["outdir"] = outdir
-            for dataset in nonparametamodel.datasets:
+            for dataset in datasets:
                 os.makedirs(os.path.join(outdir, dataset.name), exist_ok=True)
                 dataset.info["outdir"] = outdir
 
             nonparametamodel = fit_loop(nonparametamodel, cfg, comm, True)
-            for dataset in nonparametamodel.datasets:
-                dataset.postfit(dataset, cfg, nonparametamodel)
+            for dataset, mdata in zip(datasets, nonparametamodel.datasets):
+                dataset.data = mdata
+                dataset.postfit(dataset, cfg, metamodel)
+            nonparametamodel.datasets = tuple(dataset.data for dataset in datasets)
 
     else:
-        for dset_name, dataset, model in zip(dset_names, datasets, models):
-            dataset.postfit(dset_name, cfg, dataset.datavec, model, dataset.info)
+        for dataset, mdata in zip(datasets, metamodel.datasets):
+            dataset.data = mdata
+            dataset.postfit(dataset, cfg, metamodel)
+        metamodel.datasets = tuple(dataset.data for dataset in datasets)
 
     print_once("Outputs can be found in", outdir)
