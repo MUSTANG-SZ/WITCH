@@ -1,26 +1,12 @@
-import argparse as argp
 import os
-import sys
-import time
-from copy import deepcopy
 from importlib import import_module
 
-import corner
 import jax
 import jax.numpy as jnp
-import matplotlib.pyplot as plt
-import mpi4jax
-import numpy as np
-import yaml
-from mpi4py import MPI
-from typing_extensions import Any, Unpack
 
-from witch import utils as wu
-from witch.containers import Model, Model_xfer
 from witch.dataset import DataSet
 from witch.fitter import *
-from witch.fitter import _mpi_fsplit, _run_fit
-from witch.fitting import run_mcmc
+from witch.fitter import _mpi_fsplit
 
 
 def load_cfg(cfg):
