@@ -2,11 +2,11 @@
 Functions for performing forward modeling
 """
 
+import jax
 import jax.numpy as jnp
 import minkasi.tods.core as todcore
 import numpy as np
 from minkasi.maps.mapset import Mapset
-import jax
 
 from .core import model
 

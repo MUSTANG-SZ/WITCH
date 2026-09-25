@@ -1,10 +1,11 @@
-import numpy as np
-import jax.numpy as jnp
-import jax
 from copy import copy
 
-from .fitting import invsafe
+import jax
+import jax.numpy as jnp
+import numpy as np
+
 from .containers import MetaModel
+from .fitting import invsafe
 from .objective import joint_objective
 
 

@@ -8,13 +8,12 @@ the chains serially.
 import argparse
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
 
-from witch.fitter import fit_loop, load_config, comm
 from witch.cfg_loader import load_cfg
+from witch.fitter import comm, fit_loop, load_config
 from witch.metropolis_hastings import run_chains_parallel, run_chains_serial
-
-import matplotlib.pyplot as plt
 
 
 def parse_args():
@@ -136,7 +135,7 @@ def main():
             )
         )
     consumer.plotter.plot()
-    plt.savefig(output_path+"mcmc.pdf")
+    plt.savefig(output_path + "mcmc.pdf")
     print(f"Acceptance rates: {acceptance_rates}")
 
 

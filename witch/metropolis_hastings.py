@@ -7,17 +7,16 @@ chains concurrently in threads.
 """
 
 from concurrent.futures import ThreadPoolExecutor
+from copy import copy
 from functools import partial
 
 import jax
 import jax.numpy as jnp
 import numpy as np
-from copy import copy
-
-
-from .fitter import joint_objective
-from .containers import MetaModel
 from tqdm import tqdm
+
+from .containers import MetaModel
+from .fitter import joint_objective
 
 
 def _updated_metamodel(metamodel: MetaModel, pars: np.ndarray):
@@ -206,6 +205,7 @@ def metropolis_hastings(
         pars=current_state,
         dataset_ind=dataset_ind,
     )
+
     # helper to compute log prior (supports gaussian via metamodel.errs and uniform bounds)
     def _log_prior(meta, pars, err_scale=1.0):
         lower = jnp.asarray(meta.priors[0])
@@ -247,7 +247,9 @@ def metropolis_hastings(
             pars=candidate,
             dataset_ind=dataset_ind,
         )
-        p_candidate = p_like_candidate + _log_prior(metamodel, candidate, prior_err_scale)
+        p_candidate = p_like_candidate + _log_prior(
+            metamodel, candidate, prior_err_scale
+        )
 
         current_logpost = float(p_current)
         candidate_logpost = float(p_candidate)
@@ -272,7 +274,13 @@ def metropolis_hastings(
 
 
 def run_chains_serial(
-    metamodel, num_samples, num_chains, bound=2, seed=0, prior_type="uniform", prior_err_scale=1.0
+    metamodel,
+    num_samples,
+    num_chains,
+    bound=2,
+    seed=0,
+    prior_type="uniform",
+    prior_err_scale=1.0,
 ):
     """
     Run multiple chains serially with the MPI-aware joint likelihood.
@@ -281,7 +289,9 @@ def run_chains_serial(
     must be called in the same order by all ranks.
     """
     jax.block_until_ready(calc_like_joint(metamodel, metamodel.parameters))
-    jax.block_until_ready(draw_samp(metamodel, jax.random.key(seed), bound, prior_type, prior_err_scale))
+    jax.block_until_ready(
+        draw_samp(metamodel, jax.random.key(seed), bound, prior_type, prior_err_scale)
+    )
 
     chains = []
     for chain_id in range(num_chains):
@@ -322,7 +332,9 @@ def run_chains_parallel(
     jax.block_until_ready(
         calc_like_dataset(metamodel, metamodel.parameters, dataset_ind)
     )
-    jax.block_until_ready(draw_samp(metamodel, jax.random.key(seed), bound, prior_type, prior_err_scale))
+    jax.block_until_ready(
+        draw_samp(metamodel, jax.random.key(seed), bound, prior_type, prior_err_scale)
+    )
 
     with ThreadPoolExecutor(max_workers=num_chains) as executor:
         futures = [

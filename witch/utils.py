@@ -3,6 +3,8 @@ A set of utility functions and constants used for unit conversions
 and cosmology as well as some generically useful math functions.
 """
 
+from functools import partial
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -10,7 +12,6 @@ from astropy import constants as const
 from astropy import units as u
 from astropy.cosmology import Planck15 as cosmo
 from jax.typing import ArrayLike
-from functools import partial
 
 jax.config.update("jax_enable_x64", True)
 
