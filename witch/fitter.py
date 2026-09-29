@@ -24,13 +24,13 @@ import yaml
 from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
-from . import utils as wu
 from .containers import MetaModel, Model_xfer
 from .containers.metamodel import _compute_metadata_map, _compute_par_map_and_pars
 from .dataset import DataSet, DataSetData
 from .fitting import run_lmfit, run_mcmc
 from .nonparametric import para_to_non_para
 from .objective import joint_objective
+from .resampling import MC_resample
 
 comm = MPI.COMM_WORLD.Clone()
 
@@ -497,7 +497,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
     _save_model(cfg, metamodel, "mcmc", nonpara)
     if comm.Get_rank() == 0:
         samples = np.array(samples)
-        samps_path = os.path.join(cfg["outdir"], f"samples_mcmc.npz")
+        samps_path = os.path.join(cfg["outdir"], "samples_mcmc.npz")
         print_once("Saving samples to", samps_path)
         np.savez_compressed(samps_path, samples=samples)
         try:
@@ -556,7 +556,7 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             )
             load_path = None
     else:
-        print_once(f"[resume] Not resuming from previous checkpoint")
+        print_once("[resume] Not resuming from previous checkpoint")
 
     # Actually load and validate checkpoint if we found valid path
     if load_path is not None:
@@ -845,6 +845,7 @@ def main():
 
     # Now we fit
     to_fit = cfg.get("fit", True)
+    resample = cfg.get("resample", False)
     if to_fit and outdir is not None:
         metamodel = fit_loop(metamodel, cfg, comm)
         for dataset, mdata in zip(datasets, metamodel.datasets):

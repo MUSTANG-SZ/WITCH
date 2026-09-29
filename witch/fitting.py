@@ -337,7 +337,7 @@ def hmc(
     # Can probably fix by moving functions out of local scope
     if c_sample is None:
         if rank == 0:
-            print(f"Compiling MC sample function. This can take a few minutes!")
+            print("Compiling MC sample function. This can take a few minutes!")
         t0 = time.time()
         _ = _sample(key.copy(), params.copy(), step_size.copy())
         jax.block_until_ready(_)
