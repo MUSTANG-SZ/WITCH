@@ -7,6 +7,8 @@ the chains serially.
 
 import argparse
 import os
+import warnings
+from collections.abc import Sequence
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,6 +16,87 @@ import numpy as np
 from witch.cfg_loader import load_cfg
 from witch.fitter import comm, fit_loop, load_config
 from witch.metropolis_hastings import run_chains_parallel, run_chains_serial
+
+
+def sanitize_chains(
+    chain_samples: np.ndarray,
+    par_names: Sequence[str] | np.ndarray,
+    fit_mask: Sequence[bool] | np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Make parameter names unique and identify immobile parameters.
+
+    Duplicate parameter names are renamed with numeric suffixes, preserving
+    the first occurrence. Fitted parameters with no movement in any chain are
+    excluded from the returned plotting mask.
+
+    Parameters
+    ----------
+    chain_samples : np.ndarray
+        Samples with shape ``(num_chains, num_samples, num_parameters)``.
+    par_names : Sequence[str] or np.ndarray
+        Name for each parameter in the final axis of ``chain_samples``.
+    fit_mask : Sequence[bool] or np.ndarray
+        Boolean mask indicating which parameters are fitted. Must have one
+        entry per parameter.
+
+    Returns
+    -------
+    unique_names : np.ndarray
+        Parameter names made unique where duplicates were present.
+    plot_mask : np.ndarray
+        Copy of ``fit_mask`` with parameters that have no movement in at least
+        one chain set to ``False``.
+
+    Warns
+    -----
+    UserWarning
+        If parameter names are duplicated or fitted parameters have no movement.
+        The no-movement warning identifies the affected parameters and chains.
+    """
+    unique_names = []
+    used_names = set()
+    occurrences = {}
+    renamed = []
+    for name in map(str, par_names):
+        occurrences[name] = occurrences.get(name, 0) + 1
+        suffix = occurrences[name]
+        candidate = name if suffix == 1 else f"{name}_{suffix}"
+        while candidate in used_names:
+            suffix += 1
+            candidate = f"{name}_{suffix}"
+        used_names.add(candidate)
+        unique_names.append(candidate)
+        if candidate != name:
+            renamed.append(f"{name} -> {candidate}")
+
+    if renamed:
+        warnings.warn(
+            "Duplicate parameter names found; renamed duplicates: "
+            + ", ".join(renamed),
+            UserWarning,
+            stacklevel=2,
+        )
+
+    plot_mask = np.asarray(fit_mask, dtype=bool).copy()
+    immobile = []
+    for parameter_index in np.flatnonzero(plot_mask):
+        frozen_chains = np.flatnonzero(
+            np.ptp(chain_samples[:, :, parameter_index], axis=1) == 0
+        )
+        if frozen_chains.size:
+            plot_mask[parameter_index] = False
+            chain_labels = ", ".join(f"Chain {index}" for index in frozen_chains)
+            immobile.append(f"{unique_names[parameter_index]} ({chain_labels})")
+
+    if immobile:
+        warnings.warn(
+            "Parameters with no movement were removed from the plot: "
+            + "; ".join(immobile),
+            UserWarning,
+            stacklevel=2,
+        )
+
+    return np.asarray(unique_names), plot_mask
 
 
 def parse_args():
@@ -111,6 +194,7 @@ def main():
     # Filter out chains to only look at fit parameters.
     fit_mask = np.asarray(metamodel.to_fit)
     chain_samples = np.stack([chain_samples for chain_samples, _ in chains])
+    par_names, plot_mask = sanitize_chains(chain_samples, metamodel.par_names, fit_mask)
     output_path = (
         args.output if os.path.isabs(args.output) else os.path.join(outdir, args.output)
     )
@@ -118,24 +202,31 @@ def main():
         output_path,
         samples=chain_samples,
         acceptance_rates=np.asarray(acceptance_rates),
-        par_names=np.asarray(metamodel.par_names),
+        par_names=par_names,
         to_fit=fit_mask,
     )
     print(f"Saved chains to {output_path}")
 
     consumer = ChainConsumer()
-    for chain_id, (chain_samples, _) in enumerate(chains):
-        consumer.add_chain(
-            Chain(
-                samples=pd.DataFrame(
-                    chain_samples[:, fit_mask],
-                    columns=np.asarray(metamodel.par_names)[fit_mask],
-                ),
-                name=f"RXJ1347 chain {chain_id}",
+    if np.any(plot_mask):
+        for chain_id, (chain_samples, _) in enumerate(chains):
+            consumer.add_chain(
+                Chain(
+                    samples=pd.DataFrame(
+                        chain_samples[:, plot_mask],
+                        columns=par_names[plot_mask],
+                    ),
+                    name=f"RXJ1347 chain {chain_id}",
+                )
             )
+        consumer.plotter.plot()
+        plt.savefig(output_path + "mcmc.pdf")
+    else:
+        warnings.warn(
+            "No fitted parameters with movement remain; skipping the MCMC plot.",
+            UserWarning,
+            stacklevel=2,
         )
-    consumer.plotter.plot()
-    plt.savefig(output_path + "mcmc.pdf")
     print(f"Acceptance rates: {acceptance_rates}")
 
 
