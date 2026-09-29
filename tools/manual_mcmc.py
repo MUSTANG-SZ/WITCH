@@ -23,7 +23,8 @@ def sanitize_chains(
     par_names: Sequence[str] | np.ndarray,
     fit_mask: Sequence[bool] | np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Make parameter names unique and identify immobile parameters.
+    """
+    Make parameter names unique and identify immobile parameters.
 
     Duplicate parameter names are renamed with numeric suffixes, preserving
     the first occurrence. Fitted parameters with no movement in any chain are
