@@ -412,7 +412,7 @@ def _run_fit(
     to_fit = np.array(metamodel.to_fit)
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
-    metamodel, i, delta_chisq = run_lmfit(
+    metamodel, i, delta_chisq, lmd = run_lmfit(
         metamodel,
         eval(str(cfg["fitting"].get("maxiter", "10"))),
         eval(str(cfg["fitting"].get("chitol", "1e-5"))),
@@ -420,14 +420,14 @@ def _run_fit(
     mpi4jax.barrier(comm=comm)
     t2 = time.time()
     print_once(
-        f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}"
+        f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}, final lambda: {lmd}"
     )
 
     print_once(metamodel)
     _save_model(cfg, metamodel, f"fit{r}", nonpara)
 
     metamodel = _reestimate_noise(metamodel)
-    return metamodel
+    return metamodel, i
 
 
 def _mcmc_checkpoint_callback(
@@ -597,13 +597,18 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     print_once(
         re.sub(r"^Round 1.*\n?", "Starting pars:\n", str(metamodel), flags=re.MULTILINE)
     )
+    consecutive_single_iteration_rounds = 0
     for r in range(start_round, metamodel.n_rounds):
-        metamodel = _run_fit(
+        metamodel, iterations = _run_fit(
             cfg,
             metamodel,
             r,
             nonpara,
         )
+        if iterations == 1:
+            consecutive_single_iteration_rounds += 1
+        else:
+            consecutive_single_iteration_rounds = 0
         mpi4jax.barrier(comm=comm)
 
         # Checkpoint after each round
@@ -616,6 +621,11 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             round_num=r,
         )
         print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
+        if consecutive_single_iteration_rounds >= 2:
+            print_once(
+                "Stopping fitting after two consecutive rounds completed in one iteration"
+            )
+            break
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
         metamodel = _run_mcmc(
