@@ -221,7 +221,8 @@ def main():
                 )
             )
         consumer.plotter.plot()
-        plt.savefig(output_path + "mcmc.pdf")
+        plot_path = os.path.splitext(output_path)[0] + ".pdf"
+        plt.savefig(plot_path)
     else:
         warnings.warn(
             "No fitted parameters with movement remain; skipping the MCMC plot.",
