@@ -218,14 +218,14 @@ def run_lmfit(
         return (i + 1, delta_chisq, lmd, metamodel, curve, grad)
 
     pars, _ = _prior_pars_fit(
-         metamodel.priors, metamodel.parameters, jnp.array(metamodel.to_fit)
-     )
+        metamodel.priors, metamodel.parameters, jnp.array(metamodel.to_fit)
+    )
     # Recompute chisq at the starting pars so that it matches the current noise model,
     # the stored value may be from before the noise was reestimated
     chisq, grad, curve = joint_objective(metamodel, True, True, True)
     metamodel = metamodel.update(
         pars=pars, errs=metamodel.errs, cov=metamodel.cov, chisq=chisq
-   )
+    )
     i, delta_chisq, lmd, metamodel, *_ = jax.lax.while_loop(
         _cond_func,
         _body_func,
