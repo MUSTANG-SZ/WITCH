@@ -63,13 +63,13 @@ def calc_like_joint(metamodel: MetaModel, pars: np.ndarray, dataset_ind: int = 0
     """
     del dataset_ind
     cur_meta = _updated_metamodel(metamodel, pars)
-    loglike, _, _ = joint_objective(
+    chisq, _, _ = joint_objective(
         metamodel=cur_meta,
         do_loglike=True,
         do_grad=False,
         do_curve=False,
     )
-    return loglike
+    return -0.5 * chisq
 
 
 @partial(jax.jit, static_argnames=("dataset_ind",))
@@ -93,7 +93,7 @@ def calc_like_dataset(metamodel, pars, dataset_ind=0):
     loglike : the log likelihood of the data to the parameters.
     """
     cur_meta = _updated_metamodel(metamodel, pars)
-    loglike, _, _ = cur_meta.datasets[dataset_ind].objective(
+    chisq, _, _ = cur_meta.datasets[dataset_ind].objective(
         cur_meta,
         dataset_ind,
         do_loglike=True,
@@ -101,19 +101,25 @@ def calc_like_dataset(metamodel, pars, dataset_ind=0):
         do_curve=False,
     )
 
-    return loglike
+    return -0.5 * chisq
 
 
 @partial(jax.jit, static_argnames=("prior_type",))
-def draw_samp(metamodel, key, bound=2, prior_type="uniform", err_scale=1.0):
+def draw_samp(
+    metamodel,
+    key,
+    bound=2,
+    prior_type="uniform",
+    err_scale=1.0,
+    parameter_scale=None,
+):
     """
     Draw a masked proposal from a uniform or normal distribution.
 
-    Uniform proposals use the model's prior bounds, replacing unbounded
-    limits with values scaled from the current parameters. Normal proposals
-    are centered on the current parameters and use ``metamodel.errs`` as
-    standard deviations. Parameters outside ``metamodel.to_fit`` remain
-    unchanged.
+    Uniform and normal proposals are centered on the current parameters and
+    use ``metamodel.errs`` to set their step widths. Uniform-prior bounds are
+    enforced by the acceptance test. Parameters outside ``metamodel.to_fit``
+    remain unchanged.
 
     Parameters
     ----------
@@ -122,9 +128,15 @@ def draw_samp(metamodel, key, bound=2, prior_type="uniform", err_scale=1.0):
     key : jax.Array
         JAX PRNG key used for the proposal.
     bound : float, default=2
-        Scale factor used to replace unbounded uniform limits.
+        Fallback scale for proposal widths when fitted errors or prior bounds
+        cannot provide a finite width.
     prior_type : {"uniform", "normal"}, default="uniform"
-        Proposal distribution to use.
+        Prior and symmetric proposal distribution to use.
+    err_scale : float, default=1.0
+        Scale factor for proposal widths derived from ``metamodel.errs``.
+    parameter_scale : jax.Array, optional
+        Fixed scale for normalized coordinates. If omitted, derive it from the
+        current parameters and errors.
 
     Returns
     -------
@@ -132,21 +144,45 @@ def draw_samp(metamodel, key, bound=2, prior_type="uniform", err_scale=1.0):
         Proposed full parameter vector.
     """
     pars = jnp.asarray(metamodel.parameters)
+    if parameter_scale is None:
+        errs_for_scale = jnp.abs(jnp.asarray(metamodel.errs))
+        parameter_scale = jnp.where(
+            pars != 0,
+            jnp.abs(pars),
+            jnp.where(errs_for_scale > 0, errs_for_scale, jnp.ones_like(pars)),
+        )
+    else:
+        parameter_scale = jnp.asarray(parameter_scale)
+    normalized_pars = pars / parameter_scale
     if prior_type == "uniform":
-        lower = jnp.asarray(metamodel.priors[0])
-        upper = jnp.asarray(metamodel.priors[1])
-        unbounded = jnp.isinf(lower)
-        lower = jnp.where(unbounded, pars / bound, lower)
-        upper = jnp.where(unbounded, pars * bound, upper)
-        new_pars = jax.random.uniform(key, shape=pars.shape, minval=lower, maxval=upper)
+        lower = jnp.asarray(metamodel.priors[0]) / parameter_scale
+        upper = jnp.asarray(metamodel.priors[1]) / parameter_scale
+        errs = jnp.asarray(metamodel.errs) * err_scale / parameter_scale
+        fallback = jnp.where(
+            jnp.isfinite(lower) & jnp.isfinite(upper),
+            (upper - lower) / 10.0,
+            jnp.ones_like(normalized_pars) / bound,
+        )
+        valid_errs = jnp.isfinite(errs) & (errs > 0)
+        step_width = jnp.where(
+            valid_errs,
+            jnp.clip(errs, fallback * 0.1, fallback),
+            fallback,
+        )
+        normalized_new_pars = normalized_pars + step_width * (
+            2 * jax.random.uniform(key, shape=pars.shape) - 1
+        )
     elif prior_type == "normal":
         # For normal proposals, sample around current pars using metamodel.errs
         # scaled by `err_scale` (passed from the chain runner/CLI).
-        errs = jnp.asarray(metamodel.errs)
-        new_pars = pars + errs * err_scale * jax.random.normal(key, shape=pars.shape)
+        errs = jnp.asarray(metamodel.errs) * err_scale / parameter_scale
+        normalized_new_pars = normalized_pars + errs * jax.random.normal(
+            key, shape=pars.shape
+        )
     else:
         raise ValueError(f"Unknown prior type: {prior_type}")
 
+    new_pars = normalized_new_pars * parameter_scale
     return jnp.where(metamodel.to_fit, new_pars, pars)
 
 
@@ -164,9 +200,9 @@ def metropolis_hastings(
     """
     Run one Metropolis-Hastings chain using log-likelihoods.
 
-    The likelihood function must return a log likelihood. Since the proposal
-    distribution matches the selected uniform or normal prior, the proposal
-    and prior terms cancel in the acceptance ratio.
+    The likelihood function must return a log likelihood. Proposals are
+    symmetric random walks, so their forward and reverse proposal terms cancel
+    in the acceptance ratio. The selected prior is included separately.
 
     Parameters
     ----------
@@ -185,7 +221,7 @@ def metropolis_hastings(
     dataset_ind : int, default=0
         Dataset index passed to ``calc_like_func``.
     prior_type : {"uniform", "normal"}, default="uniform"
-        Proposal/prior distribution.
+        Prior and symmetric proposal distribution.
 
     Returns
     -------
@@ -196,6 +232,12 @@ def metropolis_hastings(
     """
     samples = np.zeros((num_samples, len(metamodel.parameters)))
     current_state = metamodel.parameters
+    initial_errs = jnp.abs(jnp.asarray(metamodel.errs))
+    parameter_scale = jnp.where(
+        current_state != 0,
+        jnp.abs(current_state),
+        jnp.where(initial_errs > 0, initial_errs, jnp.ones_like(current_state)),
+    )
     accepted_count = 0
     key = jax.random.key(seed)
     rng = np.random.default_rng(seed)
@@ -231,14 +273,16 @@ def metropolis_hastings(
         desc=f"Chain {chain_id + 1}",
         unit="step",
     ):
-        # Propose a candidate state using a symmetric Normal distribution
+        # Propose a candidate state using a symmetric random walk.
         key, sample_key = jax.random.split(key)
+        proposal_metamodel = _updated_metamodel(metamodel, current_state)
         candidate = draw_samp(
-            metamodel=metamodel,
+            metamodel=proposal_metamodel,
             key=sample_key,
             bound=bound,
             prior_type=prior_type,
             err_scale=prior_err_scale,
+            parameter_scale=parameter_scale,
         )
 
         # Compare log acceptance probabilities to avoid exponentiating likelihoods.
