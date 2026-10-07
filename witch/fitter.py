@@ -606,9 +606,7 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             r,
             nonpara,
         )
-        single_iteration_round = comm.allreduce(
-            int(iterations == 1), op=MPI.MIN
-        ) == 1
+        single_iteration_round = comm.allreduce(int(iterations == 1), op=MPI.MIN) == 1
         if single_iteration_round:
             consecutive_single_iteration_rounds += 1
         else:

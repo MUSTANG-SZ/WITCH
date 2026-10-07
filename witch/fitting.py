@@ -148,6 +148,7 @@ def _make_tod_objectives(metamodel: MetaModel):
     for dataset_ind, dataset in enumerate(metamodel.datasets):
         objective = getattr(dataset.objective, "__wrapped__", dataset.objective)
         for tod in dataset.datavec:
+
             def objective_for_tod(
                 current_metamodel,
                 dataset_ind=dataset_ind,
@@ -184,14 +185,22 @@ def _tod_chunked_objective(metamodel: MetaModel, objectives=None):
 
     comm = metamodel.global_comm
     if isinstance(comm, NullComm) or comm.Get_size() == 1:
-        return jnp.asarray(local_chisq), jnp.asarray(local_grad), jnp.asarray(local_curve)
+        return (
+            jnp.asarray(local_chisq),
+            jnp.asarray(local_grad),
+            jnp.asarray(local_curve),
+        )
 
     global_grad = np.empty_like(local_grad)
     global_curve = np.empty_like(local_curve)
     comm.Allreduce(local_grad, global_grad, op=MPI.SUM)
     comm.Allreduce(local_curve, global_curve, op=MPI.SUM)
     global_chisq = comm.allreduce(local_chisq, op=MPI.SUM)
-    return jnp.asarray(global_chisq), jnp.asarray(global_grad), jnp.asarray(global_curve)
+    return (
+        jnp.asarray(global_chisq),
+        jnp.asarray(global_grad),
+        jnp.asarray(global_curve),
+    )
 
 
 def _run_lmfit_tod_chunks(
@@ -214,9 +223,7 @@ def _run_lmfit_tod_chunks(
     iteration = 0
     delta_chisq = jnp.array(jnp.inf, jnp.float32)
     lmd = zero.copy()
-    while iteration < maxiter and (
-        bool(delta_chisq >= chitol) or bool(lmd > zero)
-    ):
+    while iteration < maxiter and (bool(delta_chisq >= chitol) or bool(lmd > zero)):
         curve_use = curve.at[:].add(lmd * jnp.diag(jnp.diag(curve)))
         step = jnp.dot(
             invscale(curve_use.at[tf, :].get().at[:, tf].get()), grad.at[tf].get()
@@ -292,7 +299,9 @@ def run_lmfit(
     chitol = jnp.float32(chitol)
     tf = np.where(np.array(metamodel.to_fit))[0]
 
-    if metamodel.datasets and all(dataset.mode == "tod" for dataset in metamodel.datasets):
+    if metamodel.datasets and all(
+        dataset.mode == "tod" for dataset in metamodel.datasets
+    ):
         local_multiple_tods = any(
             len(dataset.datavec.tods) > 1 for dataset in metamodel.datasets
         )
@@ -300,9 +309,7 @@ def run_lmfit(
             use_tod_chunks = local_multiple_tods
         else:
             use_tod_chunks = (
-                metamodel.global_comm.allreduce(
-                    int(local_multiple_tods), op=MPI.MAX
-                )
+                metamodel.global_comm.allreduce(int(local_multiple_tods), op=MPI.MAX)
                 > 0
             )
         if use_tod_chunks:

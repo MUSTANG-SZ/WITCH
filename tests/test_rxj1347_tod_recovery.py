@@ -9,7 +9,6 @@ import numpy as np
 import pytest
 import yaml
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RXJ1347_CONFIG = REPO_ROOT / "unit_tests" / "RXJ1347_a10.yaml"
 TOD_ROOT = Path(os.environ.get("WITCH_DATROOT", Path.home())) / "RXJ1347" / "mustang2"

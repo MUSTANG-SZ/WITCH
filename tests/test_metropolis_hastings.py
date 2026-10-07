@@ -14,7 +14,10 @@ class _MetaModel:
     def __init__(self, parameters):
         self.parameters = jnp.asarray(parameters)
         self.errs = jnp.ones_like(self.parameters)
-        self.priors = (jnp.full_like(self.parameters, -10), jnp.full_like(self.parameters, 10))
+        self.priors = (
+            jnp.full_like(self.parameters, -10),
+            jnp.full_like(self.parameters, 10),
+        )
         self.cov = jnp.zeros((len(parameters), len(parameters)))
         self.chisq = jnp.array(0.0)
         self.to_fit = jnp.ones_like(self.parameters, dtype=bool)
