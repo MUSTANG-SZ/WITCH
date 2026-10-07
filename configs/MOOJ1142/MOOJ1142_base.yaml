@@ -1,6 +1,6 @@
 fit: True # If True fit the cluster, overridden by command line
 sub: True # If True the cluster before mapmaking, overridden by command line
-n_rounds: 4 # How many rounds of fitting to try
+n_rounds: 10 # How many rounds of fitting to try
 model_map: True
 resample: True
 
@@ -78,8 +78,8 @@ datasets:
 
 # Setting for the fitter
 fitting:
-  maxiter: 10 # Maximum fit iterations per round
-  chitol: 1e-5 # Change in chisq that we consider to be converged
+  maxiter: 20 # Maximum fit iterations per round
+  chitol: 1e-3 # Change in chisq that we consider to be converged
 
 imports:
   astropy.units: u

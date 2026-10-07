@@ -588,7 +588,8 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     # Compile objective function
     print_once("Compiling objective function")
     t0 = time.time()
-    chisq, *_ = joint_objective(metamodel)
+    chisq, _, _ = joint_objective(metamodel, do_grad=False, do_curve=False)
+    jax.block_until_ready(chisq)
     metamodel = metamodel.update(
         pars=metamodel.parameters, errs=metamodel.errs, cov=metamodel.cov, chisq=chisq
     )
@@ -605,7 +606,10 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             r,
             nonpara,
         )
-        if iterations == 1:
+        single_iteration_round = comm.allreduce(
+            int(iterations == 1), op=MPI.MIN
+        ) == 1
+        if single_iteration_round:
             consecutive_single_iteration_rounds += 1
         else:
             consecutive_single_iteration_rounds = 0
