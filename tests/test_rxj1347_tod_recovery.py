@@ -25,6 +25,7 @@ def test_rxj1347_simulated_a10_gaussian_recovers_input_parameters(tmp_path):
 
     env = os.environ.copy()
     env["WITCH_OUTROOT"] = str(tmp_path / "output")
+    print("Launching RXJ1347 fit with 4 MPI ranks", flush=True)
     result = subprocess.run(
         [
             mpirun,
@@ -34,12 +35,10 @@ def test_rxj1347_simulated_a10_gaussian_recovers_input_parameters(tmp_path):
             str(RXJ1347_CONFIG),
         ],
         check=False,
-        capture_output=True,
-        text=True,
         env=env,
         timeout=1800,
     )
-    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.returncode == 0
 
     result_files = list((tmp_path / "output").rglob("par_results_final_fit.dill"))
     assert len(result_files) == 1
