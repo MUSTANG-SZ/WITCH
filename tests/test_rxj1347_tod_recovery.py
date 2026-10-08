@@ -66,4 +66,3 @@ def test_rxj1347_simulated_a10_gaussian_recovers_input_parameters(tmp_path):
             failures.append(parameter)
 
     assert not failures, f"Parameters outside 5% recovery tolerance: {failures}"
-
