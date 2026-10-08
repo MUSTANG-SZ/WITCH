@@ -148,6 +148,5 @@ class TestCheckpointing:
             _read_checkpoint("/nonexistent/path/checkpoint.pkl")
 
 
-
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
