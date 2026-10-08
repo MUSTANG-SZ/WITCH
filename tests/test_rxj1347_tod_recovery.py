@@ -35,6 +35,7 @@ def test_rxj1347_simulated_a10_gaussian_recovers_input_parameters(tmp_path):
             str(RXJ1347_CONFIG),
         ],
         check=False,
+        capture_output=True,
         env=env,
         timeout=1800,
     )
