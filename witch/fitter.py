@@ -24,13 +24,13 @@ import yaml
 from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
-from . import utils as wu
 from .containers import MetaModel, Model_xfer
 from .containers.metamodel import _compute_metadata_map, _compute_par_map_and_pars
 from .dataset import DataSet, DataSetData
 from .fitting import run_lmfit, run_mcmc
 from .nonparametric import para_to_non_para
 from .objective import joint_objective
+from .resampling import MC_resample
 
 comm = MPI.COMM_WORLD.Clone()
 
@@ -412,7 +412,7 @@ def _run_fit(
     to_fit = np.array(metamodel.to_fit)
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
-    metamodel, i, delta_chisq = run_lmfit(
+    metamodel, i, delta_chisq, lmd = run_lmfit(
         metamodel,
         eval(str(cfg["fitting"].get("maxiter", "10"))),
         eval(str(cfg["fitting"].get("chitol", "1e-5"))),
@@ -420,14 +420,14 @@ def _run_fit(
     mpi4jax.barrier(comm=comm)
     t2 = time.time()
     print_once(
-        f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}"
+        f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}, final lambda: {lmd}"
     )
 
     print_once(metamodel)
     _save_model(cfg, metamodel, f"fit{r}", nonpara)
 
     metamodel = _reestimate_noise(metamodel)
-    return metamodel
+    return metamodel, i
 
 
 def _mcmc_checkpoint_callback(
@@ -497,7 +497,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
     _save_model(cfg, metamodel, "mcmc", nonpara)
     if comm.Get_rank() == 0:
         samples = np.array(samples)
-        samps_path = os.path.join(cfg["outdir"], f"samples_mcmc.npz")
+        samps_path = os.path.join(cfg["outdir"], "samples_mcmc.npz")
         print_once("Saving samples to", samps_path)
         np.savez_compressed(samps_path, samples=samples)
         try:
@@ -556,7 +556,7 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             )
             load_path = None
     else:
-        print_once(f"[resume] Not resuming from previous checkpoint")
+        print_once("[resume] Not resuming from previous checkpoint")
 
     # Actually load and validate checkpoint if we found valid path
     if load_path is not None:
@@ -588,7 +588,8 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     # Compile objective function
     print_once("Compiling objective function")
     t0 = time.time()
-    chisq, *_ = joint_objective(metamodel)
+    chisq, _, _ = joint_objective(metamodel, do_grad=False, do_curve=False)
+    jax.block_until_ready(chisq)
     metamodel = metamodel.update(
         pars=metamodel.parameters, errs=metamodel.errs, cov=metamodel.cov, chisq=chisq
     )
@@ -597,13 +598,19 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     print_once(
         re.sub(r"^Round 1.*\n?", "Starting pars:\n", str(metamodel), flags=re.MULTILINE)
     )
+    consecutive_single_iteration_rounds = 0
     for r in range(start_round, metamodel.n_rounds):
-        metamodel = _run_fit(
+        metamodel, iterations = _run_fit(
             cfg,
             metamodel,
             r,
             nonpara,
         )
+        single_iteration_round = comm.allreduce(int(iterations == 1), op=MPI.MIN) == 1
+        if single_iteration_round:
+            consecutive_single_iteration_rounds += 1
+        else:
+            consecutive_single_iteration_rounds = 0
         mpi4jax.barrier(comm=comm)
 
         # Checkpoint after each round
@@ -616,6 +623,11 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             round_num=r,
         )
         print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
+        if consecutive_single_iteration_rounds >= 2:
+            print_once(
+                "Stopping fitting after two consecutive rounds completed in one iteration"
+            )
+            break
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
         metamodel = _run_mcmc(
@@ -845,6 +857,7 @@ def main():
 
     # Now we fit
     to_fit = cfg.get("fit", True)
+    resample = cfg.get("resample", False)
     if to_fit and outdir is not None:
         metamodel = fit_loop(metamodel, cfg, comm)
         for dataset, mdata in zip(datasets, metamodel.datasets):

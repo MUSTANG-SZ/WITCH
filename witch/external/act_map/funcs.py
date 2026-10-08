@@ -4,7 +4,6 @@ import os
 import jax.numpy as jnp
 from astropy.io import fits
 from astropy.wcs import WCS
-from jax import Array
 from jitkasi.solutions import SolutionSet, maps
 from mpi4py import MPI
 
