@@ -1,7 +1,6 @@
 import os
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 import dill
@@ -20,8 +19,9 @@ def test_rxj1347_simulated_a10_gaussian_recovers_input_parameters(tmp_path):
     pytest.importorskip("minkasi")
     pytest.importorskip("jitkasi")
     mpirun = shutil.which("mpirun")
-    if mpirun is None:
-        pytest.skip("Requires mpirun for the two-rank fitting regression")
+    witcher = shutil.which("witcher")
+    if mpirun is None or witcher is None:
+        pytest.skip("Requires mpirun and witcher for the four-rank fitting regression")
 
     env = os.environ.copy()
     env["WITCH_OUTROOT"] = str(tmp_path / "output")
@@ -29,10 +29,8 @@ def test_rxj1347_simulated_a10_gaussian_recovers_input_parameters(tmp_path):
         [
             mpirun,
             "-n",
-            "2",
-            sys.executable,
-            "-c",
-            "from witch.fitter import main; main()",
+            "4",
+            witcher,
             str(RXJ1347_CONFIG),
         ],
         check=False,
