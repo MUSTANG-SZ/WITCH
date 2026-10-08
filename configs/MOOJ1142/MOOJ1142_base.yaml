@@ -1,6 +1,6 @@
 fit: True # If True fit the cluster, overridden by command line
 sub: True # If True the cluster before mapmaking, overridden by command line
-n_rounds: 10 # How many rounds of fitting to try
+n_rounds: 40 # How many rounds of fitting to try
 model_map: True
 resample: True
 

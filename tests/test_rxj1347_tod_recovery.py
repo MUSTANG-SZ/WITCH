@@ -70,10 +70,19 @@ def test_rxj1347_simulated_a10_gaussian_recovers_input_parameters(tmp_path):
 
     fitted = dict(zip(fit_result["par_names"], fit_result["parameters"], strict=True))
     injected = {"m500": 1.5e15, "alpha": 1.551, "amp_g": 0.002}
+    failures = []
     for parameter, true_value in injected.items():
-        relative_error = abs(fitted[parameter] - true_value) / abs(true_value)
-        assert relative_error <= 0.05, (
-            f"{parameter} recovered as {fitted[parameter]:.8g}; "
-            f"injected value is {true_value:.8g} "
-            f"(relative error {relative_error:.2%})"
+        recovered_value = fitted[parameter]
+        relative_error = abs(recovered_value - true_value) / abs(true_value)
+        passed = relative_error <= 0.05
+        status = "PASS" if passed else "FAIL"
+        print(
+            f"{status} {parameter}: injected={true_value:.8g}, "
+            f"recovered={recovered_value:.8g}, "
+            f"relative_error={relative_error:.2%} (< 5%: {passed})",
+            flush=True,
         )
+        if not passed:
+            failures.append(parameter)
+
+    assert not failures, f"Parameters outside 5% recovery tolerance: {failures}"
