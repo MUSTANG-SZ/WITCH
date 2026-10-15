@@ -16,7 +16,7 @@ import numpy as np
 from tqdm import tqdm
 
 from .containers import MetaModel
-from .fitter import joint_objective
+from .objective import joint_objective
 
 
 def _updated_metamodel(metamodel: MetaModel, pars: np.ndarray):
@@ -104,7 +104,7 @@ def calc_like_dataset(metamodel, pars, dataset_ind=0):
     return -0.5 * chisq
 
 
-@partial(jax.jit, static_argnames=("prior_type",))
+@partial(jax.jit, static_argnames=("prior_type", "proposal"))
 def draw_samp(
     metamodel,
     key,
@@ -112,6 +112,7 @@ def draw_samp(
     prior_type="uniform",
     err_scale=1.0,
     parameter_scale=None,
+    proposal="diag",
 ):
     """
     Draw a masked proposal from a uniform or normal distribution.
@@ -137,6 +138,12 @@ def draw_samp(
     parameter_scale : jax.Array, optional
         Fixed scale for normalized coordinates. If omitted, derive it from the
         current parameters and errors.
+    proposal : {"diag", "cov"}, default="diag"
+        ``diag`` uses independent per-parameter steps. ``cov`` draws a
+        correlated gaussian step from ``metamodel.cov`` restricted to the
+        fitted parameters and scaled by ``2.38 / sqrt(n_fit) * err_scale``
+        (the optimal random-walk scaling). It falls back to ``diag`` with
+        the ``prior_type`` diagonal step if the covariance is not positive definite.
 
     Returns
     -------
@@ -144,6 +151,31 @@ def draw_samp(
         Proposed full parameter vector.
     """
     pars = jnp.asarray(metamodel.parameters)
+    if proposal == "cov":
+        mask = jnp.asarray(metamodel.to_fit)
+        n_fit = jnp.maximum(jnp.sum(mask), 1)
+        cov = jnp.asarray(metamodel.cov)
+        sub = jnp.where(mask[:, None] & mask[None, :], cov, 0.0)
+        diag = jnp.diag(sub)
+        # Unit variance for unfit params keeps the cholesky well defined
+        sub = sub + jnp.diag(jnp.where(mask, 1e-10 * diag, 1.0))
+        chol = jnp.linalg.cholesky(sub)
+        step = chol @ jax.random.normal(key, shape=pars.shape)
+        step = step * 2.38 / jnp.sqrt(n_fit) * err_scale
+        ok = jnp.all(jnp.isfinite(chol)) & jnp.all(diag[mask] > 0)
+        return jax.lax.cond(
+            ok,
+            lambda: jnp.where(mask, pars + step, pars),
+            lambda: draw_samp.__wrapped__(
+                metamodel,
+                key,
+                bound,
+                prior_type,
+                err_scale,
+                parameter_scale,
+                "diag",
+            ),
+        )
     if parameter_scale is None:
         errs_for_scale = jnp.abs(jnp.asarray(metamodel.errs))
         parameter_scale = jnp.where(
@@ -196,6 +228,8 @@ def metropolis_hastings(
     dataset_ind=0,
     prior_type="uniform",
     prior_err_scale=1.0,
+    progress=True,
+    proposal="diag",
 ):
     """
     Run one Metropolis-Hastings chain using log-likelihoods.
@@ -222,6 +256,12 @@ def metropolis_hastings(
         Dataset index passed to ``calc_like_func``.
     prior_type : {"uniform", "normal"}, default="uniform"
         Prior and symmetric proposal distribution.
+    prior_err_scale : float, default=1.0
+        Multiplier on ``metamodel.errs`` for proposal width and normal prior.
+    progress : bool, default=True
+        Whether to show a progress bar.
+    proposal : {"diag", "cov"}, default="diag"
+        Proposal type, see ``draw_samp``.
 
     Returns
     -------
@@ -272,6 +312,7 @@ def metropolis_hastings(
         range(num_samples),
         desc=f"Chain {chain_id + 1}",
         unit="step",
+        disable=not progress,
     ):
         # Propose a candidate state using a symmetric random walk.
         key, sample_key = jax.random.split(key)
@@ -283,6 +324,7 @@ def metropolis_hastings(
             prior_type=prior_type,
             err_scale=prior_err_scale,
             parameter_scale=parameter_scale,
+            proposal=proposal,
         )
 
         # Compare log acceptance probabilities to avoid exponentiating likelihoods.
@@ -325,6 +367,8 @@ def run_chains_serial(
     seed=0,
     prior_type="uniform",
     prior_err_scale=1.0,
+    progress=True,
+    proposal="diag",
 ):
     """
     Run multiple chains serially with the MPI-aware joint likelihood.
@@ -334,7 +378,14 @@ def run_chains_serial(
     """
     jax.block_until_ready(calc_like_joint(metamodel, metamodel.parameters))
     jax.block_until_ready(
-        draw_samp(metamodel, jax.random.key(seed), bound, prior_type, prior_err_scale)
+        draw_samp(
+            metamodel,
+            jax.random.key(seed),
+            bound,
+            prior_type,
+            prior_err_scale,
+            proposal=proposal,
+        )
     )
 
     chains = []
@@ -350,6 +401,8 @@ def run_chains_serial(
                 0,
                 prior_type,
                 prior_err_scale,
+                progress,
+                proposal,
             )
         )
     return chains
@@ -364,6 +417,7 @@ def run_chains_parallel(
     dataset_ind=0,
     prior_type="uniform",
     prior_err_scale=1.0,
+    proposal="diag",
 ):
     """
     Run independent chains concurrently for one dataset.
@@ -377,7 +431,14 @@ def run_chains_parallel(
         calc_like_dataset(metamodel, metamodel.parameters, dataset_ind)
     )
     jax.block_until_ready(
-        draw_samp(metamodel, jax.random.key(seed), bound, prior_type, prior_err_scale)
+        draw_samp(
+            metamodel,
+            jax.random.key(seed),
+            bound,
+            prior_type,
+            prior_err_scale,
+            proposal=proposal,
+        )
     )
 
     with ThreadPoolExecutor(max_workers=num_chains) as executor:
@@ -393,9 +454,116 @@ def run_chains_parallel(
                 dataset_ind,
                 prior_type,
                 prior_err_scale,
+                False,
+                proposal,
             )
             for chain_id in range(num_chains)
         ]
         chains = [future.result() for future in futures]
 
     return chains
+
+
+def run_mh(
+    metamodel,
+    num_samples=10000,
+    num_chains=4,
+    burn_in=0.1,
+    bound=2,
+    seed=0,
+    prior_type="uniform",
+    prior_err_scale=1.0,
+    joint=True,
+    dataset_ind=0,
+    progress=True,
+    proposal="cov",
+):
+    """
+    Run Metropolis-Hastings chains and summarize them into the metamodel.
+
+    The chains start at the current ``metamodel.parameters`` (e.g. the
+    Levenberg-Marquardt best fit) and only parameters with ``to_fit`` set are
+    varied. Mirrors the interface of ``witch.fitting.run_mcmc``.
+
+    Parameters
+    ----------
+    metamodel : witch.containers.MetaModel
+        Model to sample.
+    num_samples : int, default=10000
+        Samples per chain.
+    num_chains : int, default=4
+        Number of chains.
+    burn_in : float, default=0.1
+        Fraction of each chain discarded.
+    bound : float, default=2
+        Scale for unbounded uniform proposals.
+    seed : int, default=0
+        Base seed; chain ``i`` uses ``seed + i``.
+    prior_type : {"uniform", "normal"}, default="uniform"
+        Prior and proposal type.
+    prior_err_scale : float, default=1.0
+        Multiplier on ``metamodel.errs`` for proposal width and normal prior.
+    joint : bool, default=True
+        Use the MPI-aware joint likelihood (chains run serially). If False
+        chains run in threads on a single dataset.
+    dataset_ind : int, default=0
+        Dataset used when ``joint`` is False.
+    progress : bool, default=True
+        Show progress bars.
+    proposal : {"cov", "diag"}, default="cov"
+        ``cov`` proposes steps from the LM covariance in ``metamodel.cov``
+        (falls back to ``diag`` with the chosen prior_type if unusable); ``diag`` uses independent steps.
+
+    Returns
+    -------
+    metamodel : witch.containers.MetaModel
+        Metamodel with median parameters, std errors, covariance and chisq.
+    flat_samples : np.ndarray
+        Post burn-in samples of the fitted parameters, ``(nsamp, nfit)``.
+    chains : np.ndarray
+        All chains, ``(num_chains, num_samples, num_parameters)``.
+    acceptance_rates : np.ndarray
+        Acceptance rate of each chain.
+    """
+    if joint:
+        results = run_chains_serial(
+            metamodel,
+            num_samples,
+            num_chains,
+            bound,
+            seed,
+            prior_type,
+            prior_err_scale,
+            progress,
+            proposal,
+        )
+    else:
+        results = run_chains_parallel(
+            metamodel,
+            num_samples,
+            num_chains,
+            bound,
+            seed,
+            dataset_ind,
+            prior_type,
+            prior_err_scale,
+            proposal,
+        )
+    chains = np.array([r[0] for r in results])
+    acceptance_rates = np.array([r[1] for r in results])
+
+    to_fit = np.array(metamodel.to_fit)
+    start = int(burn_in * num_samples)
+    flat_samples = chains[:, start:, :][:, :, to_fit].reshape(-1, int(to_fit.sum()))
+
+    pars = np.array(metamodel.parameters)
+    errs = np.zeros_like(pars)
+    cov = np.zeros((len(pars), len(pars)))
+    pars[to_fit] = np.median(flat_samples, axis=0)
+    errs[to_fit] = np.std(flat_samples, axis=0)
+    cov[np.ix_(to_fit, to_fit)] = np.atleast_2d(np.cov(flat_samples.T))
+    chisq = -2 * calc_like_joint(metamodel, jnp.array(pars))
+    metamodel = metamodel.update(
+        pars=jnp.array(pars), errs=jnp.array(errs), cov=jnp.array(cov), chisq=chisq
+    )
+    return metamodel, flat_samples, chains, acceptance_rates

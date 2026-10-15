@@ -146,7 +146,7 @@ below encompass all options for both:
 fitting:
   maxiter: 10 # Maximum fit iterations per round of fitting
   chitol: 1e-5 # Change in chisq that we consider to be converged
-# Settings for HMC
+# Settings for MCMC, see the Metropolis-Hastings section below for method: mh
 mcmc:
   run: True # If this is false the chain will not be run
   num_steps: 1000 # The number of samples in the chain
@@ -156,6 +156,38 @@ mcmc:
 ```
 
 to better understand what these fields are read the documentation for [`fit_dataset`](https://mustang-sz.github.io/WITCH/latest/reference/fitting/#witch.fitting.fit_dataset) and [`run_mcmc`](https://mustang-sz.github.io/WITCH/latest/reference/fitting/#witch.fitting.run_mcmc)
+
+### Metropolis-Hastings MCMC
+
+Besides the Hamiltonian sampler above, the `mcmc` block can run a Metropolis-Hastings (MH) sampler by setting `method: mh`.
+The default is `method: hmc`, so existing configs are unchanged.
+By default MH runs after the Levenberg–Marquardt rounds and starts from the best fit.
+Only parameters that are being fit (`to_fit`) are sampled.
+
+```yaml
+mcmc:
+  run: True
+  method: mh            # hmc (default) or mh
+  lm: True              # False skips the LM rounds and samples from the starting parameters
+  num_steps: 10000      # Samples per chain
+  num_chains: 4         # Number of independent chains
+  burn_in: 0.1          # Fraction of each chain to discard
+  seed: 0               # Chain i uses seed + i
+  proposal: cov         # cov: correlated steps from the LM covariance, diag: independent steps
+  prior_type: uniform   # uniform: flat within `priors`, normal: gaussian around the fit with width errs
+  prior_err_scale: 1.0  # Scales errs (diag proposal width, normal prior) and the cov proposal
+  bound: 2              # Fallback proposal scale for unbounded priors with the diag proposal
+  joint: True           # True: joint likelihood over all datasets (MPI aware, chains run serially)
+                        # False: independent chains in threads using a single dataset
+  dataset_index: 0      # Dataset to use when joint is False
+```
+
+The `cov` proposal uses the covariance from the LM fit, scaled by `2.38/sqrt(n_fit)`, and falls back to the `diag` proposal if it is unusable (e.g. `lm: False` where no covariance exists).
+Run it as usual with `witcher config.yaml`, or `mpirun -n 4 witcher config.yaml` for MPI.
+The median and standard deviation of the post burn-in samples are written to the final parameters and errors.
+Outputs in the output directory are `samples_mcmc.npz` (`samples` with the fit parameters as columns, plus `chains` with shape `(num_chains, num_steps, n_par)`, `acceptance_rates`, `par_names` and `to_fit`), `par_results_mcmc.dill`, `results_mcmc.yaml` and `corner.png`.
+Acceptance rates are printed at the end of the run; aim for roughly 20-40%, and lower `prior_err_scale` if it is much smaller.
+The standalone `tools/manual_mcmc.py` script is kept for legacy use.
 
 The final section that you will usually want in the `base` config is one that defines out datasets.
 This can be quite complicated and will vary depending on your dataset.

@@ -28,9 +28,9 @@ from .containers import MetaModel, Model_xfer
 from .containers.metamodel import _compute_metadata_map, _compute_par_map_and_pars
 from .dataset import DataSet, DataSetData
 from .fitting import run_lmfit, run_mcmc
+from .metropolis_hastings import run_mh
 from .nonparametric import para_to_non_para
 from .objective import joint_objective
-from .resampling import MC_resample
 
 comm = MPI.COMM_WORLD.Clone()
 
@@ -473,25 +473,53 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
         cfg=cfg,
     )
 
+    mcfg = cfg["mcmc"]
+    method = str(mcfg.get("method", "hmc")).lower()
+    if method not in ("hmc", "mh"):
+        raise ValueError(f"Unknown mcmc method {method}, must be 'hmc' or 'mh'")
+    extras = {}
     t1 = time.time()
-    metamodel, samples = run_mcmc(
-        metamodel,
-        num_steps=int(cfg["mcmc"].get("num_steps", 5000)),
-        num_leaps=int(cfg["mcmc"].get("num_leaps", 10)),
-        step_size=jnp.array(float(cfg["mcmc"].get("step_size", 0.02))),
-        sample_which=int(cfg["mcmc"].get("sample_which", -1)),
-        burn_in=float(cfg["mcmc"].get("burn_in", 0.1)),
-        max_tries=int(cfg["mcmc"].get("max_tries", 20)),
-        # callback=callback, # Disabling for now, impure callbacks in a jax loop are dangerous
-    )
+    if method == "mh":
+        metamodel, samples, chains, acc = run_mh(
+            metamodel,
+            num_samples=int(mcfg.get("num_steps", 10000)),
+            num_chains=int(mcfg.get("num_chains", 4)),
+            burn_in=float(mcfg.get("burn_in", 0.1)),
+            bound=float(mcfg.get("bound", 2)),
+            seed=int(mcfg.get("seed", 0)),
+            prior_type=str(mcfg.get("prior_type", "uniform")),
+            prior_err_scale=float(mcfg.get("prior_err_scale", 1.0)),
+            joint=bool(mcfg.get("joint", True)),
+            dataset_ind=int(mcfg.get("dataset_index", 0)),
+            progress=comm.Get_rank() == 0,
+            proposal=str(mcfg.get("proposal", "cov")),
+        )
+        print_once(f"MH acceptance rates: {acc}")
+        extras = dict(
+            chains=chains,
+            acceptance_rates=acc,
+            par_names=np.array(metamodel.par_names),
+            to_fit=np.array(metamodel.to_fit),
+        )
+    else:
+        metamodel, samples = run_mcmc(
+            metamodel,
+            num_steps=int(mcfg.get("num_steps", 5000)),
+            num_leaps=int(mcfg.get("num_leaps", 10)),
+            step_size=jnp.array(float(mcfg.get("step_size", 0.02))),
+            sample_which=int(mcfg.get("sample_which", -1)),
+            burn_in=float(mcfg.get("burn_in", 0.1)),
+            max_tries=int(mcfg.get("max_tries", 20)),
+            # callback=callback, # Disabling for now, impure callbacks in a jax loop are dangerous
+        )
     mpi4jax.barrier(comm=comm)
     t2 = time.time()
     print_once(f"Took {t2 - t1} s to run mcmc")
-    callback_state["step"] = samples.shape[1]
+    callback_state["step"] = samples.shape[0]
     callback(metamodel, callback_state=callback_state)
 
     message = str(metamodel).split("\n")
-    message[1] = "MCMC estimated pars:"
+    message[1] = f"{method.upper()} MCMC estimated pars:"
     print_once("\n".join(message))
 
     _save_model(cfg, metamodel, "mcmc", nonpara)
@@ -499,7 +527,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
         samples = np.array(samples)
         samps_path = os.path.join(cfg["outdir"], "samples_mcmc.npz")
         print_once("Saving samples to", samps_path)
-        np.savez_compressed(samps_path, samples=samples)
+        np.savez_compressed(samps_path, samples=samples, **extras)
         try:
             to_fit = np.array(metamodel.to_fit)
             # ranges = [prior if prior is not None else [0.5 * model.params[i], 2 * model.params[i]] for i, prior in enumerate(model.priors)]
@@ -599,7 +627,9 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
         re.sub(r"^Round 1.*\n?", "Starting pars:\n", str(metamodel), flags=re.MULTILINE)
     )
     consecutive_single_iteration_rounds = 0
-    for r in range(start_round, metamodel.n_rounds):
+    # mcmc.lm: False skips LM and samples from the starting parameters
+    run_lm = cfg.get("mcmc", {}).get("lm", True)
+    for r in range(start_round, metamodel.n_rounds if run_lm else 0):
         metamodel, iterations = _run_fit(
             cfg,
             metamodel,

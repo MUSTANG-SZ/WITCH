@@ -1,0 +1,11 @@
+base: RXJ1347_tod_recovery.yaml
+paths:
+  subdir: rxj1347_mh
+mcmc:
+  run: true
+  method: mh
+  num_steps: 500
+  num_chains: 2
+  burn_in: 0.2
+  prior_type: uniform
+  proposal: cov

@@ -1,3 +1,4 @@
+import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -134,3 +135,43 @@ def test_chain_accepts_local_uniform_proposals(monkeypatch):
     )
 
     assert 0.0 < acceptance_rate < 1.0
+
+
+def test_run_mh_summarizes_chains(monkeypatch):
+    class _Meta:
+        parameters = jnp.array([1.0, 2.0])
+        to_fit = jnp.array([True, False])
+
+        def update(self, pars, errs, cov, chisq):
+            self.out = (pars, errs, cov, chisq)
+            return self
+
+    chains = [(np.tile([[1.0, 2.0]], (10, 1)), 0.5)] * 2
+    monkeypatch.setattr(mh, "run_chains_serial", lambda *a, **k: chains)
+    monkeypatch.setattr(mh, "calc_like_joint", lambda m, p: 0.0)
+    meta, flat, all_chains, acc = mh.run_mh(_Meta(), 10, 2, burn_in=0.5)
+    assert flat.shape == (10, 1)
+    assert all_chains.shape == (2, 10, 2)
+    assert np.allclose(acc, 0.5)
+
+
+def test_cov_proposal_is_correlated_and_respects_mask():
+    metamodel = _MetaModel([0.0, 0.0, 5.0])
+    metamodel.cov = jnp.array([[1.0, 0.9, 0.0], [0.9, 1.0, 0.0], [0.0, 0.0, 1.0]])
+    metamodel.to_fit = jnp.array([True, True, False])
+    draw = jax.jit(
+        lambda key: mh.draw_samp.__wrapped__(
+            metamodel, key, proposal="cov", prior_type="normal"
+        )
+    )
+    steps = np.array([np.asarray(draw(jax.random.key(i))) for i in range(300)])
+    assert np.all(steps[:, 2] == 5.0)
+    assert np.corrcoef(steps[:, 0], steps[:, 1])[0, 1] > 0.8
+
+
+def test_cov_proposal_falls_back_when_cov_unusable():
+    metamodel = _MetaModel([0.0, 1.0])  # cov is all zeros
+    draw = mh.draw_samp.__wrapped__
+    new = draw(metamodel, jax.random.key(0), proposal="cov", prior_type="normal")
+    assert np.all(np.isfinite(np.asarray(new)))
+    assert not np.allclose(np.asarray(new), [0.0, 1.0])
