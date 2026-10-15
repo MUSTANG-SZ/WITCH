@@ -162,7 +162,7 @@ def draw_samp(
         chol = jnp.linalg.cholesky(sub)
         step = chol @ jax.random.normal(key, shape=pars.shape)
         step = step * 2.38 / jnp.sqrt(n_fit) * err_scale
-        ok = jnp.all(jnp.isfinite(chol)) & jnp.all(diag[mask] > 0)
+        ok = jnp.all(jnp.isfinite(chol)) & jnp.all(jnp.where(mask, diag > 0, True))
         return jax.lax.cond(
             ok,
             lambda: jnp.where(mask, pars + step, pars),
