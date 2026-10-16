@@ -1,0 +1,11 @@
+base: RXJ1347_a10.yaml
+sim: true
+par_offset: 1.1
+paths:
+  subdir: rxj1347_tod_recovery
+datasets:
+  mustang2:
+    ntods: 4
+fitting:
+  maxiter: 30
+  chitol: 0.00001

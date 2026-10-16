@@ -2,17 +2,13 @@
 Functions for performing forward modeling
 """
 
-import functools
-
 import jax
 import jax.numpy as jnp
-import minkasi.maps.skymap as skymap
 import minkasi.tods.core as todcore
 import numpy as np
 from minkasi.maps.mapset import Mapset
 
 from .core import model
-from .utils import make_grid
 
 
 @jax.jit

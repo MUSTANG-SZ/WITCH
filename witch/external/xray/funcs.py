@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Self
 
 import jax.numpy as jnp
-import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
 from jax import Array, vmap
@@ -299,7 +298,7 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
                 hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
                 hdul = fits.HDUList([hdu])
                 hdul.writeto(
-                    os.path.join(outdir, dset.name, f"residual.fits"),
+                    os.path.join(outdir, dset.name, "residual.fits"),
                     overwrite=True,
                 )
 
@@ -308,7 +307,7 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
                 hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
                 hdul = fits.HDUList([hdu])
                 hdul.writeto(
-                    os.path.join(outdir, dset.name, f"truth.fits"),
+                    os.path.join(outdir, dset.name, "truth.fits"),
                     overwrite=True,
                 )
     # Make Model maps
