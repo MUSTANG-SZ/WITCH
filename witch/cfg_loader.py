@@ -4,12 +4,38 @@ from importlib import import_module
 import jax
 import jax.numpy as jnp
 
-from witch.dataset import DataSet
+import witch.fitter as fitter
+from witch.containers import MetaModel
+from witch.dataset import DataSet, DataSetData
 from witch.fitter import *
 from witch.fitter import _mpi_fsplit
 
 
-def load_cfg(cfg):
+def load_cfg(cfg, args=None):
+    """
+    Set up datasets and the metamodel from a loaded config, exactly as the
+    fitter does before fitting.
+
+    Parameters
+    ----------
+    cfg : dict
+        Config as returned by `witch.fitter.load_config`. Modified in place.
+    args : argparse.Namespace, optional
+        Parsed command line arguments. If given, `wnoise`, `nosub` and
+        `nofit` override the config.
+
+    Returns
+    -------
+    datasets : tuple[DataSet]
+        Processed datasets living on this MPI task.
+    outdir : str
+        Output directory.
+    dset_names : list[str]
+        Names of all datasets in the config.
+    metamodel : MetaModel
+        The metamodel. The (possibly split) MPI communicator is stored in
+        `witch.fitter.comm`.
+    """
     if "MJ_TODROOT" in os.environ:
         if "WITCH_DATROOT" not in os.environ:
             print_once(
@@ -39,6 +65,13 @@ def load_cfg(cfg):
     cfg["map"] = cfg.get("map", True)
     cfg["sub"] = cfg.get("sub", True)
     cfg["mem_starved"] = cfg.get("mem_starved", False)
+    if args is not None:
+        if args.wnoise:
+            cfg["wnoise"] = True
+        if args.nosub:
+            cfg["sub"] = False
+        if args.nofit:
+            cfg["fit"] = False
 
     # Do imports
     for module, name in cfg.get("imports", {}).items():
@@ -60,8 +93,9 @@ def load_cfg(cfg):
     for dset_name in dset_names:
         get_files = eval(cfg["datasets"][dset_name]["funcs"]["get_files"])
         fnames[dset_name] = get_files(dset_name, cfg)
-    global comm
-    fnames, comm, comms_local = _mpi_fsplit(fnames, comm)
+    # Update the fitter's comm so print_once and the fit loop use the split comm
+    fnames, fitter.comm, comms_local = _mpi_fsplit(fnames, fitter.comm)
+    comm = fitter.comm
 
     for dset_name in dset_names:
         # If this dataset doesn't live in this proc then skip
