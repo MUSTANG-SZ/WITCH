@@ -1,3 +1,40 @@
+## 11.1.0 (2026-10-19)
+
+### Feat
+
+- move dataset loading to cfg_loader from fitter. Claude also clean up some small discrepancies between loading code in fitter and cfg_loader
+- add more rounds to param recovery test
+- config-driven Metropolis-Hastings MCMC
+- adding CI unit tests running on PSD
+- print output during fitting for debuggin
+- use more threads in test_rxj1347
+- split out rxj_tod_recovery yaml as its own file
+- more rounds of fitting and print out param recervy in test rxj1347
+- add unit tests, including test_rxj1347_tod_recovery which uses simulated data to verify that WITCH returns correct parameters. Could be used to control PRs
+- add tod chunking to overcome memory usage issues. This is a temporary patch
+- more robust sample drawing
+- documentation
+- add chain sanitization and a sim gaussian file. Chain sanitization was implemented by gpt5.6
+- add ability to change piror widths with gaussian prios.
+- restore jit
+- add metropolis hastings mcmc
+- fix likelihood calculation
+- turn off jit
+- start tool for doing Monte Carlo resampling of ML parameters. Current issue: re-running joint_objective on a metamodel that has already been through joint_objective raises very opaque errors
+
+### Fix
+
+- avoid traced boolean indexing in cov proposal
+- reenable output capture now that test works
+- remove test of non-existant _read_model
+- merge conflict and update jax requirement
+- single iteration check could sometimes cause MPI issues
+- plot path
+- increase number of rounds and iters for LM fitting. In general this is now our recomendation
+- serious bug involving not recomputing chisq after recomputing noise. This lead to subsquent rounds of fitting never having any acceptance
+- bug with sample not actually changing X and use full cov to compute likelihoods
+- reformating code
+
 ## 11.0.0 (2026-09-08)
 
 ### Fix
