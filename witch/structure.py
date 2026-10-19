@@ -22,6 +22,36 @@ def _get_nonpara(signature, prefix_list=["nonpara_"]):
     return int(np.sum(static_msk))
 
 
+def _inv_gnfw(rsq, scale, gamma, alpha, beta):
+    r"""
+    Evaluate $1/(r^\gamma (1 + r^\alpha)^{(\beta-\gamma)/\alpha})$ with $r = scale\sqrt{rsq}$.
+    Done in log space (one log, one exp, one log1p, one exp per element)
+    which is much cheaper than three `pow` calls on large 3D grids.
+
+    Parameters
+    ----------
+    rsq : jax.Array
+        Squared radius (before applying `scale`).
+    scale : float
+        Factor to multiply the radius by.
+    gamma : float
+        The central slope.
+    alpha : float
+        The intermediate slope.
+    beta : float
+        The outer slope.
+
+    Returns
+    -------
+    inv_shape : jax.Array
+        The inverse of the gNFW denominator.
+    """
+    lr = jnp.log(scale) + 0.5 * jnp.log(rsq)
+    return jnp.exp(
+        -gamma * lr - (beta - gamma) / alpha * jnp.log1p(jnp.exp(alpha * lr))
+    )
+
+
 @jax.jit
 def gnfw(
     dx: float,
@@ -115,8 +145,7 @@ def gnfw(
 
     r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
 
-    r = c500 * jnp.sqrt(x**2 + y**2 + z**2) / r500
-    denominator = (r**gamma) * (1 + r**alpha) ** ((beta - gamma) / alpha)
+    inv_shape = _inv_gnfw(x**2 + y**2 + z**2, c500 / r500, gamma, alpha, beta)
 
     P500 = (
         1.65e-03
@@ -125,7 +154,7 @@ def gnfw(
         * h70**2
     )
 
-    return P500 * P0 / denominator
+    return P500 * P0 * inv_shape
 
 
 @jax.jit
@@ -322,8 +351,7 @@ def egnfw(
 
     r500 = (m500 / (4.00 * jnp.pi / 3.00) / 5.00e02 / nz) ** (1.00 / 3.00)
 
-    r = c500 * jnp.sqrt(x**2 + y**2 + z**2) / r500
-    denominator = (r**gamma) * (1 + r**alpha) ** ((beta - gamma) / alpha)
+    inv_shape = _inv_gnfw(x**2 + y**2 + z**2, c500 / r500, gamma, alpha, beta)
 
     P500 = (
         1.65e-03
@@ -332,7 +360,7 @@ def egnfw(
         * h70**2
     )
 
-    return P500 * P0 / denominator
+    return P500 * P0 * inv_shape
 
 
 @jax.jit
@@ -416,8 +444,7 @@ def a10(
 
     x, y, z, *_ = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
-    r = c500 * jnp.sqrt(x**2 + y**2 + z**2)
-    denominator = (r**gamma) * (1 + r**alpha) ** ((beta - gamma) / alpha)
+    inv_shape = _inv_gnfw(x**2 + y**2 + z**2, c500, gamma, alpha, beta)
 
     P500 = (
         1.65e-03
@@ -426,7 +453,7 @@ def a10(
         * h70**2
     )
 
-    return P500 * P0 / denominator
+    return P500 * P0 * inv_shape
 
 
 @jax.jit
@@ -531,8 +558,7 @@ def ea10(
 
     x, y, z, *_ = transform_grid(dx, dy, dz, r_1, r_2, r_3, theta, xyz)
 
-    r = c500 * jnp.sqrt(x**2 + y**2 + z**2)
-    denominator = (r**gamma) * (1 + r**alpha) ** ((beta - gamma) / alpha)
+    inv_shape = _inv_gnfw(x**2 + y**2 + z**2, c500, gamma, alpha, beta)
 
     P500 = (
         1.65e-03
@@ -541,7 +567,7 @@ def ea10(
         * h70**2
     )
 
-    return P500 * P0 / denominator
+    return P500 * P0 * inv_shape
 
 
 @jax.jit
