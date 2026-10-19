@@ -15,8 +15,6 @@ from .containers import MetaModel
 from .objective import joint_objective
 from .utils import NullComm
 
-_cache = {}
-
 
 @jax.jit
 def invsafe(matrix: jax.Array, thresh: float = 1e-16) -> jax.Array:
@@ -233,10 +231,9 @@ def _run_lmfit_tod_chunks(
             metamodel.parameters.at[tf].add(step),
             jnp.array(metamodel.to_fit),
         )
-        errs = jnp.where(
-            to_fit, jnp.sqrt(jnp.diag(invscale(curve_use, do_invsafe=True))), 0
-        )
-        cov = jnp.where(to_fit, invscale(curve_use, do_invsafe=True), 0)
+        full_cov = invscale(curve_use, do_invsafe=True)
+        errs = jnp.where(to_fit, jnp.sqrt(jnp.diag(full_cov)), 0)
+        cov = jnp.where(to_fit, full_cov, 0)
         new_metamodel = copy(metamodel).update(
             pars=new_pars, errs=errs, cov=cov, chisq=metamodel.chisq
         )
@@ -336,10 +333,9 @@ def run_lmfit(
             jnp.array(metamodel.to_fit),
         )
         # Get errs
-        errs = jnp.where(
-            to_fit, jnp.sqrt(jnp.diag(invscale(curve_use, do_invsafe=True))), 0
-        )
-        cov = jnp.where(to_fit, invscale(curve_use, do_invsafe=True), 0)
+        full_cov = invscale(curve_use, do_invsafe=True)
+        errs = jnp.where(to_fit, jnp.sqrt(jnp.diag(full_cov)), 0)
+        cov = jnp.where(to_fit, full_cov, 0)
         # Now lets get an updated model
         new_metamodel = copy(metamodel).update(
             pars=new_pars, errs=errs, cov=cov, chisq=metamodel.chisq
@@ -391,10 +387,16 @@ def run_lmfit(
     return metamodel, i, delta_chisq, lmd
 
 
+@partial(jax.jit, donate_argnums=(0, 1))
+def _update_chain(chain, accept_prob, params, prob, i):
+    chain = chain.at[i].set(params)
+    accept_prob = accept_prob.at[i].set(prob)
+    return chain, accept_prob
+
+
 def hmc(
     params: jax.Array,
-    log_prob: Callable[[jax.Array], jax.Array],
-    log_prob_grad: Callable[[jax.Array], jax.Array],
+    log_prob_and_grad: Callable[[jax.Array], tuple[jax.Array, jax.Array]],
     num_steps: int,
     num_leaps: int,
     step_size: jax.Array,
@@ -415,17 +417,15 @@ def hmc(
     ----------
     params : jax.Array
         The initial parameters to start the chain at.
-    log_prob : Callable[[jax.Array], jax.Array]
-        Function that returns the log probability of the model
-        for a given set of params. This should take `params` as its
-        first arguments, all other arguments should be fixed ahead of time
-        (ie: using `functools.partial`).
-    log_prob_grad : Callable[[jax.Array], jax.Array]
-        Function that returns the gradient log probability of the model
+    log_prob_and_grad : Callable[[jax.Array], tuple[jax.Array, jax.Array]]
+        Function that returns the log probability of the model and its gradient
         for a given set of params. This should take `params` as its
         first arguments, all other arguments should be fixed ahead of time
         (ie: using `functools.partial`). The returned gradient should have
         shape `(len(params),)`.
+        The compiled sampler is cached on this function (keyed on `num_leaps`),
+        so reuse the same function object to avoid recompiling and use a new
+        one whenever the model or data change.
     num_steps : int
         The number of steps to run the chain for.
     num_leaps : int
@@ -453,60 +453,55 @@ def hmc(
     npar = len(params)
     ones = jnp.ones(npar, dtype=bool)
 
-    @partial(jax.jit, inline=True)
     def _leap(_, args):
-        params, momentum, step_size = args
-        momentum = momentum.at[:].add(0.5 * step_size * log_prob_grad(params))  # kick
+        params, momentum, _, grad, step_size = args
+        momentum = momentum.at[:].add(0.5 * step_size * grad)  # kick
         params = params.at[:].add(step_size * momentum)  # drift
-        momentum = momentum.at[:].add(0.5 * step_size * log_prob_grad(params))  # kick
+        # The gradient at the end of one leap is reused for the next first kick
+        log_prob, grad = log_prob_and_grad(params)
+        momentum = momentum.at[:].add(0.5 * step_size * grad)  # kick
 
-        return params, momentum, step_size
+        return params, momentum, log_prob, grad, step_size
 
     @jax.jit
-    def _sample(key, params, step_size):
+    def _sample(key, params, log_prob, grad, step_size):
         mpi4jax.barrier(comm=comm)
         key = mpi4jax.bcast(key, 0, comm=comm)
         key, uniform_key = jax.random.split(key, 2)
 
         # generate random momentum
         momentum = vnorm(jax.random.split(key, npar))
-        new_params, new_momentum, _ = jax.lax.fori_loop(
-            0, num_leaps, _leap, (params, momentum, step_size)
+        new_params, new_momentum, new_log_prob, new_grad, _ = jax.lax.fori_loop(
+            0, num_leaps, _leap, (params, momentum, log_prob, grad, step_size)
         )
 
         # MH correction
-        dpe = log_prob(new_params) - log_prob(params)
+        dpe = new_log_prob - log_prob
         dke = -0.5 * (jnp.sum(new_momentum**2) - jnp.sum(momentum**2))
         log_accept = dke + dpe
         accept_prob = jnp.minimum(jnp.exp(log_accept), 1)
         accept = jax.random.uniform(uniform_key) < accept_prob
         params = jax.lax.select(accept * ones, new_params, params)
+        grad = jax.lax.select(accept * ones, new_grad, grad)
+        log_prob = jax.lax.select(accept, new_log_prob, log_prob)
 
-        return key, params, accept_prob
+        return key, params, log_prob, grad, accept_prob
 
-    @partial(jax.jit, donate_argnums=(0, 1))
-    def _update(chain, accept_prob, params, prob, i):
-        chain = chain.at[i].set(params)
-        accept_prob = accept_prob.at[i].set(prob)
-        return chain, accept_prob
-
-    c_sample = _cache.get("hmc_sample", None)
-    # Suboptimal caching for right now
-    # Can probably fix by moving functions out of local scope
+    # Cache on the likelihood function so that closures are never stale
+    sample_cache = log_prob_and_grad.__dict__.setdefault("_hmc_sample", {})
+    c_sample = sample_cache.get((num_leaps, npar), None)
+    log_prob, grad = log_prob_and_grad(params)
     if c_sample is None:
         if rank == 0:
             print("Compiling MC sample function. This can take a few minutes!")
         t0 = time.time()
-        _ = _sample(key.copy(), params.copy(), step_size.copy())
+        _ = _sample(key.copy(), params.copy(), log_prob, grad, step_size.copy())
         jax.block_until_ready(_)
-        # t_sample = _sample.trace(key.copy(), params.copy(), step_size.copy())
-        # l_sample = t_sample.lower()
-        # c_sample = l_sample.compile()
         c_sample = _sample
         t1 = time.time()
         if rank == 0:
             print(f"Compiled MC sample function in {t1-t0} s")
-        _cache["hmc_sample"] = c_sample
+        sample_cache[(num_leaps, npar)] = c_sample
     else:
         if rank == 0:
             print("Using cached sample function")
@@ -518,9 +513,11 @@ def hmc(
         chain = jnp.zeros(0)
         accept_prob = jnp.zeros(0)
     for i in tqdm(range(num_steps), disable=(rank != 0)):
-        key, params, prob = c_sample(key, params, step_size)
+        key, params, log_prob, grad, prob = c_sample(
+            key, params, log_prob, grad, step_size
+        )
         if rank == 0:
-            chain, accept_prob = _update(chain, accept_prob, params, prob, i)
+            chain, accept_prob = _update_chain(chain, accept_prob, params, prob, i)
     if rank == 0:
         print(f"Accepted {accept_prob.mean():.2%} of samples")
         sys.stdout.flush()
@@ -614,7 +611,7 @@ def run_mcmc(
     init_pars = init_pars.at[:].multiply(1.0 / scale)
 
     @jax.jit
-    def _log_prob(pars, metamodel=metamodel, init_pars=init_pars):
+    def _log_prob_and_grad(pars, metamodel=metamodel, init_pars=init_pars):
         full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)
         _, in_bounds = _prior_pars_fit(
@@ -628,31 +625,12 @@ def run_mcmc(
         temp_metamodel = copy(metamodel).update(
             full_pars, init_errs, jnp.array(0), jnp.array(0)
         )
-        chisq, *_ = joint_objective(temp_metamodel, True, False, False)
-        log_like = -0.5 * chisq
-        log_like = log_like + log_prior
-        return log_like
-
-    @jax.jit
-    def _log_prob_grad(pars, metamodel=metamodel, init_pars=init_pars):
-        full_pars = init_pars.at[to_fit].set(pars)
-        full_pars = full_pars.at[:].multiply(scale)
-        _, in_bounds = _prior_pars_fit(
-            metamodel.priors, full_pars, jnp.array(metamodel.to_fit)
-        )
-        log_prior = jnp.sum(
-            jnp.where(
-                jnp.array(jnp.where(metamodel.to_fit, in_bounds, True)), 0, -1 * jnp.inf
-            )
-        )
-        temp_metamodel = copy(metamodel).update(
-            full_pars, init_errs, jnp.array(0), jnp.array(0)
-        )
-        _, grad, _ = joint_objective(temp_metamodel, False, True, False)
+        chisq, grad, _ = joint_objective(temp_metamodel, True, True, False)
+        log_like = -0.5 * chisq + log_prior
         grad = grad.at[:].multiply(1.0 / scale)
         log_like_grad = grad.at[to_fit].get().ravel()
         log_like_grad = log_like_grad.at[:].add(log_prior)
-        return log_like_grad
+        return log_like, log_like_grad
 
     def _get_step_size(step_size, key, comm, max_tries):
         mpi4jax.barrier(comm=global_comm)
@@ -675,8 +653,7 @@ def run_mcmc(
         def _hmc(n_steps, step_size):
             _, chain_probs = hmc(
                 init_pars.at[to_fit].get().ravel(),
-                _log_prob,
-                _log_prob_grad,
+                _log_prob_and_grad,
                 num_steps=n_steps,
                 num_leaps=num_leaps,
                 step_size=step_size,
@@ -743,7 +720,7 @@ def run_mcmc(
         mpi4jax.barrier(comm=global_comm)
         probs = jnp.array(probs)
         step_sizes = jnp.array(step_sizes)
-        msk = jnp.isfinite(probs) + (probs > 0)
+        msk = jnp.isfinite(probs) & (probs > 0)
         srt = jnp.argsort(probs[msk])
         if jnp.sum(msk) == 0:
             raise ValueError(
@@ -773,8 +750,7 @@ def run_mcmc(
 
     chain, _ = hmc(
         init_pars.at[to_fit].get().ravel(),
-        _log_prob,
-        _log_prob_grad,
+        _log_prob_and_grad,
         num_steps=num_steps,
         num_leaps=num_leaps,
         step_size=step_size,
