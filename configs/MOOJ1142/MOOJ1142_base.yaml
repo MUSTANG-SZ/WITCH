@@ -79,7 +79,7 @@ datasets:
 # Setting for the fitter
 fitting:
   maxiter: 20 # Maximum fit iterations per round
-  chitol: 1e-3 # Change in chisq that we consider to be converged
+  chitol: 0.0011 # Change in chisq that we consider to be converged
 
 imports:
   astropy.units: u
