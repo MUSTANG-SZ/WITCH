@@ -1,0 +1,6 @@
+base: RXJ1347_tod_recovery.yaml
+paths:
+  subdir: rxj1347_bench
+datasets:
+  mustang2:
+    ntods: 1
