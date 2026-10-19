@@ -601,6 +601,7 @@ def run_mcmc(
 
     init_pars = jnp.array(metamodel.parameters)
     init_errs = jnp.zeros_like(init_pars)
+    init_cov = jnp.zeros((len(init_pars), len(init_pars)))
     final_pars = init_pars.copy()
     final_errs = init_errs.copy()
 
@@ -623,7 +624,7 @@ def run_mcmc(
             )
         )
         temp_metamodel = copy(metamodel).update(
-            full_pars, init_errs, jnp.array(0), jnp.array(0)
+            full_pars, init_errs, init_cov, jnp.array(0.0)
         )
         chisq, grad, _ = joint_objective(temp_metamodel, True, True, False)
         log_like = -0.5 * chisq + log_prior
@@ -759,22 +760,29 @@ def run_mcmc(
     )
     flat_samples = chain.at[:].multiply(scale.at[to_fit].get())
 
+    fit_idx = np.flatnonzero(np.array(to_fit))
+    final_cov = jnp.zeros((len(final_pars), len(final_pars)))
     if rank == 0:
         burn_in = int(num_steps * burn_in)
         flat_samples = flat_samples[burn_in:]
         final_pars = final_pars.at[to_fit].set(jnp.median(flat_samples, axis=0).ravel())
         final_errs = final_errs.at[to_fit].set(jnp.std(flat_samples, axis=0).ravel())
+        # The sample covariance only covers the fit parameters, embed it in the full matrix
+        final_cov = final_cov.at[fit_idx[:, None], fit_idx[None, :]].set(
+            jnp.atleast_2d(jnp.cov(flat_samples, rowvar=False))
+        )
     final_pars = jnp.array(mpi4jax.bcast(final_pars, 0, comm=global_comm))
     final_errs = jnp.array(mpi4jax.bcast(final_errs, 0, comm=global_comm))
-    cov = cov = jnp.cov(flat_samples, rowvar=False)
+    final_cov = jnp.array(mpi4jax.bcast(final_cov, 0, comm=global_comm))
+    # Placeholder cov and chisq so we can evaluate the chisq at the final parameters
     metamodel = metamodel.update(
         final_pars.block_until_ready(),
         final_errs.block_until_ready(),
-        jnp.array(0).block_until_ready(),
-        jnp.array(0).block_until_ready(),
+        jnp.zeros_like(final_cov),
+        jnp.array(0.0),
     )
     chisq, *_ = joint_objective(metamodel, True, False, False)
-    metamodel = metamodel.update(final_pars, final_errs, cov, chisq)
+    metamodel = metamodel.update(final_pars, final_errs, final_cov, chisq)
     jax.block_until_ready(metamodel)
 
     return metamodel, flat_samples
