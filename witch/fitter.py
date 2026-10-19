@@ -10,7 +10,6 @@ import sys
 import time
 from copy import copy, deepcopy
 from functools import partial
-from importlib import import_module
 
 import corner
 import dill as pk
@@ -24,11 +23,10 @@ import yaml
 from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
-from . import utils as wu
-from .containers import MetaModel, Model_xfer
+from .containers import Model_xfer
 from .containers.metamodel import _compute_metadata_map, _compute_par_map_and_pars
-from .dataset import DataSet, DataSetData
 from .fitting import run_lmfit, run_mcmc
+from .metropolis_hastings import run_mh
 from .nonparametric import para_to_non_para
 from .objective import joint_objective
 
@@ -412,7 +410,7 @@ def _run_fit(
     to_fit = np.array(metamodel.to_fit)
     print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
-    metamodel, i, delta_chisq = run_lmfit(
+    metamodel, i, delta_chisq, lmd = run_lmfit(
         metamodel,
         eval(str(cfg["fitting"].get("maxiter", "10"))),
         eval(str(cfg["fitting"].get("chitol", "1e-5"))),
@@ -420,14 +418,14 @@ def _run_fit(
     mpi4jax.barrier(comm=comm)
     t2 = time.time()
     print_once(
-        f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}"
+        f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}, final lambda: {lmd}"
     )
 
     print_once(metamodel)
     _save_model(cfg, metamodel, f"fit{r}", nonpara)
 
     metamodel = _reestimate_noise(metamodel)
-    return metamodel
+    return metamodel, i
 
 
 def _mcmc_checkpoint_callback(
@@ -473,33 +471,61 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
         cfg=cfg,
     )
 
+    mcfg = cfg["mcmc"]
+    method = str(mcfg.get("method", "hmc")).lower()
+    if method not in ("hmc", "mh"):
+        raise ValueError(f"Unknown mcmc method {method}, must be 'hmc' or 'mh'")
+    extras = {}
     t1 = time.time()
-    metamodel, samples = run_mcmc(
-        metamodel,
-        num_steps=int(cfg["mcmc"].get("num_steps", 5000)),
-        num_leaps=int(cfg["mcmc"].get("num_leaps", 10)),
-        step_size=jnp.array(float(cfg["mcmc"].get("step_size", 0.02))),
-        sample_which=int(cfg["mcmc"].get("sample_which", -1)),
-        burn_in=float(cfg["mcmc"].get("burn_in", 0.1)),
-        max_tries=int(cfg["mcmc"].get("max_tries", 20)),
-        # callback=callback, # Disabling for now, impure callbacks in a jax loop are dangerous
-    )
+    if method == "mh":
+        metamodel, samples, chains, acc = run_mh(
+            metamodel,
+            num_samples=int(mcfg.get("num_steps", 10000)),
+            num_chains=int(mcfg.get("num_chains", 4)),
+            burn_in=float(mcfg.get("burn_in", 0.1)),
+            bound=float(mcfg.get("bound", 2)),
+            seed=int(mcfg.get("seed", 0)),
+            prior_type=str(mcfg.get("prior_type", "uniform")),
+            prior_err_scale=float(mcfg.get("prior_err_scale", 1.0)),
+            joint=bool(mcfg.get("joint", True)),
+            dataset_ind=int(mcfg.get("dataset_index", 0)),
+            progress=comm.Get_rank() == 0,
+            proposal=str(mcfg.get("proposal", "cov")),
+        )
+        print_once(f"MH acceptance rates: {acc}")
+        extras = dict(
+            chains=chains,
+            acceptance_rates=acc,
+            par_names=np.array(metamodel.par_names),
+            to_fit=np.array(metamodel.to_fit),
+        )
+    else:
+        metamodel, samples = run_mcmc(
+            metamodel,
+            num_steps=int(mcfg.get("num_steps", 5000)),
+            num_leaps=int(mcfg.get("num_leaps", 10)),
+            step_size=jnp.array(float(mcfg.get("step_size", 0.02))),
+            sample_which=int(mcfg.get("sample_which", -1)),
+            burn_in=float(mcfg.get("burn_in", 0.1)),
+            max_tries=int(mcfg.get("max_tries", 20)),
+            # callback=callback, # Disabling for now, impure callbacks in a jax loop are dangerous
+        )
     mpi4jax.barrier(comm=comm)
     t2 = time.time()
     print_once(f"Took {t2 - t1} s to run mcmc")
-    callback_state["step"] = samples.shape[1]
+    callback_state["step"] = samples.shape[0]
     callback(metamodel, callback_state=callback_state)
 
     message = str(metamodel).split("\n")
-    message[1] = "MCMC estimated pars:"
+    message[1] = f"{method.upper()} MCMC estimated pars:"
     print_once("\n".join(message))
 
     _save_model(cfg, metamodel, "mcmc", nonpara)
     if comm.Get_rank() == 0:
         samples = np.array(samples)
-        samps_path = os.path.join(cfg["outdir"], f"samples_mcmc.npz")
+        samps_path = os.path.join(cfg["outdir"], "samples_mcmc.npz")
         print_once("Saving samples to", samps_path)
-        np.savez_compressed(samps_path, samples=samples)
+        np.savez_compressed(samps_path, samples=samples, **extras)
         try:
             to_fit = np.array(metamodel.to_fit)
             # ranges = [prior if prior is not None else [0.5 * model.params[i], 2 * model.params[i]] for i, prior in enumerate(model.priors)]
@@ -556,7 +582,7 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             )
             load_path = None
     else:
-        print_once(f"[resume] Not resuming from previous checkpoint")
+        print_once("[resume] Not resuming from previous checkpoint")
 
     # Actually load and validate checkpoint if we found valid path
     if load_path is not None:
@@ -588,7 +614,8 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     # Compile objective function
     print_once("Compiling objective function")
     t0 = time.time()
-    chisq, *_ = joint_objective(metamodel)
+    chisq, _, _ = joint_objective(metamodel, do_grad=False, do_curve=False)
+    jax.block_until_ready(chisq)
     metamodel = metamodel.update(
         pars=metamodel.parameters, errs=metamodel.errs, cov=metamodel.cov, chisq=chisq
     )
@@ -597,13 +624,21 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     print_once(
         re.sub(r"^Round 1.*\n?", "Starting pars:\n", str(metamodel), flags=re.MULTILINE)
     )
-    for r in range(start_round, metamodel.n_rounds):
-        metamodel = _run_fit(
+    consecutive_single_iteration_rounds = 0
+    # mcmc.lm: False skips LM and samples from the starting parameters
+    run_lm = cfg.get("mcmc", {}).get("lm", True)
+    for r in range(start_round, metamodel.n_rounds if run_lm else 0):
+        metamodel, iterations = _run_fit(
             cfg,
             metamodel,
             r,
             nonpara,
         )
+        single_iteration_round = comm.allreduce(int(iterations == 1), op=MPI.MIN) == 1
+        if single_iteration_round:
+            consecutive_single_iteration_rounds += 1
+        else:
+            consecutive_single_iteration_rounds = 0
         mpi4jax.barrier(comm=comm)
 
         # Checkpoint after each round
@@ -616,6 +651,11 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             round_num=r,
         )
         print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
+        if consecutive_single_iteration_rounds >= 2:
+            print_once(
+                "Stopping fitting after two consecutive rounds completed in one iteration"
+            )
+            break
 
     if "mcmc" in cfg and cfg["mcmc"].get("run", True):
         metamodel = _run_mcmc(
@@ -664,187 +704,21 @@ def load_config(start_cfg, cfg_path):
 
 
 def main():
-    if "MJ_TODROOT" in os.environ:
-        if "WITCH_DATROOT" not in os.environ:
-            print_once(
-                "You are using MJ_TODROOT, this is depreciated in favor of WITCH_DATROOT. Setting WITCH_DATROOT to the value of MJ_TODROOT..."
-            )
-            os.environ["WITCH_DATROOT"] = os.environ["MJ_TODROOT"]
-        else:
-            print_once(
-                "Both WITCH_DATROOT and MJ_TODROOT provided! MJ_TODROOT is depreciated, using WITCH_DATROOT..."
-            )
-
-    if "MJ_OUTROOT" in os.environ:
-        if "WITCH_OUTROOT" not in os.environ:
-            print_once(
-                "You are using MJ_OUTROOT, this is depreciated in favor of WITCH_OUTROOT. Setting WITCH_OUTROOT to the value of MJ_OUTROOT..."
-            )
-            os.environ["WITCH_OUTROOT"] = os.environ["MJ_OUTROOT"]
-        else:
-            print_once(
-                "Both WITCH_OUTROOT and MJ_OUTROOT provided! MJ_OUTROOT is depreciated, using WITCH_OUTROOT..."
-            )
-
     parser = _make_parser()
     args = parser.parse_args()
 
     if args.cpu == True:
         jax.config.update("jax_platform_name", "cpu")
 
-    # TODO: Serialize cfg to a data class (pydantic?)
+    from .cfg_loader import load_cfg
+
     cfg = load_config({}, args.config)
-    cfg["fit"] = cfg.get("fit", "model" in cfg)
-    cfg["sim"] = cfg.get("sim", False)
-    cfg["wnoise"] = cfg.get("wnoise", False)
-    cfg["map"] = cfg.get("map", True)
-    cfg["sub"] = cfg.get("sub", True)
-    cfg["mem_starved"] = cfg.get("mem_starved", False)
-    if args.wnoise:
-        cfg["wnoise"] = True
-    if args.nosub:
-        cfg["sub"] = False
-    if args.nofit:
-        cfg["fit"] = False
-
-    # Do imports
-    for module, name in cfg.get("imports", {}).items():
-        mod = import_module(module)
-        if isinstance(name, str):
-            globals()[name] = mod
-        elif isinstance(name, list):
-            for n in name:
-                locals()[n] = getattr(mod, n)
-        else:
-            raise TypeError("Expect import name to be a string or a list")
-
-    # Get the functions needed to work with our dataset
-    dset_names = list(cfg["datasets"].keys())
-    models = []
-    datasets = []
-    outdir = None
-    # First lets plan how to split things up among mpi tasks
-    fnames = {}
-    for dset_name in dset_names:
-        get_files = eval(cfg["datasets"][dset_name]["funcs"]["get_files"])
-        fnames[dset_name] = get_files(dset_name, cfg)
-    global comm
-    fnames, comm, comms_local = _mpi_fsplit(fnames, comm)
-
-    for dset_name in dset_names:
-        # If this dataset doesn't live in this proc then skip
-        if len(fnames[dset_name]) == 0:
-            continue
-
-        if "load_tods" in cfg["datasets"][dset_name]["funcs"]:
-            cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
-                "funcs"
-            ]["load_tods"]
-        elif "load_maps" in cfg["datasets"][dset_name]["funcs"]:
-            cfg["datasets"][dset_name]["funcs"]["load"] = cfg["datasets"][dset_name][
-                "funcs"
-            ]["load_maps"]
-        get_files = eval(cfg["datasets"][dset_name]["funcs"]["get_files"])
-        load = eval(cfg["datasets"][dset_name]["funcs"]["load"])
-        get_info = eval(cfg["datasets"][dset_name]["funcs"]["get_info"])
-        make_metadata = eval(cfg["datasets"][dset_name]["funcs"]["make_metadata"])
-        preproc = eval(cfg["datasets"][dset_name]["funcs"]["preproc"])
-        postproc = eval(cfg["datasets"][dset_name]["funcs"]["postproc"])
-        postfit = eval(cfg["datasets"][dset_name]["funcs"]["postfit"])
-
-        # Get data, info, and metadata
-        datavec = load(dset_name, cfg, fnames[dset_name], comms_local[dset_name])
-        info = get_info(dset_name, cfg, datavec)
-        metadata = make_metadata(dset_name, cfg, info)
-
-        # Setup noise
-        noise_class = eval(str(cfg["datasets"][dset_name]["noise"]["class"]))
-        noise_args = tuple(eval(str(cfg["datasets"][dset_name]["noise"]["args"])))
-        noise_kwargs = eval(str(cfg["datasets"][dset_name]["noise"]["kwargs"]))
-
-        # Init dataset
-        dataset = DataSet(
-            dset_name,
-            get_files,
-            load,
-            get_info,
-            make_metadata,
-            preproc,
-            postproc,
-            postfit,
-            comm,
-            info,
-        )
-
-        # Init the data container
-        dataset.data = DataSetData(
-            dset_name,
-            info["mode"],
-            info["objective"],
-            datavec,
-            metadata,
-            noise_class,
-            noise_args,
-            noise_kwargs,
-        )
-
-        if "base" in cfg.keys():
-            del cfg[
-                "base"
-            ]  # We've collated to the cfg files so no need to keep the base
-        datasets += [dataset]
-
-    datasets = tuple(datasets)
-    # Define the model and get stuff setup fitting
-    if "metamodel" in cfg:
-        metamodel = MetaModel.from_config(
-            comm,
-            cfg,
-            tuple(dataset.data for dataset in datasets),
-        )
-    else:
-        if "model" in cfg:
-            raise ValueError(
-                "No MetaModel defined but Model definition found. This appears to be a legacy configuration! Please update!"
-            )
-        metamodel = MetaModel(
-            comm,
-            tuple(),
-            tuple(dataset.data for dataset in datasets),
-            tuple(),
-            tuple(),
-            tuple(),
-            jnp.zeros(0),
-            jnp.zeros(0),
-            jnp.zeros(0),
-            jnp.zeros(0),
-        )
-        print_once("No metamodel defined, setting fit, sim, and sub to False")
-        cfg["fit"] = False
-        cfg["sim"] = False
-        cfg["sub"] = False
-    outdir = get_outdir(cfg, metamodel)
-    cfg["outdir"] = outdir
-
-    # Now process
-    for dataset in datasets:
-        os.makedirs(os.path.join(outdir, dataset.name), exist_ok=True)
-        dataset.info["outdir"] = outdir
-        comm.barrier()
-        dataset.preproc(dataset, cfg, metamodel)
-        comm.barrier()
-        if dataset.mode == "tod":
-            dataset.data.datavec = process_tods(cfg, dataset, metamodel)
-        elif dataset.mode == "map":
-            dataset.data.datavec = process_maps(cfg, dataset, metamodel)
-        comm.barrier()
-        dataset = jax.block_until_ready(dataset)
-        dataset.postproc(dataset, cfg, metamodel)
-    metamodel.datasets = tuple(dataset.data for dataset in datasets)
+    datasets, outdir, _, metamodel = load_cfg(cfg, args)
     comm.barrier()
 
     # Now we fit
     to_fit = cfg.get("fit", True)
+    resample = cfg.get("resample", False)
     if to_fit and outdir is not None:
         metamodel = fit_loop(metamodel, cfg, comm)
         for dataset, mdata in zip(datasets, metamodel.datasets):

@@ -1,6 +1,6 @@
 import os
 from importlib import import_module
-from typing import Optional, Union
+from typing import Optional
 
 import aplpy
 import dill as pk

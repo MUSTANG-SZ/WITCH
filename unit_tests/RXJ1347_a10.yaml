@@ -11,12 +11,8 @@ cluster_model:
       parameters:
         dx_1:
           value: 0.0 # Units: arcsec, defined as an offset from x0 as set in base_unit.yaml
-          to_fit: [True, True, False, True] # Fit on all but the third rounds
-          priors: [-9.0, 9.0] 
         dy_1:
           value: 0.0 # Units: arcsec, defined as an offset from y0 as set in base_unit.yaml
-          to_fit: [True, True, False, True]
-          priors: [-9.0, 9.0]
         dz_1: # Line of sight offset. This is typically unconstrained so generally should be fixed to 0
           value: 0.0 
         theta: # Rotation of the model with respect to the positive y axis
@@ -27,10 +23,11 @@ cluster_model:
           value: 1.177 
         m500: # Cluster mass in M_solar
           value: "1.5e15"
-          to_fit: [True, False, True, True] 
+          to_fit: True 
         gamma: # Inner profile slope
           value: .3081 
         alpha: # Mid profile slope
+          to_fit: True
           value: 1.551 
         beta: # Outer profile slope
           value: 5.4905 
@@ -43,17 +40,13 @@ ps_model:
       parameters:
         dx_g: # Units: arcsec, defined as an offset from x0 as set in base_unit.yaml
           value: 0.0
-          to_fit: [True, True, False, True]
-          priors: [-9.0, 9.0]
         dy_g: # Units: arcsec, defined as an offset from y0 as set in base_unit.yaml
           value: 0.0
-          to_fit: [True, True, False, True]
-          priors: [-9.0, 9.0]
         sigma: # FWHM of the gaussian in arcsec
           value: 4
         amp_g: # Amplitude in map units (K_RJ)
           value: 0.002
-          to_fit: [True, False, True, True]
+          to_fit: True 
 
 # Add some info on what metadata to apply
 datasets:

@@ -4,26 +4,36 @@ name: Tests
 on:
   push:
     branches: [main]
-  pull_request: 
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
 
+jobs:
+  build:
 
-jobs: 
-  structure-tests:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with: 
-          python-version: "3.12"
+      - name: Deploy to Server
+        uses: easingthemes/ssh-deploy@main
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          ARGS: "-rlgoDzvc -i"
+          SOURCE: "./"
+          EXCLUDE: "/.git/"
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          TARGET: ${{ secrets.REMOTE_TARGET }}
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install jax jaxlib numpy scipy astropy pytest
-          pip install --no-deps -e .
-
-      - name: Run structure tests
-        run: |
-          python -m pytest tests/test_structure.py -v
+      - name: Run Tests on Server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            module load mpi
+            source ~/venvs/witch/bin/activate
+            cd ~/dev/WITCH
+            python -m pytest -s -q tests/
