@@ -141,27 +141,49 @@ def _metamodel_for_tod(metamodel: MetaModel, dataset_ind: int, tod):
     return chunk_metamodel
 
 
+def _tod_objective(metamodel, tod, dataset_ind, objective):
+    """
+    Chisq, gradient and curvature for a single TOD of a metamodel.
+
+    Parameters
+    ----------
+    metamodel : MetaModel
+        The metamodel to evaluate.
+    tod : TOD
+        The TOD to evaluate the objective for.
+        Passed as an argument (rather than closed over) so it is not baked
+        into the compiled function as a constant and the compiled function is
+        reused by TODs with the same shape.
+    dataset_ind : int
+        Index of the dataset `tod` belongs to.
+    objective : Callable
+        The (unjitted) objective of that dataset.
+
+    Returns
+    -------
+    chisq, grad, curve : jax.Array
+        See `witch.objective.chisq_objective`.
+    """
+    chunk_metamodel = _metamodel_for_tod(metamodel, dataset_ind, tod)
+    return objective(chunk_metamodel, dataset_ind, True, True, True)
+
+
+_tod_objective_jit = jax.jit(
+    _tod_objective, static_argnames=("dataset_ind", "objective")
+)
+
+
 def _make_tod_objectives(metamodel: MetaModel):
     objectives = []
     for dataset_ind, dataset in enumerate(metamodel.datasets):
         objective = getattr(dataset.objective, "__wrapped__", dataset.objective)
+        func = (
+            _tod_objective_jit if isinstance(metamodel, MetaModel) else _tod_objective
+        )
         for tod in dataset.datavec:
-
-            def objective_for_tod(
-                current_metamodel,
-                dataset_ind=dataset_ind,
-                tod=tod,
-                objective=objective,
-            ):
-                chunk_metamodel = _metamodel_for_tod(
-                    current_metamodel, dataset_ind, tod
-                )
-                return objective(chunk_metamodel, dataset_ind, True, True, True)
-
-            if isinstance(metamodel, MetaModel):
-                objectives.append(jax.jit(objective_for_tod))
-            else:
-                objectives.append(objective_for_tod)
+            objectives.append(
+                partial(func, tod=tod, dataset_ind=dataset_ind, objective=objective)
+            )
     return objectives
 
 
