@@ -164,26 +164,25 @@ def chisq_objective(
         #     resid = resid.at[:].add(-1*jnp.mean(resid, axis=-1)[..., None])
         # else:
         #     resid = resid.at[:].add(-1*jnp.mean(resid))
-        if do_loglike:
+        # The noise is symmetric so grad = J . (N r), only the curvature needs N J
+        if do_loglike or do_grad:
             resid_filt = data.noise.apply_noise(resid)
+        if do_loglike:
             chisq += jnp.sum(resid * resid_filt)
 
         if only_chisq:
             continue
 
-        grad_filt = jnp.zeros_like(grad_dat)
-        for i in range(npar):
-            grad_filt = grad_filt.at[i].set(
-                data.noise.apply_noise(grad_dat.at[i].get())
-            )
-        grad_filt = jnp.reshape(grad_filt, (npar, -1))
         grad_dat = jnp.reshape(grad_dat, (npar, -1))
-        resid = resid.ravel()
-
         if do_grad:
-            grad = grad.at[:].add(jnp.dot(grad_filt, jnp.transpose(resid)))
+            grad = grad.at[:].add(jnp.dot(grad_dat, resid_filt.ravel()))
         if do_curve:
-            curve = curve.at[:].add(jnp.dot(grad_filt, jnp.transpose(grad_dat)))
+            grad_filt = jax.vmap(data.noise.apply_noise)(
+                jnp.reshape(grad_dat, (npar,) + resid.shape)
+            )
+            curve = curve.at[:].add(
+                jnp.dot(jnp.reshape(grad_filt, (npar, -1)), grad_dat.T)
+            )
 
     return chisq, grad, curve
 
