@@ -173,15 +173,17 @@ def chisq_objective(
         if only_chisq:
             continue
 
-        grad_dat = jnp.reshape(grad_dat, (npar, -1))
+        # Gradients of parameters that are not being fit are zero, skip them
+        idx = metamodel.to_fit_idx
+        grad_dat = jnp.reshape(grad_dat[idx], (len(idx), -1))
         if do_grad:
-            grad = grad.at[:].add(jnp.dot(grad_dat, resid_filt.ravel()))
+            grad = grad.at[idx].add(jnp.dot(grad_dat, resid_filt.ravel()))
         if do_curve:
             grad_filt = jax.vmap(data.noise.apply_noise)(
-                jnp.reshape(grad_dat, (npar,) + resid.shape)
+                jnp.reshape(grad_dat, (len(idx),) + resid.shape)
             )
-            curve = curve.at[:].add(
-                jnp.dot(jnp.reshape(grad_filt, (npar, -1)), grad_dat.T)
+            curve = curve.at[idx[:, None], idx[None, :]].add(
+                jnp.dot(jnp.reshape(grad_filt, (len(idx), -1)), grad_dat.T)
             )
 
     return chisq, grad, curve

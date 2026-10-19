@@ -163,6 +163,24 @@ class MetaModel:
 
         return to_fit
 
+    @property
+    def to_fit_idx(self) -> np.ndarray:
+        """
+        Get the indices of the parameters that will be fit this round.
+        Unlike `to_fit` this is built from static information only, so it is
+        a concrete array even inside `jax.jit`.
+
+        Returns
+        -------
+        to_fit_idx : np.ndarray
+            Sorted indices into `self.parameters` of the parameters that will be fit this round.
+        """
+        to_fit = np.zeros(self.parameters.shape[0], dtype=bool)
+        for model, par_map in zip(self.models, self.parameter_map):
+            to_fit[np.array(par_map)] = np.array(model.to_fit)
+
+        return np.flatnonzero(to_fit)
+
     @cached_property
     def to_fit_ever(self) -> jax.Array:
         """
@@ -334,14 +352,18 @@ class MetaModel:
         for i in m_map:
             model = self.models[i]
             md = md_map[i]
-            par_map = self.parameter_map[i]
-            ip_grad = model.model_grad[1]
+            # Gradients of parameters we are not fitting are zero, don't project them
+            fit = np.flatnonzero(np.array(model.to_fit))
+            if len(fit) == 0:
+                continue
+            par_map = np.array(self.parameter_map[i])[fit]
+            ip_grad = model.model_grad[1][fit]
             for md_idx in md:
                 ip_grad = dset.metadata[md_idx].apply_grad(ip_grad)
             _proj_grad = _project_vectorized(ip_grad, x, y, model.xyz)
             for md_idx in md:
                 _proj_grad = dset.metadata[md_idx].apply_grad_proj(_proj_grad)
-            proj_grad = proj_grad.at[jnp.array(par_map)].add(_proj_grad)
+            proj_grad = proj_grad.at[par_map].add(_proj_grad)
         return proj_grad
 
     def get_dataset_ind(self, dset_name: str) -> int:
