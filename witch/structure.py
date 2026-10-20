@@ -582,7 +582,7 @@ def sph_isobeta(
         Line of sight offset of cluster center relative to grid origin.
         Passed to `grid.transform_grid`.
         Units: arcsec
-    r_1 : float
+    r : float
         Amount to scale along all three axes.
         Passed to `grid.transform_grid`.
         Units: arcsec
