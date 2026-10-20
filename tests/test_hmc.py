@@ -1,9 +1,9 @@
 import jax
 import jax.numpy as jnp
 import numpy as np
+from mpi4py import MPI
 
 from witch.fitting import hmc
-from mpi4py import MPI
 
 
 def _gauss(sigma):
