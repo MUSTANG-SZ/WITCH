@@ -15,6 +15,7 @@ import jax
 import jax.numpy as jnp
 import mpi4jax
 from jax.scipy.special import factorial
+from jitkasi.noise import NoiseI, NoiseSmoothedSVD, NoiseWhite
 from mpi4py import MPI
 
 if TYPE_CHECKING:
@@ -99,6 +100,59 @@ class ObjectiveFunc(Protocol):
     ) -> tuple[jax.Array, jax.Array, jax.Array]: ...
 
 
+# Noise models whose operator is known to be symmetric, N^T = N.
+# For these the gradient J.(N r) can reuse the filtered residual instead of filtering
+# every gradient map. Other models must use the general (N J).r form.
+SYMMETRIC_NOISE = (NoiseI, NoiseWhite, NoiseSmoothedSVD)
+
+
+def _tod_grad_curve(noise, resid, resid_filt, grad_dat, do_grad, do_curve):
+    """
+    Gradient and curvature contributions of one TOD.
+
+    The gradient is computed as `J.(N r)` when the noise operator `N` is known to be
+    symmetric (see `SYMMETRIC_NOISE`), which reuses `resid_filt` and so needs no filtering
+    of the gradient maps. Otherwise the general `(N J).r` is used. The curvature
+    `J^T N J` always needs the filtered gradient maps.
+
+    Parameters
+    ----------
+    noise : NoiseModel
+        The noise model of the TOD.
+    resid : jax.Array
+        Residual of the data and model, shape of the TOD.
+    resid_filt : jax.Array or None
+        `noise.apply_noise(resid)`. Required if `do_grad` and `noise` is symmetric.
+    grad_dat : jax.Array
+        Gradient maps of the fitted parameters, shape `(nfit,) + resid.shape`.
+    do_grad : bool
+        Whether to compute the gradient.
+    do_curve : bool
+        Whether to compute the curvature.
+
+    Returns
+    -------
+    grad : jax.Array or None
+        Gradient of the fitted parameters, `(nfit,)`. None if `do_grad` is False.
+    curve : jax.Array or None
+        Curvature of the fitted parameters, `(nfit, nfit)`. None if `do_curve` is False.
+    """
+    nfit = grad_dat.shape[0]
+    flat = jnp.reshape(grad_dat, (nfit, -1))
+    symmetric = isinstance(noise, SYMMETRIC_NOISE)
+    grad = curve = None
+    if do_curve or (do_grad and not symmetric):
+        grad_filt = jnp.reshape(jax.vmap(noise.apply_noise)(grad_dat), (nfit, -1))
+    if do_grad:
+        if symmetric:
+            grad = jnp.dot(flat, resid_filt.ravel())
+        else:
+            grad = jnp.dot(grad_filt, resid.ravel())
+    if do_curve:
+        curve = jnp.dot(grad_filt, flat.T)
+    return grad, curve
+
+
 @partial(jax.jit, static_argnames=("dataset_ind", "do_loglike", "do_grad", "do_curve"))
 def chisq_objective(
     metamodel: "MetaModel",
@@ -164,8 +218,9 @@ def chisq_objective(
         #     resid = resid.at[:].add(-1*jnp.mean(resid, axis=-1)[..., None])
         # else:
         #     resid = resid.at[:].add(-1*jnp.mean(resid))
-        # The noise is symmetric so grad = J . (N r), only the curvature needs N J
-        if do_loglike or do_grad:
+        symmetric = isinstance(data.noise, SYMMETRIC_NOISE)
+        resid_filt = None
+        if do_loglike or (do_grad and symmetric):
             resid_filt = data.noise.apply_noise(resid)
         if do_loglike:
             chisq += jnp.sum(resid * resid_filt)
@@ -175,16 +230,13 @@ def chisq_objective(
 
         # Gradients of parameters that are not being fit are zero, skip them
         idx = metamodel.to_fit_idx
-        grad_dat = jnp.reshape(grad_dat[idx], (len(idx), -1))
+        grad_fit, curve_fit = _tod_grad_curve(
+            data.noise, resid, resid_filt, grad_dat[idx], do_grad, do_curve
+        )
         if do_grad:
-            grad = grad.at[idx].add(jnp.dot(grad_dat, resid_filt.ravel()))
+            grad = grad.at[idx].add(grad_fit)
         if do_curve:
-            grad_filt = jax.vmap(data.noise.apply_noise)(
-                jnp.reshape(grad_dat, (len(idx),) + resid.shape)
-            )
-            curve = curve.at[idx[:, None], idx[None, :]].add(
-                jnp.dot(jnp.reshape(grad_filt, (len(idx), -1)), grad_dat.T)
-            )
+            curve = curve.at[idx[:, None], idx[None, :]].add(curve_fit)
 
     return chisq, grad, curve
 
