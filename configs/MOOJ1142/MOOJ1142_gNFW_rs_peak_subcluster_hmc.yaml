@@ -1,0 +1,14 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "MOOJ1142_gNFW_rs_peak_subcluster.yaml"
+subdir: "hmc"
+
+mcmc:
+  run: true
+  method: hmc
+  num_steps: 1000
+  num_leaps: 10
+  step_size: .02
+  sample_witch: -2
+
