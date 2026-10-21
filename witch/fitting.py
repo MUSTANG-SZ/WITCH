@@ -53,8 +53,6 @@ def invscale(matrix: jax.Array, thresh: float = 1e-16, do_invsafe=False) -> jax.
 
     Parameters
     ----------
-    Parameters
-    ----------
     matrix : jax.Array
         The matrix to invert and sxane.
         Should be a `(n, n)` array.
@@ -552,9 +550,9 @@ def run_mcmc(
         The MetaModel that describes the models and datasets.
     num_steps : int, default: 5000
         The number of steps to run MCMC for.
-    num_leaps: int, default: 10
+    num_leaps : int, default: 10
         The number of leapfrog steps to take at each sample.
-    step_size, default: .02
+    step_size : lax.Array, default: .02
         The step size to use in the leapfrog algorithm.
         This should be tuned to get an acceptance fraction of ~.65.
     sample_which : int, default: -1,

@@ -95,7 +95,7 @@ class MetaData:
 
         Parameters
         ----------
-        model_gradient : Array
+        model_grad : Array
             The model gradient defined on a grid.
 
         Returns
@@ -112,7 +112,7 @@ class MetaData:
 
         Parameters
         ----------
-        model : Array
+        model_proj : Array
             The model projected to the datavector.
 
         Returns
@@ -129,7 +129,7 @@ class MetaData:
 
         Parameters
         ----------
-        model_gradient_proj : Array
+        model_grad_proj : Array
             The model gradient projected to the datavector.
 
         Returns
@@ -367,8 +367,6 @@ class PreProc(Protocol):
         metamodel : MetaModel
             The cluster model.
             At this point this will just be the initial state of the model.
-        info : dict
-            Dictionairy containing dataset information.
         """
         ...
 

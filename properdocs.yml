@@ -1,6 +1,6 @@
 site_name: WITCH 
 site_url: https://mustang-sz.github.io/WITCH/
-theme: material 
+theme: materialx
 plugins:
   - search
   - mkdocs-homepage-copier
