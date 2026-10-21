@@ -124,7 +124,7 @@ class MetaModel:
         # Check mappings
         if self.parameter_map != other.parameter_map:
             return False
-        if self.model_map != other.metadata_map:
+        if self.model_map != other.model_map:
             return False
         if self.metadata_map != other.metadata_map:
             return False
