@@ -3674,10 +3674,7 @@ This function is MPI aware.</p>
 <span class="normal">379</span>
 <span class="normal">380</span>
 <span class="normal">381</span>
-<span class="normal">382</span>
-<span class="normal">383</span>
-<span class="normal">384</span>
-<span class="normal">385</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">run_lmfit</span><span class="p">(</span>
+<span class="normal">382</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">run_lmfit</span><span class="p">(</span>
     <span class="n">metamodel</span><span class="p">:</span> <span class="n">MetaModel</span><span class="p">,</span>
     <span class="n">maxiter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
     <span class="n">chitol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span><span class="p">,</span>
@@ -3785,10 +3782,8 @@ This function is MPI aware.</p>
     <span class="p">)</span>
     <span class="c1"># Recompute chisq at the starting pars so that it matches the current noise model,</span>
     <span class="c1"># the stored value may be from before the noise was reestimated</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"Compiling LM objective with gradient and curvature"</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">chisq</span><span class="p">,</span> <span class="n">grad</span><span class="p">,</span> <span class="n">curve</span> <span class="o">=</span> <span class="n">joint_objective</span><span class="p">(</span><span class="n">metamodel</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
     <span class="n">jax</span><span class="o">.</span><span class="n">block_until_ready</span><span class="p">((</span><span class="n">chisq</span><span class="p">,</span> <span class="n">grad</span><span class="p">,</span> <span class="n">curve</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"LM objective ready; compiling iteration loop"</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">metamodel</span> <span class="o">=</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
         <span class="n">pars</span><span class="o">=</span><span class="n">pars</span><span class="p">,</span> <span class="n">errs</span><span class="o">=</span><span class="n">metamodel</span><span class="o">.</span><span class="n">errs</span><span class="p">,</span> <span class="n">cov</span><span class="o">=</span><span class="n">metamodel</span><span class="o">.</span><span class="n">cov</span><span class="p">,</span> <span class="n">chisq</span><span class="o">=</span><span class="n">chisq</span>
     <span class="p">)</span>
@@ -3797,7 +3792,6 @@ This function is MPI aware.</p>
         <span class="n">_body_func</span><span class="p">,</span>
         <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">zero</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">curve</span><span class="p">,</span> <span class="n">grad</span><span class="p">),</span>
     <span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"LM iteration loop complete"</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">delta_chisq</span><span class="p">,</span> <span class="n">lmd</span>
 </code></pre></div></td></tr></table></div>
@@ -4009,7 +4003,10 @@ This also has the chi-squared of the estimated parameters.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/fitting.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">525</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">522</span>
+<span class="normal">523</span>
+<span class="normal">524</span>
+<span class="normal">525</span>
 <span class="normal">526</span>
 <span class="normal">527</span>
 <span class="normal">528</span>
@@ -4267,10 +4264,7 @@ This also has the chi-squared of the estimated parameters.</p>
 <span class="normal">780</span>
 <span class="normal">781</span>
 <span class="normal">782</span>
-<span class="normal">783</span>
-<span class="normal">784</span>
-<span class="normal">785</span>
-<span class="normal">786</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">run_mcmc</span><span class="p">(</span>
+<span class="normal">783</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">run_mcmc</span><span class="p">(</span>
     <span class="n">metamodel</span><span class="p">:</span> <span class="n">MetaModel</span><span class="p">,</span>
     <span class="n">num_steps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5000</span><span class="p">,</span>
     <span class="n">num_leaps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
