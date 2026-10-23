@@ -15,8 +15,9 @@ coords:
 datasets:
   act:
     noise:
-      class: "jm.NoiseWhite"
-      args: "['self.ivar']"
+      # White noise from ivar plus a CMB covariance, the CMB dominates the map variance
+      class: "wn.NoiseCMBMap"
+      args: "['self.ivar', 'self.wcs.wcs.cdelt[0]']"
       kwargs: "{}"
     funcs:
       get_files: "amf.get_files"
@@ -79,3 +80,4 @@ imports:
   jitkasi.solutions.maps: jm
   witch.external.act_map.funcs: amf
   witch.utils: wu
+  witch.noise: wn

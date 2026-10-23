@@ -152,3 +152,17 @@ Config: `configs/MOOJ1142_Joint/MOOJ1142_joint_M2_ACT_gNFW_rs_peak_subcluster{,_
   Reading the result: if ACT strongly prefers the joint parameters (a large Δchi2 in the
   `ps_solved` column) and the residual or profile shows large-scale structure out to the map
   edge, that confirms cause 1.
+
+## Session 4: cause 1 confirmed, CMB noise model added
+Ran `scripts/act_chisq_diagnostic.py` on the two dills (`par_results_final_fit.dill` = M2-only, `par_results_fit19.dill` = joint):
+- With `jm.NoiseWhite`, chi2 with no model is 39182 for 1600 px (about 24.5 per pixel), so the CMB dominates the ACT likelihood.
+  The joint parameters beat the M2-only ones by about 400 in chi2, which is the pull toward r_s=50.
+- New `witch/noise.py` `NoiseCMBMap`: dense N = diag(1/ivar) + CMB covariance (approximate LCDM TT, 2' beam,
+  crude white foreground) + a broad offset mode. Chi2 with no model drops to 1169 for 1600 px.
+  The saved joint parameters now beat the M2-only ones by only about 15, so the pull is mostly gone.
+- `MOOJ1142_joint_M2_ACT_gNFW_rs_peak_subcluster.yaml` now uses `wn.NoiseCMBMap`. The MCMC config inherits it
+  (check that it does).
+- **Still to do (needs the cluster)**: re-run the joint LM and check r_s stays near 24.
+  The diagnostic only re-evaluates saved parameters. Causes 2 (grid covers 9% of the map, model truncated at 3')
+  and 3 (model not zero-meaned) are not addressed; the noise model marginalises the offset, which handles 3.
+- `cmb_scale` (a `NoiseCMBMap.compute` kwarg) can be tuned; 1.0 gives chi2/px about 0.73 of white, so the model may be slightly too conservative.
