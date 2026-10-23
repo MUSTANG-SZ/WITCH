@@ -232,7 +232,8 @@ def _run_lmfit_tod_chunks(
     while iteration < maxiter and (bool(delta_chisq >= chitol) or bool(lmd > zero)):
         curve_use = curve.at[:].add(lmd * jnp.diag(jnp.diag(curve)))
         step = jnp.dot(
-            invscale(curve_use.at[tf, :].get().at[:, tf].get()), grad.at[tf].get()
+            invscale(curve_use.at[tf, :].get().at[:, tf].get(), do_invsafe=True),
+            grad.at[tf].get(),
         )
         new_pars, to_fit = _prior_pars_fit(
             metamodel.priors,
@@ -333,7 +334,8 @@ def run_lmfit(
         curve_use = curve.at[:].add(lmd * jnp.diag(jnp.diag(curve)))
         # Get the step
         step = jnp.dot(
-            invscale(curve_use.at[tf, :].get().at[:, tf].get()), grad.at[tf].get()
+            invscale(curve_use.at[tf, :].get().at[:, tf].get(), do_invsafe=True),
+            grad.at[tf].get(),
         )
         new_pars, to_fit = _prior_pars_fit(
             metamodel.priors,
@@ -505,7 +507,7 @@ def hmc(
         c_sample = _sample
         t1 = time.time()
         if rank == 0:
-            print(f"Compiled MC sample function in {t1-t0} s")
+            print(f"Compiled MC sample function in {t1 - t0} s")
         sample_cache[(num_leaps, npar)] = c_sample
     else:
         if rank == 0:

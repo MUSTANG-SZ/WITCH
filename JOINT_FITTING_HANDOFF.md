@@ -67,50 +67,17 @@ Delete it once the work is merged.
 - The old `unit_tests/joint_tests/*.yaml` use the legacy `model:` schema and can't load. Leave them or
   delete them.
 
-## Current blocker — the joint LM fit doesn't converge
-Smoke runs used a coarse grid (`r_map` 4′, `dr` = `dz` = 6″), `ntods: 2`, `n_rounds: 6`, `map: False`,
-`model_map: False`.
-- **M2 only** (`mpirun -n 2`): converges cleanly every round (Δχ² ≈ 1e-5, λ = 0).
-- **Joint** (`mpirun -n 3`): round 1 makes progress. After that every LM step is rejected (Δχ² = inf,
-  λ grows to about 5e8), and χ² goes *up* between rounds. Earlier, with m500 = 8e14 and maxiter 3, the
-  fit gave `amp_act` = 125 ± 4 against an injected 50, and implausibly small errors.
-- **Diagnosis so far:** the ACT dataset's χ² is inconsistent with its gradient/curvature, or the ACT
-  noise or data is wrong.
-
-Suspects:
-- `BeamConvAndPrefac.apply_grad` / `apply_grad_proj` vs `apply` (`witch/dataset.py` ~175-200).
-- Gradient projection for maps in `MetaModel.model_grad_proj` (`witch/containers/metamodel.py` ~340):
-  `x, y = data.xy`, `_project_vectorized`.
-- The point-source gradient when the model is excluded from metadata.
-- ACT `NoiseWhite` normalization.
-- Per-round noise re-estimation (`_reestimate_noise` in `fitter.py`) for maps.
-
-**Next step: a finite-difference gradient check on an ACT-only metamodel** (single process, cheap). The
-script below hasn't been run yet. Compare `fd dchisq` with `-2*grad`; they should match if grad = Aᵀ N⁻¹ r.
-```python
-import sys
-import numpy as np, jax.numpy as jnp
-from witch import fitter
-from witch.cfg_loader import load_cfg
-from witch.objective import joint_objective
-cfg = fitter.load_config({}, sys.argv[1])          # e.g. a small override of joint_sim_act_m2.yaml
-del cfg["datasets"]["mustang2"]
-del cfg["metamodel"]["model_map"]["mustang2"]
-cfg["metamodel"]["models"] = ["cluster_model", "ps_act"]
-cfg["metamodel"].pop("parameter_map")
-cli = fitter._make_parser().parse_args([sys.argv[1]])
-_, _, _, mm = load_cfg(cfg, cli)
-pars = jnp.array(mm.parameters); names = np.array(mm.par_names)
-chisq, grad, curve = joint_objective(mm, True, True, True)
-print("chisq", float(chisq), "npix", mm.datasets[0].datavec[0].data.size)
-for i in np.where(np.array(mm.to_fit))[0]:
-    h = 1e-4 * max(abs(float(pars[i])), 1.0)
-    cs = [float(joint_objective(mm.update(pars.at[i].add(s*h), mm.errs, mm.cov, mm.chisq),
-                                True, False, False)[0]) for s in (1, -1)]
-    print(names[i], (cs[0]-cs[1])/(2*h), -2*float(grad[i]), float(curve[i, i]))
-```
-Also check that χ² at the injected truth is about the number of ACT pixels (1600) for the ACT-only
-metamodel.
+## Joint LM blocker — RESOLVED (session 2)
+- ACT gradient/curvature were fine: finite differences match `-2*grad` for ACT-only and for the joint
+  3-rank metamodel; ACT-only chi2 at truth is ~1608 for 1600 px.
+- Real cause: in round 1 `amp_sh` was driven to its lower bound 0, which makes `kr_sh` exactly degenerate
+  (zero curvature row). The LM step used plain `jnp.linalg.inv` -> NaN pars -> NaN chi2 -> every step
+  "rejected" (delta inf, lambda doubling to 512). Fix: `do_invsafe=True` for the step in both LM loops
+  (`witch/fitting.py`). Smoke joint run now converges steadily and recovers truths roughly
+  (amp_act 66 +- 4 vs 50 injected on the coarse 2-TOD grid; check on the full config).
+- Also fixed: `act_map/funcs.py` `load_maps` failed on big-endian FITS (`>f4`) -> cast to float.
+- Open question: why amp_sh hit 0 in round 1 (starting at 1.1x truth). Probably a large Newton step
+  from the m500/amp_sh degeneracy; worth checking if the full config still does it.
 
 ## Remaining TODO after the fix
 1. Check that both full configs converge and recover the truths (8 TODs, 9 ranks).

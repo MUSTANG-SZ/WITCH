@@ -52,11 +52,11 @@ def load_maps(
         # The actual map
         f: fits.HDUList = fits.open(fname)
         wcs = WCS(f[0].header)  # type: ignore
-        dat = jnp.array(f[0].data.copy().T)  # type: ignore
+        dat = jnp.array(f[0].data.T.astype(float))  # type: ignore
         f.close()
         # The ivar map
         f: fits.HDUList = fits.open(iname)
-        ivar = jnp.array(f[0].data.copy().T)  # type: ignore
+        ivar = jnp.array(f[0].data.T.astype(float))  # type: ignore
         f.close()
         imaps += [maps.WCSMap(name, dat, comm, wcs, "nn", ivar=ivar)]
     mapset = SolutionSet(imaps, comm)
