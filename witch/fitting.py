@@ -154,6 +154,11 @@ def _make_tod_objectives(metamodel: MetaModel):
     for dataset_ind, dataset in enumerate(metamodel.datasets):
         objective = getattr(dataset.objective, "__wrapped__", dataset.objective)
         for tod in dataset.datavec:
+            # `WCSMap.xy` is a cached_property and `tod` is closed over as a constant,
+            # so if it is first evaluated inside jit a tracer gets cached on the map
+            # and leaks on the next trace. Populate the cache eagerly instead.
+            if dataset.mode != "tod":
+                tod.xy
 
             def objective_for_tod(
                 current_metamodel,
