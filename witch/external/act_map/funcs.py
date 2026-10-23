@@ -42,6 +42,26 @@ def get_files(dset_name: str, cfg: dict) -> list:
 def load_maps(
     dset_name: str, cfg: dict, fnames: list, comm: MPI.Intracomm
 ) -> SolutionSet:
+    """
+    Load the ACT maps and ivar maps.
+
+    Parameters
+    ----------
+    dset_name : str
+        Name of the dataset in the config.
+    cfg : dict
+        The config. If `datasets.<dset_name>.zero_mean` is True (default) the
+        ivar weighted mean is subtracted from each map.
+    fnames : list
+        `(map, ivar)` file name pairs from `get_files`.
+    comm : MPI.Intracomm
+        Communicator for the maps.
+
+    Returns
+    -------
+    SolutionSet
+        The loaded maps.
+    """
     map_names = [f[0] for f in fnames]
     ivar_names = [f[1] for f in fnames]
     map_glob = cfg["datasets"][dset_name].get("glob", "*_map.fits")
@@ -58,6 +78,10 @@ def load_maps(
         f: fits.HDUList = fits.open(iname)
         ivar = jnp.array(f[0].data.T.astype(float))  # type: ignore
         f.close()
+        if cfg["datasets"][dset_name].get("zero_mean", True):
+            # Match the zero-mean convention of the other datasets, this is a cutout
+            # so its mean is not zero. The mean is ivar weighted and ignores empty pixels.
+            dat = dat - jnp.sum(dat * ivar) / jnp.sum(ivar)
         imaps += [maps.WCSMap(name, dat, comm, wcs, "nn", ivar=ivar)]
     mapset = SolutionSet(imaps, comm)
 
