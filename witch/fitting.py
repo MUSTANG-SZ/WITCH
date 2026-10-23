@@ -370,10 +370,8 @@ def run_lmfit(
     )
     # Recompute chisq at the starting pars so that it matches the current noise model,
     # the stored value may be from before the noise was reestimated
-    print("Compiling LM objective with gradient and curvature", flush=True)
     chisq, grad, curve = joint_objective(metamodel, True, True, True)
     jax.block_until_ready((chisq, grad, curve))
-    print("LM objective ready; compiling iteration loop", flush=True)
     metamodel = metamodel.update(
         pars=pars, errs=metamodel.errs, cov=metamodel.cov, chisq=chisq
     )
@@ -382,7 +380,6 @@ def run_lmfit(
         _body_func,
         (0, jnp.astype(jnp.inf, jnp.float32), zero.copy(), metamodel, curve, grad),
     )
-    print("LM iteration loop complete", flush=True)
 
     return metamodel, i, delta_chisq, lmd
 
