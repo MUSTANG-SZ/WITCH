@@ -8,9 +8,9 @@ paths:
   maps: "MOOJ1142" # ACT maps live in WITCH_DATROOT/MOOJ1142/act
   subdir: "joint_xray_peak_rs"
 
-# The grid has to hold 3*fwhm1 of the ACT beam inside 2*r_map: 360" <= 2*180"
+# The grid has to hold 3*fwhm1 of the ACT beam inside 2*r_map, and should cover most of the 20 arcmin ACT map
 coords:
-  r_map: "3.0*60"
+  r_map: "7.0*60"
 
 datasets:
   act:

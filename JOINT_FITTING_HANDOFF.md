@@ -166,3 +166,12 @@ Ran `scripts/act_chisq_diagnostic.py` on the two dills (`par_results_final_fit.d
   The diagnostic only re-evaluates saved parameters. Causes 2 (grid covers 9% of the map, model truncated at 3')
   and 3 (model not zero-meaned) are not addressed; the noise model marginalises the offset, which handles 3.
 - `cmb_scale` (a `NoiseCMBMap.compute` kwarg) can be tuned; 1.0 gives chi2/px about 0.73 of white, so the model may be slightly too conservative.
+
+### Session 4 update
+- CMB spectrum now comes from CAMB (Planck 2018, lensed, installed in `~/venvs/general`), replacing the hand-tabulated one.
+  No-model chi2 is 1217 for 1600 px.
+- `r_map` raised to 7' (covers 51% of the ACT pixels). With the saved M2-only and joint parameters, the ACT chi2 is now
+  1097.7 vs 1097.2 after solving the ACT point source, so ACT no longer prefers the extended profile.
+  Memory/time of the 3D grid grows with `r_map`; check on the cluster.
+- The user is developing a better ACT noise estimate (CMB as a noise term). It should be a drop-in `noise.class` replacement
+  with the same `compute(dat, ivar, pix_deg)` / `apply_noise` interface as `NoiseCMBMap`.

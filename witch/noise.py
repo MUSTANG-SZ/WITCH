@@ -2,6 +2,7 @@
 Noise models for maps where the CMB is a significant noise source.
 """
 
+from functools import lru_cache
 from typing import Self
 
 import jax.numpy as jnp
@@ -10,23 +11,37 @@ from jax import jit
 from jax.tree_util import register_pytree_node_class
 from scipy.special import j0
 
-# Approximate lensed LCDM TT spectrum, D_l = l(l+1)C_l/2pi in uK_CMB^2. Good to ~10%,
-# which is plenty to stop the CMB from being mistaken for extended cluster signal.
-_ELL_TAB = np.array(
-    [2, 10, 30, 100, 150, 220, 300, 400, 540, 675, 810, 1000, 1120, 1300, 1500]
-    + [1800, 2000, 2500, 3000, 4000, 6000, 10000]
-)
-_DL_TAB = np.array(
-    [1000, 1050, 900, 2000, 3000, 5700, 3500, 1900, 2600, 1800, 2500, 1800, 1700]
-    + [1300, 1000, 650, 450, 250, 150, 80, 30, 10]
-)
+
+@lru_cache(maxsize=1)
+def _lensed_dl(lmax: int = 10000) -> np.ndarray:
+    """
+    Lensed LCDM TT spectrum from CAMB with Planck 2018 parameters.
+
+    Parameters
+    ----------
+    lmax : int, default: 10000
+        Maximum multipole.
+
+    Returns
+    -------
+    dl : np.ndarray
+        D_l = l(l+1)C_l/2pi in uK_CMB^2, indexed by l.
+    """
+    import camb
+
+    pars = camb.set_params(
+        H0=67.36, ombh2=0.02237, omch2=0.1200, tau=0.0544, As=2.1e-9, ns=0.9649,
+        lmax=lmax, lens_potential_accuracy=1,
+    )  # fmt: skip
+    res = camb.get_results(pars)
+    return res.get_lensed_scalar_cls(lmax=lmax, CMB_unit="muK", raw_cl=False)[:, 0]
 
 
 def cmb_cl(
     ell: np.ndarray, fg_dl3000: float = 100.0, fwhm_arcmin: float = 2.0
 ) -> np.ndarray:
     """
-    Beam smoothed CMB plus a crude white foreground power spectrum.
+    Beam smoothed CAMB CMB plus a crude white foreground power spectrum.
 
     Parameters
     ----------
@@ -42,7 +57,7 @@ def cmb_cl(
     cl : np.ndarray
         C_l in uK^2 sr, including the beam window squared.
     """
-    dl = np.interp(ell, _ELL_TAB, _DL_TAB) + fg_dl3000 * (ell / 3000.0) ** 2
+    dl = _lensed_dl()[ell.astype(int)] + fg_dl3000 * (ell / 3000.0) ** 2
     sigma = np.deg2rad(fwhm_arcmin / 60.0) / np.sqrt(8 * np.log(2))
     return dl * 2 * np.pi / (ell * (ell + 1)) * np.exp(-((ell * sigma) ** 2))
 
@@ -67,7 +82,7 @@ def cmb_covariance(
     cov : np.ndarray
         The `(npix, npix)` covariance in uK^2 with the map flattened in C order.
     """
-    ell = np.arange(2, 20000, dtype=float)
+    ell = np.arange(2, 10001, dtype=float)
     cl = cmb_cl(ell, **kwargs)
     ix, iy = np.indices(shape)
     xy = np.stack([ix.ravel(), iy.ravel()], axis=1) * np.deg2rad(pix_arcmin / 60.0)
