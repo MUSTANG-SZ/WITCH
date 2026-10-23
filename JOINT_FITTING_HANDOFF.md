@@ -105,3 +105,50 @@ Delete it once the work is merged.
    - The beam FFT convolution is circular with no padding.
    - The `parameter_map` index logic only works if each master comes before its tied parameters.
 5. Memory: about 4 GB per rank, dominated by the JIT-compiled model (the full 3D grid here).
+
+## Session 3 (2026-10-23): real MOOJ1142 joint fit, ACT pulls the profile out
+Config: `configs/MOOJ1142_Joint/MOOJ1142_joint_M2_ACT_gNFW_rs_peak_subcluster{,_mcmc}.yaml`
+(sph_isobeta subcluster + gnfw_rs + `ps_model`, plus ACT with `ps_act`).
+
+- **Fixed (`451ae64`)**: `UnexpectedTracerError` in the chunked LM. `WCSMap.xy` is a jitkasi
+  `cached_property`. The per-TOD objectives close over each map, so `xy` was first evaluated inside
+  jit and a tracer got cached on the map. `_make_tod_objectives` now touches `tod.xy` eagerly for
+  map datasets. The user wants jitkasi left alone; the better fix is for jitkasi to build `xy` with
+  numpy or under `jax.ensure_compile_time_eval()`.
+- **Open problem**: M2 alone gives gNFW r_s ≈ 24 (the user's number). Joint drives r_s to its upper
+  bound of 50, isobeta r to about 47, gNFW beta to about 7.4, and P0 from about 0.15 to 0.036,
+  while total chi2 barely moves (about 100 out of 4.3e7). The last LM round on Trillium was
+  `.../MOOJ1142/cluster_model_sph_isobeta-gnfw_rs+ps_model_ps_gauss+ps_act_ps_gauss/joint_xray_peak_rs/r-beta-amp-P0-r_s-beta-dx_g-dy_g-sigma-amp_g-amp_g/par_results_fit19.dill`
+  (the job was killed before the MCMC; don't trust the joint cluster profile).
+- Suspected causes, most likely first (not yet confirmed):
+  1. **The ACT noise model ignores the CMB.** The map std is 68 µK, but 1/√ivar is about 14 µK.
+     `jm.NoiseWhite` treats the CMB as signal, with about 25× too much weight. Large-scale CMB
+     under the cluster can only be absorbed by a more extended SZ profile, and with gamma and
+     alpha fixed that means r_s and beta. Fix: a CMB+noise covariance (Fourier space), or
+     high-pass both the ACT data and the model.
+  2. **The model grid (`r_map` = 3′, so ±180″) covers only the centre of the 20′×20′ ACT map.**
+     `bilinear_interp` gives zero outside the grid, so the model is truncated about 1.5 ACT beams
+     from the centre.
+  3. **`load_maps` zero-means the ACT data but not the model.**
+- **Diagnostic to run next (on the personal cluster, not Trillium)**:
+  `scripts/act_chisq_diagnostic.py`. It loads only the ACT dataset (one process, no TODs) and,
+  for each `par_results_*.dill`, prints the ACT chi2:
+  - with the parameters as saved;
+  - with the ACT point source amplitude re-solved (exact, since the model is linear in it);
+  - with the model zero-meaned as well.
+
+  It also prints the grid coverage of the map and writes model and residual FITS plus a radial
+  profile PNG under `<outroot>/.../act_diagnostic/not_fit/`. The script is untested so far.
+
+  ```
+  python scripts/act_chisq_diagnostic.py \
+      configs/MOOJ1142_Joint/MOOJ1142_joint_M2_ACT_gNFW_rs_peak_subcluster.yaml \
+      <m2_only_rs24>/par_results_final_fit.dill <joint>/par_results_fit19.dill \
+      --labels m2_only joint
+  ```
+
+  Use the M2-only run that gave r_s ≈ 24. The `xray_peak_rs/r-beta-amp-P0-beta-...` run on
+  Trillium has r_s fixed at 4.33, so it's the wrong one. Copy the dills over from Trillium.
+  Reading the result: if ACT strongly prefers the joint parameters (a large Δchi2 in the
+  `ps_solved` column) and the residual or profile shows large-scale structure out to the map
+  edge, that confirms cause 1.
