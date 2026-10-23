@@ -684,6 +684,24 @@ def _compute_par_map_and_pars(
             )
     if np.any(repeats > 1):
         raise ValueError("Some parameters mapped multiple times!")
+    # Tied parameters share one slot in the metamodel but each model only computes
+    # gradients for the parameters it fits, so all copies need to agree
+    parameters = {
+        f"{model.name}.{structure.name}.{parameter.name}": parameter
+        for model in models
+        for structure in model.structures
+        for parameter in structure.parameters
+    }
+    for p in pmap:
+        master = parameters[p[0]]
+        for n in p[1:]:
+            tied = parameters[n]
+            if tuple(tied.fit) != tuple(master.fit) or not np.array_equal(
+                tied.prior, master.prior
+            ):
+                raise ValueError(
+                    f"Tied parameters {p[0]} and {n} must have the same to_fit and priors"
+                )
     repeats = repeats.astype(bool)
     # Now build
     n_pars = int(np.sum(~repeats))

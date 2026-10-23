@@ -1,0 +1,78 @@
+# Simulated joint ACT + MUSTANG2 fit of the cluster in joint_sim_m2.yaml.
+# Same injected model and M2 noise as the M2-only config, plus the cluster and a
+# point source injected into white noise drawn from the MOOJ1142 ACT ivar map.
+# Needs at least one MPI task per TOD plus one for the ACT map,
+# ie: srun -n 9 witcher joint_sim_act_m2.yaml
+base: "joint_sim_m2.yaml"
+
+paths:
+  maps: "MOOJ1142"
+  subdir: "joint_sim_act_m2"
+
+datasets:
+  act:
+    noise:
+      class: "jm.NoiseWhite"
+      args: "['self.ivar']"
+      kwargs: "{}"
+    funcs:
+      get_files: "amf.get_files"
+      load: "amf.load_maps"
+      get_info: "amf.get_info"
+      make_metadata: "amf.make_metadata"
+      preproc: "amf.preproc"
+      postproc: "amf.postproc"
+      postfit: "amf.postfit"
+    # Single gaussian since the beam kernel is truncated at 1.5*fwhm1
+    beam:
+      fwhm1: "120"
+      amp1: 1.0
+      fwhm2: "120"
+      amp2: 0.0
+    prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_CMB(97e9, cfg['constants']['Te'])*wu.XMpc/wu.me)*1e6"
+    point_sources:
+      - "ps_act"
+
+# The ACT view of the same point source, the position is tied to ps_m2 below
+# so value, to_fit, and priors need to match ps_m2.
+# Not beam convolved or unit converted, so sigma is the ACT beam and amp is in uK_CMB.
+ps_act:
+  structures:
+    ps:
+      structure: "gaussian"
+      parameters:
+        dx_g:
+          value: 20.0
+          to_fit: True
+          priors: [5.0, 35.0]
+        dy_g:
+          value: -15.0
+          to_fit: True
+          priors: [-30.0, 0.0]
+        sigma_act: # arcsec, ACT beam
+          value: "120.0/2.3548"
+        amp_act: # uK_CMB
+          value: 50.0
+          to_fit: True
+          priors: [0.0, 500.0]
+
+metamodel:
+  models:
+    - cluster_model
+    - ps_m2
+    - ps_act
+  model_map:
+    mustang2:
+      - cluster_model
+      - ps_m2
+    act:
+      - cluster_model
+      - ps_act
+  # Each tied parameter has to come after its master
+  parameter_map:
+    - [ps_m2.ps.dx_g, ps_act.ps.dx_g]
+    - [ps_m2.ps.dy_g, ps_act.ps.dy_g]
+
+imports:
+  jitkasi.solutions.maps: jm
+  witch.external.act_map.funcs: amf

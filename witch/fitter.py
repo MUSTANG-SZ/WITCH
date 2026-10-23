@@ -213,12 +213,11 @@ def process_maps(cfg, dataset, metamodel):
                     f"ivar for map {imap.name} is all 0! Filling with a dummy value but you should check your maps!"
                 )
                 imap.ivar = imap.ivar.at[:].set(cfg.get("default_ivar", 1e8))
-            scale = 1.0 / jnp.sqrt(imap.ivar)
-            avg_scale = np.nanmean(scale)
-            print("Map noise: ", avg_scale)
-            scale = jnp.nan_to_num(
-                scale, nan=avg_scale, posinf=avg_scale, neginf=avg_scale
-            )
+            # Pixels with ivar == 0 have no weight in the likelihood, so leave them noiseless
+            # rather than letting an inf noise level propagate into the data
+            good = imap.ivar > 0
+            scale = jnp.where(good, 1.0 / jnp.sqrt(jnp.where(good, imap.ivar, 1.0)), 0.0)
+            print("Map noise: ", float(jnp.mean(scale[good])))
             imap.data = (
                 jax.random.normal(
                     jax.random.key(0), shape=imap.data.shape, dtype=imap.data.dtype
