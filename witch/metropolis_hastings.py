@@ -113,6 +113,7 @@ def draw_samp(
     err_scale=1.0,
     parameter_scale=None,
     proposal="diag",
+    pars=None,
 ):
     """
     Draw a masked proposal from a uniform or normal distribution.
@@ -144,13 +145,16 @@ def draw_samp(
         fitted parameters and scaled by ``2.38 / sqrt(n_fit) * err_scale``
         (the optimal random-walk scaling). It falls back to ``diag`` with
         the ``prior_type`` diagonal step if the covariance is not positive definite.
+    pars : jax.Array, optional
+        Parameters to center the proposal on. Defaults to ``metamodel.parameters``.
+        Passing the chain state here avoids building an updated metamodel.
 
     Returns
     -------
     jax.Array
         Proposed full parameter vector.
     """
-    pars = jnp.asarray(metamodel.parameters)
+    pars = jnp.asarray(metamodel.parameters if pars is None else pars)
     if proposal == "cov":
         mask = jnp.asarray(metamodel.to_fit)
         n_fit = jnp.maximum(jnp.sum(mask), 1)
@@ -174,6 +178,7 @@ def draw_samp(
                 err_scale,
                 parameter_scale,
                 "diag",
+                pars,
             ),
         )
     if parameter_scale is None:
@@ -216,6 +221,69 @@ def draw_samp(
 
     new_pars = normalized_new_pars * parameter_scale
     return jnp.where(metamodel.to_fit, new_pars, pars)
+
+
+@partial(jax.jit, static_argnames=("prior_type",))
+def _log_prior(pars, lower, upper, center, errs, prior_type="uniform"):
+    """
+    Log prior (up to a constant) of a parameter vector.
+
+    Parameters
+    ----------
+    pars : jax.Array
+        Parameters to evaluate the prior at.
+    lower, upper : jax.Array
+        Uniform prior bounds, used when ``prior_type`` is "uniform".
+    center : jax.Array
+        Mean of the gaussian prior, used when ``prior_type`` is "normal".
+    errs : jax.Array
+        Standard deviations (already scaled) of the gaussian prior.
+    prior_type : {"uniform", "normal"}, default="uniform"
+        Which prior to use.
+
+    Returns
+    -------
+    log_prior : jax.Array
+        Scalar log prior, ``-inf`` outside uniform bounds.
+    """
+    if prior_type == "normal":
+        errs = jnp.where(errs <= 0, jnp.inf, errs)
+        return -0.5 * jnp.sum(((pars - center) / errs) ** 2)
+    inside = jnp.logical_and(pars >= lower, pars <= upper)
+    return jnp.where(jnp.all(inside), 0.0, -jnp.inf)
+
+
+@jax.jit
+def _accept(key, state, logpost, candidate, candidate_logpost):
+    """
+    Metropolis accept/reject on device, so the chain never syncs with the host.
+
+    Parameters
+    ----------
+    key : jax.Array
+        PRNG key for the uniform draw.
+    state, candidate : jax.Array
+        Current and proposed parameters.
+    logpost, candidate_logpost : jax.Array
+        Log posteriors of ``state`` and ``candidate``.
+
+    Returns
+    -------
+    state : jax.Array
+        New chain state.
+    logpost : jax.Array
+        Log posterior of the new state.
+    accept : jax.Array
+        Whether the candidate was accepted.
+    """
+    valid = jnp.isfinite(candidate_logpost) & ~jnp.isneginf(logpost)
+    log_alpha = jnp.minimum(0.0, jnp.where(valid, candidate_logpost - logpost, 0.0))
+    accept = valid & (jnp.log(jax.random.uniform(key)) < log_alpha)
+    return (
+        jnp.where(accept, candidate, state),
+        jnp.where(accept, candidate_logpost, logpost),
+        accept,
+    )
 
 
 def metropolis_hastings(
@@ -270,44 +338,33 @@ def metropolis_hastings(
     acceptance_rate : float
         Fraction of proposals accepted.
     """
-    samples = np.zeros((num_samples, len(metamodel.parameters)))
-    current_state = metamodel.parameters
+    current_state = jnp.asarray(metamodel.parameters)
     initial_errs = jnp.abs(jnp.asarray(metamodel.errs))
     parameter_scale = jnp.where(
         current_state != 0,
         jnp.abs(current_state),
         jnp.where(initial_errs > 0, initial_errs, jnp.ones_like(current_state)),
     )
-    accepted_count = 0
     key = jax.random.key(seed)
-    rng = np.random.default_rng(seed)
-    # Compute current log-posterior (log likelihood + log prior when gaussian priors used)
-    p_like_current = calc_like_func(
+    prior_args = (
+        jnp.asarray(metamodel.priors[0]),
+        jnp.asarray(metamodel.priors[1]),
+        current_state,
+        jnp.asarray(metamodel.errs) * prior_err_scale,
+    )
+
+    def log_prior(pars):
+        return _log_prior(pars, *prior_args, prior_type=prior_type)
+
+    # Compute current log-posterior (log likelihood + log prior)
+    p_current = calc_like_func(
         metamodel=metamodel,
         pars=current_state,
         dataset_ind=dataset_ind,
-    )
+    ) + log_prior(current_state)
 
-    # helper to compute log prior (supports gaussian via metamodel.errs and uniform bounds)
-    def _log_prior(meta, pars, err_scale=1.0):
-        lower = jnp.asarray(meta.priors[0])
-        upper = jnp.asarray(meta.priors[1])
-        # If any prior is finite, treat as uniform (already handled by bounds)
-        # For gaussian-style priors we assume metamodel.errs provides 1-sigma and
-        # that gaussian priors are desired when prior_type == 'normal'.
-        if prior_type == "normal":
-            errs = jnp.asarray(meta.errs) * err_scale
-            # avoid division by zero
-            errs = jnp.where(errs <= 0, jnp.inf, errs)
-            # Gaussian log-prior (up to additive constant)
-            return -0.5 * jnp.sum(((pars - jnp.asarray(meta.parameters)) / errs) ** 2)
-        else:
-            # Uniform priors: return 0 if inside bounds else -inf
-            inside = jnp.logical_and(pars >= lower, pars <= upper)
-            return jnp.where(jnp.all(inside), 0.0, -jnp.inf)
-
-    p_current = p_like_current + _log_prior(metamodel, current_state, prior_err_scale)
-
+    states = []
+    accepted = []
     for i in tqdm(
         range(num_samples),
         desc=f"Chain {chain_id + 1}",
@@ -315,46 +372,35 @@ def metropolis_hastings(
         disable=not progress,
     ):
         # Propose a candidate state using a symmetric random walk.
-        key, sample_key = jax.random.split(key)
-        proposal_metamodel = _updated_metamodel(metamodel, current_state)
+        key, sample_key, accept_key = jax.random.split(key, 3)
         candidate = draw_samp(
-            metamodel=proposal_metamodel,
+            metamodel=metamodel,
             key=sample_key,
             bound=bound,
             prior_type=prior_type,
             err_scale=prior_err_scale,
             parameter_scale=parameter_scale,
             proposal=proposal,
+            pars=current_state,
         )
 
-        # Compare log acceptance probabilities to avoid exponentiating likelihoods.
-        p_like_candidate = calc_like_func(
+        # Compare log posteriors to avoid exponentiating likelihoods.
+        p_candidate = calc_like_func(
             metamodel=metamodel,
             pars=candidate,
             dataset_ind=dataset_ind,
+        ) + log_prior(candidate)
+        current_state, p_current, accept = _accept(
+            accept_key, current_state, p_current, candidate, p_candidate
         )
-        p_candidate = p_like_candidate + _log_prior(
-            metamodel, candidate, prior_err_scale
-        )
+        states.append(current_state)
+        accepted.append(accept)
+        # Dispatch is async, sync now and then so the progress bar is honest
+        if i % 64 == 63:
+            p_current.block_until_ready()
 
-        current_logpost = float(p_current)
-        candidate_logpost = float(p_candidate)
-        if np.isneginf(current_logpost):
-            accept = False
-        elif np.isfinite(candidate_logpost):
-            log_alpha = min(0.0, candidate_logpost - current_logpost)
-            accept = np.log(rng.random()) < log_alpha
-        else:
-            accept = False
-
-        # Accept or reject the candidate
-        if accept:
-            current_state = candidate
-            p_current = p_candidate
-            accepted_count += 1
-
-        samples[i] = current_state
-
+    samples = np.asarray(jnp.stack(states))
+    accepted_count = int(jnp.sum(jnp.stack(accepted)))
     acceptance_rate = accepted_count / num_samples
     return samples, acceptance_rate
 

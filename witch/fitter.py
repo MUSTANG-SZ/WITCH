@@ -450,6 +450,8 @@ def _mcmc_checkpoint_callback(
 
 def _run_mcmc(cfg, metamodel, nonpara=False):
     print_once("Running MCMC")
+    # The noise was re-estimated after LM, see the comment in fit_loop
+    jax.clear_caches()
     init_pars = np.array(metamodel.parameters.copy())
 
     # Checkpoint settings
@@ -612,6 +614,9 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
         )
 
     # Compile objective function
+    # Noise models live in pytree aux data and can't be compared once re-estimated,
+    # so drop any jit cache entries keyed on old noise objects
+    jax.clear_caches()
     print_once("Compiling objective function")
     t0 = time.time()
     chisq, _, _ = joint_objective(metamodel, do_grad=False, do_curve=False)

@@ -1,0 +1,16 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "MOOJ1142_gNFW_rs_peak_subcluster.yaml"
+
+mcmc:
+  run: true
+  method: hmc
+  num_steps: 1000
+  num_leaps: 10
+  step_size: .02
+  sample_which: -2
+  lm: false # Skip LM and sample from the saved model
+
+# Resume from the latest saved LM checkpoint in the output directory
+load_progress: -1

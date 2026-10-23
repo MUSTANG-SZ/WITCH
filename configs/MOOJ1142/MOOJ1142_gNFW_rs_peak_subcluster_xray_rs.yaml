@@ -9,8 +9,7 @@ name: "MOOJ1142"
 sim: False # If True use TODs to make noise and add a simulated cluster
 
 paths:
-  tods: "MOOJ1142_0"
-  subdir: "xray_peak_rs_priors_0" # Subdirectory to use
+  subdir: "xray_peak_rs" # Subdirectory to use
 
 coords:
   x0: "(175.69766238*u.deg).to(u.radian).value" # eleonora peak
@@ -28,20 +27,22 @@ cluster_model:
         dz_1:
           value: 0.0
         P0:
-          value: 1.63 
+          value: 0.373
           to_fit: True
+          priors: [0.01, 4.]
         r_s:
-          value: 4.5
-          to_fit: True
+          value: 4.33 
+          to_fit: False
         gamma:
           value: 0.465
-          to_fit: True
+          to_fit: False
         alpha:
           value: 2.26
-          to_fit: True
+          to_fit: False
         beta:
-          value: 2.05
+          value: 4.42
           to_fit: True
+          priors: [1., 10.]
         z:
           value: 1.19
     sph_isobeta:
@@ -58,19 +59,19 @@ cluster_model:
         z0:
           value: 0.0
         r:
-          value: 23.9
+          value: 10.0
           to_fit: True
+          priors: [1., 50.]
         theta:
           value: 0.0
         beta:
-          value: 2.56
+          value: 3.0
           to_fit: True
           priors: [0.0, 10.0]
         amp:
           value: 0.05
           to_fit: True
           priors: [0.0, 10.0]
-
 ps_model:
   structures:
     ps_gauss:
@@ -88,6 +89,7 @@ ps_model:
         amp_g:
           value: 0.00128582673
           to_fit: True
+
 datasets:
   mustang2:
     point_sources:
@@ -101,4 +103,3 @@ metamodel:
     mustang2:
       - cluster_model
       - ps_model
-

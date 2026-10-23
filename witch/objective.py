@@ -164,26 +164,24 @@ def chisq_objective(
         #     resid = resid.at[:].add(-1*jnp.mean(resid, axis=-1)[..., None])
         # else:
         #     resid = resid.at[:].add(-1*jnp.mean(resid))
+        resid_filt = data.noise.apply_noise(resid) if do_loglike else None
         if do_loglike:
-            resid_filt = data.noise.apply_noise(resid)
             chisq += jnp.sum(resid * resid_filt)
 
         if only_chisq:
             continue
 
-        grad_filt = jnp.zeros_like(grad_dat)
-        for i in range(npar):
-            grad_filt = grad_filt.at[i].set(
-                data.noise.apply_noise(grad_dat.at[i].get())
-            )
-        grad_filt = jnp.reshape(grad_filt, (npar, -1))
-        grad_dat = jnp.reshape(grad_dat, (npar, -1))
-        resid = resid.ravel()
-
+        # Gradients of parameters that are not being fit are zero, skip them
+        idx = metamodel.to_fit_idx
+        grad_dat = grad_dat[idx]
+        nfit = len(idx)
+        grad_filt = jnp.reshape(jax.vmap(data.noise.apply_noise)(grad_dat), (nfit, -1))
         if do_grad:
-            grad = grad.at[:].add(jnp.dot(grad_filt, jnp.transpose(resid)))
+            grad = grad.at[idx].add(jnp.dot(grad_filt, resid.ravel()))
         if do_curve:
-            curve = curve.at[:].add(jnp.dot(grad_filt, jnp.transpose(grad_dat)))
+            curve = curve.at[idx[:, None], idx[None, :]].add(
+                jnp.dot(grad_filt, jnp.reshape(grad_dat, (nfit, -1)).T)
+            )
 
     return chisq, grad, curve
 

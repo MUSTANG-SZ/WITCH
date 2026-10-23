@@ -1,0 +1,13 @@
+# Base config to merge into
+# If an absolute path is given then it is used
+# Otherwise it is assumed to me reative to the directory of this file
+base: "MOOJ1142_gNFW_rs_peak_subcluster_xray_rs.yaml"
+
+mcmc:
+  run: true
+  method: mh
+  num_steps: 10000
+  num_chains: 4
+  burn_in: 0.2
+  prior_type: uniform
+  proposal: cov

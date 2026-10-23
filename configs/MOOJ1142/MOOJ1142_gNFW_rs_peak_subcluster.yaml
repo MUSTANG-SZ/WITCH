@@ -11,16 +11,6 @@ sim: False # If True use TODs to make noise and add a simulated cluster
 paths:
   subdir: "xray_peak_rs" # Subdirectory to use
 
-mcmc:
-  run: False 
-  num_steps: 1000
-  n_leaps: 4
-
-#nonpara:
-  #to_copy: ["gnfw_rs"]
-  #n_rounds: 4
-  #sig_params: ["P0"]
-
 coords:
   x0: "(175.69766238*u.deg).to(u.radian).value" # eleonora peak
   y0: "(15.45364413*u.deg).to(u.radian).value" #eleonora peak
@@ -39,18 +29,21 @@ cluster_model:
         P0:
           value: 0.373
           to_fit: True
+          priors: [0.01, 4.]
         r_s:
           value: 26
           to_fit: True
+          priors: [1., 50.]
         gamma:
-          value: -0.717
-          to_fit: True
+          value: 0.465
+          to_fit: False
         alpha:
-          value: 1.233
-          to_fit: True
+          value: 2.26
+          to_fit: False
         beta:
-          value: 3.377
+          value: 4.42
           to_fit: True
+          priors: [1., 10.]
         z:
           value: 1.19
     sph_isobeta:
@@ -69,6 +62,7 @@ cluster_model:
         r:
           value: 10.0
           to_fit: True
+          priors: [1., 50.]
         theta:
           value: 0.0
         beta:

@@ -57,10 +57,9 @@ def test_proposals_are_centered_on_current_state(monkeypatch):
     metamodel = _MetaModel([0.0])
     centers = []
 
-    def draw_from_current(metamodel, **kwargs):
-        center = np.asarray(metamodel.parameters)
-        centers.append(center.copy())
-        return metamodel.parameters + 1
+    def draw_from_current(metamodel, pars, **kwargs):
+        centers.append(np.asarray(pars).copy())
+        return pars + 1
 
     monkeypatch.setattr(mh, "draw_samp", draw_from_current)
     monkeypatch.setattr(mh, "tqdm", lambda values, **kwargs: values)
@@ -175,3 +174,20 @@ def test_cov_proposal_falls_back_when_cov_unusable():
     new = draw(metamodel, jax.random.key(0), proposal="cov", prior_type="normal")
     assert np.all(np.isfinite(np.asarray(new)))
     assert not np.allclose(np.asarray(new), [0.0, 1.0])
+
+
+def test_chain_samples_target_distribution(monkeypatch):
+    metamodel = _MetaModel([0.0])
+    draw_samp = mh.draw_samp.__wrapped__
+    monkeypatch.setattr(mh, "draw_samp", lambda **kwargs: draw_samp(**kwargs))
+    monkeypatch.setattr(mh, "tqdm", lambda values, **kwargs: values)
+
+    samples, _ = mh.metropolis_hastings(
+        metamodel,
+        num_samples=4000,
+        seed=3,
+        calc_like_func=lambda pars, **kwargs: -0.5 * jnp.sum(pars**2),
+    )
+
+    assert abs(np.mean(samples[500:])) < 0.2
+    assert abs(np.std(samples[500:]) - 1.0) < 0.2

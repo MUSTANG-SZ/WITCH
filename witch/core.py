@@ -15,6 +15,7 @@ else:
 
 import numpy as np
 
+from .grid import transform_grid
 from .structure import STRUCT_FUNCS, STRUCT_N_NONPARA, STRUCT_N_PAR, STRUCT_STAGE
 
 ORDER = (
@@ -112,6 +113,83 @@ def _stage_m1(
     return pressure, int(start)
 
 
+# Spherical stage 0 structures. All take (dx, dy, dz, ...) as their first parameters.
+# When there is no stage 1 (which needs the full 3D pressure), the LOS integral of
+# these only depends on the projected radius so it can be tabulated in 1D.
+SPHERICAL = ("sph_isobeta", "gnfw", "gnfw_rs", "a10")
+FAST_LOS = True  # Set False to always integrate on the full 3D grid
+N_LOS_TABLE = 4096  # Number of radial nodes in the 1D LOS integral table
+
+
+def _catmull_rom(table: jax.Array, t: jax.Array) -> jax.Array:
+    """
+    Cubic (Catmull-Rom) interpolation on a uniformly spaced table.
+
+    Parameters
+    ----------
+    table : jax.Array
+        1D table of values at nodes `0, 1, ..., len(table) - 1`.
+    t : jax.Array
+        Positions to interpolate at in units of node spacing, must be in `[0, len(table) - 1]`.
+
+    Returns
+    -------
+    vals : jax.Array
+        Interpolated values with the shape of `t`.
+    """
+    n = table.shape[0]
+    # Reflect about R=0 (profiles are even in R) and extrapolate linearly past the end
+    padded = jnp.concatenate([table[1:2], table, 2 * table[-1:] - table[-2:-1]])
+    i = jnp.clip(jnp.floor(t).astype(int), 0, n - 2)
+    f = t - i
+    p0, p1, p2, p3 = (padded[i + k] for k in range(4))
+    return 0.5 * (
+        2 * p1
+        + (p2 - p0) * f
+        + (2 * p0 - 5 * p1 + 4 * p2 - p3) * f**2
+        + (3 * (p1 - p2) + p3 - p0) * f**3
+    )
+
+
+def _los_spherical(
+    struct: str,
+    pars: jax.Array,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+    dz: float,
+) -> jax.Array:
+    """
+    Line of sight integral of a spherical structure using a 1D radial table.
+    The table is built with the structure function itself on a synthetic grid
+    (same LOS samples and trapezoid weights as the 3D grid), then interpolated
+    to the projected radius of every pixel.
+
+    Parameters
+    ----------
+    struct : str
+        Name of the spherical structure, must be in `SPHERICAL`.
+    pars : jax.Array
+        Parameters of the structure, in the order of the structure function.
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Grid to compute model on.
+        See `containers.Model.xyz` for details.
+    dz : float
+        Factor to scale by while integrating.
+
+    Returns
+    -------
+    ip : jax.Array
+        Integrated profile with shape `(xyz[0].shape[0], xyz[1].shape[1])`.
+    """
+    x, y, *_ = transform_grid(pars[0], pars[1], 0.0, 1, 1, 1, 0, xyz)
+    rad = jnp.sqrt(x**2 + y**2)[..., 0]
+    rmax = jax.lax.stop_gradient(jnp.max(rad)) * (1 + 1e-6)
+    radii = jnp.linspace(0.0, rmax, N_LOS_TABLE)
+    xyz_t = (radii[:, None, None], jnp.zeros((1, 1, 1)), xyz[2], 0.0, 0.0)
+    pars_t = [0.0, 0.0] + [pars[k] for k in range(2, len(pars))]
+    table = trapz(STRUCT_FUNCS[struct](*pars_t, xyz_t), dx=dz, axis=-1)[:, 0]
+    return _catmull_rom(table, rad / rmax * (N_LOS_TABLE - 1))
+
+
 def _stage_0(
     xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
     n_structs: tuple[int, ...],
@@ -119,7 +197,11 @@ def _stage_0(
     start: int,
     pressure: jax.Array,
     run: bool = True,
-) -> tuple[jax.Array, int]:
+    los: tuple[float, jax.Array] | None = None,
+) -> tuple[jax.Array, int, jax.Array | None]:
+    # If los is given as (dz, ip) spherical structures are integrated with
+    # `_los_spherical` and added to ip instead of the 3D pressure
+    ip = None if los is None else los[1]
     for n_struct, struct in zip(n_structs, ORDER):
         if STRUCT_STAGE[struct] != 0:
             continue
@@ -133,8 +215,11 @@ def _stage_0(
         if not run:
             continue
         for i in range(n_struct):
-            pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*struct_pars[i], xyz))
-    return pressure, int(start)
+            if los is not None and struct in SPHERICAL:
+                ip = jnp.add(ip, _los_spherical(struct, struct_pars[i], xyz, los[0]))
+            else:
+                pressure = jnp.add(pressure, STRUCT_FUNCS[struct](*struct_pars[i], xyz))
+    return pressure, int(start), ip
 
 
 def _stage_1(
@@ -224,7 +309,7 @@ def model3D(
     pressure, start = _stage_m1(xyz, n_structs, n_rbins, params, start, pressure, True)
 
     # Stage 0, add to the 3d grid
-    pressure, start = _stage_0(xyz, n_structs, params, start, pressure, True)
+    pressure, start, _ = _stage_0(xyz, n_structs, params, start, pressure, True)
 
     # Stage 1, modify the 3d grid
     pressure, start = _stage_1(xyz, n_structs, params, start, pressure, True)
@@ -313,14 +398,32 @@ def model(
         xyz, n_structs, n_rbins, params, start, pressure, to_run[0]
     )
 
+    # Stage 1 needs the full 3D pressure, if there is none spherical stage 0
+    # structures can use the 1D LOS table instead
+    has_stage_1 = any(
+        n and STRUCT_STAGE[struct] == 1 for n, struct in zip(n_structs, ORDER)
+    )
+    fast_los = FAST_LOS and not has_stage_1
+    ip_los = jnp.zeros(pressure.shape[:2]) if fast_los else None
+
     # Stage 0, add to the 3d grid
-    pressure, start = _stage_0(xyz, n_structs, params, start, pressure, to_run[1])
+    pressure, start, ip_los = _stage_0(
+        xyz,
+        n_structs,
+        params,
+        start,
+        pressure,
+        to_run[1],
+        (dz, ip_los) if fast_los else None,
+    )
 
     # Stage 1, modify the 3d grid
     pressure, start = _stage_1(xyz, n_structs, params, start, pressure, to_run[2])
 
     # Integrate along line of site
     ip = trapz(pressure, dx=dz, axis=-1)
+    if fast_los:
+        ip = ip + ip_los
 
     # Stage 2, add to integrated profile
     ip, start = _stage_2(xyz, n_structs, params, start, ip, to_run[3])
@@ -418,7 +521,7 @@ def stage2_model(
     start = 0
 
     # Stage 0, but just track param start
-    pressure, start = _stage_0(xyz, n_structs, params, start, pressure, False)
+    pressure, start, _ = _stage_0(xyz, n_structs, params, start, pressure, False)
 
     # Stage 1, modify the 3d grid
     pressure, start = _stage_1(xyz, n_structs, params, start, pressure)
