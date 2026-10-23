@@ -14,7 +14,7 @@ import witch.utils as wu
 from witch import grid
 from witch.containers import MetaModel
 from witch.dataset import BeamConvAndPrefac, DataSet, MetaData
-from witch.fitter import print_once, process_tods
+from witch.fitter import print_once
 
 from ...objective import chisq_objective
 from . import mapmaking as mm
@@ -352,12 +352,22 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
             raise ValueError(
                 "Somehow trying to make a model map with no model defined!"
             )
-        model_todvec = dset.datavec.copy(deep=True)
         model_skymap = minkasi.maps.SkyMap(lims, pixsize)
-        model_cfg = deepcopy(cfg)
-        model_cfg["sim"] = True
-        model_todvec = process_tods(cfg, dset, metamodel)
-        model_todvec = to_minkasi(model_todvec, False)
+        dataset_ind = metamodel.get_dataset_ind(dset.name)
+        # to_minkasi copies the data so dset.datavec is untouched
+        model_todvec = to_minkasi(dset.datavec, False)
+        for i, tod in enumerate(model_todvec.tods):
+            # Keep the noise from the real data so the model is filtered like the data map
+            tod.set_noise(
+                minkasi_noise_class,
+                tod.info["dat_calib"],
+                False,
+                *minkasi_noise_args,
+                **minkasi_noise_kwargs,
+            )
+            tod.info["dat_calib"] = np.ascontiguousarray(
+                np.array(metamodel.model_proj(dataset_ind, i))
+            )
         mm.make_maps(
             model_todvec,
             model_skymap,
@@ -375,12 +385,14 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
             model_skymap.map.shape[1],
             0.00116355,
             0.00000969,
+            # Model structures are offsets from the fit grid origin, not the map center
+            x0=float(metamodel.models[0].xyz[3]) / wu.rad_to_arcsec,
+            y0=float(metamodel.models[0].xyz[4]) / wu.rad_to_arcsec,
         )
         orig_grids = []
         for tm in metamodel.models:
             orig_grids += [deepcopy(tm.xyz)]
             tm.xyz = xyz
-        dataset_ind = metamodel.get_dataset_ind(dset.name)
         model_skymap.map = metamodel.model_grid(dataset_ind)
         if minkasi.myrank == 0:
             model_skymap.write(os.path.join(outdir, "model/truth.fits"))
