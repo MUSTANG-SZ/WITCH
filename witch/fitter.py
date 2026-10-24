@@ -477,12 +477,17 @@ def _run_fit(
     print_once(
         f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}, final lambda: {lmd}"
     )
+    if float(lmd) > 0:
+        print_once(
+            "WARNING: final lambda > 0, this round's fit has likely not converged. "
+            "The errors below are from the damped curvature and are underestimated."
+        )
 
     print_once(metamodel)
     _save_model(cfg, metamodel, f"fit{r}", nonpara)
 
     metamodel = _reestimate_noise(metamodel)
-    return metamodel, i
+    return metamodel, i, float(lmd)
 
 
 def _mcmc_checkpoint_callback(
@@ -691,21 +696,36 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     print_once(
         re.sub(r"^Round 1.*\n?", "Starting pars:\n", str(metamodel), flags=re.MULTILINE)
     )
-    consecutive_single_iteration_rounds = 0
+    # A round counts as converged if it took a single iteration, or if it ended
+    # undamped (lambda = 0) with every free parameter moving by less than partol
+    # times its error. Stop after converged_rounds converged rounds in a row.
+    partol = float(eval(str(cfg["fitting"].get("partol", "0.1"))))
+    converged_rounds = int(cfg["fitting"].get("converged_rounds", 2))
+    consecutive_converged_rounds = 0
     # mcmc.lm: False skips LM and samples from the starting parameters
     run_lm = cfg.get("mcmc", {}).get("lm", True)
     for r in range(start_round, metamodel.n_rounds if run_lm else 0):
-        metamodel, iterations = _run_fit(
+        pars_before = np.array(metamodel.parameters)
+        metamodel, iterations, lmd = _run_fit(
             cfg,
             metamodel,
             r,
             nonpara,
         )
-        single_iteration_round = comm.allreduce(int(iterations == 1), op=MPI.MIN) == 1
-        if single_iteration_round:
-            consecutive_single_iteration_rounds += 1
+        pars_after = np.array(metamodel.parameters)
+        errs = np.array(metamodel.errs)
+        free = np.array(metamodel.to_fit) & (errs > 0)
+        shift = np.max(np.abs(pars_after - pars_before)[free] / errs[free], initial=0.0)
+        converged = iterations == 1 or (lmd == 0 and shift < partol)
+        converged = comm.allreduce(int(converged), op=MPI.MIN) == 1
+        if converged:
+            consecutive_converged_rounds += 1
         else:
-            consecutive_single_iteration_rounds = 0
+            consecutive_converged_rounds = 0
+        print_once(
+            f"Largest parameter shift this round: {shift:.3g} sigma "
+            f"({consecutive_converged_rounds}/{converged_rounds} converged rounds)"
+        )
         mpi4jax.barrier(comm=comm)
 
         # Checkpoint after each round
@@ -718,9 +738,9 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             round_num=r,
         )
         print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
-        if consecutive_single_iteration_rounds >= 2:
+        if consecutive_converged_rounds >= converged_rounds:
             print_once(
-                "Stopping fitting after two consecutive rounds completed in one iteration"
+                f"Stopping fitting after {converged_rounds} consecutive converged rounds"
             )
             break
 
