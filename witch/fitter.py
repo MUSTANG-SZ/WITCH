@@ -255,7 +255,10 @@ def get_outdir(cfg, metamodel, nonpara=False):
                 for model in metamodel.models
             ]
         ) + ("_ns" * (not cfg["sub"]))
-    outdir = os.path.join(outroot, cfg["name"], name)
+    # Keep fits to different data (e.g. M2 only vs M2+ACT) apart.
+    # Use the config rather than metamodel.datasets, which only has this rank's datasets.
+    dsets = "+".join(cfg.get("datasets", {}).keys())
+    outdir = os.path.join(outroot, cfg["name"], dsets, name)
 
     if "subdir" in cfg["paths"]:
         outdir = os.path.join(outdir, cfg["paths"]["subdir"])
