@@ -4,8 +4,10 @@ You typically want to run the `witcher` command instead of this.
 """
 
 import argparse as argp
+import glob
 import os
 import re
+import shutil
 import sys
 import time
 from copy import copy, deepcopy
@@ -31,6 +33,30 @@ from .nonparametric import para_to_non_para
 from .objective import joint_objective
 
 comm = MPI.COMM_WORLD.Clone()
+_RUN_START = time.time()
+
+# Fit outputs written by this process, so _archive_old_outputs never moves them.
+# Tracked by path because file mtimes are too coarse (and on network filesystems
+# too skewed) to tell them apart from the previous run's by time.
+_written = set()
+
+
+def _ours(path):
+    """Record `path` as written by this run and return it."""
+    _written.add(os.path.abspath(path))
+    return path
+
+
+# Files written by fit_loop and _run_mcmc, relative to the output directory
+_FIT_OUTPUTS = (
+    "results_*.dill",
+    "results_*.yaml",
+    "par_results_*.dill",
+    "samples_mcmc.npz",
+    "corner.png",
+    "checkpoints/round_*.pkl",
+    "checkpoints/mcmc_step_*.pkl",
+)
 
 
 def print_once(*args: Unpack[tuple[Any, ...]]):
@@ -216,7 +242,9 @@ def process_maps(cfg, dataset, metamodel):
             # Pixels with ivar == 0 have no weight in the likelihood, so leave them noiseless
             # rather than letting an inf noise level propagate into the data
             good = imap.ivar > 0
-            scale = jnp.where(good, 1.0 / jnp.sqrt(jnp.where(good, imap.ivar, 1.0)), 0.0)
+            scale = jnp.where(
+                good, 1.0 / jnp.sqrt(jnp.where(good, imap.ivar, 1.0)), 0.0
+            )
             print("Map noise: ", float(jnp.mean(scale[good])))
             imap.data = (
                 jax.random.normal(
@@ -314,7 +342,7 @@ def _save_outputs(cfg, metamodel, desc_str):
     outdir = cfg["outdir"]
     if comm.Get_rank() != 0:
         return
-    res_path = os.path.join(outdir, f"par_results_{desc_str}.dill")
+    res_path = _ours(os.path.join(outdir, f"par_results_{desc_str}.dill"))
     par_dict = {
         "par_names": np.asarray(metamodel.par_names),
         "parameters": np.asarray(metamodel.parameters),
@@ -330,7 +358,7 @@ def _save_model(cfg, metamodel, desc_str, nonpara=False):
     outdir = cfg["outdir"]
     if comm.Get_rank() != 0:
         return
-    res_path = os.path.join(outdir, f"results_{desc_str}.dill")
+    res_path = _ours(os.path.join(outdir, f"results_{desc_str}.dill"))
     print_once("Saving results to", res_path)
     metamodel.save(res_path)
 
@@ -350,7 +378,7 @@ def _save_model(cfg, metamodel, desc_str, nonpara=False):
                 final[model.name]["structures"][model_struct.name]["parameters"][
                     par_name
                 ]["value"] = [float(cur_par) for cur_par in par.val]
-    with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
+    with open(_ours(os.path.join(outdir, f"results_{desc_str}.yaml")), "w") as file:
         yaml.dump(final, file)
 
 
@@ -382,7 +410,7 @@ def _save_checkpoint(
         "step": step_num,
     }
 
-    metamodel.save(ckpt_path, state)
+    metamodel.save(_ours(ckpt_path), state)
 
 
 def _read_checkpoint(ckpt_path):
@@ -400,6 +428,33 @@ def _read_checkpoint(ckpt_path):
     cfg = state.get("cfg", None)
 
     return metamodel, start_round, stage, cfg
+
+
+def _archive_old_outputs(outdir):
+    """
+    Move fit outputs left over from a previous run into `outdir/old_runs/<timestamp>`
+    so they can't be mistaken for (or resumed from as) part of this run.
+    Files this process wrote (e.g. the parametric fit, when the nonparametric fit shares
+    its outdir) are never moved. Maps and other dataset outputs are left alone.
+    """
+    if comm.Get_rank() != 0:
+        return
+    stale = [
+        path
+        for pattern in _FIT_OUTPUTS
+        for path in glob.glob(os.path.join(outdir, pattern))
+        if os.path.abspath(path) not in _written
+    ]
+    if len(stale) == 0:
+        return
+    archive = os.path.join(
+        outdir, "old_runs", time.strftime("%Y%m%d-%H%M%S", time.localtime(_RUN_START))
+    )
+    for path in stale:
+        dest = os.path.join(archive, os.path.relpath(path, outdir))
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        shutil.move(path, dest)
+    print_once(f"[resume] Moved {len(stale)} outputs from a previous run to {archive}")
 
 
 def _run_fit(
@@ -527,7 +582,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
     _save_model(cfg, metamodel, "mcmc", nonpara)
     if comm.Get_rank() == 0:
         samples = np.array(samples)
-        samps_path = os.path.join(cfg["outdir"], "samples_mcmc.npz")
+        samps_path = _ours(os.path.join(cfg["outdir"], "samples_mcmc.npz"))
         print_once("Saving samples to", samps_path)
         np.savez_compressed(samps_path, samples=samples, **extras)
         try:
@@ -538,7 +593,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
                 labels=np.array(metamodel.par_names)[to_fit],
                 truths=init_pars[to_fit],
             )
-            plt.savefig(os.path.join(cfg["outdir"], "corner.png"))
+            plt.savefig(_ours(os.path.join(cfg["outdir"], "corner.png")))
         except Exception as e:
             print_once(f"Failed to make corner plot with error: {str(e)}")
     else:
@@ -602,6 +657,11 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
         metamodel = _reestimate_noise(loaded_metamodel)
 
         print_once(f"[resume] Checkpoint OK. Resuming from round {start_round}")
+    elif cfg.get("archive_old_outputs", True):
+        # Starting fresh, so stale rounds and checkpoints from an earlier run would
+        # mix with ours (and a later load_progress: -1 could resume from them)
+        _archive_old_outputs(cfg["outdir"])
+    comm.barrier()
 
     if cfg["sim"]:
         # Remove structs we deliberately want to leave out of model
