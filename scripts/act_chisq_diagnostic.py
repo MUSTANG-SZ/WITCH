@@ -38,7 +38,6 @@ import jax
 
 jax.config.update("jax_platform_name", "cpu")
 
-import astropy.units as u
 import jax.numpy as jnp
 import matplotlib
 

@@ -1,0 +1,38 @@
+# ACT-only fit of the real MOOJ1142 90 GHz map with a gNFW cluster plus a point source.
+# Same model and noise (CMB covariance + ivar white noise) as unit_tests/act/act_sim_cmb.yaml,
+# which is the simulated test of this fit. Run with a single task: witcher <this file>
+base: "../../unit_tests/act/act_sim_cmb.yaml"
+sim: False
+par_offset: 1.0
+n_rounds: 5
+
+paths:
+  subdir: "act_only_real"
+
+cluster_model:
+  structures:
+    gnfw:
+      parameters:
+        dx_1:
+          value: 0.0
+        dy_1:
+          value: 0.0
+        m500:
+          value: "5.0e14"
+
+# Position of the M2 point source in the M2 fits
+ps_act:
+  structures:
+    ps:
+      parameters:
+        dx_g:
+          value: 1.91
+        dy_g:
+          value: -4.04
+        amp_act:
+          value: 50.0
+          priors: [-1000.0, 1000.0]
+
+fitting:
+  maxiter: 50
+  chitol: 1e-2
