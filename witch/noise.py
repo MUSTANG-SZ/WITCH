@@ -397,7 +397,5 @@ class NoiseSpectrum(NoiseCMBMap):
         cov += mean_sigma**2
         return cls(jnp.asarray(np.linalg.inv(cov)), tuple(dat.shape))
 
-    @classmethod
-    def sample(cls, *args, **kwargs):
-        """Not implemented, simulate with white noise or `NoiseCMBMap`."""
-        raise NotImplementedError("NoiseSpectrum cannot draw noise")
+    # Cannot draw noise, so map sims fall back to white noise rather than using the CMB model
+    sample = None

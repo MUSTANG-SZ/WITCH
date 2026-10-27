@@ -217,6 +217,33 @@ def process_tods(cfg, dataset, metamodel):
     return todvec
 
 
+def resolve_noise_args(imap, args: tuple, kwargs: dict) -> tuple[list, dict]:
+    """
+    Evaluate noise arguments that refer to the map, like `compute_noise` does.
+
+    Parameters
+    ----------
+    imap : WCSMap
+        The map that `self` refers to in the arguments.
+    args : tuple
+        Positional noise arguments, strings starting with `self` are evaluated.
+    kwargs : dict
+        Keyword noise arguments, string values starting with `self` are evaluated.
+
+    Returns
+    -------
+    args : list
+        The evaluated positional arguments.
+    kwargs : dict
+        The evaluated keyword arguments.
+    """
+
+    def ev(a):
+        return eval(a, {"self": imap}) if isinstance(a, str) and a[:4] == "self" else a
+
+    return [ev(a) for a in args], {k: ev(v) for k, v in kwargs.items()}
+
+
 def process_maps(cfg, dataset, metamodel):
     mapset = dataset.datavec
     info = dataset.info
@@ -246,16 +273,29 @@ def process_maps(cfg, dataset, metamodel):
                 good, 1.0 / jnp.sqrt(jnp.where(good, imap.ivar, 1.0)), 0.0
             )
             print("Map noise: ", float(jnp.mean(scale[good])))
-            imap.data = (
-                jax.random.normal(
-                    jax.random.key(0), shape=imap.data.shape, dtype=imap.data.dtype
+            sample = getattr(dataset.noise_class, "sample", None)
+            if sample is not None and not cfg["wnoise"]:
+                # The noise model can draw its own correlated noise (e.g. NoiseCMBMap)
+                args, kwargs = resolve_noise_args(
+                    imap, dataset.noise_args, dataset.noise_kwargs
                 )
-                * scale
-            )
-            if not cfg["wnoise"]:
-                print_once(
-                    "Only white noise currently supported for map sims... simming map with white noise"
+                # Lets a sim use a different noise model than the fit, to test a mismatch
+                kwargs |= cfg["datasets"][dataset.name].get("sim_noise_kwargs", {})
+                key = jax.random.key(cfg.get("sim_seed", 0))
+                imap.data = sample(key, imap.data, *args, **kwargs)
+            else:
+                imap.data = (
+                    jax.random.normal(
+                        jax.random.key(cfg.get("sim_seed", 0)),
+                        shape=imap.data.shape,
+                        dtype=imap.data.dtype,
+                    )
+                    * scale
                 )
+                if not cfg["wnoise"]:
+                    print_once(
+                        "Noise model cannot be sampled... simming map with white noise"
+                    )
 
             pred = metamodel_cur.model_proj(dset_ind, i)
             imap.data = imap.data + pred
