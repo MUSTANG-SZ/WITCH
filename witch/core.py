@@ -35,6 +35,7 @@ ORDER = (
     "powerlaw",
     "powerlaw_cos",
     "cylindrical_beta_2d",
+    "mesa_2d",
     "gaussian",
 )
 

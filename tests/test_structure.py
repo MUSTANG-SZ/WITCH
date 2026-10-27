@@ -126,6 +126,21 @@ class TestStructureAnalytical:
             model_2d_from_3d[:, core], model_2d_analytical[:, core], rtol=1e-2
         )
 
+    def test_mesa_2d(self, test_grid):
+        """
+        The mesa matches its closed form on the grid, never exceeds `amp`, and the length axis
+        follows `theta`.
+        """
+        xyz, _ = test_grid
+        l0, w0, amp = 30.0, 12.0, 2.0
+        x = np.asarray(xyz[0])[:, :, 0]
+        y = np.asarray(xyz[1])[:, :, 0]
+        model = np.asarray(structure.mesa_2d(0.0, 0.0, l0, w0, 0.0, amp, xyz))
+        assert np.allclose(model, amp / (1 + (x / l0) ** 8 + (y / w0) ** 8))
+        assert model.max() <= amp
+        rot = np.asarray(structure.mesa_2d(0.0, 0.0, l0, w0, np.pi / 2, amp, xyz))
+        assert np.allclose(rot, model.T, atol=1e-6 * amp)
+
     def test_gnfw_matches_reference(self, test_grid, gnfw_reference):
         """
         Test gnfw output matches cached reference.
