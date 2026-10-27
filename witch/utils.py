@@ -316,6 +316,33 @@ def tod_hi_pass(tod: jax.Array, N_filt: int) -> jax.Array:
     return tod_filtered
 
 
+def _cell_index(x: jax.Array, xp: jax.Array) -> jax.Array:
+    """
+    Index of the upper node of the grid cell containing `x`, equivalent to
+    `jnp.clip(jnp.searchsorted(xp, x, side="right"), 1, len(xp) - 1)`
+    but without a binary search (which is slow on CPU).
+    An initial guess assuming a uniform grid is corrected by checking the
+    neighbouring nodes, so `xp` must be sorted and within one cell of uniform.
+
+    Parameters
+    ----------
+    x : jax.Array
+        Values to find the cell of.
+    xp : jax.Array
+        1D sorted, approximately uniform, grid.
+
+    Returns
+    -------
+    ix : jax.Array
+        Integer indices in `[1, len(xp) - 1]`.
+    """
+    n = xp.shape[0]
+    guess = jnp.floor((x - xp[0]) / (xp[-1] - xp[0]) * (n - 1))
+    ix = jnp.clip(guess.astype(int), 0, n - 2)
+    ix = ix - (x < xp[ix]) + (x >= xp[ix + 1])
+    return jnp.clip(ix + 1, 1, n - 1)
+
+
 # Model building tools
 # -----------------------------------------------------------
 @jax.jit
@@ -336,10 +363,10 @@ def bilinear_interp(
         Y values to return interpolated values at.
     xp : jax.Array
         X values to interpolate with, should be 1D.
-        Assumed to be sorted.
+        Assumed to be sorted and within one cell of uniformly spaced.
     yp : jax.Array
         Y values to interpolate with, should be 1D.
-        Assumed to be sorted.
+        Assumed to be sorted and within one cell of uniformly spaced.
     fp : jax.Array
         Functon values at `(xp, yp)`, should have shape `(len(xp), len(yp))`.
         Note that if you are using meshgrid, we assume `'ij'` indexing.
@@ -362,9 +389,9 @@ def bilinear_interp(
         )
 
     # Figure out bounds and mapping
-    # This breaks if xp, yp is not sorted
-    ix = jnp.clip(jnp.searchsorted(xp, x, side="right"), 1, len(xp) - 1)
-    iy = jnp.clip(jnp.searchsorted(yp, y, side="right"), 1, len(yp) - 1)
+    # This breaks if xp, yp is not sorted and approximately uniform
+    ix = _cell_index(x, xp)
+    iy = _cell_index(y, yp)
     q_11 = fp[ix - 1, iy - 1]
     q_21 = fp[ix, iy - 1]
     q_12 = fp[ix - 1, iy]
