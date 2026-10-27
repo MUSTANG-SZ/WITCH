@@ -892,7 +892,7 @@ def cylindrical_beta_2d(
     Once the grid is transformed the profile is computed as:
 
     $$
-    y(R) = \frac{\sqrt{\pi} \Gamma (3\beta/2 - 1/2)}{\Gamma(3\beta /2)} \sec{\phi} P_0 r_c [1+\frac{R}{r_c}^2]^{-3\beta /2 + 1/2}
+    y(R) = \frac{\sqrt{\pi} \Gamma (3\beta/2 - 1/2)}{\Gamma(3\beta /2)} \sec{\phi} P_0 r_c [1+\frac{R^2}{r_c^2}]^{-3\beta /2 + 1/2}
     $$
 
     Note the missing factor of
@@ -949,14 +949,15 @@ def cylindrical_beta_2d(
     model : jax.Array
         The cylindrical beta model evaluated on the grid.
     """
-    x, y, *_ = transform_grid(dx, dy, dz, 1.0, 1.0, 1.0, theta, xyz)
-    rr = x[..., 0] ** 2 + y[..., 0] ** 2
+    _, y, *_ = transform_grid(dx, dy, dz, 1.0, 1.0, 1.0, theta, xyz)
+    # The cylinder axis is x, so the projection along z depends only on the offset in y
+    r = y[..., 0]
 
     gamma_term = (
         jnp.sqrt(jnp.pi) * jax.scipy.special.gamma(3 * beta / 2 - 1 / 2)
     ) / jax.scipy.special.gamma(3 * beta / 2)
 
-    r_term = (1 + (rr / r_c) ** 2) ** (-3 * beta / 2 + 1 / 2)
+    r_term = (1 + (r / r_c) ** 2) ** (-3 * beta / 2 + 1 / 2)
 
     return gamma_term * 1 / jnp.cos(phi) * (P0 * r_c) * r_term
 
