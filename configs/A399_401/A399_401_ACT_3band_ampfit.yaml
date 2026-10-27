@@ -1,0 +1,23 @@
+# Bridge geometry fixed to the line joining the clusters (paper: 2*l0 ~ 24', width ~ 10.8'), only the
+# bridge amplitude is fit along with the clusters.
+base: "A399_401_ACT_3band.yaml"
+
+paths:
+  subdir: "act_3band_ampfit"
+
+bridge:
+  structures:
+    cylindrical_beta:
+      parameters:
+        dx:
+          value: 0.0
+          to_fit: False
+        dy:
+          value: 0.0
+          to_fit: False
+        theta:
+          value: 1.108
+          to_fit: False
+        r_c:
+          value: 300.0
+          to_fit: False

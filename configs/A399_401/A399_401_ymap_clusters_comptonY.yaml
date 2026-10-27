@@ -1,0 +1,152 @@
+# Clusters-only fit of A399 and A401 to the ACT+Planck Compton-y map
+# (/mnt/welch/ACT/bridge/comptonY/act_planck_sr_br_1.0_s19_y_map.fits).
+# Two gNFW (A10) clusters, alpha fixed; m500 is the A10/UPP mass (no weak-lensing calibration).
+# Data: 80'x80' cutout binned to 1' ($WITCH_DATROOT/A399_401/act_y), made with
+#   python scripts/make_act_cutout.py --ymap <y map> --out $WITCH_DATROOT/A399_401/act_y
+# Noise: stationary spectrum from 12 control tiles of the same map, made with
+#   python scripts/act_y_noise.py --local --ymap <y map> --out $WITCH_DATROOT/A399_401/act_y/y_noise_power.npy
+# Run with a single task: witcher configs/A399_401/A399_401_ymap_clusters_comptonY.yaml -cpu True
+name: "A399_401"
+fit: True
+sim: False
+sub: True
+wnoise: False
+par_offset: 1.0
+n_rounds: 5
+map: True
+model_map: True
+
+constants:
+  Te: 7.5 # keV, between the Suzaku/XMM values of A399 and A401
+  freq: "97e9"
+  z: 0.072735 # Mean of the cluster redshifts, used for the bridge and the unit conversion
+
+mcmc:
+  run: False
+
+paths:
+  maps: "A399_401/act_y"
+  outroot: ""
+  subdir: "ymap_new_y"
+
+# Grid origin is the midpoint of the two clusters. The grid has to cover the whole 80' map.
+coords:
+  r_map: "3000"
+  dr: "30.0"
+  dz: 30.0
+  x0: "(44.612*u.deg).to(u.radian).value"
+  y0: "(13.301*u.deg).to(u.radian).value"
+
+datasets:
+  acty:
+    glob: "*_y_map.fits"
+    ivar_glob: "*_y_ivar.fits" # all ones, the noise comes from the spectrum
+    noise:
+      class: "wn.NoiseSpectrum"
+      args: "['self.ivar', 'self.wcs.wcs.cdelt[0]']"
+      kwargs: "{'power_path': os.path.join(os.environ['WITCH_DATROOT'], 'A399_401/act_y/y_noise_power.npy')}"
+    funcs:
+      get_files: "amf.get_files"
+      load: "amf.load_maps"
+      get_info: "amf.get_info"
+      make_metadata: "amf.make_metadata"
+      preproc: "amf.preproc"
+      postproc: "amf.postproc"
+      postfit: "amf.postfit"
+    beam: # arcsec, assumed 1.6' for the DR6 ILC
+      fwhm1: "96"
+      amp1: 1.0
+      fwhm2: "96"
+      amp2: 0.0
+    # Pressure to compton y
+    prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.XMpc/wu.me)"
+
+# Offsets are arcsec from the grid origin, from the paper's best fit centres
+# A399 (44.473, 13.030) and A401 (44.751, 13.572)
+a399:
+  structures:
+    gnfw:
+      structure: "gnfw"
+      parameters:
+        dx_1:
+          value: -487.0
+          to_fit: True
+        dy_1:
+          value: -976.0
+          to_fit: True
+        dz_1:
+          value: 0.0
+        r: # arcsec per Mpc, with this choice gnfw is the same as a10
+          value: "1/wu.get_da(0.071806)"
+        P0:
+          value: 8.403
+        c500:
+          value: 1.177
+        m500:
+          value: "8.7e14" # Table 4
+          to_fit: True
+          priors: ["1e14", "3e15"]
+        gamma:
+          value: 0.3081
+        alpha:
+          value: 1.051
+        beta:
+          value: 5.4905
+        z:
+          value: 0.071806
+
+a401:
+  structures:
+    gnfw:
+      structure: "gnfw"
+      parameters:
+        dx_1:
+          value: 487.0
+          to_fit: True
+        dy_1:
+          value: 976.0
+          to_fit: True
+        dz_1:
+          value: 0.0
+        r:
+          value: "1/wu.get_da(0.073664)"
+        P0:
+          value: 8.403
+        c500:
+          value: 1.177
+        m500:
+          value: "10.2e14" # Table 4
+          to_fit: True
+          priors: ["1e14", "3e15"]
+        gamma:
+          value: 0.3081
+        alpha:
+          value: 1.051
+        beta:
+          value: 5.4905
+        z:
+          value: 0.073664
+
+metamodel:
+  models:
+    - a399
+    - a401
+  model_map:
+    acty:
+      - a399
+      - a401
+
+fitting:
+  maxiter: 50
+  chitol: 1e-2
+
+imports:
+  astropy.units: u
+  astropy.coordinates: [Angle]
+  numpy: np
+  os: os
+  witch.utils: wu
+  witch.noise: wn
+  jitkasi.noise: jn
+  jitkasi.solutions.maps: jm
+  witch.external.act_map.funcs: amf

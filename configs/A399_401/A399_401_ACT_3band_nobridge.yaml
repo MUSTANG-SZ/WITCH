@@ -1,0 +1,18 @@
+# 3-band fit with no bridge, for the chi-squared comparison.
+base: "A399_401_ACT_3band.yaml"
+paths:
+  subdir: "act_3band_nobridge"
+metamodel:
+  models:
+    - a399
+    - a401
+  model_map:
+    act090:
+      - a399
+      - a401
+    act150:
+      - a399
+      - a401
+    act220:
+      - a399
+      - a401
