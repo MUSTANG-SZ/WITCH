@@ -1,0 +1,160 @@
+# Clusters-only elliptical isobeta fit of A399 and A401 to the ACT+Planck Compton-y map
+# (/mnt/welch/ACT/bridge/comptonY/act_planck_sr_br_1.0_s19_y_map.fits).
+# Two elliptical beta models, as in the paper (Hincks et al. 2022).
+# Data: 80'x80' cutout binned to 1' ($WITCH_DATROOT/A399_401/act_y), made with
+#   python scripts/make_act_cutout.py --ymap <y map> --out $WITCH_DATROOT/A399_401/act_y
+# Noise: stationary spectrum from 12 control tiles of the same map, made with
+#   python scripts/act_y_noise.py --local --ymap <y map> --out $WITCH_DATROOT/A399_401/act_y/y_noise_power.npy
+# Run with a single task: witcher configs/A399_401/A399_401_ymap_clusters_isobeta_comptonY.yaml -cpu True
+name: "A399_401"
+fit: True
+sim: False
+sub: True
+wnoise: False
+par_offset: 1.0
+n_rounds: 5
+map: True
+model_map: True
+
+constants:
+  Te: 7.5 # keV, between the Suzaku/XMM values of A399 and A401
+  freq: "97e9"
+  z: 0.072735 # Mean of the cluster redshifts, used for the bridge and the unit conversion
+
+mcmc:
+  run: False
+
+paths:
+  maps: "A399_401/act_y"
+  outroot: ""
+  subdir: "ymap_isobeta"
+
+# Grid origin is the midpoint of the two clusters. The grid has to cover the whole 80' map.
+coords:
+  r_map: "3000"
+  dr: "30.0"
+  dz: 30.0
+  x0: "(44.612*u.deg).to(u.radian).value"
+  y0: "(13.301*u.deg).to(u.radian).value"
+
+datasets:
+  acty:
+    glob: "*_y_map.fits"
+    ivar_glob: "*_y_ivar.fits" # all ones, the noise comes from the spectrum
+    noise:
+      class: "wn.NoiseSpectrum"
+      args: "['self.ivar', 'self.wcs.wcs.cdelt[0]']"
+      kwargs: "{'power_path': os.path.join(os.environ['WITCH_DATROOT'], 'A399_401/act_y/y_noise_power.npy')}"
+    funcs:
+      get_files: "amf.get_files"
+      load: "amf.load_maps"
+      get_info: "amf.get_info"
+      make_metadata: "amf.make_metadata"
+      preproc: "amf.preproc"
+      postproc: "amf.postproc"
+      postfit: "amf.postfit"
+    beam: # arcsec, assumed 1.6' for the DR6 ILC
+      fwhm1: "96"
+      amp1: 1.0
+      fwhm2: "96"
+      amp2: 0.0
+    # Pressure to compton y
+    prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.XMpc/wu.me)"
+
+# Cluster starting values are the paper's 'Ellip-beta, no bridge' fit (Table 2): central offsets from
+# the grid origin, r_c, axis ratio R, angle and beta. amp is calibrated to the paper's peak y.
+a399:
+  structures:
+    isobeta:
+      structure: "isobeta"
+      parameters:
+        dx:
+          value: -487.0
+          to_fit: True
+        dy:
+          value: -976.0
+          to_fit: True
+        dz:
+          value: 0.0
+        r_1: # core radii in arcsec, the paper's r_c and R * r_c
+          value: 162.0
+          to_fit: True
+          priors: [60.0, 600.0]
+        r_2:
+          value: 140.9
+          to_fit: True
+          priors: [60.0, 600.0]
+        r_3: # line of sight core, degenerate with amp so fixed
+          value: 162.0
+        theta:
+          value: -0.925
+          to_fit: True
+          priors: [-2.0, 2.0]
+        beta:
+          value: 0.74
+          to_fit: True
+          priors: [0.3, 2.0]
+        amp:
+          value: 0.295
+          to_fit: True
+          priors: [0.0, 1.0e3]
+
+a401:
+  structures:
+    isobeta:
+      structure: "isobeta"
+      parameters:
+        dx:
+          value: 487.0
+          to_fit: True
+        dy:
+          value: 976.0
+          to_fit: True
+        dz:
+          value: 0.0
+        r_1: # core radii in arcsec, the paper's r_c and R * r_c
+          value: 144.0
+          to_fit: True
+          priors: [60.0, 600.0]
+        r_2:
+          value: 110.9
+          to_fit: True
+          priors: [60.0, 600.0]
+        r_3: # line of sight core, degenerate with amp so fixed
+          value: 144.0
+        theta:
+          value: -1.065
+          to_fit: True
+          priors: [-2.0, 2.0]
+        beta:
+          value: 0.73
+          to_fit: True
+          priors: [0.3, 2.0]
+        amp:
+          value: 0.61
+          to_fit: True
+          priors: [0.0, 1.0e3]
+
+metamodel:
+  models:
+    - a399
+    - a401
+  model_map:
+    acty:
+      - a399
+      - a401
+
+fitting:
+  maxiter: 50
+  chitol: 1e-2
+
+imports:
+  astropy.units: u
+  astropy.coordinates: [Angle]
+  numpy: np
+  os: os
+  witch.utils: wu
+  witch.noise: wn
+  jitkasi.noise: jn
+  jitkasi.solutions.maps: jm
+  witch.external.act_map.funcs: amf
