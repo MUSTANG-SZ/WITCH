@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from functools import lru_cache
 from typing import Self
 
+import jax
 import jax.numpy as jnp
 import numpy as np
 from jax import jit
@@ -280,6 +281,53 @@ class NoiseCMBMap:
         )
         cov += np.diag(white) + mean_sigma**2
         return cls(jnp.asarray(np.linalg.inv(cov)), tuple(dat.shape))
+
+    @classmethod
+    def sample(
+        cls,
+        key: jax.Array,
+        dat: jnp.ndarray,
+        ivar: jnp.ndarray,
+        pix_deg: float,
+        cmb_scale: float = 1.0,
+        **kwargs: float,
+    ) -> jnp.ndarray:
+        """
+        Draw a noise realisation from the same model `compute` uses, minus the mean prior.
+        The ivar weighted mean is removed to match `load_maps`, and pixels with no weight are zeroed.
+
+        Parameters
+        ----------
+        key : jax.Array
+            PRNG key.
+        dat : jax.Array
+            The map, only used for its shape.
+        ivar : jax.Array
+            Inverse variance of the white noise per pixel.
+        pix_deg : float
+            Pixel size in degrees (sign is ignored).
+        cmb_scale : float, default: 1.0
+            Multiplier on the CMB covariance.
+        **kwargs
+            Passed to `cmb_covariance`, e.g. `fwhm_arcmin`.
+
+        Returns
+        -------
+        noise : jax.Array
+            A noise map with the shape of `dat`.
+        """
+        ivar = np.asarray(ivar, dtype=float).ravel()
+        good = ivar > 0
+        cov = cmb_scale * cmb_covariance(
+            dat.shape, abs(float(pix_deg)) * 60.0, **kwargs
+        )
+        cov += np.diag(np.where(good, 1.0 / np.where(good, ivar, 1.0), 0.0))
+        # eigh rather than cholesky since the smooth CMB covariance is close to singular
+        vals, vecs = np.linalg.eigh(cov)
+        white = np.asarray(jax.random.normal(key, (ivar.size,)))
+        noise = vecs @ (np.sqrt(np.clip(vals, 0, None)) * white)
+        noise -= np.sum(noise * ivar) / np.sum(ivar)
+        return jnp.asarray(np.where(good, noise, 0.0).reshape(dat.shape))
 
     def tree_flatten(self) -> tuple[tuple, tuple[int, int]]:
         return (self.ninv,), self.shape
