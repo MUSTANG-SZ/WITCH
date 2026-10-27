@@ -963,6 +963,65 @@ def cylindrical_beta_2d(
 
 
 @jax.jit
+def mesa_2d(
+    dx: float,
+    dy: float,
+    l0: float,
+    w0: float,
+    theta: float,
+    amp: float,
+    xyz: tuple[jax.Array, jax.Array, jax.Array, float, float],
+) -> jax.Array:
+    r"""
+    Flat topped "mesa" profile in 2d, added to the line of sight integrated map.
+    This function does not include smoothing or declination stretch
+    which should be applied at the end.
+
+    Once the grid is transformed the profile is computed as:
+
+    $$
+    \frac{A}{1 + (l/l_0)^8 + (w/w_0)^8}
+    $$
+
+    where $A$ is `amp`, $l$ is the coordinate along the axis rotated by `theta` and $w$
+    the one orthogonal to it (Hincks et al. 2022, Eq. 5).
+
+    Parameters
+    ----------
+    dx : float
+        RA of the mesa centre relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    dy : float
+        Dec of the mesa centre relative to grid origin.
+        Passed to `grid.transform_grid`.
+        Units: arcsec
+    l0 : float
+        Half length of the mesa along the axis.
+        Units: arcsec
+    w0 : float
+        Half width of the mesa orthogonal to the axis.
+        Units: arcsec
+    theta : float
+        Angle of the length axis in the xy-plane.
+        Passed to `grid.transform_grid`.
+        Units: radians
+    amp : float
+        Amplitude of the plateau, in the units of the integrated pressure.
+    xyz : tuple[jax.Array, jax.Array, jax.Array, float, float]
+        Coordinte grid to calculate model on.
+        See `containers.Model.xyz` for details.
+
+    Returns
+    -------
+    model : jax.Array
+        The mesa evaluated on the 2D map grid.
+    """
+    x, y, *_ = transform_grid(dx, dy, 0.0, 1.0, 1.0, 1.0, theta, xyz)
+    return amp / (1.0 + (x[..., 0] / l0) ** 8 + (y[..., 0] / w0) ** 8)
+
+
+@jax.jit
 def egaussian(
     dx: float,
     dy: float,
@@ -1524,6 +1583,7 @@ N_PAR_A10 = len(inspect.signature(a10).parameters) - 1
 N_PAR_EA10 = len(inspect.signature(ea10).parameters) - 1
 N_PAR_CYLINDRICAL = len(inspect.signature(cylindrical_beta).parameters) - 1
 N_PAR_CYLINDRICAL_2D = len(inspect.signature(cylindrical_beta_2d).parameters) - 1
+N_PAR_MESA_2D = len(inspect.signature(mesa_2d).parameters) - 1
 N_PAR_GAUSSIAN = len(inspect.signature(gaussian).parameters) - 1
 N_PAR_EGAUSSIAN = len(inspect.signature(egaussian).parameters) - 1
 N_PAR_UNIFORM = len(inspect.signature(add_uniform).parameters) - 2
@@ -1538,6 +1598,7 @@ STRUCT_FUNCS = {
     "ea10": ea10,
     "cylindrical_beta": cylindrical_beta,
     "cylindrical_beta_2d": cylindrical_beta_2d,
+    "mesa_2d": mesa_2d,
     "exponential": add_exponential,
     "powerlaw": add_powerlaw,
     "powerlaw_cos": add_powerlaw_cos,
@@ -1557,6 +1618,7 @@ STRUCT_N_PAR = {
     "ea10": N_PAR_EA10,
     "cylindrical_beta": N_PAR_CYLINDRICAL,
     "cylindrical_beta_2d": N_PAR_CYLINDRICAL_2D,
+    "mesa_2d": N_PAR_MESA_2D,
     "exponential": N_PAR_EXPONENTIAL,
     "powerlaw": N_PAR_POWERLAW,
     "powerlaw_cos": N_PAR_POWERLAW,
@@ -1579,6 +1641,7 @@ STRUCT_STAGE = {
     "ea10": 0,
     "cylindrical_beta": 0,
     "cylindrical_beta_2d": 2,
+    "mesa_2d": 2,
     "exponential": 1,
     "powerlaw": 1,
     "powerlaw_cos": 1,
