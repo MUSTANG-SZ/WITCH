@@ -2003,7 +2003,8 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>witch/containers/metamodel.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 31</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 30</span>
+<span class="normal"> 31</span>
 <span class="normal"> 32</span>
 <span class="normal"> 33</span>
 <span class="normal"> 34</span>
@@ -2624,8 +2625,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="normal">649</span>
 <span class="normal">650</span>
 <span class="normal">651</span>
-<span class="normal">652</span>
-<span class="normal">653</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_pytree_node_class</span>
+<span class="normal">652</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_pytree_node_class</span>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">MetaModel</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
@@ -2738,9 +2738,9 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">        par_name : jax.Array</span>
 <span class="sd">            String array of parameter names.</span>
 <span class="sd">        """</span>
-        <span class="n">par_names</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"U128"</span><span class="p">)</span>
+        <span class="n">par_names</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"U128"</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">):</span>
-            <span class="n">par_names</span><span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">par_names</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"U128"</span><span class="p">)</span>
+            <span class="n">par_names</span><span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">par_names</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"U128"</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">par_names</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
 
@@ -2754,14 +2754,14 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">        to_fit : jax.Array</span>
 <span class="sd">            Boolean array that is True for parameters that will be fit this round.</span>
 <span class="sd">        """</span>
-        <span class="n">to_fit</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">to_fit</span> <span class="o">=</span> <span class="n">jjnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">):</span>
-            <span class="n">to_fit</span> <span class="o">=</span> <span class="n">to_fit</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">to_fit</span><span class="p">))</span>
+            <span class="n">to_fit</span> <span class="o">=</span> <span class="n">to_fit</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">to_fit</span><span class="p">))</span>
 
         <span class="k">return</span> <span class="n">to_fit</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">to_fit_idx</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_fit_idx</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the indices of the parameters that will be fit this round.</span>
 <span class="sd">        Unlike `to_fit` this is built from static information only, so it is</span>
@@ -2769,14 +2769,14 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        to_fit_idx : np.ndarray</span>
+<span class="sd">        to_fit_idx : jnp.ndarray</span>
 <span class="sd">            Sorted indices into `self.parameters` of the parameters that will be fit this round.</span>
 <span class="sd">        """</span>
-        <span class="n">to_fit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">to_fit</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">):</span>
-            <span class="n">to_fit</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">to_fit</span><span class="p">)</span>
+            <span class="n">to_fit</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">to_fit</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">to_fit</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">to_fit</span><span class="p">)</span>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_fit_ever</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
@@ -2788,10 +2788,10 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">        to_fit_ever : jax.Array</span>
 <span class="sd">            Boolean array that is True for parameters that will be fit.</span>
 <span class="sd">        """</span>
-        <span class="n">to_fit_ever</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">to_fit_ever</span> <span class="o">=</span> <span class="n">jjnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">):</span>
-            <span class="n">to_fit_ever</span> <span class="o">=</span> <span class="n">to_fit_ever</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
-                <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">to_fit_ever</span><span class="p">)</span>
+            <span class="n">to_fit_ever</span> <span class="o">=</span> <span class="n">to_fit_ever</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+                <span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">to_fit_ever</span><span class="p">)</span>
             <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">to_fit_ever</span>
@@ -2808,11 +2808,11 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">        priors_high : jax.Array</span>
 <span class="sd">            Higher bound of prior ranges.</span>
 <span class="sd">        """</span>
-        <span class="n">priors_low</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
-        <span class="n">priors_high</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
+        <span class="n">priors_low</span> <span class="o">=</span> <span class="n">jjnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
+        <span class="n">priors_high</span> <span class="o">=</span> <span class="n">jjnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">):</span>
-            <span class="n">priors_low</span> <span class="o">=</span> <span class="n">priors_low</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">priors</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-            <span class="n">priors_high</span> <span class="o">=</span> <span class="n">priors_high</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">priors</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">priors_low</span> <span class="o">=</span> <span class="n">priors_low</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">priors</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">priors_high</span> <span class="o">=</span> <span class="n">priors_high</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">priors</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
         <span class="k">return</span> <span class="n">priors_low</span><span class="p">,</span> <span class="n">priors_high</span>
 
@@ -2826,7 +2826,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">        cur_round : int</span>
 <span class="sd">            The current fitting round.</span>
 <span class="sd">        """</span>
-        <span class="n">cur_rounds</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">model</span><span class="o">.</span><span class="n">cur_round</span> <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">])</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">cur_rounds</span> <span class="o">=</span> <span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">model</span><span class="o">.</span><span class="n">cur_round</span> <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">])</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
         <span class="n">cur_round</span> <span class="o">=</span> <span class="n">cur_rounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
         <span class="k">return</span> <span class="n">cur_round</span>
@@ -2841,7 +2841,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
 <span class="sd">        n_rounds : int</span>
 <span class="sd">            The total fitting rounds.</span>
 <span class="sd">        """</span>
-        <span class="n">n_rounds_all</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">model</span><span class="o">.</span><span class="n">n_rounds</span> <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">])</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">n_rounds_all</span> <span class="o">=</span> <span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">model</span><span class="o">.</span><span class="n">n_rounds</span> <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">])</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
         <span class="n">n_rounds</span> <span class="o">=</span> <span class="n">n_rounds_all</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
         <span class="k">return</span> <span class="n">n_rounds</span>
@@ -2866,7 +2866,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
         <span class="n">m_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
         <span class="n">md_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
         <span class="n">dset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
-        <span class="n">proj</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">m_map</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+        <span class="n">proj</span> <span class="o">=</span> <span class="n">jjnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">m_map</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">m_map</span><span class="p">:</span>
             <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="n">md</span> <span class="o">=</span> <span class="n">md_map</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
@@ -2904,7 +2904,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
             <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">xy</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">wu</span><span class="o">.</span><span class="n">rad_to_arcsec</span>
         <span class="n">y</span> <span class="o">=</span> <span class="n">y</span> <span class="o">*</span> <span class="n">wu</span><span class="o">.</span><span class="n">rad_to_arcsec</span>
-        <span class="n">proj</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">proj</span> <span class="o">=</span> <span class="n">jjnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">m_map</span><span class="p">:</span>
             <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="n">md</span> <span class="o">=</span> <span class="n">md_map</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
@@ -2945,15 +2945,15 @@ to apply to <code>MetaModel.models[i]</code>.</p>
             <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">xy</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">wu</span><span class="o">.</span><span class="n">rad_to_arcsec</span>
         <span class="n">y</span> <span class="o">=</span> <span class="n">y</span> <span class="o">*</span> <span class="n">wu</span><span class="o">.</span><span class="n">rad_to_arcsec</span>
-        <span class="n">proj_grad</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">proj_grad</span> <span class="o">=</span> <span class="n">jjnp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">m_map</span><span class="p">:</span>
             <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="n">md</span> <span class="o">=</span> <span class="n">md_map</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="c1"># Gradients of parameters we are not fitting are zero, don't project them</span>
-            <span class="n">fit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">to_fit</span><span class="p">))</span>
+            <span class="n">fit</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">to_fit</span><span class="p">))</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fit</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">continue</span>
-            <span class="n">par_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">[</span><span class="n">i</span><span class="p">])[</span><span class="n">fit</span><span class="p">]</span>
+            <span class="n">par_map</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">[</span><span class="n">i</span><span class="p">])[</span><span class="n">fit</span><span class="p">]</span>
             <span class="n">ip_grad</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">model_grad</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">fit</span><span class="p">]</span>
             <span class="k">for</span> <span class="n">md_idx</span> <span class="ow">in</span> <span class="n">md</span><span class="p">:</span>
                 <span class="n">ip_grad</span> <span class="o">=</span> <span class="n">dset</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">md_idx</span><span class="p">]</span><span class="o">.</span><span class="n">apply_grad</span><span class="p">(</span><span class="n">ip_grad</span><span class="p">)</span>
@@ -3019,9 +3019,9 @@ to apply to <code>MetaModel.models[i]</code>.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">chisq</span> <span class="o">=</span> <span class="n">chisq</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
             <span class="n">deepcopy</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
-                <span class="n">pars</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)],</span>
-                <span class="n">errs</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)],</span>
-                <span class="n">cov</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)],</span>
+                <span class="n">pars</span><span class="p">[</span><span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)],</span>
+                <span class="n">errs</span><span class="p">[</span><span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)],</span>
+                <span class="n">cov</span><span class="p">[</span><span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)],</span>
                 <span class="n">chisq</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">)</span>
@@ -3050,7 +3050,7 @@ to apply to <code>MetaModel.models[i]</code>.</p>
         <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"to_fit"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"to_fit_ever"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
-            <span class="n">model</span><span class="o">.</span><span class="n">add_round</span><span class="p">(</span><span class="n">to_fit</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)])</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">add_round</span><span class="p">(</span><span class="n">to_fit</span><span class="p">[</span><span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)])</span>
             <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">)</span>
         <span class="p">)</span>
 
@@ -3578,7 +3578,7 @@ a concrete array even inside <code>jax.jit</code>.</p>
       <tbody>
           <tr class="doc-section-item">
 <td><code>to_fit_idx</code></td>            <td>
-                  <code><span title="numpy.ndarray">ndarray</span></code>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -3674,7 +3674,8 @@ alows us to use this function in JITed functions.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/containers/metamodel.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">435</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">434</span>
+<span class="normal">435</span>
 <span class="normal">436</span>
 <span class="normal">437</span>
 <span class="normal">438</span>
@@ -3698,8 +3699,7 @@ alows us to use this function in JITed functions.</p>
 <span class="normal">456</span>
 <span class="normal">457</span>
 <span class="normal">458</span>
-<span class="normal">459</span>
-<span class="normal">460</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add_round</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">to_fit</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="normal">459</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add_round</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">to_fit</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Add an additional round to the metamodel.</span>
 
@@ -3720,7 +3720,7 @@ alows us to use this function in JITed functions.</p>
     <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"to_fit"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"to_fit_ever"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
-        <span class="n">model</span><span class="o">.</span><span class="n">add_round</span><span class="p">(</span><span class="n">to_fit</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)])</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">add_round</span><span class="p">(</span><span class="n">to_fit</span><span class="p">[</span><span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)])</span>
         <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">)</span>
     <span class="p">)</span>
 
@@ -3778,7 +3778,8 @@ False if not.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/containers/metamodel.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 94</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 93</span>
+<span class="normal"> 94</span>
 <span class="normal"> 95</span>
 <span class="normal"> 96</span>
 <span class="normal"> 97</span>
@@ -3815,8 +3816,7 @@ False if not.</p>
 <span class="normal">128</span>
 <span class="normal">129</span>
 <span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">check_compatibility</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="normal">131</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">check_compatibility</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Check if another `MetaModel` instance is compatible with this one.</span>
 <span class="sd">    Used for checkpointing.</span>
@@ -3993,7 +3993,8 @@ False if not.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/containers/metamodel.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">554</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">553</span>
+<span class="normal">554</span>
 <span class="normal">555</span>
 <span class="normal">556</span>
 <span class="normal">557</span>
@@ -4053,8 +4054,7 @@ False if not.</p>
 <span class="normal">611</span>
 <span class="normal">612</span>
 <span class="normal">613</span>
-<span class="normal">614</span>
-<span class="normal">615</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">614</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">from_config</span><span class="p">(</span>
     <span class="bp">cls</span><span class="p">,</span>
     <span class="n">global_comm</span><span class="p">:</span> <span class="n">MPI</span><span class="o">.</span><span class="n">Comm</span> <span class="o">|</span> <span class="n">MPI</span><span class="o">.</span><span class="n">Intracomm</span> <span class="o">|</span> <span class="n">wu</span><span class="o">.</span><span class="n">NullComm</span><span class="p">,</span>
@@ -4192,7 +4192,8 @@ False if not.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/containers/metamodel.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">369</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">368</span>
+<span class="normal">369</span>
 <span class="normal">370</span>
 <span class="normal">371</span>
 <span class="normal">372</span>
@@ -4210,8 +4211,7 @@ False if not.</p>
 <span class="normal">384</span>
 <span class="normal">385</span>
 <span class="normal">386</span>
-<span class="normal">387</span>
-<span class="normal">388</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_dataset_ind</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="normal">387</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_dataset_ind</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Get the index of a dataset</span>
 
@@ -4327,7 +4327,8 @@ Does not check to see if the path is valid.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/containers/metamodel.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">511</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">510</span>
+<span class="normal">511</span>
 <span class="normal">512</span>
 <span class="normal">513</span>
 <span class="normal">514</span>
@@ -4345,8 +4346,7 @@ Does not check to see if the path is valid.</p>
 <span class="normal">526</span>
 <span class="normal">527</span>
 <span class="normal">528</span>
-<span class="normal">529</span>
-<span class="normal">530</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">529</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Self</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Load the model from a file with dill.</span>
@@ -4459,7 +4459,8 @@ where each element matches the shape of <code>self.datasets[dataset_ind].datavec
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/containers/metamodel.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">323</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">322</span>
+<span class="normal">323</span>
 <span class="normal">324</span>
 <span class="normal">325</span>
 <span class="normal">326</span>
@@ -4502,8 +4503,7 @@ where each element matches the shape of <code>self.datasets[dataset_ind].datavec
 <span class="normal">363</span>
 <span class="normal">364</span>
 <span class="normal">365</span>
-<span class="normal">366</span>
-<span class="normal">367</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">model_grad_proj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">datavec_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
+<span class="normal">366</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">model_grad_proj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">datavec_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Project the models held in the metamodel to some data in a dataset.</span>
 
@@ -4531,15 +4531,15 @@ where each element matches the shape of <code>self.datasets[dataset_ind].datavec
         <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">xy</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">wu</span><span class="o">.</span><span class="n">rad_to_arcsec</span>
     <span class="n">y</span> <span class="o">=</span> <span class="n">y</span> <span class="o">*</span> <span class="n">wu</span><span class="o">.</span><span class="n">rad_to_arcsec</span>
-    <span class="n">proj_grad</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">proj_grad</span> <span class="o">=</span> <span class="n">jjnp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">m_map</span><span class="p">:</span>
         <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
         <span class="n">md</span> <span class="o">=</span> <span class="n">md_map</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
         <span class="c1"># Gradients of parameters we are not fitting are zero, don't project them</span>
-        <span class="n">fit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">to_fit</span><span class="p">))</span>
+        <span class="n">fit</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">to_fit</span><span class="p">))</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fit</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">continue</span>
-        <span class="n">par_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">[</span><span class="n">i</span><span class="p">])[</span><span class="n">fit</span><span class="p">]</span>
+        <span class="n">par_map</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">[</span><span class="n">i</span><span class="p">])[</span><span class="n">fit</span><span class="p">]</span>
         <span class="n">ip_grad</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">model_grad</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">fit</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">md_idx</span> <span class="ow">in</span> <span class="n">md</span><span class="p">:</span>
             <span class="n">ip_grad</span> <span class="o">=</span> <span class="n">dset</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">md_idx</span><span class="p">]</span><span class="o">.</span><span class="n">apply_grad</span><span class="p">(</span><span class="n">ip_grad</span><span class="p">)</span>
@@ -4626,7 +4626,8 @@ This does apply metadata (ie. beam convolution+prefactor).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/containers/metamodel.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">252</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">251</span>
+<span class="normal">252</span>
 <span class="normal">253</span>
 <span class="normal">254</span>
 <span class="normal">255</span>
@@ -4653,8 +4654,7 @@ This does apply metadata (ie. beam convolution+prefactor).</p>
 <span class="normal">276</span>
 <span class="normal">277</span>
 <span class="normal">278</span>
-<span class="normal">279</span>
-<span class="normal">280</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">model_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
+<span class="normal">279</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">model_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Get the model for a dataset on the computed grid.</span>
 <span class="sd">    This currently assumes that all models have the same grid.</span>
@@ -4674,7 +4674,7 @@ This does apply metadata (ie. beam convolution+prefactor).</p>
     <span class="n">m_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
     <span class="n">md_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata_map</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
     <span class="n">dset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">dataset_ind</span><span class="p">]</span>
-    <span class="n">proj</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">m_map</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+    <span class="n">proj</span> <span class="o">=</span> <span class="n">jjnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">m_map</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">m_map</span><span class="p">:</span>
         <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
         <span class="n">md</span> <span class="o">=</span> <span class="n">md_map</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
@@ -4776,7 +4776,8 @@ This does apply metadata (ie. beam convolution+prefactor).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/containers/metamodel.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">282</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">281</span>
+<span class="normal">282</span>
 <span class="normal">283</span>
 <span class="normal">284</span>
 <span class="normal">285</span>
@@ -4814,8 +4815,7 @@ This does apply metadata (ie. beam convolution+prefactor).</p>
 <span class="normal">317</span>
 <span class="normal">318</span>
 <span class="normal">319</span>
-<span class="normal">320</span>
-<span class="normal">321</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">model_proj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">datavec_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
+<span class="normal">320</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">model_proj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">datavec_ind</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Project the models held in the metamodel to some data in a dataset.</span>
 
@@ -4843,7 +4843,7 @@ This does apply metadata (ie. beam convolution+prefactor).</p>
         <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">xy</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">wu</span><span class="o">.</span><span class="n">rad_to_arcsec</span>
     <span class="n">y</span> <span class="o">=</span> <span class="n">y</span> <span class="o">*</span> <span class="n">wu</span><span class="o">.</span><span class="n">rad_to_arcsec</span>
-    <span class="n">proj</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">proj</span> <span class="o">=</span> <span class="n">jjnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">m_map</span><span class="p">:</span>
         <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
         <span class="n">md</span> <span class="o">=</span> <span class="n">md_map</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
@@ -4936,7 +4936,8 @@ This does apply metadata (ie. beam convolution+prefactor).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/containers/metamodel.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">532</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">531</span>
+<span class="normal">532</span>
 <span class="normal">533</span>
 <span class="normal">534</span>
 <span class="normal">535</span>
@@ -4955,8 +4956,7 @@ This does apply metadata (ie. beam convolution+prefactor).</p>
 <span class="normal">548</span>
 <span class="normal">549</span>
 <span class="normal">550</span>
-<span class="normal">551</span>
-<span class="normal">552</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">remove_structs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cfg</span><span class="p">):</span>
+<span class="normal">551</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">remove_structs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cfg</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Create a new metamodel with marked structures removed.</span>
 
@@ -5047,7 +5047,8 @@ Does not check to see if the path is valid.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/containers/metamodel.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">487</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">486</span>
+<span class="normal">487</span>
 <span class="normal">488</span>
 <span class="normal">489</span>
 <span class="normal">490</span>
@@ -5068,8 +5069,7 @@ Does not check to see if the path is valid.</p>
 <span class="normal">505</span>
 <span class="normal">506</span>
 <span class="normal">507</span>
-<span class="normal">508</span>
-<span class="normal">509</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}):</span>
+<span class="normal">508</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Serialize the model to a file with dill.</span>
 
@@ -5175,7 +5175,8 @@ alows us to use this function in JITed functions.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/containers/metamodel.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">462</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">461</span>
+<span class="normal">462</span>
 <span class="normal">463</span>
 <span class="normal">464</span>
 <span class="normal">465</span>
@@ -5197,8 +5198,7 @@ alows us to use this function in JITed functions.</p>
 <span class="normal">481</span>
 <span class="normal">482</span>
 <span class="normal">483</span>
-<span class="normal">484</span>
-<span class="normal">485</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_round</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_round</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="normal">484</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_round</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_round</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Set the round of the metamodel.</span>
 
@@ -5358,7 +5358,8 @@ alows us to use this function in JITed functions.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/containers/metamodel.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">390</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">389</span>
+<span class="normal">390</span>
 <span class="normal">391</span>
 <span class="normal">392</span>
 <span class="normal">393</span>
@@ -5400,8 +5401,7 @@ alows us to use this function in JITed functions.</p>
 <span class="normal">429</span>
 <span class="normal">430</span>
 <span class="normal">431</span>
-<span class="normal">432</span>
-<span class="normal">433</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span>
+<span class="normal">432</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">errs</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">cov</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">chisq</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
@@ -5436,9 +5436,9 @@ alows us to use this function in JITed functions.</p>
     <span class="bp">self</span><span class="o">.</span><span class="n">chisq</span> <span class="o">=</span> <span class="n">chisq</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
         <span class="n">deepcopy</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
-            <span class="n">pars</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)],</span>
-            <span class="n">errs</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)],</span>
-            <span class="n">cov</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)],</span>
+            <span class="n">pars</span><span class="p">[</span><span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)],</span>
+            <span class="n">errs</span><span class="p">[</span><span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)],</span>
+            <span class="n">cov</span><span class="p">[</span><span class="n">jjnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">par_map</span><span class="p">)],</span>
             <span class="n">chisq</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">for</span> <span class="n">model</span><span class="p">,</span> <span class="n">par_map</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">)</span>
