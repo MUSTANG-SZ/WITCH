@@ -21,6 +21,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.random._pickle as numpy_random_pickle
 import scipy.special
+from matplotlib.colors import to_rgba
+from scipy.ndimage import gaussian_filter
 
 try:
     from .compare_xray_SZ_pressure_profiles_errors import (
@@ -147,56 +149,49 @@ def plot_profile_covariance(
     plt.close(fig)
 
 
+def xmm_profile_params(samples: np.ndarray) -> dict[str, np.ndarray]:
+    # Provenance: adapted from radial_profile_and_uncert_n.ipynb, posterior-profile construction.
+    # Intent: convert each posterior sample into the physical profile parameters, with radii in arcsec.
+    """
+    Convert XMM posterior samples into profile parameters.
+
+    Args:
+        samples: XMM posterior samples, columns ordered as the saved notebook fit
+            (x_main, y_main, x_sub, y_sub, rs_main, rc_sub, beta_main, beta_sub, a_main, a_sub, a_bkg).
+
+    Returns:
+        Map "main" -> (n, 3) array of gNFW (P0, r_s, beta) and "sub" -> (n, 3) array of isobeta (amp, r_c, beta).
+    """
+    rs_main, rc_sub, beta_main, beta_sub, a_main, a_sub = samples[:, 4:10].T
+    p0_main = np.sqrt(a_main / F_S_MAIN) * KT_MAIN_KEV
+    amp_sub = (
+        np.sqrt(
+            a_sub
+            * scipy.special.gamma(3.0 * beta_sub)
+            / (F_S_SUB * scipy.special.gamma(3.0 * beta_sub - 0.5))
+        )
+        * KT_SUB_KEV
+    )
+    return {
+        "main": np.column_stack(
+            [p0_main, rs_main * XMM_PIXEL_SCALE_ARCSEC, beta_main / 2.0]
+        ),
+        "sub": np.column_stack([amp_sub, rc_sub * XMM_PIXEL_SCALE_ARCSEC, beta_sub]),
+    }
+
+
 def compute_xmm_pressure_profiles(
     samples: np.ndarray, r_vals: np.ndarray
 ) -> tuple[list[np.ndarray], list[np.ndarray]]:
-    # Provenance: adapted from radial_profile_and_uncert_n.ipynb, posterior-profile construction.
-    # Intent: turn each posterior sample into a main-cluster and west-subcluster pressure profile.
     """Build the XMM main-cluster and west-subcluster pressure-profile ensembles."""
-    p_profiles_main = []
-    p_profiles_sub = []
-
-    for sample in samples:
-        # Match the posterior parameter ordering used by the saved notebook fit.
-        (
-            _x_main_mcmc,
-            _y_main_mcmc,
-            _x_sub_mcmc,
-            _y_sub_mcmc,
-            rs_main_mcmc,
-            rc_sub_mcmc,
-            beta_main_mcmc,
-            beta_sub_mcmc,
-            a_main_mcmc,
-            a_sub_mcmc,
-            _a_bkg_mcmc,
-        ) = sample
-
-        # Keep the notebook normalization and shape conventions, with radii converted to arcsec.
-        main_profile = gNFW(
-            r=r_vals,
-            p_0=np.sqrt(a_main_mcmc / F_S_MAIN) * KT_MAIN_KEV,
-            r_s=rs_main_mcmc * XMM_PIXEL_SCALE_ARCSEC,
-            alpha=ALPHA_MAIN,
-            beta=beta_main_mcmc / 2.0,
-            gamma=GAMMA_MAIN,
-        )
-        sub_profile = iso_beta(
-            r=r_vals,
-            p_0=np.sqrt(
-                a_sub_mcmc
-                * scipy.special.gamma(3.0 * beta_sub_mcmc)
-                / (F_S_SUB * scipy.special.gamma(3.0 * beta_sub_mcmc - 0.5))
-            )
-            * KT_SUB_KEV,
-            r_c=rc_sub_mcmc * XMM_PIXEL_SCALE_ARCSEC,
-            beta=beta_sub_mcmc,
-        )
-
-        p_profiles_main.append(main_profile)
-        p_profiles_sub.append(sub_profile)
-
-    return p_profiles_main, p_profiles_sub
+    params = xmm_profile_params(samples)
+    return (
+        [
+            gNFW(r_vals, p_0, r_s, ALPHA_MAIN, beta, GAMMA_MAIN)
+            for p_0, r_s, beta in params["main"]
+        ],
+        [iso_beta(r_vals, p_0, r_c, beta) for p_0, r_c, beta in params["sub"]],
+    )
 
 
 def load_M2_samples(run_dir: Path, sample_count: int, seed: int = 0) -> np.ndarray:
@@ -218,6 +213,30 @@ def load_M2_samples(run_dir: Path, sample_count: int, seed: int = 0) -> np.ndarr
     ]
 
 
+def m2_profile_params(samples: np.ndarray, *, r_s_fit: bool) -> dict[str, np.ndarray]:
+    """
+    Split M2 MCMC samples into profile parameters.
+
+    Args:
+        samples: MCMC samples with columns (r, beta, amp, P0, [r_s,] beta, dx_g, dy_g, sigma, amp_g), the
+            bracketed r_s column being present only if r_s was fit.
+        r_s_fit: Whether r_s is a fitted parameter; otherwise it is fixed to M2_R_S_FIXED.
+
+    Returns:
+        Map "main" -> (n, 3) array of gNFW (P0, r_s, beta) and "sub" -> (n, 3) array of isobeta (amp, r_c, beta).
+    """
+    r_c, beta_sub, amp, p_0 = samples[:, :4].T
+    r_s, beta_main = (
+        (samples[:, 4], samples[:, 5])
+        if r_s_fit
+        else (np.full(len(samples), M2_R_S_FIXED), samples[:, 4])
+    )
+    return {
+        "main": np.column_stack([p_0, r_s, beta_main]),
+        "sub": np.column_stack([amp, r_c, beta_sub]),
+    }
+
+
 def compute_M2_pressure_profiles(
     samples: np.ndarray,
     r_vals: np.ndarray,
@@ -228,27 +247,21 @@ def compute_M2_pressure_profiles(
     Build the M2 main-cluster (gNFW) and west-subcluster (isobeta) pressure-profile ensembles from MCMC samples.
 
     Args:
-            samples: MCMC samples with columns (r, beta, amp, P0, [r_s,] beta, dx_g, dy_g, sigma, amp_g), the
-                    bracketed r_s column being present only if r_s was fit.
-            r_vals: Radii at which to evaluate the profiles.
-            r_s_fit: Whether r_s is a fitted parameter; otherwise it is fixed to M2_R_S_FIXED.
+        samples: MCMC samples, see m2_profile_params.
+        r_vals: Radii at which to evaluate the profiles.
+        r_s_fit: Whether r_s is a fitted parameter; otherwise it is fixed to M2_R_S_FIXED.
 
     Returns:
-            Lists of main and sub pressure profiles, one entry per sample.
+        Lists of main and sub pressure profiles, one entry per sample.
     """
-    p_profiles_main = []
-    p_profiles_sub = []
-
-    for sample in samples:
-        r_c_sub, beta_sub, amp_sub, p_0 = sample[:4]
-        r_s, beta_main = (
-            (sample[4], sample[5]) if r_s_fit else (M2_R_S_FIXED, sample[4])
-        )
-
-        p_profiles_main.append(gNFW(r_vals, p_0, r_s, M2_ALPHA, beta_main, M2_GAMMA))
-        p_profiles_sub.append(iso_beta(r_vals, amp_sub, r_c_sub, beta_sub))
-
-    return p_profiles_main, p_profiles_sub
+    params = m2_profile_params(samples, r_s_fit=r_s_fit)
+    return (
+        [
+            gNFW(r_vals, p_0, r_s, M2_ALPHA, beta, M2_GAMMA)
+            for p_0, r_s, beta in params["main"]
+        ],
+        [iso_beta(r_vals, p_0, r_c, beta) for p_0, r_c, beta in params["sub"]],
+    )
 
 
 # -------------------------------------------------------------------------------------------- #
@@ -275,29 +288,180 @@ def plot_profile_comparison(
     plt.close(fig)
 
 
+PANEL_TITLES = ("Main Cluster Pressure Profile", "West Subcluster Pressure Profile")
+PARAM_LABELS = {
+    "main": (r"$P_0$ (keV cm$^{-3}$)", r'$r_s$ (")', r"$\beta$"),
+    "sub": (r"amp (keV cm$^{-3}$)", r'$r_c$ (")', r"$\beta$"),
+}
+
+
+def _draw_profile_panel(
+    ax: plt.Axes,
+    ensembles: dict[str, tuple[list[np.ndarray], list[np.ndarray]]],
+    r_vals: np.ndarray,
+    i: int,
+) -> None:
+    """Draw the median + 90% band of component i (0 main, 1 sub) for every source onto ax, with radius axes."""
+    ax.set_title(PANEL_TITLES[i])
+    for label, pair in ensembles.items():
+        color, ls = PLOT_STYLE[label]
+        low, med, high = np.percentile(np.asarray(pair[i]), [5, 50, 95], axis=0)
+        ax.loglog(r_vals, med, c=color, ls=ls, label=label)
+        ax.fill_between(r_vals, low, high, color=color, alpha=0.3)
+    ax.legend()
+    format_radius_axes(ax, kpc_per_arcsec, hide_rightmost_label=not i)
+
+
 def _draw_profile_panels(
     axes: np.ndarray,
     ensembles: dict[str, tuple[list[np.ndarray], list[np.ndarray]]],
     r_vals: np.ndarray,
 ) -> None:
     """Draw the main (left) and west-subcluster (right) median + 90% band panels onto axes."""
-    for i, (ax, title) in enumerate(
-        zip(axes, ("Main Cluster Pressure Profile", "West Subcluster Pressure Profile"))
-    ):
-        ax.set_title(title)
-        for label, pair in ensembles.items():
-            color, ls = PLOT_STYLE[label]
-            low, med, high = np.percentile(np.asarray(pair[i]), [5, 50, 95], axis=0)
-            ax.loglog(r_vals, med, c=color, ls=ls, label=label)
-            ax.fill_between(r_vals, low, high, color=color, alpha=0.3)
-        ax.legend()
-        format_radius_axes(ax, kpc_per_arcsec, hide_rightmost_label=not i)
+    for i, ax in enumerate(axes):
+        _draw_profile_panel(ax, ensembles, r_vals, i)
     format_shared_pressure_axes(*axes)
     axes[0].figure.subplots_adjust(wspace=0.0)
 
 
+def _credible_levels(hist: np.ndarray, fracs: tuple[float, ...]) -> list[float]:
+    """Return the histogram heights enclosing each fraction of the total mass (highest fraction first -> lowest level)."""
+    flat = np.sort(hist.ravel())[::-1]
+    cum = np.cumsum(flat) / flat.sum()
+    return [flat[np.searchsorted(cum, f)] for f in fracs]
+
+
+def _own_range(x: np.ndarray, pad: float = 0.2) -> tuple[float, float]:
+    """Return the 0.5-99.5 percentile range of x, padded by the given fraction of its width."""
+    lo, hi = np.percentile(x, [0.5, 99.5])
+    return lo - pad * (hi - lo), hi + pad * (hi - lo)
+
+
+def plot_corner(
+    fig: plt.Figure,
+    samples: dict[str, np.ndarray],
+    labels: tuple[str, ...],
+    n_bins: int = 30,
+) -> None:
+    """
+    Draw an overlaid corner plot of several sample sets onto fig.
+
+    Parameters whose samples are constant for a source (i.e. fixed in that fit) are skipped for that source.
+    Each source is binned over its own range so that narrow posteriors are not over-smoothed by the
+    shared (wider) axis limits.
+
+    Args:
+        fig: Figure or SubFigure to draw on.
+        samples: Map from source label (key of PLOT_STYLE) to an (n, k) array of samples.
+        labels: The k axis labels.
+        n_bins: Histogram bins per axis.
+    """
+    k = len(labels)
+    axes = fig.subplots(
+        k,
+        k,
+        squeeze=False,
+        gridspec_kw={"wspace": 0.05, "hspace": 0.05, "left": 0.12, "right": 0.98},
+    )
+    varies = {name: np.ptp(s, axis=0) > 0 for name, s in samples.items()}
+    ranges = []
+    for j in range(k):
+        cols = np.concatenate(
+            [s[:, j] for name, s in samples.items() if varies[name][j]]
+        )
+        lo, hi = np.percentile(cols, [0.5, 99.5])
+        pad = 0.1 * (hi - lo)
+        ranges.append((lo - pad, hi + pad))
+
+    for i in range(k):
+        for j in range(k):
+            ax = axes[i, j]
+            if j > i:
+                ax.axis("off")
+                continue
+            for name, s in samples.items():
+                if not (varies[name][i] and varies[name][j]):
+                    continue
+                color = PLOT_STYLE[name][0]
+                if i == j:
+                    ax.hist(
+                        s[:, i],
+                        bins=n_bins,
+                        range=_own_range(s[:, i]),
+                        density=True,
+                        histtype="step",
+                        color=color,
+                        lw=1.5,
+                    )
+                    continue
+                hist, xe, ye = np.histogram2d(
+                    s[:, j],
+                    s[:, i],
+                    bins=n_bins,
+                    range=[_own_range(s[:, j]), _own_range(s[:, i])],
+                )
+                hist = gaussian_filter(hist, 1.0)
+                l95, l68 = _credible_levels(hist, (0.95, 0.68))
+                xc, yc = (xe[1:] + xe[:-1]) / 2, (ye[1:] + ye[:-1]) / 2
+                ax.contourf(
+                    xc,
+                    yc,
+                    hist.T,
+                    levels=[l95, l68, hist.max() * 1.001],
+                    colors=[to_rgba(color, 0.25), to_rgba(color, 0.5)],
+                )
+                ax.contour(
+                    xc, yc, hist.T, levels=[l95, l68], colors=color, linewidths=1.0
+                )
+            ax.set_xlim(ranges[j])
+            if i != j:
+                ax.set_ylim(ranges[i])
+            else:
+                ax.set_yticks([])
+            ax.tick_params(labelbottom=i == k - 1, labelleft=j == 0 and i > 0)
+            if i == k - 1:
+                ax.set_xlabel(labels[j])
+            if j == 0 and i > 0:
+                ax.set_ylabel(labels[i])
+
+
+def plot_profile_and_corner(
+    ensembles: dict[str, tuple[list[np.ndarray], list[np.ndarray]]],
+    params: dict[str, dict[str, np.ndarray]],
+    r_vals: np.ndarray,
+    component: str,
+    output_path: Path,
+) -> None:
+    """
+    Save a two-panel figure of one component: its pressure profile (left) and a corner plot of the
+    profile parameters of the samples used to build it (right), for every source.
+
+    Args:
+        ensembles: Map from label to the (main, sub) lists of sampled profiles.
+        params: Map from label to the {"main", "sub"} parameter arrays of the same samples.
+        r_vals: Radii in arcsec at which the profiles are evaluated.
+        component: "main" or "sub".
+        output_path: Where to save the figure.
+    """
+    i = ("main", "sub").index(component)
+    with plt.rc_context(PLOT_RC):
+        fig = plt.figure(figsize=(17, 6.5))
+        left, right = fig.subfigures(1, 2, width_ratios=[1, 1.1], wspace=0.0)
+        left.subplots_adjust(left=0.12, right=0.97)
+        ax = left.subplots()
+        _draw_profile_panel(ax, ensembles, r_vals, i)
+        ax.set(ylim=(1e-7, 1.0), ylabel=r"P (keV cm$^{-3}$)")
+        plot_corner(
+            right,
+            {label: p[component] for label, p in params.items()},
+            PARAM_LABELS[component],
+        )
+        fig.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+
 def main() -> None:
-    """Compute the radial-bin covariance and co-plotted 90% bands of the M2 and XMM pressure profiles, all from MCMC chains."""
+    """Compute the radial-bin covariance, co-plotted 90% bands and parameter corner plots of the M2 and XMM pressure profiles, all from MCMC chains."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--run",
@@ -318,14 +482,17 @@ def main() -> None:
     cov_plot_dir.mkdir(parents=True, exist_ok=True)
 
     # Pressure-profile ensembles per source: XMM first, then each requested M2 run.
-    ensembles = {}
+    ensembles, params = {}, {}
     for name in M2_RUNS if args.run == "both" else [args.run]:
         run_dir, r_s_fit = M2_RUNS[name]
+        m2_samples = load_M2_samples(run_dir, n_samples)
         ensembles[f"M2 {name}"] = compute_M2_pressure_profiles(
-            load_M2_samples(run_dir, n_samples), r_vals, r_s_fit=r_s_fit
+            m2_samples, r_vals, r_s_fit=r_s_fit
         )
+        params[f"M2 {name}"] = m2_profile_params(m2_samples, r_s_fit=r_s_fit)
     xmm_samples = get_xmm_posterior_samples(xmm_state_path, n_samples)
     ensembles["XMM"] = compute_xmm_pressure_profiles(xmm_samples, r_vals)
+    params["XMM"] = xmm_profile_params(xmm_samples)
 
     for label, pair in ensembles.items():
         for component, profiles in zip(("main", "sub"), pair):
@@ -340,6 +507,15 @@ def main() -> None:
         r_vals,
         cov_plot_dir.parent / "MOO_1142_main+west_pressure_profiles_w_errors.png",
     )
+    for component in ("main", "sub"):
+        plot_profile_and_corner(
+            ensembles,
+            params,
+            r_vals,
+            component,
+            cov_plot_dir.parent
+            / f"MOO_1142_{component}_pressure_profile_and_corner.png",
+        )
 
 
 if __name__ == "__main__":
