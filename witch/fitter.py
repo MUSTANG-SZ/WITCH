@@ -590,12 +590,19 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     if load_path is not None:
         loaded_metamodel, loaded_start_round, *_ = _read_checkpoint(load_path)
 
-        # Compatibility checks
-        if not metamodel.check_compatibility(loaded_metamodel):
+        # Only rank 0 saves checkpoints, and the datasets and their maps are per task,
+        # so only rank 0 can compare those. Agree across tasks so all fail together.
+        compatible = metamodel.check_compatibility(
+            loaded_metamodel, check_local=comm.Get_rank() == 0
+        )
+        if not comm.allreduce(int(compatible), op=MPI.MIN):
             raise ValueError("Checkpoint is incompatible!")
 
+        # Take the fit state from the checkpoint but keep this task's datasets
         loaded_metamodel.global_comm = metamodel.global_comm
         loaded_metamodel.datasets = metamodel.datasets
+        loaded_metamodel.model_map = metamodel.model_map
+        loaded_metamodel.metadata_map = metamodel.metadata_map
         start_round = loaded_start_round
         metamodel = _reestimate_noise(loaded_metamodel)
 

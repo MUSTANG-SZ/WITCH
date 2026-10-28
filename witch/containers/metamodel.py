@@ -91,7 +91,7 @@ class MetaModel:
         rep += f"\nchisq is {self.chisq}"
         return rep
 
-    def check_compatibility(self, other: Self) -> bool:
+    def check_compatibility(self, other: Self, check_local: bool = True) -> bool:
         """
         Check if another `MetaModel` instance is compatible with this one.
         Used for checkpointing.
@@ -100,6 +100,10 @@ class MetaModel:
         ---------
         other : MetaModel
             The `MetaModel` instance to check compatibility with.
+        check_local : bool, default: True
+            Also check the datasets, `model_map` and `metadata_map`.
+            These only hold the datasets living on this MPI task, so only compare
+            them against a checkpoint saved by a task with the same datasets.
 
         Returns
         -------
@@ -113,6 +117,10 @@ class MetaModel:
         for sm, om in zip(self.models, other.models):
             if not sm.check_compatibility(om):
                 return False
+        if self.parameter_map != other.parameter_map:
+            return False
+        if not check_local:
+            return True
 
         # Check datasets (just names for now)
         if len(self.datasets) != len(other.datasets):
@@ -122,8 +130,6 @@ class MetaModel:
                 return False
 
         # Check mappings
-        if self.parameter_map != other.parameter_map:
-            return False
         if self.model_map != other.model_map:
             return False
         if self.metadata_map != other.metadata_map:
