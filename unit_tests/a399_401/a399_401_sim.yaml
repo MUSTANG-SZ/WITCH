@@ -1,0 +1,22 @@
+# Simulated fit of the A399-A401 isobeta + mesa model on a blank 80'x80' map with white noise.
+# The injected model is the one in the base config (the paper's Table 2 values); the fit starts 10% away.
+# The map and ivar are made by tests/test_a399_401_sim.py (the map only supplies the WCS, its data are replaced by the sim).
+# Run with a single task, ie: witcher unit_tests/a399_401/a399_401_sim.yaml -cpu True
+base: "../../configs/A399_401/A399_401_ymap_isobeta_mesa_comptonY.yaml"
+sim: True
+wnoise: True
+par_offset: 1.1
+n_rounds: 10
+map: False
+model_map: False
+
+paths:
+  maps: "A399_401_sim"
+  subdir: "a399_401_sim"
+
+datasets:
+  acty:
+    noise:
+      class: "jm.NoiseWhite"
+      args: "['self.ivar']"
+      kwargs: "{}"
