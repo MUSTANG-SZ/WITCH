@@ -77,6 +77,9 @@ def main() -> None:
     ap.add_argument("--dec", type=float, default=13.301)
     ap.add_argument("--width", type=float, default=80.0, help="arcmin")
     ap.add_argument("--bin", type=int, default=2)
+    ap.add_argument(
+        "--scale", type=float, default=1.0, help="Factor that converts the map to y"
+    )
     ap.add_argument("--max-std-ratio", type=float, default=1.5)
     ap.add_argument(
         "--local",
@@ -91,7 +94,7 @@ def main() -> None:
         if args.local
         else control_centres(args.ra, args.dec, 1 if args.debug else 5)
     )
-    fields = [cutout_y(args.ymap, r, d, width, args.bin)[0] for r, d in cs]
+    fields = [cutout_y(args.ymap, r, d, width, args.bin, args.scale)[0] for r, d in cs]
     keep = [f for f in fields if np.mean(f == 0) < 0.01]
     stds = np.array([f.std() for f in keep])
     good = [
@@ -99,7 +102,7 @@ def main() -> None:
         for f, s in zip(keep, stds, strict=True)
         if s < args.max_std_ratio * np.median(stds)
     ]
-    target = cutout_y(args.ymap, args.ra, args.dec, width, args.bin)[0]
+    target = cutout_y(args.ymap, args.ra, args.dec, width, args.bin, args.scale)[0]
     print(f"{len(cs)} fields, {len(keep)} non-empty, {len(good)} used")
     print(
         f"control std median {np.median(stds):.3e} range {stds.min():.3e}-{stds.max():.3e}, target std {target.std():.3e}"

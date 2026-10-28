@@ -100,26 +100,36 @@ def main() -> None:
     ap.add_argument("--dir", type=Path, required=True, help="Fit output directory")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--burn", type=float, default=0.1, help="Burn-in fraction")
+    ap.add_argument(
+        "--auto", action="store_true", help="Axis ranges from the samples, not Fig. 4"
+    )
     ap.add_argument("--debug", action="store_true", help="Use every 50th sample")
     args = ap.parse_args()
 
     chains = np.load(args.dir / "samples_mcmc.npz", allow_pickle=True)["chains"]
     chains = chains[:, int(args.burn * chains.shape[1]) :]
-    best = np.asarray(
-        dill.load((args.dir / "par_results_fit3.dill").open("rb"))["parameters"]
+    # The LM best fit is the last round that was saved
+    best_file = max(
+        args.dir.glob("par_results_fit*.dill"), key=lambda f: int(f.stem[15:])
     )
+    best = np.asarray(dill.load(best_file.open("rb"))["parameters"])
     prefactor = float(wu.get_da(Z) * wu.XMpc / wu.me)
     samples = physical(chains.reshape(-1, chains.shape[-1]), prefactor)
     truths = physical(best, prefactor)
     if args.debug:
         samples = samples[::50]
 
+    ranges = (
+        [tuple(np.percentile(samples[:, i], [0.1, 99.9])) for i in range(7)]
+        if args.auto
+        else RANGES
+    )
     fig = corner.corner(
         samples,
         labels=LABELS,
         truths=truths,
         truth_color="C0",
-        range=RANGES,
+        range=ranges,
         levels=(0.68, 0.95, 0.997),
         fill_contours=True,
         plot_datapoints=False,

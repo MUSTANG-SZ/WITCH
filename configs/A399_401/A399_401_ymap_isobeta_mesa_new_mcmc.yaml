@@ -1,0 +1,14 @@
+# LM fit followed by a Metropolis-Hastings MCMC of the isobeta + mesa fit to the newest ACT map.
+# joint: False runs the 4 chains concurrently in threads, ~1.7x faster than the default for a single dataset.
+# Run with: witcher configs/A399_401/A399_401_ymap_isobeta_mesa_new_mcmc.yaml -cpu True
+base: "A399_401_ymap_isobeta_mesa_new.yaml"
+
+mcmc:
+  run: True
+  method: "mh"
+  num_steps: 10000
+  num_chains: 4
+  burn_in: 0.1
+  proposal: "cov"
+  seed: 0
+  joint: False

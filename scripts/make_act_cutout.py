@@ -69,7 +69,7 @@ def cutout(
 
 
 def cutout_y(
-    mapf: Path, ra: float, dec: float, width: float, nbin: int
+    mapf: Path, ra: float, dec: float, width: float, nbin: int, scale: float = 1.0
 ) -> tuple[np.ndarray, fits.Header]:
     """
     Cut out and rebin (by averaging) a full sky 2D map such as an ACT ILC Compton-y map.
@@ -84,6 +84,8 @@ def cutout_y(
         Side length of the patch in arcmin.
     nbin : int
         Rebinning factor.
+    scale : float, default: 1.0
+        Factor the map is multiplied by, to convert it to Compton y.
 
     Returns
     -------
@@ -98,8 +100,9 @@ def cutout_y(
         n = int(round(width / pix / nbin)) * nbin
         cx, cy = (float(c) for c in wcs.wcs_world2pix([[ra, dec]], 0)[0])
         x0, y0 = int(round(cx - n / 2)), int(round(cy - n / 2))
-        dat = np.nan_to_num(
-            np.array(hdul[0].data[y0 : y0 + n, x0 : x0 + n], dtype=float)
+        dat = (
+            np.nan_to_num(np.array(hdul[0].data[y0 : y0 + n, x0 : x0 + n], dtype=float))
+            * scale
         )
     m = n // nbin
     new = WCS(naxis=2)
@@ -121,6 +124,12 @@ def main() -> None:
         help="Cut a 2D Compton-y map instead, written with a unit ivar as A399_401_y_{map,ivar}.fits",
     )
     ap.add_argument(
+        "--scale",
+        type=float,
+        default=1.0,
+        help="Factor to multiply the Compton-y map by to get y",
+    )
+    ap.add_argument(
         "--srcfree", action="store_true", help="Use the point source subtracted map"
     )
     ap.add_argument("--ra", type=float, default=44.612)
@@ -132,7 +141,12 @@ def main() -> None:
     args = ap.parse_args()
     if args.ymap is not None:
         dat, hdr = cutout_y(
-            args.ymap, args.ra, args.dec, 20.0 if args.debug else args.width, args.bin
+            args.ymap,
+            args.ra,
+            args.dec,
+            20.0 if args.debug else args.width,
+            args.bin,
+            args.scale,
         )
         args.out.mkdir(parents=True, exist_ok=True)
         fits.PrimaryHDU(dat, hdr).writeto(

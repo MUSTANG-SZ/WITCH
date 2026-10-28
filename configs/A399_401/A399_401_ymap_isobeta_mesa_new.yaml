@@ -1,0 +1,16 @@
+# As A399_401_ymap_isobeta_mesa_comptonY.yaml but on the newest ACT+Planck Compton-y map (/mnt/welch/ACT/bridge.fits).
+# Data: 80'x80' cutout binned to 1' in $WITCH_DATROOT/A399_401/act_y_new, in units of y, made with
+#   python scripts/make_act_cutout.py --ymap /mnt/welch/ACT/bridge.fits --scale=-3.526666833214854e-07 --out $WITCH_DATROOT/A399_401/act_y_new
+# Noise: stationary spectrum from 12 control tiles of the same map, made with
+#   python scripts/act_y_noise.py --local --ymap /mnt/welch/ACT/bridge.fits --scale=-3.526666833214854e-07 --out $WITCH_DATROOT/A399_401/act_y_new/y_noise_power.npy
+# Run with a single task: witcher configs/A399_401/A399_401_ymap_isobeta_mesa_new.yaml -cpu True
+base: "A399_401_ymap_isobeta_mesa_comptonY.yaml"
+
+paths:
+  maps: "A399_401/act_y_new"
+  subdir: "ymap_isobeta_mesa_new"
+
+datasets:
+  acty:
+    noise:
+      kwargs: "{'power_path': os.path.join(os.environ['WITCH_DATROOT'], 'A399_401/act_y_new/y_noise_power.npy')}"
