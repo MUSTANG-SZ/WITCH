@@ -1,0 +1,14 @@
+# Same as A399_401_ACT_gnfw_cyl.yaml but with no bridge component, for the chi-squared comparison.
+base: "A399_401_ACT_gnfw_cyl.yaml"
+
+paths:
+  subdir: "act_only_nobridge"
+
+metamodel:
+  models:
+    - a399
+    - a401
+  model_map:
+    act:
+      - a399
+      - a401

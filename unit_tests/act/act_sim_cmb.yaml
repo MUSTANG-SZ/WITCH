@@ -1,0 +1,133 @@
+# Simulated ACT-only fit of a MOOJ1142-like gNFW cluster plus a point source.
+# The ACT map is 40x40 pixels at 0.5' so only the integrated signal, and a little of the profile shape, is constrained.
+# Noise is the CMB covariance plus white noise from the MOOJ1142 ACT ivar map, as in the real-data fit.
+# Run with a single task, ie: witcher unit_tests/act/act_sim_cmb.yaml
+name: "MOOJ1142"
+fit: True
+sim: True
+sub: True
+wnoise: False # Draw correlated CMB noise from the noise model
+par_offset: 1.1 # Start the fit 10% away from the injected values
+n_rounds: 10
+map: True
+model_map: True
+
+constants:
+  Te: 5.0
+  freq: "97e9"
+  z: 1.19
+
+mcmc:
+  run: False
+
+paths:
+  # Relative paths are taken relative to WITCH_DATROOT, the maps live in <maps>/act
+  maps: "MOOJ1142"
+  outroot: ""
+  subdir: "act_sim_cmb"
+
+# 3*fwhm1 of the ACT beam has to fit inside 2*r_map
+coords:
+  r_map: "7.0*60"
+  dr: "10.0"
+  dz: 10.0
+  x0: "(175.69766238*u.deg).to(u.radian).value"
+  y0: "(15.45364413*u.deg).to(u.radian).value"
+
+datasets:
+  act:
+    noise:
+      class: "wn.NoiseCMBMap"
+      args: "['self.ivar', 'self.wcs.wcs.cdelt[0]']"
+      kwargs: "{}"
+    funcs:
+      get_files: "amf.get_files"
+      load: "amf.load_maps"
+      get_info: "amf.get_info"
+      make_metadata: "amf.make_metadata"
+      preproc: "amf.preproc"
+      postproc: "amf.postproc"
+      postfit: "amf.postfit"
+    # Single gaussian since the beam kernel is truncated at 1.5*fwhm1
+    beam:
+      fwhm1: "120"
+      amp1: 1.0
+      fwhm2: "120"
+      amp2: 0.0
+    # y -> uK_CMB at 97 GHz
+    prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_CMB(97e9, cfg['constants']['Te'])*wu.XMpc/wu.me)*1e6"
+    point_sources:
+      - "ps_act"
+
+cluster_model:
+  structures:
+    gnfw:
+      structure: "gnfw"
+      parameters:
+        dx_1: # arcsec
+          value: 3.0
+        dy_1: # arcsec
+          value: -3.0
+        dz_1:
+          value: 0.0
+        r: # arcsec per Mpc, with this choice gnfw is the same as a10
+          value: "1/wu.get_da(constants['z'])"
+        P0:
+          value: 8.403
+        c500:
+          value: 1.177
+        m500:
+          value: "5.0e14"
+          to_fit: True
+          priors: ["1e14", "5e15"]
+        gamma:
+          value: 0.3081
+        alpha:
+          value: 1.551
+          to_fit: True
+          priors: [0.3, 5.0]
+        beta:
+          value: 5.4905
+        z:
+          value: 1.19
+
+# Point source models are not beam convolved or unit converted,
+# so sigma is the ACT beam and amp is in uK_CMB.
+ps_act:
+  structures:
+    ps:
+      structure: "gaussian"
+      parameters:
+        dx_g: # arcsec
+          value: 20.0
+        dy_g: # arcsec
+          value: -15.0
+        sigma_act: # arcsec, ACT beam
+          value: "120.0/2.3548"
+        amp_act: # uK_CMB
+          value: 50.0
+          to_fit: True
+          priors: [0.0, 500.0]
+
+metamodel:
+  models:
+    - cluster_model
+    - ps_act
+  model_map:
+    act:
+      - cluster_model
+      - ps_act
+
+fitting:
+  maxiter: 30
+  chitol: 1e-5
+
+imports:
+  astropy.units: u
+  astropy.coordinates: [Angle]
+  numpy: np
+  witch.utils: wu
+  witch.noise: wn
+  jitkasi.noise: jn
+  jitkasi.solutions.maps: jm
+  witch.external.act_map.funcs: amf

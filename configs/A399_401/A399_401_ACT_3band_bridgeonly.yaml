@@ -1,0 +1,28 @@
+# Bridge only at P0=1e-3, run with --nofit to get the per-band bridge template for scripts/act_joint_noise_test.py
+base: "A399_401_ACT_3band.yaml"
+paths:
+  subdir: "act_3band_bridgeonly"
+bridge:
+  structures:
+    cylindrical_beta:
+      parameters:
+        dx:
+          value: 0.0
+        dy:
+          value: 0.0
+        theta:
+          value: 1.108
+        r_c:
+          value: 300.0
+        P0:
+          value: 0.001
+metamodel:
+  models:
+    - bridge
+  model_map:
+    act090:
+      - bridge
+    act150:
+      - bridge
+    act220:
+      - bridge

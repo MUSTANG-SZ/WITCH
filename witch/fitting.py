@@ -89,6 +89,28 @@ def _prior_pars_fit(
     return pars, to_fit
 
 
+def _stalled(new_delta_chisq: jax.Array, chitol: jax.Array) -> jax.Array:
+    """
+    Whether a rejected step failed only by less than the tolerance, i.e. we are at the minimum.
+
+    Near the minimum the undamped step changes chisq at the floating point noise level, so
+    treating it as a failure would raise lambda forever and leave errors from damped curvature.
+
+    Parameters
+    ----------
+    new_delta_chisq : jax.Array
+        Improvement in chisq from the trial step, negative if chisq increased.
+    chitol : jax.Array
+        Convergence tolerance on the chisq improvement.
+
+    Returns
+    -------
+    stalled : jax.Array
+        True if the trial step did not improve chisq but is within `chitol` of the current one.
+    """
+    return (new_delta_chisq <= 0) & (new_delta_chisq > -chitol)
+
+
 def _failure(
     metamodel,
     new_metamodel,
@@ -271,6 +293,9 @@ def _run_lmfit_tod_chunks(
             new_delta_chisq,
             lmd,
         )
+        stalled = _stalled(new_delta_chisq, chitol)
+        lmd = jnp.where(stalled, zero, lmd)
+        delta_chisq = jnp.where(stalled, 0.0, delta_chisq)
         iteration += 1
 
     return metamodel, iteration, delta_chisq, lmd
@@ -377,6 +402,9 @@ def run_lmfit(
             new_delta_chisq,
             lmd,
         )
+        stalled = _stalled(new_delta_chisq, chitol)
+        lmd = jnp.where(stalled, zero, lmd)
+        delta_chisq = jnp.where(stalled, 0.0, delta_chisq)
 
         return (i + 1, delta_chisq, lmd, metamodel, curve, grad)
 

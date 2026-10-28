@@ -1,0 +1,63 @@
+# Joint fit of the ACT+Planck Compton-y map and the MUSTANG2 TODs of the A399-A401 bridge field.
+# Same isobeta clusters and mesa bridge as A399_401_ymap_isobeta_mesa_comptonY.yaml (the ACT+Planck map, which
+# keeps the large scales the bridge needs), now also projected into the M2 TODs.
+# All TODs are used, ~1.5 GB of memory each, so this needs more than one node. See run_A399_401_joint_act_m2.sbatch.
+# M2 covers the middle of the field and A401 but not A399 (Dec 13.23-13.61 deg), so A399 is set by ACT alone.
+# The M2 TODs are in $WITCH_DATROOT/bridge. Set `ntods` for a subset, or point `paths.tods` at a directory of links.
+# The grid has to be fine enough for the 10" M2 beam, so it is much finer than the ACT-only one.
+# One MPI task is used for ACT and the rest split the TODs, ie: mpirun -n 9 witcher configs/A399_401/A399_401_joint_act_m2.yaml -cpu True
+base: "A399_401_ymap_isobeta_mesa_comptonY.yaml"
+
+paths:
+  tods: "bridge"
+  glob: "Signal_TOD*.fits"
+  ndo: False
+  odo: False
+  subdir: "joint_act_m2"
+
+constants:
+  freq: "90e9"
+
+coords:
+  dr: "15.0"
+  dz: 30.0
+
+datasets:
+  mustang2:
+    ntods: null # All TODs
+    noise:
+      class: "jn.NoiseSmoothedSVD"
+      args: "[]"
+      kwargs: "{'fwhm':10}"
+    funcs:
+      get_files: "mf.get_files"
+      load_tods: "mf.load_tods"
+      get_info: "mf.get_info"
+      make_metadata: "mf.make_metadata"
+      preproc: "mf.preproc"
+      postproc: "mf.postproc"
+      postfit: "mf.postfit"
+    minkasi_noise:
+      class: "minkasi.mapmaking.noise.NoiseSmoothedSVD"
+      args: "[]"
+      kwargs: "{'fwhm':10}"
+    beam:
+      fwhm1: "9.735"
+      amp1: 0.9808
+      fwhm2: "32.627"
+      amp2: 0.0192
+    copy_noise: False
+    dograd: False
+    npass: 1
+    freq: "float(90e9)"
+    prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_RJ(90e9, cfg['constants']['Te'])*wu.XMpc/wu.me)"
+
+metamodel:
+  model_map:
+    mustang2:
+      - a399
+      - a401
+      - bridge
+
+imports:
+  witch.external.minkasi.funcs: mf
