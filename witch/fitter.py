@@ -286,8 +286,9 @@ def get_outdir(cfg, metamodel, nonpara=False):
     print_once("Outputs can be found in", outdir)
     if comm.Get_rank() == 0:
         os.makedirs(outdir, exist_ok=True)
+        # Parameters are positional within a structure, so the key order has to be kept
         with open(os.path.join(outdir, "config.yaml"), "w") as file:
-            yaml.dump(cfg, file)
+            yaml.dump(cfg, file, sort_keys=False)
 
     return outdir
 
@@ -350,7 +351,7 @@ def _save_model(cfg, metamodel, desc_str, nonpara=False):
                     par_name
                 ]["value"] = [float(cur_par) for cur_par in par.val]
     with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
-        yaml.dump(final, file)
+        yaml.dump(final, file, sort_keys=False)
 
 
 def _reestimate_noise(metamodel):
