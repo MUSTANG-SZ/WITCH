@@ -414,6 +414,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#witch.cfg_loader.aic_refit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        aic_refit
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#witch.cfg_loader.deep_merge" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1511,6 +1522,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#witch.cfg_loader.aic_refit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        aic_refit
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#witch.cfg_loader.deep_merge" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1921,6 +1943,312 @@ grad for models with transfer function is not supported.</p>
 <div class="doc doc-object doc-function">
 
 
+<h2 id="witch.cfg_loader.aic_refit" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">aic_refit</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">nonpara</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Maximum likelihood under the initial noise model, for comparing models with the AIC.</p>
+<p>The fit re-estimates the noise from each model's own residuals, so the chi-squared of
+different models can't be compared. Here the noise is re-estimated from the data alone
+(as at load time), the free parameters are refit with LM starting from the current
+parameters (the MCMC medians, or the LM best fit without MCMC), and the result is saved
+as <code>aic.yaml</code> and <code>par_results_aic.dill</code> in the output directory. The fit's own noise
+is restored afterwards, nothing else is changed.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>cfg</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The config, <code>cfg["outdir"]</code> is where the results are written and
+<code>fitting.maxiter</code> / <code>fitting.chitol</code> set the LM refit.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>metamodel</code>
+            </td>
+            <td>
+                  <code><span title="MetaModel">MetaModel</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The fitted metamodel, its free parameters for the current round are refit.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>start</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Description of the starting parameters, saved in <code>aic.yaml</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>nonpara</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True the outputs get a <code>_nonpara</code> suffix.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>metamodel</code></td>            <td>
+                  <code><span title="MetaModel">MetaModel</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The input metamodel with its parameters and fit noise unchanged.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>witch/fitter.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">569</span>
+<span class="normal">570</span>
+<span class="normal">571</span>
+<span class="normal">572</span>
+<span class="normal">573</span>
+<span class="normal">574</span>
+<span class="normal">575</span>
+<span class="normal">576</span>
+<span class="normal">577</span>
+<span class="normal">578</span>
+<span class="normal">579</span>
+<span class="normal">580</span>
+<span class="normal">581</span>
+<span class="normal">582</span>
+<span class="normal">583</span>
+<span class="normal">584</span>
+<span class="normal">585</span>
+<span class="normal">586</span>
+<span class="normal">587</span>
+<span class="normal">588</span>
+<span class="normal">589</span>
+<span class="normal">590</span>
+<span class="normal">591</span>
+<span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span>
+<span class="normal">597</span>
+<span class="normal">598</span>
+<span class="normal">599</span>
+<span class="normal">600</span>
+<span class="normal">601</span>
+<span class="normal">602</span>
+<span class="normal">603</span>
+<span class="normal">604</span>
+<span class="normal">605</span>
+<span class="normal">606</span>
+<span class="normal">607</span>
+<span class="normal">608</span>
+<span class="normal">609</span>
+<span class="normal">610</span>
+<span class="normal">611</span>
+<span class="normal">612</span>
+<span class="normal">613</span>
+<span class="normal">614</span>
+<span class="normal">615</span>
+<span class="normal">616</span>
+<span class="normal">617</span>
+<span class="normal">618</span>
+<span class="normal">619</span>
+<span class="normal">620</span>
+<span class="normal">621</span>
+<span class="normal">622</span>
+<span class="normal">623</span>
+<span class="normal">624</span>
+<span class="normal">625</span>
+<span class="normal">626</span>
+<span class="normal">627</span>
+<span class="normal">628</span>
+<span class="normal">629</span>
+<span class="normal">630</span>
+<span class="normal">631</span>
+<span class="normal">632</span>
+<span class="normal">633</span>
+<span class="normal">634</span>
+<span class="normal">635</span>
+<span class="normal">636</span>
+<span class="normal">637</span>
+<span class="normal">638</span>
+<span class="normal">639</span>
+<span class="normal">640</span>
+<span class="normal">641</span>
+<span class="normal">642</span>
+<span class="normal">643</span>
+<span class="normal">644</span>
+<span class="normal">645</span>
+<span class="normal">646</span>
+<span class="normal">647</span>
+<span class="normal">648</span>
+<span class="normal">649</span>
+<span class="normal">650</span>
+<span class="normal">651</span>
+<span class="normal">652</span>
+<span class="normal">653</span>
+<span class="normal">654</span>
+<span class="normal">655</span>
+<span class="normal">656</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">aic_refit</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">nonpara</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Maximum likelihood under the initial noise model, for comparing models with the AIC.</span>
+
+<span class="sd">    The fit re-estimates the noise from each model's own residuals, so the chi-squared of</span>
+<span class="sd">    different models can't be compared. Here the noise is re-estimated from the data alone</span>
+<span class="sd">    (as at load time), the free parameters are refit with LM starting from the current</span>
+<span class="sd">    parameters (the MCMC medians, or the LM best fit without MCMC), and the result is saved</span>
+<span class="sd">    as `aic.yaml` and `par_results_aic.dill` in the output directory. The fit's own noise</span>
+<span class="sd">    is restored afterwards, nothing else is changed.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cfg : dict</span>
+<span class="sd">        The config, `cfg["outdir"]` is where the results are written and</span>
+<span class="sd">        `fitting.maxiter` / `fitting.chitol` set the LM refit.</span>
+<span class="sd">    metamodel : MetaModel</span>
+<span class="sd">        The fitted metamodel, its free parameters for the current round are refit.</span>
+<span class="sd">    start : str</span>
+<span class="sd">        Description of the starting parameters, saved in `aic.yaml`.</span>
+<span class="sd">    nonpara : bool, default: False</span>
+<span class="sd">        If True the outputs get a `_nonpara` suffix.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    metamodel : MetaModel</span>
+<span class="sd">        The input metamodel with its parameters and fit noise unchanged.</span>
+<span class="sd">    """</span>
+    <span class="n">print_once</span><span class="p">(</span><span class="s2">"Refitting under the initial noise model for the AIC"</span><span class="p">)</span>
+    <span class="n">suffix</span> <span class="o">=</span> <span class="s2">"_nonpara"</span> <span class="o">*</span> <span class="n">nonpara</span>
+    <span class="n">start_pars</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">bcast</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">metamodel</span><span class="o">.</span><span class="n">parameters</span><span class="p">),</span> <span class="n">root</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+    <span class="n">free</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">metamodel</span><span class="o">.</span><span class="n">to_fit</span><span class="p">)</span>
+
+    <span class="c1"># Noise models live in pytree aux data, so drop jit caches keyed on the old ones</span>
+    <span class="n">_initial_noise</span><span class="p">(</span><span class="n">metamodel</span><span class="p">)</span>
+    <span class="n">jax</span><span class="o">.</span><span class="n">clear_caches</span><span class="p">()</span>
+    <span class="n">start_mm</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">metamodel</span><span class="p">)</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+        <span class="n">start_pars</span><span class="p">,</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">errs</span><span class="p">,</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">cov</span><span class="p">,</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">chisq</span>
+    <span class="p">)</span>
+    <span class="n">chisq_start</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">joint_objective</span><span class="p">(</span><span class="n">start_mm</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">fitted</span><span class="p">,</span> <span class="n">iterations</span><span class="p">,</span> <span class="n">delta_chisq</span><span class="p">,</span> <span class="n">lmd</span> <span class="o">=</span> <span class="n">run_lmfit</span><span class="p">(</span>
+        <span class="n">start_mm</span><span class="p">,</span>
+        <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"fitting"</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"maxiter"</span><span class="p">,</span> <span class="s2">"10"</span><span class="p">))),</span>
+        <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"fitting"</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"chitol"</span><span class="p">,</span> <span class="s2">"1e-5"</span><span class="p">))),</span>
+    <span class="p">)</span>
+    <span class="n">chisq_refit</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">joint_objective</span><span class="p">(</span><span class="n">fitted</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">_save_outputs</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">fitted</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"aic</span><span class="si">{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">free</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+        <span class="n">pars</span><span class="p">,</span> <span class="n">errs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">fitted</span><span class="o">.</span><span class="n">parameters</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">fitted</span><span class="o">.</span><span class="n">errs</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"noise"</span><span class="p">:</span> <span class="s2">"initial: estimated from the data with no model subtracted"</span><span class="p">,</span>
+            <span class="s2">"start"</span><span class="p">:</span> <span class="n">start</span><span class="p">,</span>
+            <span class="s2">"k"</span><span class="p">:</span> <span class="n">k</span><span class="p">,</span>
+            <span class="s2">"chisq_start"</span><span class="p">:</span> <span class="n">chisq_start</span><span class="p">,</span>
+            <span class="s2">"chisq_refit"</span><span class="p">:</span> <span class="n">chisq_refit</span><span class="p">,</span>
+            <span class="s2">"aic"</span><span class="p">:</span> <span class="n">chisq_refit</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">k</span><span class="p">,</span>
+            <span class="s2">"lm"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"iterations"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">iterations</span><span class="p">),</span>
+                <span class="s2">"delta_chisq"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">delta_chisq</span><span class="p">),</span>
+                <span class="s2">"lambda"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">lmd</span><span class="p">),</span>
+            <span class="p">},</span>
+            <span class="c1"># A list in parameter order, names alone can repeat across structures</span>
+            <span class="s2">"parameters"</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="s2">"index"</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span>
+                    <span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+                    <span class="s2">"start"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">start_pars</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span>
+                    <span class="s2">"refit"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">pars</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span>
+                    <span class="s2">"err"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">errs</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fitted</span><span class="o">.</span><span class="n">par_names</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">free</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="p">],</span>
+        <span class="p">}</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"outdir"</span><span class="p">],</span> <span class="sa">f</span><span class="s2">"aic</span><span class="si">{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">.yaml"</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">file</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">print_once</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"AIC chisq: </span><span class="si">{</span><span class="n">chisq_start</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> at the start, </span><span class="si">{</span><span class="n">chisq_refit</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> after "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">iterations</span><span class="si">}</span><span class="s2"> LM iterations (lambda </span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">lmd</span><span class="p">)</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2">), saved to </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Back to the fit's noise model for the rest of the pipeline</span>
+    <span class="n">metamodel</span> <span class="o">=</span> <span class="n">_reestimate_noise</span><span class="p">(</span><span class="n">metamodel</span><span class="p">)</span>
+    <span class="n">jax</span><span class="o">.</span><span class="n">clear_caches</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">metamodel</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h2 id="witch.cfg_loader.deep_merge" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">deep_merge</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span></code>
 
@@ -1934,18 +2262,18 @@ grad for models with transfer function is not supported.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/fitter.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">688</span>
-<span class="normal">689</span>
-<span class="normal">690</span>
-<span class="normal">691</span>
-<span class="normal">692</span>
-<span class="normal">693</span>
-<span class="normal">694</span>
-<span class="normal">695</span>
-<span class="normal">696</span>
-<span class="normal">697</span>
-<span class="normal">698</span>
-<span class="normal">699</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">deep_merge</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">802</span>
+<span class="normal">803</span>
+<span class="normal">804</span>
+<span class="normal">805</span>
+<span class="normal">806</span>
+<span class="normal">807</span>
+<span class="normal">808</span>
+<span class="normal">809</span>
+<span class="normal">810</span>
+<span class="normal">811</span>
+<span class="normal">812</span>
+<span class="normal">813</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">deep_merge</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Based on https://gist.github.com/angstwad/bf22d1822c38a92ec0a9?permalink_comment_id=3517209</span>
 <span class="sd">    """</span>
@@ -2796,22 +3124,22 @@ so we merge the original into the newly loaded one.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/fitter.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">702</span>
-<span class="normal">703</span>
-<span class="normal">704</span>
-<span class="normal">705</span>
-<span class="normal">706</span>
-<span class="normal">707</span>
-<span class="normal">708</span>
-<span class="normal">709</span>
-<span class="normal">710</span>
-<span class="normal">711</span>
-<span class="normal">712</span>
-<span class="normal">713</span>
-<span class="normal">714</span>
-<span class="normal">715</span>
-<span class="normal">716</span>
-<span class="normal">717</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_config</span><span class="p">(</span><span class="n">start_cfg</span><span class="p">,</span> <span class="n">cfg_path</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">816</span>
+<span class="normal">817</span>
+<span class="normal">818</span>
+<span class="normal">819</span>
+<span class="normal">820</span>
+<span class="normal">821</span>
+<span class="normal">822</span>
+<span class="normal">823</span>
+<span class="normal">824</span>
+<span class="normal">825</span>
+<span class="normal">826</span>
+<span class="normal">827</span>
+<span class="normal">828</span>
+<span class="normal">829</span>
+<span class="normal">830</span>
+<span class="normal">831</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_config</span><span class="p">(</span><span class="n">start_cfg</span><span class="p">,</span> <span class="n">cfg_path</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    We want to load a config and if it has the key "base",</span>
 <span class="sd">    load that as well and merge them.</span>

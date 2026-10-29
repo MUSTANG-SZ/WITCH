@@ -1120,56 +1120,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#witch.model_comparison.ChisqEvaluator" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ChisqEvaluator
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="ChisqEvaluator">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#witch.model_comparison.ChisqEvaluator.__call__" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        __call__
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#witch.model_comparison.ChisqEvaluator.chisq_at" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        chisq_at
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#witch.model_comparison.ChisqEvaluator.refit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        refit
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#witch.model_comparison.ComparabilityError" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1238,6 +1188,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.model_comparison.aic_chisqs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        aic_chisqs
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1345,17 +1306,6 @@
     <span class="md-ellipsis">
       
         ks_compare
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#witch.model_comparison.load_initial_noise_data" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        load_initial_noise_data
       
     </span>
   </a>
@@ -1676,56 +1626,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#witch.model_comparison.ChisqEvaluator" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ChisqEvaluator
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="ChisqEvaluator">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#witch.model_comparison.ChisqEvaluator.__call__" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        __call__
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#witch.model_comparison.ChisqEvaluator.chisq_at" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        chisq_at
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#witch.model_comparison.ChisqEvaluator.refit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        refit
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#witch.model_comparison.ComparabilityError" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1794,6 +1694,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.model_comparison.aic_chisqs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        aic_chisqs
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1908,17 +1819,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#witch.model_comparison.load_initial_noise_data" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        load_initial_noise_data
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#witch.model_comparison.load_run" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2000,9 +1900,10 @@
     <div class="doc doc-contents first">
 
         <p>Compare fits of the same data with KS tests on their posteriors and the AIC.</p>
-<p>All models are evaluated against one fixed noise model, the one estimated from the
-raw data before any model subtraction, so that their chi-squared values come from
-the same likelihood. Each model is evaluated at the median of its MCMC chain.</p>
+<p>The AIC uses the <code>aic.yaml</code> each fit writes (<code>witch.fitter.aic_refit</code>): the maximum likelihood
+under one noise model shared by every fit of the same data, the one estimated from the raw
+data before any model subtraction, so the chi-squared of different models are comparable.
+Runs from before it was added have no <code>aic.yaml</code> and need refitting to be compared.</p>
 <p>Two levels of checks guard the comparisons:
 * comparable (<code>check_comparable</code>, needed for the AIC): same data and likelihood configuration,
   same structures and parameter ties, and parameters fixed in both runs have the same value.
@@ -2059,975 +1960,11 @@ the same likelihood. Each model is evaluated at the median of its MCMC chain.</p
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>witch/model_comparison.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">46</span>
-<span class="normal">47</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ChainQualityError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">43</span>
+<span class="normal">44</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ChainQualityError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Raised when an MCMC chain can't support a KS test."""</span>
 </code></pre></div></td></tr></table></div>
               </details>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="witch.model_comparison.ChisqEvaluator" class="doc doc-heading">
-            <code>ChisqEvaluator</code>
-
-
-</h2>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>Chi-squared of nested runs at their posterior medians against one set of data and noise.</p>
-<p>The data is evaluated one TOD (or map) at a time to keep memory down, with one
-compiled objective per TOD that is reused for every run (TODs carry array metadata
-so they can't share a compiled function, see <code>fitting._make_tod_objectives</code>).
-The result is summed over MPI tasks.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>metamodel</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="MetaModel
-
-
-  
-      dataclass
-   (witch.containers.MetaModel)" href="../containers/metamodel/#witch.containers.metamodel.MetaModel">MetaModel</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Metamodel with the data and initial noise, from <code>load_initial_noise_data</code>.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-
-
-
-
-
-
-              <details class="mkdocstrings-source">
-                <summary>Source code in <code>witch/model_comparison.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">634</span>
-<span class="normal">635</span>
-<span class="normal">636</span>
-<span class="normal">637</span>
-<span class="normal">638</span>
-<span class="normal">639</span>
-<span class="normal">640</span>
-<span class="normal">641</span>
-<span class="normal">642</span>
-<span class="normal">643</span>
-<span class="normal">644</span>
-<span class="normal">645</span>
-<span class="normal">646</span>
-<span class="normal">647</span>
-<span class="normal">648</span>
-<span class="normal">649</span>
-<span class="normal">650</span>
-<span class="normal">651</span>
-<span class="normal">652</span>
-<span class="normal">653</span>
-<span class="normal">654</span>
-<span class="normal">655</span>
-<span class="normal">656</span>
-<span class="normal">657</span>
-<span class="normal">658</span>
-<span class="normal">659</span>
-<span class="normal">660</span>
-<span class="normal">661</span>
-<span class="normal">662</span>
-<span class="normal">663</span>
-<span class="normal">664</span>
-<span class="normal">665</span>
-<span class="normal">666</span>
-<span class="normal">667</span>
-<span class="normal">668</span>
-<span class="normal">669</span>
-<span class="normal">670</span>
-<span class="normal">671</span>
-<span class="normal">672</span>
-<span class="normal">673</span>
-<span class="normal">674</span>
-<span class="normal">675</span>
-<span class="normal">676</span>
-<span class="normal">677</span>
-<span class="normal">678</span>
-<span class="normal">679</span>
-<span class="normal">680</span>
-<span class="normal">681</span>
-<span class="normal">682</span>
-<span class="normal">683</span>
-<span class="normal">684</span>
-<span class="normal">685</span>
-<span class="normal">686</span>
-<span class="normal">687</span>
-<span class="normal">688</span>
-<span class="normal">689</span>
-<span class="normal">690</span>
-<span class="normal">691</span>
-<span class="normal">692</span>
-<span class="normal">693</span>
-<span class="normal">694</span>
-<span class="normal">695</span>
-<span class="normal">696</span>
-<span class="normal">697</span>
-<span class="normal">698</span>
-<span class="normal">699</span>
-<span class="normal">700</span>
-<span class="normal">701</span>
-<span class="normal">702</span>
-<span class="normal">703</span>
-<span class="normal">704</span>
-<span class="normal">705</span>
-<span class="normal">706</span>
-<span class="normal">707</span>
-<span class="normal">708</span>
-<span class="normal">709</span>
-<span class="normal">710</span>
-<span class="normal">711</span>
-<span class="normal">712</span>
-<span class="normal">713</span>
-<span class="normal">714</span>
-<span class="normal">715</span>
-<span class="normal">716</span>
-<span class="normal">717</span>
-<span class="normal">718</span>
-<span class="normal">719</span>
-<span class="normal">720</span>
-<span class="normal">721</span>
-<span class="normal">722</span>
-<span class="normal">723</span>
-<span class="normal">724</span>
-<span class="normal">725</span>
-<span class="normal">726</span>
-<span class="normal">727</span>
-<span class="normal">728</span>
-<span class="normal">729</span>
-<span class="normal">730</span>
-<span class="normal">731</span>
-<span class="normal">732</span>
-<span class="normal">733</span>
-<span class="normal">734</span>
-<span class="normal">735</span>
-<span class="normal">736</span>
-<span class="normal">737</span>
-<span class="normal">738</span>
-<span class="normal">739</span>
-<span class="normal">740</span>
-<span class="normal">741</span>
-<span class="normal">742</span>
-<span class="normal">743</span>
-<span class="normal">744</span>
-<span class="normal">745</span>
-<span class="normal">746</span>
-<span class="normal">747</span>
-<span class="normal">748</span>
-<span class="normal">749</span>
-<span class="normal">750</span>
-<span class="normal">751</span>
-<span class="normal">752</span>
-<span class="normal">753</span>
-<span class="normal">754</span>
-<span class="normal">755</span>
-<span class="normal">756</span>
-<span class="normal">757</span>
-<span class="normal">758</span>
-<span class="normal">759</span>
-<span class="normal">760</span>
-<span class="normal">761</span>
-<span class="normal">762</span>
-<span class="normal">763</span>
-<span class="normal">764</span>
-<span class="normal">765</span>
-<span class="normal">766</span>
-<span class="normal">767</span>
-<span class="normal">768</span>
-<span class="normal">769</span>
-<span class="normal">770</span>
-<span class="normal">771</span>
-<span class="normal">772</span>
-<span class="normal">773</span>
-<span class="normal">774</span>
-<span class="normal">775</span>
-<span class="normal">776</span>
-<span class="normal">777</span>
-<span class="normal">778</span>
-<span class="normal">779</span>
-<span class="normal">780</span>
-<span class="normal">781</span>
-<span class="normal">782</span>
-<span class="normal">783</span>
-<span class="normal">784</span>
-<span class="normal">785</span>
-<span class="normal">786</span>
-<span class="normal">787</span>
-<span class="normal">788</span>
-<span class="normal">789</span>
-<span class="normal">790</span>
-<span class="normal">791</span>
-<span class="normal">792</span>
-<span class="normal">793</span>
-<span class="normal">794</span>
-<span class="normal">795</span>
-<span class="normal">796</span>
-<span class="normal">797</span>
-<span class="normal">798</span>
-<span class="normal">799</span>
-<span class="normal">800</span>
-<span class="normal">801</span>
-<span class="normal">802</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ChisqEvaluator</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Chi-squared of nested runs at their posterior medians against one set of data and noise.</span>
-
-<span class="sd">    The data is evaluated one TOD (or map) at a time to keep memory down, with one</span>
-<span class="sd">    compiled objective per TOD that is reused for every run (TODs carry array metadata</span>
-<span class="sd">    so they can't share a compiled function, see `fitting._make_tod_objectives`).</span>
-<span class="sd">    The result is summed over MPI tasks.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    metamodel : MetaModel</span>
-<span class="sd">        Metamodel with the data and initial noise, from `load_initial_noise_data`.</span>
-<span class="sd">    """</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metamodel</span><span class="p">:</span> <span class="n">MetaModel</span><span class="p">):</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">.fitting</span><span class="w"> </span><span class="kn">import</span> <span class="n">_metamodel_for_tod</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">metamodel</span> <span class="o">=</span> <span class="n">metamodel</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">full_par_names</span><span class="p">(</span><span class="n">metamodel</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">objectives</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">dset_ind</span><span class="p">,</span> <span class="n">dataset</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">metamodel</span><span class="o">.</span><span class="n">datasets</span><span class="p">):</span>
-            <span class="n">objective</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">objective</span><span class="p">,</span> <span class="s2">"__wrapped__"</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">objective</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">dataset</span><span class="o">.</span><span class="n">datavec</span><span class="p">:</span>
-
-                <span class="k">def</span><span class="w"> </span><span class="nf">chunk_chisq</span><span class="p">(</span><span class="n">mm</span><span class="p">,</span> <span class="n">dset_ind</span><span class="o">=</span><span class="n">dset_ind</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">objective</span><span class="o">=</span><span class="n">objective</span><span class="p">):</span>
-                    <span class="n">chunk</span> <span class="o">=</span> <span class="n">_metamodel_for_tod</span><span class="p">(</span><span class="n">mm</span><span class="p">,</span> <span class="n">dset_ind</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
-                    <span class="k">return</span> <span class="n">objective</span><span class="p">(</span><span class="n">chunk</span><span class="p">,</span> <span class="n">dset_ind</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-
-                <span class="bp">self</span><span class="o">.</span><span class="n">objectives</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">chunk_chisq</span><span class="p">))</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">_check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run</span><span class="p">:</span> <span class="n">Run</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Raise if `run` doesn't have the same parameters as the loaded metamodel.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        run : Run</span>
-<span class="sd">            The run to check.</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        NestingError</span>
-<span class="sd">            If the parameters of `run` don't match those of the loaded metamodel.</span>
-<span class="sd">        """</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">names</span> <span class="o">!=</span> <span class="n">run</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">NestingError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">run</span><span class="o">.</span><span class="n">label</span><span class="si">}</span><span class="s2">: parameters differ from the loaded metamodel"</span>
-            <span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">_at</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MetaModel</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Copy of the loaded metamodel at `pars`, the loaded metamodel itself is untouched.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        pars : np.ndarray</span>
-<span class="sd">            Full parameter vector.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        metamodel : MetaModel</span>
-<span class="sd">            The copy, with its own (deep copied) models.</span>
-<span class="sd">        """</span>
-        <span class="n">mm</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metamodel</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">mm</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">pars</span><span class="p">),</span> <span class="n">mm</span><span class="o">.</span><span class="n">errs</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">cov</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">chisq</span><span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">chisq_at</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Chi-squared at a full parameter vector.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        pars : np.ndarray</span>
-<span class="sd">            Full parameter vector in the order of the loaded metamodel.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        chisq : float</span>
-<span class="sd">            The chi-squared summed over all data and MPI tasks.</span>
-<span class="sd">        """</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">mpi4py</span><span class="w"> </span><span class="kn">import</span> <span class="n">MPI</span>
-
-        <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">NullComm</span>
-
-        <span class="n">mm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_at</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span>
-        <span class="n">chisq</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">objective</span><span class="p">(</span><span class="n">mm</span><span class="p">))</span> <span class="k">for</span> <span class="n">objective</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">objectives</span><span class="p">)</span>
-        <span class="n">comm</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">global_comm</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">comm</span><span class="p">,</span> <span class="n">NullComm</span><span class="p">)</span> <span class="ow">and</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">chisq</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="n">chisq</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">MPI</span><span class="o">.</span><span class="n">SUM</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">chisq</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run</span><span class="p">:</span> <span class="n">Run</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Chi-squared of `run` at its posterior medians.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        run : Run</span>
-<span class="sd">            The run to evaluate, it must have the same parameters as the loaded metamodel.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        chisq : float</span>
-<span class="sd">            The chi-squared summed over all data and MPI tasks.</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        NestingError</span>
-<span class="sd">            If the parameters of `run` don't match those of the loaded metamodel.</span>
-<span class="sd">        """</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_check</span><span class="p">(</span><span class="n">run</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">chisq_at</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">medians</span><span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">refit</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">run</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span> <span class="n">chitol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-3</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Maximum likelihood of `run` under the shared noise: LM started from its posterior medians.</span>
-
-<span class="sd">        The AIC is defined at the maximum likelihood. The medians can sit off the ridge of a</span>
-<span class="sd">        degenerate posterior, and the chains were run with each model's own re-estimated noise,</span>
-<span class="sd">        so both effects are removed by refitting the run's free parameters here.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        run : Run</span>
-<span class="sd">            The run to refit, it must have the same parameters as the loaded metamodel.</span>
-<span class="sd">        maxiter : int, default: 20</span>
-<span class="sd">            Maximum LM iterations.</span>
-<span class="sd">        chitol : float, default: 1e-3</span>
-<span class="sd">            Change in chi-squared at which LM is considered converged.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        pars : np.ndarray</span>
-<span class="sd">            The refit full parameter vector.</span>
-<span class="sd">        chisq : float</span>
-<span class="sd">            The chi-squared at `pars`.</span>
-<span class="sd">        info : dict</span>
-<span class="sd">            LM diagnostics (`iterations`, `delta_chisq`, `lambda`) and `shift`, the move of each</span>
-<span class="sd">            free parameter from its median in units of its posterior standard deviation.</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        NestingError</span>
-<span class="sd">            If the parameters of `run` don't match those of the loaded metamodel.</span>
-<span class="sd">        """</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">.fitting</span><span class="w"> </span><span class="kn">import</span> <span class="n">_run_lmfit_tod_chunks</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_check</span><span class="p">(</span><span class="n">run</span><span class="p">)</span>
-        <span class="n">mm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_at</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">medians</span><span class="p">)</span>
-        <span class="c1"># Fit only this run's free parameters, add_round edits the models of this copy only</span>
-        <span class="n">mm</span><span class="o">.</span><span class="n">set_round</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">n_rounds</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">mm</span><span class="o">.</span><span class="n">add_round</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">free</span><span class="p">))</span>
-        <span class="n">fitted</span><span class="p">,</span> <span class="n">iterations</span><span class="p">,</span> <span class="n">delta_chisq</span><span class="p">,</span> <span class="n">lmd</span> <span class="o">=</span> <span class="n">_run_lmfit_tod_chunks</span><span class="p">(</span>
-            <span class="n">mm</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">,</span> <span class="n">chitol</span>
-        <span class="p">)</span>
-        <span class="n">pars</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fitted</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-
-        <span class="n">flat</span> <span class="o">=</span> <span class="n">run</span><span class="o">.</span><span class="n">chains</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">run</span><span class="o">.</span><span class="n">k</span><span class="p">)</span>
-        <span class="n">shift</span> <span class="o">=</span> <span class="p">(</span><span class="n">pars</span><span class="p">[</span><span class="n">run</span><span class="o">.</span><span class="n">free</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">flat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">flat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">info</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">"iterations"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">iterations</span><span class="p">),</span>
-            <span class="s2">"delta_chisq"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">delta_chisq</span><span class="p">),</span>
-            <span class="s2">"lambda"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">lmd</span><span class="p">),</span>
-            <span class="s2">"shift"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">free_names</span><span class="p">,</span> <span class="n">shift</span><span class="p">)),</span>
-        <span class="p">}</span>
-        <span class="k">return</span> <span class="n">pars</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">chisq_at</span><span class="p">(</span><span class="n">pars</span><span class="p">),</span> <span class="n">info</span>
-</code></pre></div></td></tr></table></div>
-              </details>
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="witch.model_comparison.ChisqEvaluator.__call__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__call__</span><span class="p">(</span><span class="n">run</span><span class="p">)</span></code>
-
-</h3>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Chi-squared of <code>run</code> at its posterior medians.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>run</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="Run
-
-
-  
-      dataclass
-   (witch.model_comparison.Run)" href="#witch.model_comparison.Run">Run</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The run to evaluate, it must have the same parameters as the loaded metamodel.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-<th>Name</th>          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-<td><code>chisq</code></td>            <td>
-                  <code><span title="float">float</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The chi-squared summed over all data and MPI tasks.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="NestingError (witch.model_comparison.NestingError)" href="#witch.model_comparison.NestingError">NestingError</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If the parameters of <code>run</code> don't match those of the loaded metamodel.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-            <details class="mkdocstrings-source">
-              <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">726</span>
-<span class="normal">727</span>
-<span class="normal">728</span>
-<span class="normal">729</span>
-<span class="normal">730</span>
-<span class="normal">731</span>
-<span class="normal">732</span>
-<span class="normal">733</span>
-<span class="normal">734</span>
-<span class="normal">735</span>
-<span class="normal">736</span>
-<span class="normal">737</span>
-<span class="normal">738</span>
-<span class="normal">739</span>
-<span class="normal">740</span>
-<span class="normal">741</span>
-<span class="normal">742</span>
-<span class="normal">743</span>
-<span class="normal">744</span>
-<span class="normal">745</span>
-<span class="normal">746</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run</span><span class="p">:</span> <span class="n">Run</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Chi-squared of `run` at its posterior medians.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    run : Run</span>
-<span class="sd">        The run to evaluate, it must have the same parameters as the loaded metamodel.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    chisq : float</span>
-<span class="sd">        The chi-squared summed over all data and MPI tasks.</span>
-
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    NestingError</span>
-<span class="sd">        If the parameters of `run` don't match those of the loaded metamodel.</span>
-<span class="sd">    """</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_check</span><span class="p">(</span><span class="n">run</span><span class="p">)</span>
-    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">chisq_at</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">medians</span><span class="p">)</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="witch.model_comparison.ChisqEvaluator.chisq_at" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">chisq_at</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span></code>
-
-</h3>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Chi-squared at a full parameter vector.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>pars</code>
-            </td>
-            <td>
-                  <code><span title="numpy.ndarray">ndarray</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Full parameter vector in the order of the loaded metamodel.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-<th>Name</th>          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-<td><code>chisq</code></td>            <td>
-                  <code><span title="float">float</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The chi-squared summed over all data and MPI tasks.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-            <details class="mkdocstrings-source">
-              <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">701</span>
-<span class="normal">702</span>
-<span class="normal">703</span>
-<span class="normal">704</span>
-<span class="normal">705</span>
-<span class="normal">706</span>
-<span class="normal">707</span>
-<span class="normal">708</span>
-<span class="normal">709</span>
-<span class="normal">710</span>
-<span class="normal">711</span>
-<span class="normal">712</span>
-<span class="normal">713</span>
-<span class="normal">714</span>
-<span class="normal">715</span>
-<span class="normal">716</span>
-<span class="normal">717</span>
-<span class="normal">718</span>
-<span class="normal">719</span>
-<span class="normal">720</span>
-<span class="normal">721</span>
-<span class="normal">722</span>
-<span class="normal">723</span>
-<span class="normal">724</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">chisq_at</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Chi-squared at a full parameter vector.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    pars : np.ndarray</span>
-<span class="sd">        Full parameter vector in the order of the loaded metamodel.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    chisq : float</span>
-<span class="sd">        The chi-squared summed over all data and MPI tasks.</span>
-<span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">mpi4py</span><span class="w"> </span><span class="kn">import</span> <span class="n">MPI</span>
-
-    <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">NullComm</span>
-
-    <span class="n">mm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_at</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span>
-    <span class="n">chisq</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">objective</span><span class="p">(</span><span class="n">mm</span><span class="p">))</span> <span class="k">for</span> <span class="n">objective</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">objectives</span><span class="p">)</span>
-    <span class="n">comm</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">global_comm</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">comm</span><span class="p">,</span> <span class="n">NullComm</span><span class="p">)</span> <span class="ow">and</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">chisq</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="n">chisq</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">MPI</span><span class="o">.</span><span class="n">SUM</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">chisq</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="witch.model_comparison.ChisqEvaluator.refit" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">refit</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="n">maxiter</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">chitol</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span></code>
-
-</h3>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Maximum likelihood of <code>run</code> under the shared noise: LM started from its posterior medians.</p>
-<p>The AIC is defined at the maximum likelihood. The medians can sit off the ridge of a
-degenerate posterior, and the chains were run with each model's own re-estimated noise,
-so both effects are removed by refitting the run's free parameters here.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>run</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="Run
-
-
-  
-      dataclass
-   (witch.model_comparison.Run)" href="#witch.model_comparison.Run">Run</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The run to refit, it must have the same parameters as the loaded metamodel.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>maxiter</code>
-            </td>
-            <td>
-                  <code><span title="int">int</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Maximum LM iterations.</p>
-              </div>
-            </td>
-            <td>
-                  <code>20</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>chitol</code>
-            </td>
-            <td>
-                  <code><span title="float">float</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Change in chi-squared at which LM is considered converged.</p>
-              </div>
-            </td>
-            <td>
-                  <code>1e-3</code>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-<th>Name</th>          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-<td><code>pars</code></td>            <td>
-                  <code><span title="numpy.ndarray">ndarray</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The refit full parameter vector.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-<td><code>chisq</code></td>            <td>
-                  <code><span title="float">float</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The chi-squared at <code>pars</code>.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-<td><code>info</code></td>            <td>
-                  <code><span title="dict">dict</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>LM diagnostics (<code>iterations</code>, <code>delta_chisq</code>, <code>lambda</code>) and <code>shift</code>, the move of each
-free parameter from its median in units of its posterior standard deviation.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="NestingError (witch.model_comparison.NestingError)" href="#witch.model_comparison.NestingError">NestingError</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If the parameters of <code>run</code> don't match those of the loaded metamodel.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-            <details class="mkdocstrings-source">
-              <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">748</span>
-<span class="normal">749</span>
-<span class="normal">750</span>
-<span class="normal">751</span>
-<span class="normal">752</span>
-<span class="normal">753</span>
-<span class="normal">754</span>
-<span class="normal">755</span>
-<span class="normal">756</span>
-<span class="normal">757</span>
-<span class="normal">758</span>
-<span class="normal">759</span>
-<span class="normal">760</span>
-<span class="normal">761</span>
-<span class="normal">762</span>
-<span class="normal">763</span>
-<span class="normal">764</span>
-<span class="normal">765</span>
-<span class="normal">766</span>
-<span class="normal">767</span>
-<span class="normal">768</span>
-<span class="normal">769</span>
-<span class="normal">770</span>
-<span class="normal">771</span>
-<span class="normal">772</span>
-<span class="normal">773</span>
-<span class="normal">774</span>
-<span class="normal">775</span>
-<span class="normal">776</span>
-<span class="normal">777</span>
-<span class="normal">778</span>
-<span class="normal">779</span>
-<span class="normal">780</span>
-<span class="normal">781</span>
-<span class="normal">782</span>
-<span class="normal">783</span>
-<span class="normal">784</span>
-<span class="normal">785</span>
-<span class="normal">786</span>
-<span class="normal">787</span>
-<span class="normal">788</span>
-<span class="normal">789</span>
-<span class="normal">790</span>
-<span class="normal">791</span>
-<span class="normal">792</span>
-<span class="normal">793</span>
-<span class="normal">794</span>
-<span class="normal">795</span>
-<span class="normal">796</span>
-<span class="normal">797</span>
-<span class="normal">798</span>
-<span class="normal">799</span>
-<span class="normal">800</span>
-<span class="normal">801</span>
-<span class="normal">802</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">refit</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span> <span class="n">run</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span> <span class="n">chitol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-3</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Maximum likelihood of `run` under the shared noise: LM started from its posterior medians.</span>
-
-<span class="sd">    The AIC is defined at the maximum likelihood. The medians can sit off the ridge of a</span>
-<span class="sd">    degenerate posterior, and the chains were run with each model's own re-estimated noise,</span>
-<span class="sd">    so both effects are removed by refitting the run's free parameters here.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    run : Run</span>
-<span class="sd">        The run to refit, it must have the same parameters as the loaded metamodel.</span>
-<span class="sd">    maxiter : int, default: 20</span>
-<span class="sd">        Maximum LM iterations.</span>
-<span class="sd">    chitol : float, default: 1e-3</span>
-<span class="sd">        Change in chi-squared at which LM is considered converged.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    pars : np.ndarray</span>
-<span class="sd">        The refit full parameter vector.</span>
-<span class="sd">    chisq : float</span>
-<span class="sd">        The chi-squared at `pars`.</span>
-<span class="sd">    info : dict</span>
-<span class="sd">        LM diagnostics (`iterations`, `delta_chisq`, `lambda`) and `shift`, the move of each</span>
-<span class="sd">        free parameter from its median in units of its posterior standard deviation.</span>
-
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    NestingError</span>
-<span class="sd">        If the parameters of `run` don't match those of the loaded metamodel.</span>
-<span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">.fitting</span><span class="w"> </span><span class="kn">import</span> <span class="n">_run_lmfit_tod_chunks</span>
-
-    <span class="bp">self</span><span class="o">.</span><span class="n">_check</span><span class="p">(</span><span class="n">run</span><span class="p">)</span>
-    <span class="n">mm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_at</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">medians</span><span class="p">)</span>
-    <span class="c1"># Fit only this run's free parameters, add_round edits the models of this copy only</span>
-    <span class="n">mm</span><span class="o">.</span><span class="n">set_round</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">n_rounds</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-    <span class="n">mm</span><span class="o">.</span><span class="n">add_round</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">free</span><span class="p">))</span>
-    <span class="n">fitted</span><span class="p">,</span> <span class="n">iterations</span><span class="p">,</span> <span class="n">delta_chisq</span><span class="p">,</span> <span class="n">lmd</span> <span class="o">=</span> <span class="n">_run_lmfit_tod_chunks</span><span class="p">(</span>
-        <span class="n">mm</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">,</span> <span class="n">chitol</span>
-    <span class="p">)</span>
-    <span class="n">pars</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fitted</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-
-    <span class="n">flat</span> <span class="o">=</span> <span class="n">run</span><span class="o">.</span><span class="n">chains</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">run</span><span class="o">.</span><span class="n">k</span><span class="p">)</span>
-    <span class="n">shift</span> <span class="o">=</span> <span class="p">(</span><span class="n">pars</span><span class="p">[</span><span class="n">run</span><span class="o">.</span><span class="n">free</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">flat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">flat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-    <span class="n">info</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">"iterations"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">iterations</span><span class="p">),</span>
-        <span class="s2">"delta_chisq"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">delta_chisq</span><span class="p">),</span>
-        <span class="s2">"lambda"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">lmd</span><span class="p">),</span>
-        <span class="s2">"shift"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">free_names</span><span class="p">,</span> <span class="n">shift</span><span class="p">)),</span>
-    <span class="p">}</span>
-    <span class="k">return</span> <span class="n">pars</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">chisq_at</span><span class="p">(</span><span class="n">pars</span><span class="p">),</span> <span class="n">info</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-
-
-  </div>
 
     </div>
 
@@ -3061,8 +1998,8 @@ free parameter from its median in units of its posterior standard deviation.</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>witch/model_comparison.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">38</span>
-<span class="normal">39</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ComparabilityError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">35</span>
+<span class="normal">36</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ComparabilityError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Raised when two runs are not fits of the same model family to the same data."""</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -3099,8 +2036,8 @@ free parameter from its median in units of its posterior standard deviation.</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>witch/model_comparison.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">42</span>
-<span class="normal">43</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">NestingError</span><span class="p">(</span><span class="n">ComparabilityError</span><span class="p">):</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">39</span>
+<span class="normal">40</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">NestingError</span><span class="p">(</span><span class="n">ComparabilityError</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Raised when two runs are not nested models of the same data."""</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -3253,20 +2190,13 @@ Tied parameters are named after their first occurrence.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="witch.model_comparison.Run.metamodel">metamodel</span></code></td>
+            <td><code><span title="witch.model_comparison.Run.aic">aic</span></code></td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="MetaModel
-
-
-  
-      dataclass
-   (witch.containers.MetaModel)" href="../containers/metamodel/#witch.containers.metamodel.MetaModel">MetaModel</a> | None</code>
+                  <code><span title="dict">dict</span> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The saved metamodel of the run, without data. This is the source of truth for the model:
-configs saved before <code>sort_keys=False</code> was added to <code>fitter</code> have their keys sorted,
-which scrambles the (positional) parameters if the model is rebuilt from them.</p>
+                <p>Contents of the run's <code>aic.yaml</code> (see <code>witch.fitter.aic_refit</code>), None if it has none.</p>
               </div>
             </td>
           </tr>
@@ -3282,7 +2212,10 @@ which scrambles the (positional) parameters if the model is rebuilt from them.</
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>witch/model_comparison.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 50</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 47</span>
+<span class="normal"> 48</span>
+<span class="normal"> 49</span>
+<span class="normal"> 50</span>
 <span class="normal"> 51</span>
 <span class="normal"> 52</span>
 <span class="normal"> 53</span>
@@ -3338,12 +2271,7 @@ which scrambles the (positional) parameters if the model is rebuilt from them.</
 <span class="normal">103</span>
 <span class="normal">104</span>
 <span class="normal">105</span>
-<span class="normal">106</span>
-<span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="normal">106</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">Run</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    A finished WITCH run loaded from its output directory.</span>
@@ -3371,10 +2299,8 @@ which scrambles the (positional) parameters if the model is rebuilt from them.</
 <span class="sd">        `(nchain, nstep, nfree)` post burn-in MCMC samples of the free parameters.</span>
 <span class="sd">    parameter_map : tuple</span>
 <span class="sd">        The `MetaModel.parameter_map` of the run.</span>
-<span class="sd">    metamodel : MetaModel | None</span>
-<span class="sd">        The saved metamodel of the run, without data. This is the source of truth for the model:</span>
-<span class="sd">        configs saved before `sort_keys=False` was added to `fitter` have their keys sorted,</span>
-<span class="sd">        which scrambles the (positional) parameters if the model is rebuilt from them.</span>
+<span class="sd">    aic : dict | None</span>
+<span class="sd">        Contents of the run's `aic.yaml` (see `witch.fitter.aic_refit`), None if it has none.</span>
 <span class="sd">    """</span>
 
     <span class="n">label</span><span class="p">:</span> <span class="nb">str</span>
@@ -3387,7 +2313,7 @@ which scrambles the (positional) parameters if the model is rebuilt from them.</
     <span class="n">free</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
     <span class="n">chains</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
     <span class="n">parameter_map</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="n">metamodel</span><span class="p">:</span> <span class="n">MetaModel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">aic</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">k</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
@@ -3499,6 +2425,210 @@ which scrambles the (positional) parameters if the model is rebuilt from them.</
 <div class="doc doc-object doc-function">
 
 
+<h2 id="witch.model_comparison.aic_chisqs" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">aic_chisqs</span><span class="p">(</span><span class="n">runs</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">'refit'</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The chi-squared of each run from its <code>aic.yaml</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>runs</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="Run
+
+
+  
+      dataclass
+   (witch.model_comparison.Run)" href="#witch.model_comparison.Run">Run</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Runs loaded with <code>load_run</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>which</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>"refit" for the maximum likelihood (what the AIC is defined at) or
+"start" for the starting point (MCMC medians, or the LM best fit).</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#34;refit&#34;</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>chisqs</code></td>            <td>
+                  <code><span title="list">list</span>[<span title="float">float</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Chi-squared of each run, in the order of <code>runs</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="FileNotFoundError">FileNotFoundError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If a run has no <code>aic.yaml</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ComparabilityError (witch.model_comparison.ComparabilityError)" href="#witch.model_comparison.ComparabilityError">ComparabilityError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If an <code>aic.yaml</code> refit different parameters than the run's chain sampled.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>witch/model_comparison.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">574</span>
+<span class="normal">575</span>
+<span class="normal">576</span>
+<span class="normal">577</span>
+<span class="normal">578</span>
+<span class="normal">579</span>
+<span class="normal">580</span>
+<span class="normal">581</span>
+<span class="normal">582</span>
+<span class="normal">583</span>
+<span class="normal">584</span>
+<span class="normal">585</span>
+<span class="normal">586</span>
+<span class="normal">587</span>
+<span class="normal">588</span>
+<span class="normal">589</span>
+<span class="normal">590</span>
+<span class="normal">591</span>
+<span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span>
+<span class="normal">597</span>
+<span class="normal">598</span>
+<span class="normal">599</span>
+<span class="normal">600</span>
+<span class="normal">601</span>
+<span class="normal">602</span>
+<span class="normal">603</span>
+<span class="normal">604</span>
+<span class="normal">605</span>
+<span class="normal">606</span>
+<span class="normal">607</span>
+<span class="normal">608</span>
+<span class="normal">609</span>
+<span class="normal">610</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">aic_chisqs</span><span class="p">(</span><span class="n">runs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">],</span> <span class="n">which</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"refit"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    The chi-squared of each run from its `aic.yaml`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    runs : list[Run]</span>
+<span class="sd">        Runs loaded with `load_run`.</span>
+<span class="sd">    which : str, default: "refit"</span>
+<span class="sd">        "refit" for the maximum likelihood (what the AIC is defined at) or</span>
+<span class="sd">        "start" for the starting point (MCMC medians, or the LM best fit).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    chisqs : list[float]</span>
+<span class="sd">        Chi-squared of each run, in the order of `runs`.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    FileNotFoundError</span>
+<span class="sd">        If a run has no `aic.yaml`.</span>
+<span class="sd">    ComparabilityError</span>
+<span class="sd">        If an `aic.yaml` refit different parameters than the run's chain sampled.</span>
+<span class="sd">    """</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">run</span><span class="o">.</span><span class="n">outdir</span> <span class="k">for</span> <span class="n">run</span> <span class="ow">in</span> <span class="n">runs</span> <span class="k">if</span> <span class="n">run</span><span class="o">.</span><span class="n">aic</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"No aic.yaml in </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">, these fits predate witch.fitter.aic_refit"</span>
+        <span class="p">)</span>
+    <span class="k">for</span> <span class="n">run</span> <span class="ow">in</span> <span class="n">runs</span><span class="p">:</span>
+        <span class="n">refit</span> <span class="o">=</span> <span class="p">[</span><span class="n">par</span><span class="p">[</span><span class="s2">"index"</span><span class="p">]</span> <span class="k">for</span> <span class="n">par</span> <span class="ow">in</span> <span class="n">run</span><span class="o">.</span><span class="n">aic</span><span class="p">[</span><span class="s2">"parameters"</span><span class="p">]]</span>
+        <span class="k">if</span> <span class="n">run</span><span class="o">.</span><span class="n">aic</span><span class="p">[</span><span class="s2">"k"</span><span class="p">]</span> <span class="o">!=</span> <span class="n">run</span><span class="o">.</span><span class="n">k</span> <span class="ow">or</span> <span class="n">refit</span> <span class="o">!=</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">free</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="n">ComparabilityError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">run</span><span class="o">.</span><span class="n">label</span><span class="si">}</span><span class="s2">: aic.yaml refit parameters </span><span class="si">{</span><span class="n">refit</span><span class="si">}</span><span class="s2"> but the chain samples "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">free</span><span class="p">))</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">aic</span><span class="p">[</span><span class="sa">f</span><span class="s2">"chisq_</span><span class="si">{</span><span class="n">which</span><span class="si">}</span><span class="s2">"</span><span class="p">])</span> <span class="k">for</span> <span class="n">run</span> <span class="ow">in</span> <span class="n">runs</span><span class="p">]</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h2 id="witch.model_comparison.aic_table" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">aic_table</span><span class="p">(</span><span class="n">runs</span><span class="p">,</span> <span class="n">chisqs</span><span class="p">)</span></code>
 
@@ -3552,7 +2682,7 @@ which scrambles the (positional) parameters if the model is rebuilt from them.</
             <td>
               <div class="doc-md-description">
                 <p>Chi-squared of each run against the same data and noise,
-ideally at each run's maximum likelihood (<code>ChisqEvaluator.refit</code>).</p>
+ideally at each run's maximum likelihood (<code>aic_chisqs(runs, "refit")</code>).</p>
               </div>
             </td>
             <td>
@@ -3611,36 +2741,36 @@ ideally at each run's maximum likelihood (<code>ChisqEvaluator.refit</code>).</p
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">805</span>
-<span class="normal">806</span>
-<span class="normal">807</span>
-<span class="normal">808</span>
-<span class="normal">809</span>
-<span class="normal">810</span>
-<span class="normal">811</span>
-<span class="normal">812</span>
-<span class="normal">813</span>
-<span class="normal">814</span>
-<span class="normal">815</span>
-<span class="normal">816</span>
-<span class="normal">817</span>
-<span class="normal">818</span>
-<span class="normal">819</span>
-<span class="normal">820</span>
-<span class="normal">821</span>
-<span class="normal">822</span>
-<span class="normal">823</span>
-<span class="normal">824</span>
-<span class="normal">825</span>
-<span class="normal">826</span>
-<span class="normal">827</span>
-<span class="normal">828</span>
-<span class="normal">829</span>
-<span class="normal">830</span>
-<span class="normal">831</span>
-<span class="normal">832</span>
-<span class="normal">833</span>
-<span class="normal">834</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">aic_table</span><span class="p">(</span><span class="n">runs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">],</span> <span class="n">chisqs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">613</span>
+<span class="normal">614</span>
+<span class="normal">615</span>
+<span class="normal">616</span>
+<span class="normal">617</span>
+<span class="normal">618</span>
+<span class="normal">619</span>
+<span class="normal">620</span>
+<span class="normal">621</span>
+<span class="normal">622</span>
+<span class="normal">623</span>
+<span class="normal">624</span>
+<span class="normal">625</span>
+<span class="normal">626</span>
+<span class="normal">627</span>
+<span class="normal">628</span>
+<span class="normal">629</span>
+<span class="normal">630</span>
+<span class="normal">631</span>
+<span class="normal">632</span>
+<span class="normal">633</span>
+<span class="normal">634</span>
+<span class="normal">635</span>
+<span class="normal">636</span>
+<span class="normal">637</span>
+<span class="normal">638</span>
+<span class="normal">639</span>
+<span class="normal">640</span>
+<span class="normal">641</span>
+<span class="normal">642</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">aic_table</span><span class="p">(</span><span class="n">runs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">],</span> <span class="n">chisqs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    AIC of each run, `chisq + 2k`, with the difference to the best run and Akaike weights.</span>
 
@@ -3650,7 +2780,7 @@ ideally at each run's maximum likelihood (<code>ChisqEvaluator.refit</code>).</p
 <span class="sd">        Comparable runs, checked with `sort_comparable`. They don't need to be nested.</span>
 <span class="sd">    chisqs : list[float]</span>
 <span class="sd">        Chi-squared of each run against the same data and noise,</span>
-<span class="sd">        ideally at each run's maximum likelihood (`ChisqEvaluator.refit`).</span>
+<span class="sd">        ideally at each run's maximum likelihood (`aic_chisqs(runs, "refit")`).</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -3752,7 +2882,8 @@ ideally at each run's maximum likelihood (<code>ChisqEvaluator.refit</code>).</p
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">491</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">490</span>
+<span class="normal">491</span>
 <span class="normal">492</span>
 <span class="normal">493</span>
 <span class="normal">494</span>
@@ -3779,8 +2910,7 @@ ideally at each run's maximum likelihood (<code>ChisqEvaluator.refit</code>).</p
 <span class="normal">515</span>
 <span class="normal">516</span>
 <span class="normal">517</span>
-<span class="normal">518</span>
-<span class="normal">519</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">chain_diagnostics</span><span class="p">(</span><span class="n">run</span><span class="p">:</span> <span class="n">Run</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="normal">518</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">chain_diagnostics</span><span class="p">(</span><span class="n">run</span><span class="p">:</span> <span class="n">Run</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Convergence diagnostics of each free parameter of a run.</span>
 
@@ -3930,7 +3060,8 @@ The runs don't have to be nested, ie: one can free alpha and the other gamma.</p
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">256</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">255</span>
+<span class="normal">256</span>
 <span class="normal">257</span>
 <span class="normal">258</span>
 <span class="normal">259</span>
@@ -3962,8 +3093,7 @@ The runs don't have to be nested, ie: one can free alpha and the other gamma.</p
 <span class="normal">285</span>
 <span class="normal">286</span>
 <span class="normal">287</span>
-<span class="normal">288</span>
-<span class="normal">289</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">check_comparable</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">rtol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-10</span><span class="p">):</span>
+<span class="normal">288</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">check_comparable</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">rtol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-10</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Check that two runs fit the same data with the same family of models.</span>
 
@@ -4142,7 +3272,8 @@ point in <code>big</code>'s parameter space.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">292</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">291</span>
+<span class="normal">292</span>
 <span class="normal">293</span>
 <span class="normal">294</span>
 <span class="normal">295</span>
@@ -4191,8 +3322,7 @@ point in <code>big</code>'s parameter space.</p>
 <span class="normal">338</span>
 <span class="normal">339</span>
 <span class="normal">340</span>
-<span class="normal">341</span>
-<span class="normal">342</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">check_nested</span><span class="p">(</span><span class="n">small</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">big</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">rtol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="normal">341</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">check_nested</span><span class="p">(</span><span class="n">small</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">big</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">rtol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Check that `small` is nested in `big`.</span>
 
@@ -4342,30 +3472,30 @@ if a posterior is skewed or a chain is poorly converged, so it is worth a look.<
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">837</span>
-<span class="normal">838</span>
-<span class="normal">839</span>
-<span class="normal">840</span>
-<span class="normal">841</span>
-<span class="normal">842</span>
-<span class="normal">843</span>
-<span class="normal">844</span>
-<span class="normal">845</span>
-<span class="normal">846</span>
-<span class="normal">847</span>
-<span class="normal">848</span>
-<span class="normal">849</span>
-<span class="normal">850</span>
-<span class="normal">851</span>
-<span class="normal">852</span>
-<span class="normal">853</span>
-<span class="normal">854</span>
-<span class="normal">855</span>
-<span class="normal">856</span>
-<span class="normal">857</span>
-<span class="normal">858</span>
-<span class="normal">859</span>
-<span class="normal">860</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">chisq_order_warnings</span><span class="p">(</span><span class="n">runs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">],</span> <span class="n">chisqs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">645</span>
+<span class="normal">646</span>
+<span class="normal">647</span>
+<span class="normal">648</span>
+<span class="normal">649</span>
+<span class="normal">650</span>
+<span class="normal">651</span>
+<span class="normal">652</span>
+<span class="normal">653</span>
+<span class="normal">654</span>
+<span class="normal">655</span>
+<span class="normal">656</span>
+<span class="normal">657</span>
+<span class="normal">658</span>
+<span class="normal">659</span>
+<span class="normal">660</span>
+<span class="normal">661</span>
+<span class="normal">662</span>
+<span class="normal">663</span>
+<span class="normal">664</span>
+<span class="normal">665</span>
+<span class="normal">666</span>
+<span class="normal">667</span>
+<span class="normal">668</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">chisq_order_warnings</span><span class="p">(</span><span class="n">runs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">],</span> <span class="n">chisqs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Flag nested pairs where the larger model has the higher chi-squared, non-nested pairs are skipped.</span>
 <span class="sd">    At the maximum likelihood this can't happen, at the posterior medians it can</span>
@@ -4465,7 +3595,8 @@ if a posterior is skewed or a chain is poorly converged, so it is worth a look.<
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">210</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">209</span>
+<span class="normal">210</span>
 <span class="normal">211</span>
 <span class="normal">212</span>
 <span class="normal">213</span>
@@ -4482,8 +3613,7 @@ if a posterior is skewed or a chain is poorly converged, so it is worth a look.<
 <span class="normal">224</span>
 <span class="normal">225</span>
 <span class="normal">226</span>
-<span class="normal">227</span>
-<span class="normal">228</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">data_signature</span><span class="p">(</span><span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="normal">227</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">data_signature</span><span class="p">(</span><span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    The parts of a config that define the data and likelihood.</span>
 
@@ -4579,7 +3709,8 @@ Uses Geyer's initial positive sequence estimate of the autocorrelation time.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">434</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">433</span>
+<span class="normal">434</span>
 <span class="normal">435</span>
 <span class="normal">436</span>
 <span class="normal">437</span>
@@ -4609,8 +3740,7 @@ Uses Geyer's initial positive sequence estimate of the autocorrelation time.</p>
 <span class="normal">461</span>
 <span class="normal">462</span>
 <span class="normal">463</span>
-<span class="normal">464</span>
-<span class="normal">465</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">ess</span><span class="p">(</span><span class="n">chains</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="normal">464</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">ess</span><span class="p">(</span><span class="n">chains</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Effective sample size of one parameter, summed over chains.</span>
 <span class="sd">    Uses Geyer's initial positive sequence estimate of the autocorrelation time.</span>
@@ -4734,7 +3864,12 @@ Tied parameters are named after the first model that holds them.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">114</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
 <span class="normal">115</span>
 <span class="normal">116</span>
 <span class="normal">117</span>
@@ -4757,12 +3892,7 @@ Tied parameters are named after the first model that holds them.</p>
 <span class="normal">134</span>
 <span class="normal">135</span>
 <span class="normal">136</span>
-<span class="normal">137</span>
-<span class="normal">138</span>
-<span class="normal">139</span>
-<span class="normal">140</span>
-<span class="normal">141</span>
-<span class="normal">142</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">full_par_names</span><span class="p">(</span><span class="n">metamodel</span><span class="p">:</span> <span class="n">MetaModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="normal">137</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">full_par_names</span><span class="p">(</span><span class="n">metamodel</span><span class="p">:</span> <span class="n">MetaModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Get fully qualified parameter names and structure types of a metamodel.</span>
 
@@ -4893,7 +4023,8 @@ Tied parameters are named after the first model that holds them.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">370</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">369</span>
+<span class="normal">370</span>
 <span class="normal">371</span>
 <span class="normal">372</span>
 <span class="normal">373</span>
@@ -4910,8 +4041,7 @@ Tied parameters are named after the first model that holds them.</p>
 <span class="normal">384</span>
 <span class="normal">385</span>
 <span class="normal">386</span>
-<span class="normal">387</span>
-<span class="normal">388</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">is_nested</span><span class="p">(</span><span class="n">small</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">big</span><span class="p">:</span> <span class="n">Run</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="normal">387</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">is_nested</span><span class="p">(</span><span class="n">small</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">big</span><span class="p">:</span> <span class="n">Run</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Whether `small` is nested in `big`, see `check_nested`.</span>
 
@@ -5084,7 +4214,8 @@ the effective sample sizes, and the ESS corrected p-value.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">522</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">521</span>
+<span class="normal">522</span>
 <span class="normal">523</span>
 <span class="normal">524</span>
 <span class="normal">525</span>
@@ -5133,8 +4264,7 @@ the effective sample sizes, and the ESS corrected p-value.</p>
 <span class="normal">568</span>
 <span class="normal">569</span>
 <span class="normal">570</span>
-<span class="normal">571</span>
-<span class="normal">572</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">ks_compare</span><span class="p">(</span><span class="n">small</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">big</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">min_ess</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">50.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="normal">571</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">ks_compare</span><span class="p">(</span><span class="n">small</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">big</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">min_ess</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">50.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Two-sample KS test of the shared free parameters of two nested runs.</span>
 <span class="sd">    The p-value uses the effective sample sizes, since MCMC samples are correlated</span>
@@ -5185,267 +4315,6 @@ the effective sample sizes, and the ESS corrected p-value.</p>
             <span class="p">}</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">rows</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h2 id="witch.model_comparison.load_initial_noise_data" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">load_initial_noise_data</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="n">ntods</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">outroot</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
-
-</h2>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Load the data with the noise estimated from the raw data, before any model subtraction.</p>
-<p>This runs the normal WITCH loading (<code>load_cfg</code>) with simulation, fitting, and all
-mapmaking turned off, so each TOD's noise model is computed from the TOD itself.
-The data comes from the run's config but the model comes from the run's saved metamodel,
-since rebuilding the model from a key sorted <code>config.yaml</code> scrambles its parameters.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>run</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="Run
-
-
-  
-      dataclass
-   (witch.model_comparison.Run)" href="#witch.model_comparison.Run">Run</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The run to take the data configuration and model from, normally the largest model.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>ntods</code>
-            </td>
-            <td>
-                  <code><span title="int">int</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If set only load this many TODs, for quick tests only as the
-chi-squared is then not comparable to a full run.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>outroot</code>
-            </td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Where <code>load_cfg</code> writes its (unused) output directory.
-Defaults to a new temporary directory.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-<th>Name</th>          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-<td><code>metamodel</code></td>            <td>
-                  <code><a class="autorefs autorefs-internal" title="MetaModel
-
-
-  
-      dataclass
-   (witch.containers.MetaModel)" href="../containers/metamodel/#witch.containers.metamodel.MetaModel">MetaModel</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The run's saved metamodel with the loaded data attached,
-its parameters are set per run in <code>ChisqEvaluator</code>.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="NestingError (witch.model_comparison.NestingError)" href="#witch.model_comparison.NestingError">NestingError</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If the loaded data doesn't map onto the saved models the same way it did in the fit.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-            <details class="mkdocstrings-source">
-              <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">575</span>
-<span class="normal">576</span>
-<span class="normal">577</span>
-<span class="normal">578</span>
-<span class="normal">579</span>
-<span class="normal">580</span>
-<span class="normal">581</span>
-<span class="normal">582</span>
-<span class="normal">583</span>
-<span class="normal">584</span>
-<span class="normal">585</span>
-<span class="normal">586</span>
-<span class="normal">587</span>
-<span class="normal">588</span>
-<span class="normal">589</span>
-<span class="normal">590</span>
-<span class="normal">591</span>
-<span class="normal">592</span>
-<span class="normal">593</span>
-<span class="normal">594</span>
-<span class="normal">595</span>
-<span class="normal">596</span>
-<span class="normal">597</span>
-<span class="normal">598</span>
-<span class="normal">599</span>
-<span class="normal">600</span>
-<span class="normal">601</span>
-<span class="normal">602</span>
-<span class="normal">603</span>
-<span class="normal">604</span>
-<span class="normal">605</span>
-<span class="normal">606</span>
-<span class="normal">607</span>
-<span class="normal">608</span>
-<span class="normal">609</span>
-<span class="normal">610</span>
-<span class="normal">611</span>
-<span class="normal">612</span>
-<span class="normal">613</span>
-<span class="normal">614</span>
-<span class="normal">615</span>
-<span class="normal">616</span>
-<span class="normal">617</span>
-<span class="normal">618</span>
-<span class="normal">619</span>
-<span class="normal">620</span>
-<span class="normal">621</span>
-<span class="normal">622</span>
-<span class="normal">623</span>
-<span class="normal">624</span>
-<span class="normal">625</span>
-<span class="normal">626</span>
-<span class="normal">627</span>
-<span class="normal">628</span>
-<span class="normal">629</span>
-<span class="normal">630</span>
-<span class="normal">631</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_initial_noise_data</span><span class="p">(</span>
-    <span class="n">run</span><span class="p">:</span> <span class="n">Run</span><span class="p">,</span> <span class="n">ntods</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">outroot</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MetaModel</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Load the data with the noise estimated from the raw data, before any model subtraction.</span>
-
-<span class="sd">    This runs the normal WITCH loading (`load_cfg`) with simulation, fitting, and all</span>
-<span class="sd">    mapmaking turned off, so each TOD's noise model is computed from the TOD itself.</span>
-<span class="sd">    The data comes from the run's config but the model comes from the run's saved metamodel,</span>
-<span class="sd">    since rebuilding the model from a key sorted `config.yaml` scrambles its parameters.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    run : Run</span>
-<span class="sd">        The run to take the data configuration and model from, normally the largest model.</span>
-<span class="sd">    ntods : int | None, default: None</span>
-<span class="sd">        If set only load this many TODs, for quick tests only as the</span>
-<span class="sd">        chi-squared is then not comparable to a full run.</span>
-<span class="sd">    outroot : str | None, default: None</span>
-<span class="sd">        Where `load_cfg` writes its (unused) output directory.</span>
-<span class="sd">        Defaults to a new temporary directory.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    metamodel : MetaModel</span>
-<span class="sd">        The run's saved metamodel with the loaded data attached,</span>
-<span class="sd">        its parameters are set per run in `ChisqEvaluator`.</span>
-
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    NestingError</span>
-<span class="sd">        If the loaded data doesn't map onto the saved models the same way it did in the fit.</span>
-<span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">.cfg_loader</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_cfg</span>
-
-    <span class="n">cfg</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">cfg</span><span class="p">)</span>
-    <span class="n">cfg</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
-        <span class="n">sim</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fit</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sig_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">res_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">model_map</span><span class="o">=</span><span class="kc">False</span>
-    <span class="p">)</span>
-    <span class="n">cfg</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">noise_map</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">ntods</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">dset</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">"datasets"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-            <span class="n">dset</span><span class="p">[</span><span class="s2">"ntods"</span><span class="p">]</span> <span class="o">=</span> <span class="n">ntods</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"WITCH_OUTROOT"</span><span class="p">]</span> <span class="o">=</span> <span class="n">outroot</span> <span class="ow">or</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">"witch_cmp_"</span><span class="p">)</span>
-    <span class="n">args</span> <span class="o">=</span> <span class="n">SimpleNamespace</span><span class="p">(</span><span class="n">wnoise</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nosub</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nofit</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">loaded</span> <span class="o">=</span> <span class="n">load_cfg</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
-
-    <span class="n">metamodel</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">metamodel</span><span class="p">)</span>
-    <span class="k">if</span> <span class="p">[</span><span class="n">d</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">loaded</span><span class="o">.</span><span class="n">datasets</span><span class="p">]</span> <span class="o">!=</span> <span class="p">[</span><span class="n">d</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">datasets</span><span class="p">]:</span>
-        <span class="k">raise</span> <span class="n">NestingError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">run</span><span class="o">.</span><span class="n">label</span><span class="si">}</span><span class="s2">: loaded datasets differ from the fit's"</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">loaded</span><span class="o">.</span><span class="n">model_map</span> <span class="o">!=</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">model_map</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">NestingError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">run</span><span class="o">.</span><span class="n">label</span><span class="si">}</span><span class="s2">: dataset to model mapping differs from the fit's"</span>
-        <span class="p">)</span>
-    <span class="n">metamodel</span><span class="o">.</span><span class="n">datasets</span> <span class="o">=</span> <span class="n">loaded</span><span class="o">.</span><span class="n">datasets</span>
-    <span class="n">metamodel</span><span class="o">.</span><span class="n">global_comm</span> <span class="o">=</span> <span class="n">loaded</span><span class="o">.</span><span class="n">global_comm</span>
-    <span class="k">return</span> <span class="n">metamodel</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -5592,7 +4461,12 @@ its parameters are set per run in <code>ChisqEvaluator</code>.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">145</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
 <span class="normal">146</span>
 <span class="normal">147</span>
 <span class="normal">148</span>
@@ -5653,8 +4527,7 @@ its parameters are set per run in <code>ChisqEvaluator</code>.</p>
 <span class="normal">203</span>
 <span class="normal">204</span>
 <span class="normal">205</span>
-<span class="normal">206</span>
-<span class="normal">207</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_run</span><span class="p">(</span>
+<span class="normal">206</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_run</span><span class="p">(</span>
     <span class="n">outdir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">burn_in</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Run</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
@@ -5703,6 +4576,10 @@ its parameters are set per run in <code>ChisqEvaluator</code>.</p>
         <span class="n">burn_in</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"mcmc"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"burn_in"</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)</span>
     <span class="n">chains</span> <span class="o">=</span> <span class="n">npz</span><span class="p">[</span><span class="s2">"chains"</span><span class="p">]</span>
     <span class="n">chains</span> <span class="o">=</span> <span class="n">chains</span><span class="p">[:,</span> <span class="nb">int</span><span class="p">(</span><span class="n">burn_in</span> <span class="o">*</span> <span class="n">chains</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="p">:,</span> <span class="n">free</span><span class="p">]</span>
+    <span class="n">aic</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="s2">"aic.yaml"</span><span class="p">)):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="s2">"aic.yaml"</span><span class="p">))</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">aic</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">Run</span><span class="p">(</span>
         <span class="n">label</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="o">*</span><span class="n">outdir</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]),</span>
@@ -5715,7 +4592,7 @@ its parameters are set per run in <code>ChisqEvaluator</code>.</p>
         <span class="n">free</span><span class="p">,</span>
         <span class="n">chains</span><span class="p">,</span>
         <span class="n">metamodel</span><span class="o">.</span><span class="n">parameter_map</span><span class="p">,</span>
-        <span class="n">metamodel</span><span class="p">,</span>
+        <span class="n">aic</span><span class="p">,</span>
     <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -5808,7 +4685,8 @@ its parameters are set per run in <code>ChisqEvaluator</code>.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">416</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">415</span>
+<span class="normal">416</span>
 <span class="normal">417</span>
 <span class="normal">418</span>
 <span class="normal">419</span>
@@ -5822,8 +4700,7 @@ its parameters are set per run in <code>ChisqEvaluator</code>.</p>
 <span class="normal">427</span>
 <span class="normal">428</span>
 <span class="normal">429</span>
-<span class="normal">430</span>
-<span class="normal">431</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">nested_pairs</span><span class="p">(</span><span class="n">runs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Run</span><span class="p">,</span> <span class="n">Run</span><span class="p">]]:</span>
+<span class="normal">430</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">nested_pairs</span><span class="p">(</span><span class="n">runs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Run</span><span class="p">,</span> <span class="n">Run</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    All `(small, big)` pairs of runs where `small` is nested in `big`.</span>
 
@@ -5948,7 +4825,8 @@ its parameters are set per run in <code>ChisqEvaluator</code>.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">345</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">344</span>
+<span class="normal">345</span>
 <span class="normal">346</span>
 <span class="normal">347</span>
 <span class="normal">348</span>
@@ -5969,8 +4847,7 @@ its parameters are set per run in <code>ChisqEvaluator</code>.</p>
 <span class="normal">363</span>
 <span class="normal">364</span>
 <span class="normal">365</span>
-<span class="normal">366</span>
-<span class="normal">367</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">order_nested</span><span class="p">(</span><span class="n">runs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">]:</span>
+<span class="normal">366</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">order_nested</span><span class="p">(</span><span class="n">runs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Sort runs by number of free parameters and check every pair is nested.</span>
 
@@ -6071,7 +4948,8 @@ Values above ~1.01-1.1 mean the chains have not converged to a common distributi
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">468</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">467</span>
+<span class="normal">468</span>
 <span class="normal">469</span>
 <span class="normal">470</span>
 <span class="normal">471</span>
@@ -6090,8 +4968,7 @@ Values above ~1.01-1.1 mean the chains have not converged to a common distributi
 <span class="normal">484</span>
 <span class="normal">485</span>
 <span class="normal">486</span>
-<span class="normal">487</span>
-<span class="normal">488</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">rhat</span><span class="p">(</span><span class="n">chains</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="normal">487</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">rhat</span><span class="p">(</span><span class="n">chains</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Split R-hat (Gelman-Rubin) of one parameter.</span>
 <span class="sd">    Each chain is split in half so drifts within a chain show up as well as disagreement between chains.</span>
@@ -6221,7 +5098,8 @@ Values above ~1.01-1.1 mean the chains have not converged to a common distributi
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>witch/model_comparison.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">391</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">390</span>
+<span class="normal">391</span>
 <span class="normal">392</span>
 <span class="normal">393</span>
 <span class="normal">394</span>
@@ -6242,8 +5120,7 @@ Values above ~1.01-1.1 mean the chains have not converged to a common distributi
 <span class="normal">409</span>
 <span class="normal">410</span>
 <span class="normal">411</span>
-<span class="normal">412</span>
-<span class="normal">413</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">sort_comparable</span><span class="p">(</span><span class="n">runs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">]:</span>
+<span class="normal">412</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">sort_comparable</span><span class="p">(</span><span class="n">runs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Run</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Sort runs by number of free parameters and check every pair is comparable.</span>
 
