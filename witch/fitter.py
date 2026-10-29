@@ -355,8 +355,9 @@ def get_outdir(cfg, metamodel, nonpara=False):
     print_once("Outputs can be found in", outdir)
     if comm.Get_rank() == 0:
         os.makedirs(outdir, exist_ok=True)
+        # Parameters are positional within a structure, so the key order has to be kept
         with open(os.path.join(outdir, "config.yaml"), "w") as file:
-            yaml.dump(cfg, file)
+            yaml.dump(cfg, file, sort_keys=False)
 
     return outdir
 
@@ -419,7 +420,7 @@ def _save_model(cfg, metamodel, desc_str, nonpara=False):
                     par_name
                 ]["value"] = [float(cur_par) for cur_par in par.val]
     with open(_ours(os.path.join(outdir, f"results_{desc_str}.yaml")), "w") as file:
-        yaml.dump(final, file)
+        yaml.dump(final, file, sort_keys=False)
 
 
 def _reestimate_noise(metamodel):
@@ -505,7 +506,7 @@ def _run_fit(
 ):
     metamodel.set_round(r)
     to_fit = np.array(metamodel.to_fit)
-    print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
+    print_once(f"Starting round {r + 1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
     metamodel, i, delta_chisq, lmd = run_lmfit(
         metamodel,
@@ -539,7 +540,9 @@ def _mcmc_checkpoint_callback(
     step = callback_state["step"]
 
     if step % checkpoint_interval == 0 and comm.Get_rank() == 0:
-        ckpt_path = os.path.join(ckpt_dir, f"mcmc_step_{step}{'_nonpara'*nonpara}.pkl")
+        ckpt_path = os.path.join(
+            ckpt_dir, f"mcmc_step_{step}{'_nonpara' * nonpara}.pkl"
+        )
         _save_checkpoint(
             ckpt_path,
             updated_metamodel,
@@ -676,7 +679,7 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
 
     elif load > 0:
         # Load specific round number
-        load_path = os.path.join(ckpt_dir, f"round_{load}{'_nonpara'*nonpara}.pkl")
+        load_path = os.path.join(ckpt_dir, f"round_{load}{'_nonpara' * nonpara}.pkl")
 
         if os.path.exists(load_path):
             print_once(f"[resume] Loading checkpoint round {load} -> {load_path}")
@@ -692,12 +695,19 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     if load_path is not None:
         loaded_metamodel, loaded_start_round, *_ = _read_checkpoint(load_path)
 
-        # Compatibility checks
-        if not metamodel.check_compatibility(loaded_metamodel):
+        # Only rank 0 saves checkpoints, and the datasets and their maps are per task,
+        # so only rank 0 can compare those. Agree across tasks so all fail together.
+        compatible = metamodel.check_compatibility(
+            loaded_metamodel, check_local=comm.Get_rank() == 0
+        )
+        if not comm.allreduce(int(compatible), op=MPI.MIN):
             raise ValueError("Checkpoint is incompatible!")
 
+        # Take the fit state from the checkpoint but keep this task's datasets
         loaded_metamodel.global_comm = metamodel.global_comm
         loaded_metamodel.datasets = metamodel.datasets
+        loaded_metamodel.model_map = metamodel.model_map
+        loaded_metamodel.metadata_map = metamodel.metadata_map
         start_round = loaded_start_round
         metamodel = _reestimate_noise(loaded_metamodel)
 
@@ -769,7 +779,7 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
         mpi4jax.barrier(comm=comm)
 
         # Checkpoint after each round
-        ckpt_path = os.path.join(ckpt_dir, f"round_{r}{'_nonpara'*nonpara}.pkl")
+        ckpt_path = os.path.join(ckpt_dir, f"round_{r}{'_nonpara' * nonpara}.pkl")
         _save_checkpoint(
             ckpt_path,
             metamodel,

@@ -1,0 +1,12 @@
+# Joint M2 + ACT fit with r_s fixed to the X-ray value and alpha free, the joint version of
+# MOOJ1142/MOOJ1142_gNFW_rs_peak_subcluster_xray_rs_alpha.yaml.
+base: "MOOJ1142_joint_M2_ACT_gNFW_rs_peak_subcluster_xray_rs.yaml"
+
+cluster_model:
+  structures:
+    gnfw_rs:
+      parameters:
+        alpha:
+          value: 2.26
+          to_fit: True
+          priors: [0.1, 10.0]

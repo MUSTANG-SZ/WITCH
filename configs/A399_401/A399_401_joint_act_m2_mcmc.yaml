@@ -1,0 +1,22 @@
+# Metropolis-Hastings MCMC of the joint ACT+M2 A399-A401 fit, started from its saved LM fit.
+# It loads the newest LM checkpoint (round_*.pkl) of A399_401_joint_act_m2.yaml and skips LM.
+# This keeps that config's paths.subdir so it resolves to the same output directory, which is where the
+# checkpoints are. Check the log for "[resume] Checkpoint OK" before trusting the chains.
+# Run with the 4-node batch script and a longer time limit:
+#   sbatch --time=12:00:00 --job-name=a399_401_mcmc configs/A399_401/run_A399_401_joint_act_m2.sbatch \
+#       /home/jorlo/dev/WITCH/configs/A399_401/A399_401_joint_act_m2_mcmc.yaml
+base: "A399_401_joint_act_m2.yaml"
+
+# Resume from the latest saved LM checkpoint in the output directory
+load_progress: -1
+
+mcmc:
+  run: True
+  lm: False # Sample from the loaded LM fit instead of refitting
+  method: "mh"
+  num_steps: 10000
+  num_chains: 4
+  burn_in: 0.1
+  proposal: "cov" # Proposals from the LM covariance saved in the checkpoint
+  seed: 0
+  joint: True # Both datasets need the MPI-aware joint likelihood, so the chains run one after another

@@ -1,3 +1,46 @@
+## 11.2.1 (2026-10-29)
+
+### Fix
+
+- stop transposing ACT maps in load_maps
+- raise when tied parameters disagree on to_fit or priors
+- keep key order when saving config.yaml and results yaml
+- don't let ivar = 0 pixels make map sim noise inf
+- LM with TOD and map datasets in the same fit
+- use safe inverse for the LM step so degenerate params don't give NaN steps
+- resume checkpoints when datasets are split across MPI tasks
+- stop LM rounds at the minimum instead of escalating lambda on noise-level steps
+- cylindrical_beta_2d squared the radius twice and used the axis coordinate
+- revert the np -> jnp replace in metamodel.py (a5113da)
+
+## 11.2.0 (2026-10-27)
+
+### Feat
+
+- some configs for MOO1142
+- hmc config
+- more configs
+- update mcmc config and reduce chisq threshold so fitting ever finishes
+
+### Fix
+
+- drop per-rank LM debug prints
+- make postfit model maps actually contain the model
+- clear jit caches before compiling after noise re-estimation
+- only use J.(N r) gradient shortcut for noise models known to be symmetric
+- run_mcmc (HMC) crashed on any real metamodel
+
+### Perf
+
+- reuse compiled per-TOD objective across LM calls
+- replace searchsorted in bilinear_interp with index arithmetic
+- reuse gradient and log prob across HMC leapfrog steps, dedupe LM invscale
+- remove host syncs and eager metamodel copies from the MH loop
+- only project and filter gradients of parameters being fit
+- 1D line of sight table for spherical stage 0 structures
+- evaluate gNFW profiles in log space
+- reuse filtered residual for gradient and batch curvature filtering
+
 ## 11.1.0 (2026-10-19)
 
 ### Feat
