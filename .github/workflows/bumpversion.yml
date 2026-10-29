@@ -5,42 +5,64 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+
 jobs:
   bump-version-and-docs:
     if: "!startsWith(github.event.head_commit.message, 'bump:')"
     runs-on: ubuntu-latest
-    name: "Bump version and create changelog with commitizen"
+    name: Bump version and deploy docs
+
     steps:
-      - name: Get token
-        uses: actions/create-github-app-token@v1
+      - name: Get GitHub App token
         id: app-token
+        uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-      - name: Check out
-        uses: actions/checkout@v3
+
+      - name: Check out repository
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
-      - name: Create bump and changelog
-        uses: commitizen-tools/commitizen-action@master
+
+      - name: Bump version and create changelog
+        id: cz
+        uses: commitizen-tools/commitizen-action@0.27.1
         with:
           github_token: ${{ steps.app-token.outputs.token }}
-      - name: Print Version
-        run: echo "Bumped to version ${{ steps.cz.outputs.version }}"
-      - name: Setup python
-        uses: actions/setup-python@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.10.6
-      - name: Install Dependencies
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install documentation dependencies
         run: |
-          pip install mkdocs-material
-          pip install pillow cairosvg mike mkdocstrings[python] mkdocs-gen-files mkdocs-literate-nav mkdocs-homepage-copier 
-      - name: Setup Docs Deploy
+          python -m pip install --upgrade pip
+          python -m pip install \
+            properdocs \
+            mkdocs-materialx \
+            pillow \
+            cairosvg \
+            mike \
+            "mkdocstrings[python]" \
+            mkdocs-gen-files \
+            mkdocs-literate-nav \
+            mkdocs-homepage-copier
+
+      - name: Configure Git
         run: |
-          git config --global user.name "Docs Deploy"
-          git config --global user.email "docs.deploy@saianeesh.com"
-      - name: Build Docs Website
+          git config user.name "Docs Deploy"
+          git config user.email "docs.deploy@saianeesh.com"
+
+      - name: Build and deploy versioned docs
+        env:
+          REVISION: ${{ steps.cz.outputs.version }}
         run: |
           mike set-default latest
-          mike deploy --push --update-aliases ${{ env.REVISION }} latest
+          mike deploy --push --update-aliases "$REVISION" latest
+

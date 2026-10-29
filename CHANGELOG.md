@@ -1,3 +1,31 @@
+## 11.2.0 (2026-10-27)
+
+### Feat
+
+- some configs for MOO1142
+- hmc config
+- more configs
+- update mcmc config and reduce chisq threshold so fitting ever finishes
+
+### Fix
+
+- drop per-rank LM debug prints
+- make postfit model maps actually contain the model
+- clear jit caches before compiling after noise re-estimation
+- only use J.(N r) gradient shortcut for noise models known to be symmetric
+- run_mcmc (HMC) crashed on any real metamodel
+
+### Perf
+
+- reuse compiled per-TOD objective across LM calls
+- replace searchsorted in bilinear_interp with index arithmetic
+- reuse gradient and log prob across HMC leapfrog steps, dedupe LM invscale
+- remove host syncs and eager metamodel copies from the MH loop
+- only project and filter gradients of parameters being fit
+- 1D line of sight table for spherical stage 0 structures
+- evaluate gNFW profiles in log space
+- reuse filtered residual for gradient and batch curvature filtering
+
 ## 11.1.0 (2026-10-19)
 
 ### Feat
