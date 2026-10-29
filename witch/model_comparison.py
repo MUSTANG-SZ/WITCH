@@ -1,13 +1,18 @@
 """
-Compare nested fits of the same data with KS tests on their posteriors and the AIC.
+Compare fits of the same data with KS tests on their posteriors and the AIC.
 
 All models are evaluated against one fixed noise model, the one estimated from the
 raw data before any model subtraction, so that their chi-squared values come from
 the same likelihood. Each model is evaluated at the median of its MCMC chain.
 
-Functions here raise `NestingError` when the runs being compared are not nested
-(different data, structures, or a fixed value the larger model can't reach) and
-`ChainQualityError` when a chain is too short or too correlated for a KS test.
+Two levels of checks guard the comparisons:
+* comparable (`check_comparable`, needed for the AIC): same data and likelihood configuration,
+  same structures and parameter ties, and parameters fixed in both runs have the same value.
+  Raises `ComparabilityError`.
+* nested (`check_nested`, needed for the KS tests): comparable, plus one run's free parameters
+  are a strict subset of the other's and its fixed values lie inside the other's priors.
+  Raises `NestingError` (a `ComparabilityError`).
+`ChainQualityError` is raised when a chain is too short or too correlated for a KS test.
 """
 
 import itertools
@@ -30,7 +35,11 @@ OUTPUT_PATH_KEYS = ("subdir", "outroot")
 DATA_KEYS = ("name", "sim", "wnoise", "coords", "constants", "datasets")
 
 
-class NestingError(ValueError):
+class ComparabilityError(ValueError):
+    """Raised when two runs are not fits of the same model family to the same data."""
+
+
+class NestingError(ComparabilityError):
     """Raised when two runs are not nested models of the same data."""
 
 
@@ -244,15 +253,50 @@ def _dict_diff(a, b, prefix: str = "") -> list[str]:
     return [] if a == b else [prefix.rstrip(".")]
 
 
+def check_comparable(a: Run, b: Run, rtol: float = 1e-10):
+    """
+    Check that two runs fit the same data with the same family of models.
+
+    This is what the AIC needs: same data and likelihood configuration, the same model
+    structures and parameter ties, and parameters fixed in both runs held at the same value.
+    The runs don't have to be nested, ie: one can free alpha and the other gamma.
+
+    Parameters
+    ----------
+    a, b : Run
+        The runs to compare.
+    rtol : float, default: 1e-10
+        Relative tolerance when comparing fixed values.
+
+    Raises
+    ------
+    ComparabilityError
+        If any of the conditions above are not met.
+    """
+    pair = f"{a.label} and {b.label}"
+    diffs = _dict_diff(data_signature(a.cfg), data_signature(b.cfg))
+    if diffs:
+        raise ComparabilityError(f"{pair}: data/likelihood config differs at {diffs}")
+    if a.structures != b.structures or a.names != b.names:
+        raise ComparabilityError(f"{pair}: model structures or parameters differ")
+    if a.parameter_map != b.parameter_map:
+        raise ComparabilityError(f"{pair}: parameter ties differ")
+    both_fixed = ~a.free & ~b.free
+    bad = ~np.isclose(a.values, b.values, rtol=rtol, atol=0) & both_fixed
+    if bad.any():
+        raise ComparabilityError(
+            f"{pair}: fixed values differ for {list(np.array(a.names)[bad])}"
+        )
+
+
 def check_nested(small: Run, big: Run, rtol: float = 1e-10) -> list[str]:
     """
     Check that `small` is nested in `big`.
 
-    Nested here means: same data and likelihood configuration, the same model
-    structures and parameter ties, every parameter free in `small` is free in `big`,
-    `big` has at least one more free parameter, parameters fixed in both have the
-    same value, and every parameter that `big` frees but `small` fixes is held at
-    a value inside `big`'s prior so `small` is a point in `big`'s parameter space.
+    Nested here means: comparable (see `check_comparable`), every parameter free in `small`
+    is free in `big`, `big` has at least one more free parameter, and every parameter that
+    `big` frees but `small` fixes is held at a value inside `big`'s prior so `small` is a
+    point in `big`'s parameter space.
 
     Parameters
     ----------
@@ -274,13 +318,12 @@ def check_nested(small: Run, big: Run, rtol: float = 1e-10) -> list[str]:
         If any of the conditions above are not met.
     """
     pair = f"{small.label} in {big.label}"
-    diffs = _dict_diff(data_signature(small.cfg), data_signature(big.cfg))
-    if diffs:
-        raise NestingError(f"{pair}: data/likelihood config differs at {diffs}")
-    if small.structures != big.structures or small.names != big.names:
-        raise NestingError(f"{pair}: model structures or parameters differ")
-    if small.parameter_map != big.parameter_map:
-        raise NestingError(f"{pair}: parameter ties differ")
+    try:
+        check_comparable(small, big, rtol)
+    except NestingError:
+        raise
+    except ComparabilityError as e:
+        raise NestingError(str(e)) from e
 
     not_free = [n for n, s, b in zip(big.names, small.free, big.free) if s and not b]
     if not_free:
@@ -289,12 +332,6 @@ def check_nested(small: Run, big: Run, rtol: float = 1e-10) -> list[str]:
     if not extra:
         raise NestingError(f"{pair}: both runs free the same parameters")
 
-    both_fixed = ~small.free & ~big.free
-    bad = ~np.isclose(small.values, big.values, rtol=rtol, atol=0) & both_fixed
-    if bad.any():
-        raise NestingError(
-            f"{pair}: fixed values differ for {list(np.array(big.names)[bad])}"
-        )
     only_big = big.free & ~small.free
     lo, hi = big.priors[:, 0], big.priors[:, 1]
     outside = only_big & ((small.values < lo) | (small.values > hi))
@@ -330,6 +367,70 @@ def order_nested(runs: list[Run]) -> list[Run]:
     return ordered
 
 
+def is_nested(small: Run, big: Run) -> bool:
+    """
+    Whether `small` is nested in `big`, see `check_nested`.
+
+    Parameters
+    ----------
+    small, big : Run
+        The runs to check.
+
+    Returns
+    -------
+    nested : bool
+        True if `small` is nested in `big`.
+    """
+    try:
+        check_nested(small, big)
+    except NestingError:
+        return False
+    return True
+
+
+def sort_comparable(runs: list[Run]) -> list[Run]:
+    """
+    Sort runs by number of free parameters and check every pair is comparable.
+
+    Parameters
+    ----------
+    runs : list[Run]
+        Runs to compare.
+
+    Returns
+    -------
+    ordered : list[Run]
+        The runs from fewest to most free parameters.
+
+    Raises
+    ------
+    ComparabilityError
+        If any pair of runs is not comparable.
+    """
+    ordered = sorted(runs, key=lambda run: run.k)
+    for a, b in itertools.combinations(ordered, 2):
+        check_comparable(a, b)
+    return ordered
+
+
+def nested_pairs(runs: list[Run]) -> list[tuple[Run, Run]]:
+    """
+    All `(small, big)` pairs of runs where `small` is nested in `big`.
+
+    Parameters
+    ----------
+    runs : list[Run]
+        Runs to search.
+
+    Returns
+    -------
+    pairs : list[tuple[Run, Run]]
+        Nested pairs, ordered by the number of free parameters of `small` then `big`.
+    """
+    ordered = sorted(runs, key=lambda run: run.k)
+    return [(a, b) for a, b in itertools.combinations(ordered, 2) if is_nested(a, b)]
+
+
 def ess(chains: np.ndarray) -> float:
     """
     Effective sample size of one parameter, summed over chains.
@@ -362,6 +463,60 @@ def ess(chains: np.ndarray) -> float:
             tau += 2 * pair
         total += n / tau
     return total
+
+
+def rhat(chains: np.ndarray) -> float:
+    """
+    Split R-hat (Gelman-Rubin) of one parameter.
+    Each chain is split in half so drifts within a chain show up as well as disagreement between chains.
+    Values above ~1.01-1.1 mean the chains have not converged to a common distribution.
+
+    Parameters
+    ----------
+    chains : np.ndarray
+        `(nchain, nstep)` samples.
+
+    Returns
+    -------
+    rhat : float
+        The split R-hat.
+    """
+    half = chains.shape[1] // 2
+    split = np.concatenate([chains[:, :half], chains[:, half : 2 * half]])
+    within = split.var(axis=1, ddof=1).mean()
+    between = half * split.mean(axis=1).var(ddof=1)
+    return float(np.sqrt(((half - 1) / half * within + between / half) / within))
+
+
+def chain_diagnostics(run: Run) -> list[dict]:
+    """
+    Convergence diagnostics of each free parameter of a run.
+
+    Parameters
+    ----------
+    run : Run
+        The run to check.
+
+    Returns
+    -------
+    rows : list[dict]
+        Per parameter effective sample size, autocorrelation time in steps
+        (total samples / ESS), and split R-hat.
+    """
+    nsamp = run.chains.shape[0] * run.chains.shape[1]
+    rows = []
+    for i, name in enumerate(run.free_names):
+        n_eff = ess(run.chains[..., i])
+        rows.append(
+            {
+                "run": run.label,
+                "parameter": name,
+                "ESS": n_eff,
+                "tau": nsamp / n_eff,
+                "Rhat": rhat(run.chains[..., i]),
+            }
+        )
+    return rows
 
 
 def ks_compare(small: Run, big: Run, min_ess: float = 50.0) -> list[dict]:
@@ -507,6 +662,67 @@ class ChisqEvaluator:
 
                 self.objectives.append(jax.jit(chunk_chisq))
 
+    def _check(self, run: Run):
+        """
+        Raise if `run` doesn't have the same parameters as the loaded metamodel.
+
+        Parameters
+        ----------
+        run : Run
+            The run to check.
+
+        Raises
+        ------
+        NestingError
+            If the parameters of `run` don't match those of the loaded metamodel.
+        """
+        if self.names != run.names:
+            raise NestingError(
+                f"{run.label}: parameters differ from the loaded metamodel"
+            )
+
+    def _at(self, pars: np.ndarray) -> MetaModel:
+        """
+        Copy of the loaded metamodel at `pars`, the loaded metamodel itself is untouched.
+
+        Parameters
+        ----------
+        pars : np.ndarray
+            Full parameter vector.
+
+        Returns
+        -------
+        metamodel : MetaModel
+            The copy, with its own (deep copied) models.
+        """
+        mm = copy(self.metamodel)
+        return mm.update(jax.numpy.asarray(pars), mm.errs, mm.cov, mm.chisq)
+
+    def chisq_at(self, pars: np.ndarray) -> float:
+        """
+        Chi-squared at a full parameter vector.
+
+        Parameters
+        ----------
+        pars : np.ndarray
+            Full parameter vector in the order of the loaded metamodel.
+
+        Returns
+        -------
+        chisq : float
+            The chi-squared summed over all data and MPI tasks.
+        """
+        from mpi4py import MPI
+
+        from .utils import NullComm
+
+        mm = self._at(pars)
+        chisq = sum(float(objective(mm)) for objective in self.objectives)
+        comm = mm.global_comm
+        if not isinstance(comm, NullComm) and comm.Get_size() > 1:
+            chisq = comm.allreduce(chisq, op=MPI.SUM)
+        return chisq
+
     def __call__(self, run: Run) -> float:
         """
         Chi-squared of `run` at its posterior medians.
@@ -526,21 +742,64 @@ class ChisqEvaluator:
         NestingError
             If the parameters of `run` don't match those of the loaded metamodel.
         """
-        from mpi4py import MPI
+        self._check(run)
+        return self.chisq_at(run.medians)
 
-        from .utils import NullComm
+    def refit(
+        self, run: Run, maxiter: int = 20, chitol: float = 1e-3
+    ) -> tuple[np.ndarray, float, dict]:
+        """
+        Maximum likelihood of `run` under the shared noise: LM started from its posterior medians.
 
-        if self.names != run.names:
-            raise NestingError(
-                f"{run.label}: parameters differ from the loaded metamodel"
-            )
-        mm = self.metamodel
-        mm = mm.update(jax.numpy.asarray(run.medians), mm.errs, mm.cov, mm.chisq)
-        chisq = sum(float(objective(mm)) for objective in self.objectives)
-        comm = mm.global_comm
-        if not isinstance(comm, NullComm) and comm.Get_size() > 1:
-            chisq = comm.allreduce(chisq, op=MPI.SUM)
-        return chisq
+        The AIC is defined at the maximum likelihood. The medians can sit off the ridge of a
+        degenerate posterior, and the chains were run with each model's own re-estimated noise,
+        so both effects are removed by refitting the run's free parameters here.
+
+        Parameters
+        ----------
+        run : Run
+            The run to refit, it must have the same parameters as the loaded metamodel.
+        maxiter : int, default: 20
+            Maximum LM iterations.
+        chitol : float, default: 1e-3
+            Change in chi-squared at which LM is considered converged.
+
+        Returns
+        -------
+        pars : np.ndarray
+            The refit full parameter vector.
+        chisq : float
+            The chi-squared at `pars`.
+        info : dict
+            LM diagnostics (`iterations`, `delta_chisq`, `lambda`) and `shift`, the move of each
+            free parameter from its median in units of its posterior standard deviation.
+
+        Raises
+        ------
+        NestingError
+            If the parameters of `run` don't match those of the loaded metamodel.
+        """
+        from .fitting import _run_lmfit_tod_chunks
+
+        self._check(run)
+        mm = self._at(run.medians)
+        # Fit only this run's free parameters, add_round edits the models of this copy only
+        mm.set_round(int(mm.n_rounds) - 1)
+        mm.add_round(jax.numpy.asarray(run.free))
+        fitted, iterations, delta_chisq, lmd = _run_lmfit_tod_chunks(
+            mm, maxiter, chitol
+        )
+        pars = np.asarray(fitted.parameters, dtype=float)
+
+        flat = run.chains.reshape(-1, run.k)
+        shift = (pars[run.free] - np.median(flat, axis=0)) / np.std(flat, axis=0)
+        info = {
+            "iterations": int(iterations),
+            "delta_chisq": float(delta_chisq),
+            "lambda": float(lmd),
+            "shift": dict(zip(run.free_names, shift)),
+        }
+        return pars, self.chisq_at(pars), info
 
 
 def aic_table(runs: list[Run], chisqs: list[float]) -> list[dict]:
@@ -550,21 +809,22 @@ def aic_table(runs: list[Run], chisqs: list[float]) -> list[dict]:
     Parameters
     ----------
     runs : list[Run]
-        Nested runs, checked with `order_nested`.
+        Comparable runs, checked with `sort_comparable`. They don't need to be nested.
     chisqs : list[float]
-        Chi-squared of each run against the same data and noise.
+        Chi-squared of each run against the same data and noise,
+        ideally at each run's maximum likelihood (`ChisqEvaluator.refit`).
 
     Returns
     -------
     rows : list[dict]
-        One row per run.
+        One row per run, in the order of `runs`.
 
     Raises
     ------
-    NestingError
-        If the runs are not nested.
+    ComparabilityError
+        If the runs are not comparable.
     """
-    order_nested(runs)
+    sort_comparable(runs)
     aic = np.array([c + 2 * run.k for run, c in zip(runs, chisqs)])
     delta = aic - aic.min()
     weights = np.exp(-delta / 2) / np.exp(-delta / 2).sum()
@@ -576,7 +836,7 @@ def aic_table(runs: list[Run], chisqs: list[float]) -> list[dict]:
 
 def chisq_order_warnings(runs: list[Run], chisqs: list[float]) -> list[str]:
     """
-    Flag nested pairs where the larger model has the higher chi-squared.
+    Flag nested pairs where the larger model has the higher chi-squared, non-nested pairs are skipped.
     At the maximum likelihood this can't happen, at the posterior medians it can
     if a posterior is skewed or a chain is poorly converged, so it is worth a look.
 
@@ -592,9 +852,9 @@ def chisq_order_warnings(runs: list[Run], chisqs: list[float]) -> list[str]:
     warnings : list[str]
         One message per offending pair.
     """
-    by_k = sorted(zip(runs, chisqs), key=lambda rc: rc[0].k)
+    chisq = {run.label: c for run, c in zip(runs, chisqs)}
     return [
-        f"{s.label} (k={s.k}) has chisq {cs:.2f} <= {b.label} (k={b.k}) at {cb:.2f}"
-        for (s, cs), (b, cb) in itertools.combinations(by_k, 2)
-        if cb > cs
+        f"{s.label} (k={s.k}) has chisq {chisq[s.label]:.2f} <= {b.label} (k={b.k}) at {chisq[b.label]:.2f}"
+        for s, b in nested_pairs(runs)
+        if chisq[b.label] > chisq[s.label]
     ]
