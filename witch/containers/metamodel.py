@@ -10,6 +10,7 @@ from typing import Self
 import dill
 import jax
 import jax.numpy as jnp
+import numpy as np
 from jax.tree_util import register_pytree_node_class
 from mpi4py import MPI
 
@@ -90,7 +91,7 @@ class MetaModel:
         rep += f"\nchisq is {self.chisq}"
         return rep
 
-    def check_compatibility(self, other: Self) -> bool:
+    def check_compatibility(self, other: Self, check_local: bool = True) -> bool:
         """
         Check if another `MetaModel` instance is compatible with this one.
         Used for checkpointing.
@@ -99,6 +100,10 @@ class MetaModel:
         ---------
         other : MetaModel
             The `MetaModel` instance to check compatibility with.
+        check_local : bool, default: True
+            Also check the datasets, `model_map` and `metadata_map`.
+            These only hold the datasets living on this MPI task, so only compare
+            them against a checkpoint saved by a task with the same datasets.
 
         Returns
         -------
@@ -112,6 +117,10 @@ class MetaModel:
         for sm, om in zip(self.models, other.models):
             if not sm.check_compatibility(om):
                 return False
+        if self.parameter_map != other.parameter_map:
+            return False
+        if not check_local:
+            return True
 
         # Check datasets (just names for now)
         if len(self.datasets) != len(other.datasets):
@@ -121,8 +130,6 @@ class MetaModel:
                 return False
 
         # Check mappings
-        if self.parameter_map != other.parameter_map:
-            return False
         if self.model_map != other.model_map:
             return False
         if self.metadata_map != other.metadata_map:
@@ -140,9 +147,9 @@ class MetaModel:
         par_name : jax.Array
             String array of parameter names.
         """
-        par_names = jnp.zeros_like(self.parameters, dtype="U128")
+        par_names = np.zeros_like(self.parameters, dtype="U128")
         for model, par_map in zip(self.models, self.parameter_map):
-            par_names[list(par_map)] = jnp.array(model.par_names, dtype="U128")
+            par_names[list(par_map)] = np.array(model.par_names, dtype="U128")
 
         return tuple(par_names.tolist())
 
@@ -156,14 +163,14 @@ class MetaModel:
         to_fit : jax.Array
             Boolean array that is True for parameters that will be fit this round.
         """
-        to_fit = jjnp.zeros_like(self.parameters, dtype=bool)
+        to_fit = jnp.zeros_like(self.parameters, dtype=bool)
         for model, par_map in zip(self.models, self.parameter_map):
-            to_fit = to_fit.at[jjnp.array(par_map)].set(jjnp.array(model.to_fit))
+            to_fit = to_fit.at[jnp.array(par_map)].set(jnp.array(model.to_fit))
 
         return to_fit
 
     @property
-    def to_fit_idx(self) -> jnp.ndarray:
+    def to_fit_idx(self) -> np.ndarray:
         """
         Get the indices of the parameters that will be fit this round.
         Unlike `to_fit` this is built from static information only, so it is
@@ -171,14 +178,14 @@ class MetaModel:
 
         Returns
         -------
-        to_fit_idx : jnp.ndarray
+        to_fit_idx : np.ndarray
             Sorted indices into `self.parameters` of the parameters that will be fit this round.
         """
-        to_fit = jnp.zeros(self.parameters.shape[0], dtype=bool)
+        to_fit = np.zeros(self.parameters.shape[0], dtype=bool)
         for model, par_map in zip(self.models, self.parameter_map):
-            to_fit[jnp.array(par_map)] = jnp.array(model.to_fit)
+            to_fit[np.array(par_map)] = np.array(model.to_fit)
 
-        return jnp.flatnonzero(to_fit)
+        return np.flatnonzero(to_fit)
 
     @cached_property
     def to_fit_ever(self) -> jax.Array:
@@ -190,10 +197,10 @@ class MetaModel:
         to_fit_ever : jax.Array
             Boolean array that is True for parameters that will be fit.
         """
-        to_fit_ever = jjnp.zeros_like(self.parameters, dtype=bool)
+        to_fit_ever = jnp.zeros_like(self.parameters, dtype=bool)
         for model, par_map in zip(self.models, self.parameter_map):
-            to_fit_ever = to_fit_ever.at[jjnp.array(par_map)].set(
-                jjnp.array(model.to_fit_ever)
+            to_fit_ever = to_fit_ever.at[jnp.array(par_map)].set(
+                jnp.array(model.to_fit_ever)
             )
 
         return to_fit_ever
@@ -210,11 +217,11 @@ class MetaModel:
         priors_high : jax.Array
             Higher bound of prior ranges.
         """
-        priors_low = jjnp.zeros_like(self.parameters)
-        priors_high = jjnp.zeros_like(self.parameters)
+        priors_low = jnp.zeros_like(self.parameters)
+        priors_high = jnp.zeros_like(self.parameters)
         for model, par_map in zip(self.models, self.parameter_map):
-            priors_low = priors_low.at[jjnp.array(par_map)].set(model.priors[0])
-            priors_high = priors_high.at[jjnp.array(par_map)].set(model.priors[1])
+            priors_low = priors_low.at[jnp.array(par_map)].set(model.priors[0])
+            priors_high = priors_high.at[jnp.array(par_map)].set(model.priors[1])
 
         return priors_low, priors_high
 
@@ -228,7 +235,7 @@ class MetaModel:
         cur_round : int
             The current fitting round.
         """
-        cur_rounds = jjnp.array([model.cur_round for model in self.models]).ravel()
+        cur_rounds = jnp.array([model.cur_round for model in self.models]).ravel()
         cur_round = cur_rounds[0]
 
         return cur_round
@@ -243,7 +250,7 @@ class MetaModel:
         n_rounds : int
             The total fitting rounds.
         """
-        n_rounds_all = jjnp.array([model.n_rounds for model in self.models]).ravel()
+        n_rounds_all = jnp.array([model.n_rounds for model in self.models]).ravel()
         n_rounds = n_rounds_all[0]
 
         return n_rounds
@@ -268,7 +275,7 @@ class MetaModel:
         m_map = self.model_map[dataset_ind]
         md_map = self.metadata_map[dataset_ind]
         dset = self.datasets[dataset_ind]
-        proj = jjnp.zeros_like(self.models[m_map[0]].model)
+        proj = jnp.zeros_like(self.models[m_map[0]].model)
         for i in m_map:
             model = self.models[i]
             md = md_map[i]
@@ -306,7 +313,7 @@ class MetaModel:
             x, y = data.xy
         x = x * wu.rad_to_arcsec
         y = y * wu.rad_to_arcsec
-        proj = jjnp.zeros_like(x)
+        proj = jnp.zeros_like(x)
         for i in m_map:
             model = self.models[i]
             md = md_map[i]
@@ -347,15 +354,15 @@ class MetaModel:
             x, y = data.xy
         x = x * wu.rad_to_arcsec
         y = y * wu.rad_to_arcsec
-        proj_grad = jjnp.zeros(self.parameters.shape + x.shape)
+        proj_grad = jnp.zeros(self.parameters.shape + x.shape)
         for i in m_map:
             model = self.models[i]
             md = md_map[i]
             # Gradients of parameters we are not fitting are zero, don't project them
-            fit = jnp.flatnonzero(jnp.array(model.to_fit))
+            fit = np.flatnonzero(np.array(model.to_fit))
             if len(fit) == 0:
                 continue
-            par_map = jnp.array(self.parameter_map[i])[fit]
+            par_map = np.array(self.parameter_map[i])[fit]
             ip_grad = model.model_grad[1][fit]
             for md_idx in md:
                 ip_grad = dset.metadata[md_idx].apply_grad(ip_grad)
@@ -421,9 +428,9 @@ class MetaModel:
         self.chisq = chisq
         self.models = tuple(
             deepcopy(model).update(
-                pars[jjnp.array(par_map)],
-                errs[jjnp.array(par_map)],
-                cov[jjnp.array(par_map)],
+                pars[jnp.array(par_map)],
+                errs[jnp.array(par_map)],
+                cov[jnp.array(par_map)],
                 chisq,
             )
             for model, par_map in zip(self.models, self.parameter_map)
@@ -452,7 +459,7 @@ class MetaModel:
         self.__dict__.pop("to_fit", None)
         self.__dict__.pop("to_fit_ever", None)
         self.models = tuple(
-            model.add_round(to_fit[jjnp.array(par_map)])
+            model.add_round(to_fit[jnp.array(par_map)])
             for model, par_map in zip(self.models, self.parameter_map)
         )
 
@@ -672,8 +679,8 @@ def _compute_par_map_and_pars(
         ]
         full_par_names += model_par_names[model.name]
     # Mark repeats and figure out indexing
-    repeats = jnp.zeros(len(full_par_names))
-    par_idx = jjnp.arange(len(full_par_names))
+    repeats = np.zeros(len(full_par_names))
+    par_idx = jnp.arange(len(full_par_names))
     for p in pmap:
         for n in p[1:]:
             repeats[full_par_names.index(n)] += 1
@@ -681,24 +688,42 @@ def _compute_par_map_and_pars(
             par_idx = par_idx.at[full_par_names.index(n)].set(
                 full_par_names.index(p[0])
             )
-    if jnp.any(repeats > 1):
+    if np.any(repeats > 1):
         raise ValueError("Some parameters mapped multiple times!")
+    # Tied parameters share one slot in the metamodel but each model only computes
+    # gradients for the parameters it fits, so all copies need to agree
+    parameters = {
+        f"{model.name}.{structure.name}.{parameter.name}": parameter
+        for model in models
+        for structure in model.structures
+        for parameter in structure.parameters
+    }
+    for p in pmap:
+        master = parameters[p[0]]
+        for n in p[1:]:
+            tied = parameters[n]
+            if tuple(tied.fit) != tuple(master.fit) or not np.array_equal(
+                tied.prior, master.prior
+            ):
+                raise ValueError(
+                    f"Tied parameters {p[0]} and {n} must have the same to_fit and priors"
+                )
     repeats = repeats.astype(bool)
     # Now build
-    n_pars = int(jnp.sum(~repeats))
-    pars = jjnp.zeros(n_pars)
-    errs = jjnp.zeros(n_pars)
-    cov = jjnp.zeros((n_pars, n_pars))
+    n_pars = int(np.sum(~repeats))
+    pars = jnp.zeros(n_pars)
+    errs = jnp.zeros(n_pars)
+    cov = jnp.zeros((n_pars, n_pars))
     n = 0
     par_map = []
     for model in models:
-        jnpar = len(model.par_names)
-        _par_map = jjnp.array(par_idx.at[n : n + jnpar].get())
+        npar = len(model.par_names)
+        _par_map = jnp.array(par_idx.at[n : n + npar].get())
         pars = pars.at[_par_map].set(model.pars)
         errs = errs.at[_par_map].set(model.errs)
         cov = cov.at[_par_map[:, None], _par_map].set(model.cov)
         par_map += [tuple(_par_map)]
-        n += jnpar
+        n += npar
     par_map = tuple(par_map)
 
     return par_map, pars, errs, cov

@@ -87,6 +87,28 @@ def _prior_pars_fit(
     return pars, to_fit
 
 
+def _stalled(new_delta_chisq: jax.Array, chitol: jax.Array) -> jax.Array:
+    """
+    Whether a rejected step failed only by less than the tolerance, i.e. we are at the minimum.
+
+    Near the minimum the undamped step changes chisq at the floating point noise level, so
+    treating it as a failure would raise lambda forever and leave errors from damped curvature.
+
+    Parameters
+    ----------
+    new_delta_chisq : jax.Array
+        Improvement in chisq from the trial step, negative if chisq increased.
+    chitol : jax.Array
+        Convergence tolerance on the chisq improvement.
+
+    Returns
+    -------
+    stalled : jax.Array
+        True if the trial step did not improve chisq but is within `chitol` of the current one.
+    """
+    return (new_delta_chisq <= 0) & (new_delta_chisq > -chitol)
+
+
 def _failure(
     metamodel,
     new_metamodel,
@@ -126,11 +148,19 @@ def _success(
 
 
 def _metamodel_for_tod(metamodel: MetaModel, dataset_ind: int, tod):
+    """
+    Copy of `metamodel` whose datasets only contain `tod` (a TOD or a map).
+    TODVecs store their elements in `tods` and SolutionSets in `solutions`.
+    """
     datasets = []
     for index, dataset in enumerate(metamodel.datasets):
         dataset_copy = copy(dataset)
         datavec = dataset.datavec.copy()
-        datavec.tods = [tod] if index == dataset_ind else []
+        items = [tod] if index == dataset_ind else []
+        if hasattr(datavec, "tods"):
+            datavec.tods = items
+        else:
+            datavec.solutions = items
         dataset_copy.datavec = datavec
         datasets.append(dataset_copy)
 
@@ -144,6 +174,11 @@ def _make_tod_objectives(metamodel: MetaModel):
     for dataset_ind, dataset in enumerate(metamodel.datasets):
         objective = getattr(dataset.objective, "__wrapped__", dataset.objective)
         for tod in dataset.datavec:
+            # `WCSMap.xy` is a cached_property and `tod` is closed over as a constant,
+            # so if it is first evaluated inside jit a tracer gets cached on the map
+            # and leaks on the next trace. Populate the cache eagerly instead.
+            if dataset.mode != "tod":
+                tod.xy
 
             def objective_for_tod(
                 current_metamodel,
@@ -222,7 +257,8 @@ def _run_lmfit_tod_chunks(
     while iteration < maxiter and (bool(delta_chisq >= chitol) or bool(lmd > zero)):
         curve_use = curve.at[:].add(lmd * jnp.diag(jnp.diag(curve)))
         step = jnp.dot(
-            invscale(curve_use.at[tf, :].get().at[:, tf].get()), grad.at[tf].get()
+            invscale(curve_use.at[tf, :].get().at[:, tf].get(), do_invsafe=True),
+            grad.at[tf].get(),
         )
         new_pars, to_fit = _prior_pars_fit(
             metamodel.priors,
@@ -255,6 +291,9 @@ def _run_lmfit_tod_chunks(
             new_delta_chisq,
             lmd,
         )
+        stalled = _stalled(new_delta_chisq, chitol)
+        lmd = jnp.where(stalled, zero, lmd)
+        delta_chisq = jnp.where(stalled, 0.0, delta_chisq)
         iteration += 1
 
     return metamodel, iteration, delta_chisq, lmd
@@ -294,21 +333,21 @@ def run_lmfit(
     chitol = jnp.float32(chitol)
     tf = np.where(np.array(metamodel.to_fit))[0]
 
-    if metamodel.datasets and all(
-        dataset.mode == "tod" for dataset in metamodel.datasets
-    ):
-        local_multiple_tods = any(
-            len(dataset.datavec.tods) > 1 for dataset in metamodel.datasets
+    # Every rank has to make the same choice here since the chunked path reduces
+    # with mpi4py and the jitted path with mpi4jax. In a joint fit the map ranks
+    # follow the TOD ranks onto the chunked path (one chunk per map).
+    local_multiple_tods = any(
+        dataset.mode == "tod" and len(dataset.datavec.tods) > 1
+        for dataset in metamodel.datasets
+    )
+    if isinstance(metamodel.global_comm, NullComm):
+        use_tod_chunks = local_multiple_tods
+    else:
+        use_tod_chunks = (
+            metamodel.global_comm.allreduce(int(local_multiple_tods), op=MPI.MAX) > 0
         )
-        if isinstance(metamodel.global_comm, NullComm):
-            use_tod_chunks = local_multiple_tods
-        else:
-            use_tod_chunks = (
-                metamodel.global_comm.allreduce(int(local_multiple_tods), op=MPI.MAX)
-                > 0
-            )
-        if use_tod_chunks:
-            return _run_lmfit_tod_chunks(metamodel, maxiter, chitol)
+    if use_tod_chunks:
+        return _run_lmfit_tod_chunks(metamodel, maxiter, chitol)
 
     @jax.jit
     def _cond_func(val):
@@ -323,7 +362,8 @@ def run_lmfit(
         curve_use = curve.at[:].add(lmd * jnp.diag(jnp.diag(curve)))
         # Get the step
         step = jnp.dot(
-            invscale(curve_use.at[tf, :].get().at[:, tf].get()), grad.at[tf].get()
+            invscale(curve_use.at[tf, :].get().at[:, tf].get(), do_invsafe=True),
+            grad.at[tf].get(),
         )
         new_pars, to_fit = _prior_pars_fit(
             metamodel.priors,
@@ -360,6 +400,9 @@ def run_lmfit(
             new_delta_chisq,
             lmd,
         )
+        stalled = _stalled(new_delta_chisq, chitol)
+        lmd = jnp.where(stalled, zero, lmd)
+        delta_chisq = jnp.where(stalled, 0.0, delta_chisq)
 
         return (i + 1, delta_chisq, lmd, metamodel, curve, grad)
 

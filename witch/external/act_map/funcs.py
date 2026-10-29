@@ -52,11 +52,15 @@ def load_maps(
         # The actual map
         f: fits.HDUList = fits.open(fname)
         wcs = WCS(f[0].header)  # type: ignore
-        dat = jnp.array(f[0].data.copy().T)  # type: ignore
+        # Keep the FITS (y, x) layout: `WCSMap.xy` flattens its meshgrid in (y, x) order, so a
+        # transposed map would be fit against a transposed model.
+        dat = jnp.array(f[0].data.astype(float))  # type: ignore
         f.close()
+        if dat.shape[0] != dat.shape[1]:
+            raise ValueError(f"WCSMap.xy only supports square maps, got {dat.shape}")
         # The ivar map
         f: fits.HDUList = fits.open(iname)
-        ivar = jnp.array(f[0].data.copy().T)  # type: ignore
+        ivar = jnp.array(f[0].data.astype(float))  # type: ignore
         f.close()
         imaps += [maps.WCSMap(name, dat, comm, wcs, "nn", ivar=ivar)]
     mapset = SolutionSet(imaps, comm)

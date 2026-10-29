@@ -213,12 +213,13 @@ def process_maps(cfg, dataset, metamodel):
                     f"ivar for map {imap.name} is all 0! Filling with a dummy value but you should check your maps!"
                 )
                 imap.ivar = imap.ivar.at[:].set(cfg.get("default_ivar", 1e8))
-            scale = 1.0 / jnp.sqrt(imap.ivar)
-            avg_scale = np.nanmean(scale)
-            print("Map noise: ", avg_scale)
-            scale = jnp.nan_to_num(
-                scale, nan=avg_scale, posinf=avg_scale, neginf=avg_scale
+            # Pixels with ivar == 0 have no weight in the likelihood, so leave them noiseless
+            # rather than letting an inf noise level propagate into the data
+            good = imap.ivar > 0
+            scale = jnp.where(
+                good, 1.0 / jnp.sqrt(jnp.where(good, imap.ivar, 1.0)), 0.0
             )
+            print("Map noise: ", float(jnp.mean(scale[good])))
             imap.data = (
                 jax.random.normal(
                     jax.random.key(0), shape=imap.data.shape, dtype=imap.data.dtype
@@ -285,8 +286,9 @@ def get_outdir(cfg, metamodel, nonpara=False):
     print_once("Outputs can be found in", outdir)
     if comm.Get_rank() == 0:
         os.makedirs(outdir, exist_ok=True)
+        # Parameters are positional within a structure, so the key order has to be kept
         with open(os.path.join(outdir, "config.yaml"), "w") as file:
-            yaml.dump(cfg, file)
+            yaml.dump(cfg, file, sort_keys=False)
 
     return outdir
 
@@ -349,7 +351,7 @@ def _save_model(cfg, metamodel, desc_str, nonpara=False):
                     par_name
                 ]["value"] = [float(cur_par) for cur_par in par.val]
     with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
-        yaml.dump(final, file)
+        yaml.dump(final, file, sort_keys=False)
 
 
 def _reestimate_noise(metamodel):
@@ -590,12 +592,19 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     if load_path is not None:
         loaded_metamodel, loaded_start_round, *_ = _read_checkpoint(load_path)
 
-        # Compatibility checks
-        if not metamodel.check_compatibility(loaded_metamodel):
+        # Only rank 0 saves checkpoints, and the datasets and their maps are per task,
+        # so only rank 0 can compare those. Agree across tasks so all fail together.
+        compatible = metamodel.check_compatibility(
+            loaded_metamodel, check_local=comm.Get_rank() == 0
+        )
+        if not comm.allreduce(int(compatible), op=MPI.MIN):
             raise ValueError("Checkpoint is incompatible!")
 
+        # Take the fit state from the checkpoint but keep this task's datasets
         loaded_metamodel.global_comm = metamodel.global_comm
         loaded_metamodel.datasets = metamodel.datasets
+        loaded_metamodel.model_map = metamodel.model_map
+        loaded_metamodel.metadata_map = metamodel.metadata_map
         start_round = loaded_start_round
         metamodel = _reestimate_noise(loaded_metamodel)
 
