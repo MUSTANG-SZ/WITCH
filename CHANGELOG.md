@@ -1,3 +1,18 @@
+## 11.2.1 (2026-10-29)
+
+### Fix
+
+- stop transposing ACT maps in load_maps
+- raise when tied parameters disagree on to_fit or priors
+- keep key order when saving config.yaml and results yaml
+- don't let ivar = 0 pixels make map sim noise inf
+- LM with TOD and map datasets in the same fit
+- use safe inverse for the LM step so degenerate params don't give NaN steps
+- resume checkpoints when datasets are split across MPI tasks
+- stop LM rounds at the minimum instead of escalating lambda on noise-level steps
+- cylindrical_beta_2d squared the radius twice and used the axis coordinate
+- revert the np -> jnp replace in metamodel.py (a5113da)
+
 ## 11.2.0 (2026-10-27)
 
 ### Feat
