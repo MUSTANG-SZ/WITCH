@@ -185,7 +185,7 @@ def test_nested_pairs_skip_non_nested():
         _run("fixed", [1, 0, 0, 1]),
         _run("rs", [1, 1, 0, 1]),
     ]
-    assert [r.label for r in sort_comparable(runs)][0] == "fixed"
+    assert next(r.label for r in sort_comparable(runs)) == "fixed"
     pairs = {(s.label, b.label) for s, b in nested_pairs(runs)}
     assert pairs == {
         ("fixed", "alpha"),
