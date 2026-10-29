@@ -1,9 +1,10 @@
 """
 Compare fits of the same data with KS tests on their posteriors and the AIC.
 
-All models are evaluated against one fixed noise model, the one estimated from the
-raw data before any model subtraction, so that their chi-squared values come from
-the same likelihood. Each model is evaluated at the median of its MCMC chain.
+The AIC uses the `aic.yaml` each fit writes (`witch.fitter.aic_refit`): the maximum likelihood
+under one noise model shared by every fit of the same data, the one estimated from the raw
+data before any model subtraction, so the chi-squared of different models are comparable.
+Runs from before it was added have no `aic.yaml` and need refitting to be compared.
 
 Two levels of checks guard the comparisons:
 * comparable (`check_comparable`, needed for the AIC): same data and likelihood configuration,
@@ -17,12 +18,8 @@ Two levels of checks guard the comparisons:
 
 import itertools
 import os
-import tempfile
-from copy import copy, deepcopy
 from dataclasses import dataclass, field
-from types import SimpleNamespace
 
-import jax
 import numpy as np
 import yaml
 from scipy import stats
@@ -75,10 +72,8 @@ class Run:
         `(nchain, nstep, nfree)` post burn-in MCMC samples of the free parameters.
     parameter_map : tuple
         The `MetaModel.parameter_map` of the run.
-    metamodel : MetaModel | None
-        The saved metamodel of the run, without data. This is the source of truth for the model:
-        configs saved before `sort_keys=False` was added to `fitter` have their keys sorted,
-        which scrambles the (positional) parameters if the model is rebuilt from them.
+    aic : dict | None
+        Contents of the run's `aic.yaml` (see `witch.fitter.aic_refit`), None if it has none.
     """
 
     label: str
@@ -91,7 +86,7 @@ class Run:
     free: np.ndarray
     chains: np.ndarray
     parameter_map: tuple = field(repr=False)
-    metamodel: MetaModel | None = field(default=None, repr=False)
+    aic: dict | None = field(default=None, repr=False)
 
     @property
     def k(self) -> int:
@@ -191,6 +186,10 @@ def load_run(
         burn_in = cfg.get("mcmc", {}).get("burn_in", 0.2)
     chains = npz["chains"]
     chains = chains[:, int(burn_in * chains.shape[1]) :, free]
+    aic = None
+    if os.path.isfile(os.path.join(outdir, "aic.yaml")):
+        with open(os.path.join(outdir, "aic.yaml")) as f:
+            aic = yaml.safe_load(f)
 
     return Run(
         label or os.path.join(*outdir.rstrip("/").split("/")[-2:]),
@@ -203,7 +202,7 @@ def load_run(
         free,
         chains,
         metamodel.parameter_map,
-        metamodel,
+        aic,
     )
 
 
@@ -572,234 +571,43 @@ def ks_compare(small: Run, big: Run, min_ess: float = 50.0) -> list[dict]:
     return rows
 
 
-def load_initial_noise_data(
-    run: Run, ntods: int | None = None, outroot: str | None = None
-) -> MetaModel:
+def aic_chisqs(runs: list[Run], which: str = "refit") -> list[float]:
     """
-    Load the data with the noise estimated from the raw data, before any model subtraction.
-
-    This runs the normal WITCH loading (`load_cfg`) with simulation, fitting, and all
-    mapmaking turned off, so each TOD's noise model is computed from the TOD itself.
-    The data comes from the run's config but the model comes from the run's saved metamodel,
-    since rebuilding the model from a key sorted `config.yaml` scrambles its parameters.
+    The chi-squared of each run from its `aic.yaml`.
 
     Parameters
     ----------
-    run : Run
-        The run to take the data configuration and model from, normally the largest model.
-    ntods : int | None, default: None
-        If set only load this many TODs, for quick tests only as the
-        chi-squared is then not comparable to a full run.
-    outroot : str | None, default: None
-        Where `load_cfg` writes its (unused) output directory.
-        Defaults to a new temporary directory.
+    runs : list[Run]
+        Runs loaded with `load_run`.
+    which : str, default: "refit"
+        "refit" for the maximum likelihood (what the AIC is defined at) or
+        "start" for the starting point (MCMC medians, or the LM best fit).
 
     Returns
     -------
-    metamodel : MetaModel
-        The run's saved metamodel with the loaded data attached,
-        its parameters are set per run in `ChisqEvaluator`.
+    chisqs : list[float]
+        Chi-squared of each run, in the order of `runs`.
 
     Raises
     ------
-    NestingError
-        If the loaded data doesn't map onto the saved models the same way it did in the fit.
+    FileNotFoundError
+        If a run has no `aic.yaml`.
+    ComparabilityError
+        If an `aic.yaml` refit different parameters than the run's chain sampled.
     """
-    from .cfg_loader import load_cfg
-
-    cfg = deepcopy(run.cfg)
-    cfg.update(
-        sim=False, fit=False, map=False, sig_map=False, res_map=False, model_map=False
-    )
-    cfg.update(noise_map=False)
-    if ntods is not None:
-        for dset in cfg["datasets"].values():
-            dset["ntods"] = ntods
-    os.environ["WITCH_OUTROOT"] = outroot or tempfile.mkdtemp(prefix="witch_cmp_")
-    args = SimpleNamespace(wnoise=False, nosub=False, nofit=True)
-    _, _, _, loaded = load_cfg(cfg, args)
-
-    metamodel = copy(run.metamodel)
-    if [d.name for d in loaded.datasets] != [d.name for d in metamodel.datasets]:
-        raise NestingError(f"{run.label}: loaded datasets differ from the fit's")
-    if loaded.model_map != metamodel.model_map:
-        raise NestingError(
-            f"{run.label}: dataset to model mapping differs from the fit's"
+    missing = [run.outdir for run in runs if run.aic is None]
+    if missing:
+        raise FileNotFoundError(
+            f"No aic.yaml in {missing}, these fits predate witch.fitter.aic_refit"
         )
-    metamodel.datasets = loaded.datasets
-    metamodel.global_comm = loaded.global_comm
-    return metamodel
-
-
-class ChisqEvaluator:
-    """
-    Chi-squared of nested runs at their posterior medians against one set of data and noise.
-
-    The data is evaluated one TOD (or map) at a time to keep memory down, with one
-    compiled objective per TOD that is reused for every run (TODs carry array metadata
-    so they can't share a compiled function, see `fitting._make_tod_objectives`).
-    The result is summed over MPI tasks.
-
-    Parameters
-    ----------
-    metamodel : MetaModel
-        Metamodel with the data and initial noise, from `load_initial_noise_data`.
-    """
-
-    def __init__(self, metamodel: MetaModel):
-        from .fitting import _metamodel_for_tod
-
-        self.metamodel = metamodel
-        self.names, _ = full_par_names(metamodel)
-        self.objectives = []
-        for dset_ind, dataset in enumerate(metamodel.datasets):
-            objective = getattr(dataset.objective, "__wrapped__", dataset.objective)
-            for data in dataset.datavec:
-
-                def chunk_chisq(mm, dset_ind=dset_ind, data=data, objective=objective):
-                    chunk = _metamodel_for_tod(mm, dset_ind, data)
-                    return objective(chunk, dset_ind, True, False, False)[0]
-
-                self.objectives.append(jax.jit(chunk_chisq))
-
-    def _check(self, run: Run):
-        """
-        Raise if `run` doesn't have the same parameters as the loaded metamodel.
-
-        Parameters
-        ----------
-        run : Run
-            The run to check.
-
-        Raises
-        ------
-        NestingError
-            If the parameters of `run` don't match those of the loaded metamodel.
-        """
-        if self.names != run.names:
-            raise NestingError(
-                f"{run.label}: parameters differ from the loaded metamodel"
+    for run in runs:
+        refit = [par["index"] for par in run.aic["parameters"]]
+        if run.aic["k"] != run.k or refit != list(np.flatnonzero(run.free)):
+            raise ComparabilityError(
+                f"{run.label}: aic.yaml refit parameters {refit} but the chain samples "
+                f"{list(np.flatnonzero(run.free))}"
             )
-
-    def _at(self, pars: np.ndarray) -> MetaModel:
-        """
-        Copy of the loaded metamodel at `pars`, the loaded metamodel itself is untouched.
-
-        Parameters
-        ----------
-        pars : np.ndarray
-            Full parameter vector.
-
-        Returns
-        -------
-        metamodel : MetaModel
-            The copy, with its own (deep copied) models.
-        """
-        mm = copy(self.metamodel)
-        return mm.update(jax.numpy.asarray(pars), mm.errs, mm.cov, mm.chisq)
-
-    def chisq_at(self, pars: np.ndarray) -> float:
-        """
-        Chi-squared at a full parameter vector.
-
-        Parameters
-        ----------
-        pars : np.ndarray
-            Full parameter vector in the order of the loaded metamodel.
-
-        Returns
-        -------
-        chisq : float
-            The chi-squared summed over all data and MPI tasks.
-        """
-        from mpi4py import MPI
-
-        from .utils import NullComm
-
-        mm = self._at(pars)
-        chisq = sum(float(objective(mm)) for objective in self.objectives)
-        comm = mm.global_comm
-        if not isinstance(comm, NullComm) and comm.Get_size() > 1:
-            chisq = comm.allreduce(chisq, op=MPI.SUM)
-        return chisq
-
-    def __call__(self, run: Run) -> float:
-        """
-        Chi-squared of `run` at its posterior medians.
-
-        Parameters
-        ----------
-        run : Run
-            The run to evaluate, it must have the same parameters as the loaded metamodel.
-
-        Returns
-        -------
-        chisq : float
-            The chi-squared summed over all data and MPI tasks.
-
-        Raises
-        ------
-        NestingError
-            If the parameters of `run` don't match those of the loaded metamodel.
-        """
-        self._check(run)
-        return self.chisq_at(run.medians)
-
-    def refit(
-        self, run: Run, maxiter: int = 20, chitol: float = 1e-3
-    ) -> tuple[np.ndarray, float, dict]:
-        """
-        Maximum likelihood of `run` under the shared noise: LM started from its posterior medians.
-
-        The AIC is defined at the maximum likelihood. The medians can sit off the ridge of a
-        degenerate posterior, and the chains were run with each model's own re-estimated noise,
-        so both effects are removed by refitting the run's free parameters here.
-
-        Parameters
-        ----------
-        run : Run
-            The run to refit, it must have the same parameters as the loaded metamodel.
-        maxiter : int, default: 20
-            Maximum LM iterations.
-        chitol : float, default: 1e-3
-            Change in chi-squared at which LM is considered converged.
-
-        Returns
-        -------
-        pars : np.ndarray
-            The refit full parameter vector.
-        chisq : float
-            The chi-squared at `pars`.
-        info : dict
-            LM diagnostics (`iterations`, `delta_chisq`, `lambda`) and `shift`, the move of each
-            free parameter from its median in units of its posterior standard deviation.
-
-        Raises
-        ------
-        NestingError
-            If the parameters of `run` don't match those of the loaded metamodel.
-        """
-        from .fitting import _run_lmfit_tod_chunks
-
-        self._check(run)
-        mm = self._at(run.medians)
-        # Fit only this run's free parameters, add_round edits the models of this copy only
-        mm.set_round(int(mm.n_rounds) - 1)
-        mm.add_round(jax.numpy.asarray(run.free))
-        fitted, iterations, delta_chisq, lmd = _run_lmfit_tod_chunks(
-            mm, maxiter, chitol
-        )
-        pars = np.asarray(fitted.parameters, dtype=float)
-
-        flat = run.chains.reshape(-1, run.k)
-        shift = (pars[run.free] - np.median(flat, axis=0)) / np.std(flat, axis=0)
-        info = {
-            "iterations": int(iterations),
-            "delta_chisq": float(delta_chisq),
-            "lambda": float(lmd),
-            "shift": dict(zip(run.free_names, shift)),
-        }
-        return pars, self.chisq_at(pars), info
+    return [float(run.aic[f"chisq_{which}"]) for run in runs]
 
 
 def aic_table(runs: list[Run], chisqs: list[float]) -> list[dict]:
@@ -812,7 +620,7 @@ def aic_table(runs: list[Run], chisqs: list[float]) -> list[dict]:
         Comparable runs, checked with `sort_comparable`. They don't need to be nested.
     chisqs : list[float]
         Chi-squared of each run against the same data and noise,
-        ideally at each run's maximum likelihood (`ChisqEvaluator.refit`).
+        ideally at each run's maximum likelihood (`aic_chisqs(runs, "refit")`).
 
     Returns
     -------
