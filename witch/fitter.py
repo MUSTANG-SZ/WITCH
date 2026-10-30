@@ -52,6 +52,7 @@ _FIT_OUTPUTS = (
     "results_*.dill",
     "results_*.yaml",
     "par_results_*.dill",
+    "aic*.yaml",
     "samples_mcmc.npz",
     "corner.png",
     "checkpoints/round_*.pkl",
@@ -652,6 +653,113 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
     return metamodel
 
 
+def _initial_noise(metamodel):
+    """
+    Estimate the noise of every TOD or map from the data itself, with no model subtracted.
+    This is the noise model the data is loaded with, so it only depends on the data and the
+    noise settings and is the same for every model fit to the same data.
+    """
+    for dataset in metamodel.datasets:
+        for data in dataset.datavec:
+            data.compute_noise(
+                dataset.noise_class,
+                None,
+                *dataset.noise_args,
+                **dataset.noise_kwargs,
+            )
+    return metamodel
+
+
+def aic_refit(cfg, metamodel, start, nonpara=False):
+    """
+    Maximum likelihood under the initial noise model, for comparing models with the AIC.
+
+    The fit re-estimates the noise from each model's own residuals, so the chi-squared of
+    different models can't be compared. Here the noise is re-estimated from the data alone
+    (as at load time), the free parameters are refit with LM starting from the current
+    parameters (the MCMC medians, or the LM best fit without MCMC), and the result is saved
+    as `aic.yaml` and `par_results_aic.dill` in the output directory. The fit's own noise
+    is restored afterwards, nothing else is changed.
+
+    Parameters
+    ----------
+    cfg : dict
+        The config, `cfg["outdir"]` is where the results are written and
+        `fitting.maxiter` / `fitting.chitol` set the LM refit.
+    metamodel : MetaModel
+        The fitted metamodel, its free parameters for the current round are refit.
+    start : str
+        Description of the starting parameters, saved in `aic.yaml`.
+    nonpara : bool, default: False
+        If True the outputs get a `_nonpara` suffix.
+
+    Returns
+    -------
+    metamodel : MetaModel
+        The input metamodel with its parameters and fit noise unchanged.
+    """
+    print_once("Refitting under the initial noise model for the AIC")
+    suffix = "_nonpara" * nonpara
+    start_pars = jnp.array(comm.bcast(np.array(metamodel.parameters), root=0))
+    free = np.array(metamodel.to_fit)
+
+    # Noise models live in pytree aux data, so drop jit caches keyed on the old ones
+    _initial_noise(metamodel)
+    jax.clear_caches()
+    start_mm = copy(metamodel).update(
+        start_pars, metamodel.errs, metamodel.cov, metamodel.chisq
+    )
+    chisq_start = float(joint_objective(start_mm, True, False, False)[0])
+    fitted, iterations, delta_chisq, lmd = run_lmfit(
+        start_mm,
+        eval(str(cfg["fitting"].get("maxiter", "10"))),
+        eval(str(cfg["fitting"].get("chitol", "1e-5"))),
+    )
+    chisq_refit = float(joint_objective(fitted, True, False, False)[0])
+    _save_outputs(cfg, fitted, f"aic{suffix}")
+
+    if comm.Get_rank() == 0:
+        k = int(free.sum())
+        pars, errs = np.array(fitted.parameters), np.array(fitted.errs)
+        result = {
+            "noise": "initial: estimated from the data with no model subtracted",
+            "start": start,
+            "k": k,
+            "chisq_start": chisq_start,
+            "chisq_refit": chisq_refit,
+            "aic": chisq_refit + 2 * k,
+            "lm": {
+                "iterations": int(iterations),
+                "delta_chisq": float(delta_chisq),
+                "lambda": float(lmd),
+            },
+            # A list in parameter order, names alone can repeat across structures
+            "parameters": [
+                {
+                    "index": i,
+                    "name": name,
+                    "start": float(start_pars[i]),
+                    "refit": float(pars[i]),
+                    "err": float(errs[i]),
+                }
+                for i, name in enumerate(fitted.par_names)
+                if free[i]
+            ],
+        }
+        path = _ours(os.path.join(cfg["outdir"], f"aic{suffix}.yaml"))
+        with open(path, "w") as file:
+            yaml.dump(result, file, sort_keys=False)
+        print_once(
+            f"AIC chisq: {chisq_start:.2f} at the start, {chisq_refit:.2f} after "
+            f"{iterations} LM iterations (lambda {float(lmd):.3g}), saved to {path}"
+        )
+
+    # Back to the fit's noise model for the rest of the pipeline
+    metamodel = _reestimate_noise(metamodel)
+    jax.clear_caches()
+    return metamodel
+
+
 def fit_loop(metamodel, cfg, comm, nonpara=False):
     if metamodel is None:
         raise ValueError("Can't fit without metamodel defined!")
@@ -794,13 +902,20 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             )
             break
 
-    if "mcmc" in cfg and cfg["mcmc"].get("run", True):
+    ran_mcmc = "mcmc" in cfg and cfg["mcmc"].get("run", True)
+    if ran_mcmc:
         metamodel = _run_mcmc(
             cfg,
             metamodel,
             nonpara,
         )
         mpi4jax.barrier(comm=comm)
+
+    # Chi-squared under a noise model shared by every fit of this data, for model comparison
+    metamodel = aic_refit(
+        cfg, metamodel, "mcmc_median" if ran_mcmc else "lm_best_fit", nonpara
+    )
+    mpi4jax.barrier(comm=comm)
 
     # Save final pars
     _save_model(cfg, metamodel, "final_fit", nonpara)
