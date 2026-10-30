@@ -1,0 +1,23 @@
+# M2-only gNFW_rs + subcluster fit with P0, r_s, and alpha free, beta and gamma fixed.
+# With r_s ~27" the alpha transition covers ~10-70", the scales M2 resolves, while beta only
+# shapes the profile beyond that. beta is fixed to the X-ray value converted to our
+# definition (the X-ray beta is half of ours, 2 * 2.05 = 4.1).
+# Same k as MOOJ1142_gNFW_rs_peak_subcluster.yaml (P0, r_s, beta free) so the two are
+# compared by AIC, and nested in MOOJ1142_gNFW_rs_peak_subcluster_free_alpha.yaml.
+base: "MOOJ1142_gNFW_rs_peak_subcluster.yaml"
+
+paths:
+  subdir: "xray_peak_rs_free_rs_alpha"
+
+cluster_model:
+  structures:
+    gnfw_rs:
+      parameters:
+        alpha:
+          value: 2.26
+          to_fit: True
+          priors: [0.1, 10.0]
+        beta:
+          value: 4.1
+          to_fit: False
+          priors: [1., 10.]
