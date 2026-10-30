@@ -1,0 +1,23 @@
+# M2-only gNFW_rs + subcluster fit with r_s fixed to the X-ray value, P0 and alpha free,
+# beta and gamma fixed to their X-ray values.
+# The r_s fixed counterpart of MOOJ1142_gNFW_rs_peak_subcluster_free_rs_alpha.yaml, and the
+# alpha free counterpart of MOOJ1142_gNFW_rs_peak_subcluster_xray_rs.yaml (P0, beta free).
+# Not to be confused with MOOJ1142_gNFW_rs_peak_subcluster_xray_rs_alpha.yaml, which frees
+# alpha and beta together.
+base: "MOOJ1142_gNFW_rs_peak_subcluster_xray_rs.yaml"
+
+paths:
+  subdir: "xray_peak_rs_xray_rs_free_alpha"
+
+cluster_model:
+  structures:
+    gnfw_rs:
+      parameters:
+        alpha:
+          value: 2.26
+          to_fit: True
+          priors: [0.1, 10.0]
+        beta:
+          value: 2.05
+          to_fit: False
+          priors: [1., 10.]
