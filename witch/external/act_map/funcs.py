@@ -2,9 +2,11 @@ import glob
 import os
 
 import jax.numpy as jnp
+import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
 from jitkasi.solutions import SolutionSet, maps
+from jitkasi.wcs import JAXWCS
 from mpi4py import MPI
 
 import witch.utils as wu
@@ -72,21 +74,18 @@ def load_maps(
         # The actual map
         f: fits.HDUList = fits.open(fname)
         wcs = WCS(f[0].header)  # type: ignore
-        # Keep the FITS (y, x) layout: `WCSMap.xy` flattens its meshgrid in (y, x) order, so a
-        # transposed map would be fit against a transposed model.
-        dat = jnp.array(f[0].data.astype(float))  # type: ignore
+        # `WCSMap.xy` puts x along the first axis, so transpose the FITS (y, x) layout.
+        dat = jnp.array(f[0].data.astype(float)).T  # type: ignore
         f.close()
-        if dat.shape[0] != dat.shape[1]:
-            raise ValueError(f"WCSMap.xy only supports square maps, got {dat.shape}")
         # The ivar map
         f: fits.HDUList = fits.open(iname)
-        ivar = jnp.array(f[0].data.astype(float))  # type: ignore
+        ivar = jnp.array(f[0].data.astype(float)).T  # type: ignore
         f.close()
         if cfg["datasets"][dset_name].get("zero_mean", True):
             # Match the zero-mean convention of the other datasets, this is a cutout
             # so its mean is not zero. The mean is ivar weighted and ignores empty pixels.
             dat = dat - jnp.sum(dat * ivar) / jnp.sum(ivar)
-        imaps += [maps.WCSMap(name, dat, comm, wcs, "nn", ivar=ivar)]
+        imaps += [maps.WCSMap(name, dat, comm, JAXWCS.from_astropy(wcs), ivar=ivar)]
     mapset = SolutionSet(imaps, comm)
 
     return mapset
@@ -145,7 +144,9 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
 
             if res_map:
                 imap.data = imap.data - pred
-                hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
+                hdu = fits.PrimaryHDU(
+                    data=np.asarray(imap.data).T, header=imap.wcs.to_header()
+                )
                 hdul = fits.HDUList([hdu])
                 hdul.writeto(
                     os.path.join(outdir, dset.name, f"{imap.name}_residual.fits"),
@@ -154,7 +155,9 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
 
             if mod_map:
                 imap.data = pred
-                hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
+                hdu = fits.PrimaryHDU(
+                    data=np.asarray(imap.data).T, header=imap.wcs.to_header()
+                )
                 hdul = fits.HDUList([hdu])
                 hdul.writeto(
                     os.path.join(outdir, dset.name, f"{imap.name}_truth.fits"),

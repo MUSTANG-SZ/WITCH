@@ -8,6 +8,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from jax import Array, vmap
 from jax.tree_util import register_pytree_node_class
+from jitkasi.wcs import JAXWCS
 from jitkasi.solutions import SolutionSet, maps
 from mpi4py import MPI
 from scipy.ndimage import zoom
@@ -61,7 +62,7 @@ def load_maps(
         factor = 300 / len(dat_cut)
         dat = zoom(dat_cut, factor, order=0)
         f.close()
-        imaps += [maps.WCSMap(name, dat, comm, wcs, "nn")]
+        imaps += [maps.WCSMap(name, dat, comm, JAXWCS.from_astropy(wcs))]
     mapset = SolutionSet(imaps, comm)
     return mapset
 
@@ -239,7 +240,6 @@ class BackgroundProj(MetaData):
 
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
-
         children = (self.back_map,)
         aux_data = tuple()
 
@@ -349,7 +349,7 @@ def make_metadata(dset_name: str, cfg: dict, comm: MPI.Intracomm) -> tuple:
     wcs = WCS(f[0].header)  # type: ignore
     dat = jnp.array(f[0].data.copy().T)  # type: ignore
     f.close()
-    back_map = [maps.WCSMap(name, dat, comm, wcs, "nn")]
+    back_map = [maps.WCSMap(name, dat, comm, JAXWCS.from_astropy(wcs))]
 
     meta_list = [beams, exp_maps, back_map]
     metadata = tuple(meta_list)
