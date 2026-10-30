@@ -18,6 +18,6 @@ cluster_model:
           to_fit: True
           priors: [0.1, 10.0]
         beta:
-          value: 4.1
+          value: 2.05
           to_fit: False
           priors: [1., 10.]

@@ -27,11 +27,11 @@ cluster_model:
         dz_1:
           value: 0.0
         P0:
-          value: 0.373
+          value: 1.63
           to_fit: True
           priors: [0.01, 4.]
         r_s:
-          value: 26
+          value: 4.33
           to_fit: True
           priors: [1., 50.]
         gamma:
@@ -41,7 +41,7 @@ cluster_model:
           value: 2.26
           to_fit: False
         beta:
-          value: 4.42
+          value: 2.05
           to_fit: True
           priors: [1., 10.]
         z:
