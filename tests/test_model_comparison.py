@@ -8,6 +8,7 @@ from witch.model_comparison import (
     ComparabilityError,
     NestingError,
     Run,
+    aic_chisqs,
     aic_table,
     chain_diagnostics,
     check_comparable,
@@ -219,3 +220,26 @@ def test_rhat_flags_disagreeing_chains():
     rows = chain_diagnostics(_run("rs", [1, 1, 0, 1]))
     assert [r["parameter"] for r in rows] == ["m.gnfw.P0", "m.gnfw.r_s", "ps.g.amp"]
     assert all(r["Rhat"] < 1.01 for r in rows)
+
+
+def test_aic_chisqs_reads_aic_yaml_and_checks_it():
+    rs, alpha = _run("rs", [1, 1, 0, 1]), _run("alpha", [1, 0, 1, 1])
+    with pytest.raises(FileNotFoundError, match="aic_from_run"):
+        aic_chisqs([rs, alpha])
+
+    def aic(free_idx, start, refit):
+        pars = [{"index": i, "refit": 0.0} for i in free_idx]
+        return {
+            "k": len(free_idx),
+            "chisq_start": start,
+            "chisq_refit": refit,
+            "parameters": pars,
+        }
+
+    rs.aic = aic([0, 1, 3], 105.0, 100.0)
+    alpha.aic = aic([0, 2, 3], 99.0, 96.0)
+    assert aic_chisqs([rs, alpha]) == [100.0, 96.0]
+    assert aic_chisqs([rs, alpha], "start") == [105.0, 99.0]
+    alpha.aic = aic([0, 1, 3], 99.0, 96.0)  # Refit r_s rather than alpha
+    with pytest.raises(ComparabilityError, match="refit parameters"):
+        aic_chisqs([rs, alpha])
