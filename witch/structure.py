@@ -1002,7 +1002,7 @@ def mesa_2d(
         Units: arcsec
     w0 : float
         Half width of the mesa orthogonal to the axis.
-        Must be > 0. 
+        Must be > 0.
         Units: arcsec
     theta : float
         Angle of the length axis in the xy-plane.
