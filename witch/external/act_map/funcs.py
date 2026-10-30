@@ -5,6 +5,7 @@ import jax.numpy as jnp
 from astropy.io import fits
 from astropy.wcs import WCS
 from jitkasi.solutions import SolutionSet, maps
+from jitkasi.wcs import JAXWCS
 from mpi4py import MPI
 
 import witch.utils as wu
@@ -62,7 +63,9 @@ def load_maps(
         f: fits.HDUList = fits.open(iname)
         ivar = jnp.array(f[0].data.astype(float))  # type: ignore
         f.close()
-        imaps += [maps.WCSMap(name, dat, comm, wcs, "nn", ivar=ivar)]
+        imaps += [
+            maps.WCSMap(name, dat, comm, JAXWCS.from_astropy(wcs), "nn", ivar=ivar)
+        ]
     mapset = SolutionSet(imaps, comm)
 
     return mapset
