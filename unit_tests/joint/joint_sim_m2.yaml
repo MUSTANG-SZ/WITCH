@@ -1,0 +1,183 @@
+# Simulated MUSTANG2-only fit of a simple cluster: gNFW + shock + point source.
+# This is the M2 half of the joint ACT + M2 recovery test, see joint_sim_act_m2.yaml
+# for the joint version and tests/test_joint_act_m2_recovery.py for the test itself.
+# The signal is injected into sign flipped real MOOJ1142 TODs so the noise is realistic.
+# Run with one MPI task per TOD, ie: srun -n 8 witcher joint_sim_m2.yaml
+name: "MOOJ1142" # Used for the TOD blacklist as well as the output path
+fit: True
+sim: True
+sub: True
+par_offset: 1.1 # Start the fit 10% away from the injected values
+n_rounds: 10
+map: True
+model_map: True
+
+constants:
+  Te: 5.0
+  freq: "90e9"
+  z: 1.19
+
+mcmc:
+  run: False
+
+paths:
+  # Relative paths are taken relative to WITCH_DATROOT
+  tods: "MOOJ1142"
+  glob: "Signal_TOD*.fits"
+  ndo: False
+  odo: False
+  outroot: ""
+  subdir: "joint_sim_m2"
+
+# The grid needs to be large enough to cover the ACT beam,
+# 3*fwhm1 of the ACT beam has to fit inside 2*r_map.
+# The shock is a stage 1 structure so the model is integrated on the full 3D grid.
+coords:
+  r_map: "6.0*60"
+  dr: "3.0"
+  dz: 3.0
+  x0: "(175.69766238*u.deg).to(u.radian).value"
+  y0: "(15.45364413*u.deg).to(u.radian).value"
+
+datasets:
+  mustang2:
+    noise:
+      class: "jn.NoiseSmoothedSVD"
+      args: "[]"
+      kwargs: "{'fwhm':10}"
+    funcs:
+      get_files: "mf.get_files"
+      load_tods: "mf.load_tods"
+      get_info: "mf.get_info"
+      make_metadata: "mf.make_metadata"
+      preproc: "mf.preproc"
+      postproc: "mf.postproc"
+      postfit: "mf.postfit"
+    minkasi_noise:
+      class: "minkasi.mapmaking.noise.NoiseSmoothedSVD"
+      args: "[]"
+      kwargs: "{'fwhm':10}"
+    beam:
+      fwhm1: "10.088324"
+      amp1: 0.96811
+      fwhm2: "33.123396"
+      amp2: 0.03188
+    copy_noise: False
+    dograd: False
+    npass: 1
+    freq: "float(90e9)"
+    prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_RJ(90e9, cfg['constants']['Te'])*wu.XMpc/wu.me)"
+    ntods: 8
+    point_sources:
+      - "ps_m2"
+
+cluster_model:
+  structures:
+    gnfw:
+      structure: "gnfw"
+      parameters:
+        dx_1: # arcsec
+          value: 3.0
+          to_fit: True
+          priors: [-30.0, 30.0]
+        dy_1: # arcsec
+          value: -3.0
+          to_fit: True
+          priors: [-30.0, 30.0]
+        dz_1:
+          value: 0.0
+        r: # arcsec per Mpc, with this choice gnfw is the same as a10
+          value: "1/wu.get_da(constants['z'])"
+        P0:
+          value: 8.403
+        c500:
+          value: 1.177
+        m500:
+          value: "5.0e14"
+          to_fit: True
+          priors: ["1e14", "5e15"]
+        gamma:
+          value: 0.3081
+        alpha:
+          value: 1.551
+          to_fit: True
+          priors: [0.3, 5.0]
+        beta:
+          value: 5.4905
+          to_fit: True
+          priors: [2.0, 12.0]
+        z:
+          value: 1.19
+    shock:
+      # Pressure enhancement in an ellipsoid NE of the core
+      structure: "powerlaw_cos"
+      parameters:
+        dx_sh: # arcsec
+          value: -30.0
+        dy_sh: # arcsec
+          value: 20.0
+        dz_sh:
+          value: 0.0
+        r1_sh: # arcsec
+          value: 40.0
+        r2_sh:
+          value: 25.0
+        r3_sh:
+          value: 30.0
+        theta_sh:
+          value: "np.deg2rad(30.0)"
+        amp_sh:
+          value: 1.5
+          to_fit: True
+          priors: [0.0, 10.0]
+        phi0_sh:
+          value: "np.deg2rad(150.0)"
+        kr_sh:
+          value: 1.0
+          to_fit: True
+          priors: [-5.0, 5.0]
+        omega_sh:
+          value: "np.pi/3"
+
+# Point source models are not beam convolved or unit converted,
+# so sigma includes the beam and amp is in the units of the data (K_RJ).
+ps_m2:
+  structures:
+    ps:
+      structure: "gaussian"
+      parameters:
+        dx_g: # arcsec
+          value: 20.0
+          to_fit: True
+          priors: [5.0, 35.0]
+        dy_g: # arcsec
+          value: -15.0
+          to_fit: True
+          priors: [-30.0, 0.0]
+        sigma_m2: # arcsec, M2 beam
+          value: "10.0/2.3548"
+        amp_m2: # K_RJ
+          value: 0.001
+          to_fit: True
+          priors: [0.0, 0.01]
+
+metamodel:
+  models:
+    - cluster_model
+    - ps_m2
+  model_map:
+    mustang2:
+      - cluster_model
+      - ps_m2
+
+fitting:
+  maxiter: 30
+  chitol: 1e-5
+
+imports:
+  astropy.units: u
+  astropy.coordinates: [Angle]
+  numpy: np
+  witch.utils: wu
+  witch.external.minkasi.funcs: mf
+  jitkasi.noise: jn
