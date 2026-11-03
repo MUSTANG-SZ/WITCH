@@ -1,5 +1,6 @@
 """Tests for the CMB + white noise map model."""
 
+import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
@@ -61,3 +62,19 @@ def test_noise_spectrum_warns_interim(tmp_path) -> None:
     dat = np.zeros((4, 4))
     with pytest.warns(UserWarning, match="interim"):
         NoiseSpectrum.compute(dat, np.ones_like(dat), 1.0, str(tmp_path / "p.npy"))
+
+
+def test_cmb_sample_properties() -> None:
+    """The CMB sample has more variance than white noise (on a small patch, after mean removal), zero weighted mean and no noise in empty pixels."""
+    pytest.importorskip("camb")
+    from witch.noise import NoiseCMBMap
+
+    shape = (12, 12)
+    ivar = jnp.full(shape, 0.0053).at[0, :].set(0.0)
+    noise = np.asarray(
+        NoiseCMBMap.sample(jax.random.key(1), jnp.zeros(shape), ivar, 0.5 / 60)
+    )
+    assert noise.shape == shape
+    assert np.all(noise[0] == 0)
+    assert abs(np.sum(noise * np.asarray(ivar)) / np.sum(ivar)) < 1e-3
+    assert noise[1:].std() > 1.2 * np.sqrt(1 / 0.0053)
