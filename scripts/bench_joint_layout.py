@@ -52,8 +52,8 @@ def run(args: argparse.Namespace):
         Parsed `run` arguments.
     """
     import jax
-
     from bench_objective import timeit
+
     from witch import fitter
     from witch.cfg_loader import load_cfg
     from witch.objective import joint_objective
