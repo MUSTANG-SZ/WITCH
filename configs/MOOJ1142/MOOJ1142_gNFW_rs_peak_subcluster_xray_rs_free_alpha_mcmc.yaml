@@ -1,0 +1,12 @@
+# MH settings as MOOJ1142_gNFW_rs_peak_subcluster_free_rs_alpha_mcmc.yaml, so the four
+# r_s fixed/free x beta/alpha free fits can be compared like for like.
+base: "MOOJ1142_gNFW_rs_peak_subcluster_xray_rs_free_alpha.yaml"
+
+mcmc:
+  run: true
+  method: mh
+  num_steps: 40000
+  num_chains: 4
+  burn_in: 0.2
+  prior_type: uniform
+  proposal: cov
