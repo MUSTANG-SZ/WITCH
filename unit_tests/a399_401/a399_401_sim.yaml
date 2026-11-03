@@ -2,7 +2,7 @@
 # The injected model is the one in the base config (the paper's Table 2 values); the fit starts 10% away.
 # The map and ivar are made by tests/test_a399_401_sim.py (the map only supplies the WCS, its data are replaced by the sim).
 # Run with a single task, ie: witcher unit_tests/a399_401/a399_401_sim.yaml -cpu True
-base: "../../configs/A399_401/A399_401_ymap_isobeta_mesa_comptonY.yaml"
+base: "a399_401_base.yaml"
 sim: True
 wnoise: True
 par_offset: 1.1

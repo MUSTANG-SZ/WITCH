@@ -1,14 +1,14 @@
 """
 Replicate Fig. 4 of Hincks et al. (2022, arXiv:2107.04611): the posterior of the 'Ellip-beta+mesa' fit.
 
-Reads the samples written by `witcher configs/A399_401/A399_401_ymap_isobeta_mesa_mcmc.yaml` and converts
+Reads the samples written by an MCMC fit with the isobeta+mesa config (see the A399-401 analysis repo) and converts
 the isobeta amplitudes to the paper's central Compton y, A = prefactor * amp * r_3 * sqrt(pi) Gamma(1.5 beta - 0.5) / Gamma(1.5 beta),
 and the mesa amplitude to A_fil = prefactor * amp. The core radius is the larger of r_1 and r_2.
 The blue lines mark the LM best fit.
 
 Usage
 -----
-    python scripts/a399_401_fig4.py --dir <fit output dir> --out reports/a399_401_fig4.png [--debug]
+    python examples/a399_401_corner.py --dir <fit output dir> --out reports/a399_401_fig4.png [--debug]
 """
 
 import argparse

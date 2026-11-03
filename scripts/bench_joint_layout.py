@@ -235,7 +235,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("run", help="benchmark this MPI layout (launch with srun)")
-    p.add_argument("--config", default="configs/A399_401/A399_401_joint_act_m2.yaml")
+    p.add_argument(
+        "--config", required=True, help="joint config, e.g. A399_401_joint_act_m2.yaml"
+    )
     p.add_argument("--m2", default="mustang2", help="name of the TOD dataset")
     p.add_argument("--ntods", type=int, required=True, help="TODs to load on this node")
     p.add_argument("--nrep", type=int, default=3)
