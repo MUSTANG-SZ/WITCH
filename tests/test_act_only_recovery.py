@@ -54,7 +54,7 @@ def test_parameters_recovered(fit) -> None:
     for name, (par, err) in fit.items():
         assert np.isfinite(par) and np.isfinite(err)
         # Errors a thousand times below the input would be the damped-curvature symptom
-        assert err > 1e-3 * abs(INJECTED[name]), (
-            f"{name} error {err} is implausibly small"
-        )
+        assert err > 1e-3 * abs(
+            INJECTED[name]
+        ), f"{name} error {err} is implausibly small"
         assert abs(par - INJECTED[name]) < 3 * err, f"{name}: {par} +- {err}"
