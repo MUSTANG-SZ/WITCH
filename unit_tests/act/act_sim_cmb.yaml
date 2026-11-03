@@ -38,7 +38,7 @@ datasets:
   act:
     noise:
       class: "wn.NoiseCMBMap"
-      args: "['self.ivar', 'self.wcs.wcs.cdelt[0]']"
+      args: "['self.ivar', 'self.wcs.cdelt[0]']"
       kwargs: "{}"
     funcs:
       get_files: "amf.get_files"

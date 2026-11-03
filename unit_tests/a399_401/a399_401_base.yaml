@@ -43,7 +43,7 @@ datasets:
     ivar_glob: "*_y_ivar.fits" # all ones, the noise comes from the spectrum
     noise:
       class: "wn.NoiseSpectrum"
-      args: "['self.ivar', 'self.wcs.wcs.cdelt[0]']"
+      args: "['self.ivar', 'self.wcs.cdelt[0]']"
       kwargs: "{'power_path': os.path.join(os.environ['WITCH_DATROOT'], 'A399_401/act_y/y_noise_power.npy')}"
     funcs:
       get_files: "amf.get_files"
