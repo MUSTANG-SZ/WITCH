@@ -4,8 +4,10 @@ You typically want to run the `witcher` command instead of this.
 """
 
 import argparse as argp
+import glob
 import os
 import re
+import shutil
 import sys
 import time
 from copy import copy, deepcopy
@@ -31,6 +33,31 @@ from .nonparametric import para_to_non_para
 from .objective import joint_objective
 
 comm = MPI.COMM_WORLD.Clone()
+_RUN_START = time.time()
+
+# Fit outputs written by this process, so _archive_old_outputs never moves them.
+# Tracked by path because file mtimes are too coarse (and on network filesystems
+# too skewed) to tell them apart from the previous run's by time.
+_written = set()
+
+
+def _ours(path):
+    """Record `path` as written by this run and return it."""
+    _written.add(os.path.abspath(path))
+    return path
+
+
+# Files written by fit_loop and _run_mcmc, relative to the output directory
+_FIT_OUTPUTS = (
+    "results_*.dill",
+    "results_*.yaml",
+    "par_results_*.dill",
+    "aic*.yaml",
+    "samples_mcmc.npz",
+    "corner.png",
+    "checkpoints/round_*.pkl",
+    "checkpoints/mcmc_step_*.pkl",
+)
 
 
 def print_once(*args: Unpack[tuple[Any, ...]]):
@@ -257,7 +284,10 @@ def get_outdir(cfg, metamodel, nonpara=False):
                 for model in metamodel.models
             ]
         ) + ("_ns" * (not cfg["sub"]))
-    outdir = os.path.join(outroot, cfg["name"], name)
+    # Keep fits to different data (e.g. M2 only vs M2+ACT) apart.
+    # Use the config rather than metamodel.datasets, which only has this rank's datasets.
+    dsets = "+".join(cfg.get("datasets", {}).keys())
+    outdir = os.path.join(outroot, cfg["name"], dsets, name)
 
     if "subdir" in cfg["paths"]:
         outdir = os.path.join(outdir, cfg["paths"]["subdir"])
@@ -314,7 +344,7 @@ def _save_outputs(cfg, metamodel, desc_str):
     outdir = cfg["outdir"]
     if comm.Get_rank() != 0:
         return
-    res_path = os.path.join(outdir, f"par_results_{desc_str}.dill")
+    res_path = _ours(os.path.join(outdir, f"par_results_{desc_str}.dill"))
     par_dict = {
         "par_names": np.asarray(metamodel.par_names),
         "parameters": np.asarray(metamodel.parameters),
@@ -330,7 +360,7 @@ def _save_model(cfg, metamodel, desc_str, nonpara=False):
     outdir = cfg["outdir"]
     if comm.Get_rank() != 0:
         return
-    res_path = os.path.join(outdir, f"results_{desc_str}.dill")
+    res_path = _ours(os.path.join(outdir, f"results_{desc_str}.dill"))
     print_once("Saving results to", res_path)
     metamodel.save(res_path)
 
@@ -350,7 +380,7 @@ def _save_model(cfg, metamodel, desc_str, nonpara=False):
                 final[model.name]["structures"][model_struct.name]["parameters"][
                     par_name
                 ]["value"] = [float(cur_par) for cur_par in par.val]
-    with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
+    with open(_ours(os.path.join(outdir, f"results_{desc_str}.yaml")), "w") as file:
         yaml.dump(final, file, sort_keys=False)
 
 
@@ -382,7 +412,7 @@ def _save_checkpoint(
         "step": step_num,
     }
 
-    metamodel.save(ckpt_path, state)
+    metamodel.save(_ours(ckpt_path), state)
 
 
 def _read_checkpoint(ckpt_path):
@@ -400,6 +430,33 @@ def _read_checkpoint(ckpt_path):
     cfg = state.get("cfg", None)
 
     return metamodel, start_round, stage, cfg
+
+
+def _archive_old_outputs(outdir):
+    """
+    Move fit outputs left over from a previous run into `outdir/old_runs/<timestamp>`
+    so they can't be mistaken for (or resumed from as) part of this run.
+    Files this process wrote (e.g. the parametric fit, when the nonparametric fit shares
+    its outdir) are never moved. Maps and other dataset outputs are left alone.
+    """
+    if comm.Get_rank() != 0:
+        return
+    stale = [
+        path
+        for pattern in _FIT_OUTPUTS
+        for path in glob.glob(os.path.join(outdir, pattern))
+        if os.path.abspath(path) not in _written
+    ]
+    if len(stale) == 0:
+        return
+    archive = os.path.join(
+        outdir, "old_runs", time.strftime("%Y%m%d-%H%M%S", time.localtime(_RUN_START))
+    )
+    for path in stale:
+        dest = os.path.join(archive, os.path.relpath(path, outdir))
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        shutil.move(path, dest)
+    print_once(f"[resume] Moved {len(stale)} outputs from a previous run to {archive}")
 
 
 def _run_fit(
@@ -422,12 +479,17 @@ def _run_fit(
     print_once(
         f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}, final lambda: {lmd}"
     )
+    if float(lmd) > 0:
+        print_once(
+            "WARNING: final lambda > 0, this round's fit has likely not converged. "
+            "The errors below are from the damped curvature and are underestimated."
+        )
 
     print_once(metamodel)
     _save_model(cfg, metamodel, f"fit{r}", nonpara)
 
     metamodel = _reestimate_noise(metamodel)
-    return metamodel, i
+    return metamodel, i, float(lmd)
 
 
 def _mcmc_checkpoint_callback(
@@ -527,7 +589,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
     _save_model(cfg, metamodel, "mcmc", nonpara)
     if comm.Get_rank() == 0:
         samples = np.array(samples)
-        samps_path = os.path.join(cfg["outdir"], "samples_mcmc.npz")
+        samps_path = _ours(os.path.join(cfg["outdir"], "samples_mcmc.npz"))
         print_once("Saving samples to", samps_path)
         np.savez_compressed(samps_path, samples=samples, **extras)
         try:
@@ -538,7 +600,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
                 labels=np.array(metamodel.par_names)[to_fit],
                 truths=init_pars[to_fit],
             )
-            plt.savefig(os.path.join(cfg["outdir"], "corner.png"))
+            plt.savefig(_ours(os.path.join(cfg["outdir"], "corner.png")))
         except Exception as e:
             print_once(f"Failed to make corner plot with error: {str(e)}")
     else:
@@ -546,6 +608,113 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
         del samples
 
     metamodel = _reestimate_noise(metamodel)
+    return metamodel
+
+
+def _initial_noise(metamodel):
+    """
+    Estimate the noise of every TOD or map from the data itself, with no model subtracted.
+    This is the noise model the data is loaded with, so it only depends on the data and the
+    noise settings and is the same for every model fit to the same data.
+    """
+    for dataset in metamodel.datasets:
+        for data in dataset.datavec:
+            data.compute_noise(
+                dataset.noise_class,
+                None,
+                *dataset.noise_args,
+                **dataset.noise_kwargs,
+            )
+    return metamodel
+
+
+def aic_refit(cfg, metamodel, start, nonpara=False):
+    """
+    Maximum likelihood under the initial noise model, for comparing models with the AIC.
+
+    The fit re-estimates the noise from each model's own residuals, so the chi-squared of
+    different models can't be compared. Here the noise is re-estimated from the data alone
+    (as at load time), the free parameters are refit with LM starting from the current
+    parameters (the MCMC medians, or the LM best fit without MCMC), and the result is saved
+    as `aic.yaml` and `par_results_aic.dill` in the output directory. The fit's own noise
+    is restored afterwards, nothing else is changed.
+
+    Parameters
+    ----------
+    cfg : dict
+        The config, `cfg["outdir"]` is where the results are written and
+        `fitting.maxiter` / `fitting.chitol` set the LM refit.
+    metamodel : MetaModel
+        The fitted metamodel, its free parameters for the current round are refit.
+    start : str
+        Description of the starting parameters, saved in `aic.yaml`.
+    nonpara : bool, default: False
+        If True the outputs get a `_nonpara` suffix.
+
+    Returns
+    -------
+    metamodel : MetaModel
+        The input metamodel with its parameters and fit noise unchanged.
+    """
+    print_once("Refitting under the initial noise model for the AIC")
+    suffix = "_nonpara" * nonpara
+    start_pars = jnp.array(comm.bcast(np.array(metamodel.parameters), root=0))
+    free = np.array(metamodel.to_fit)
+
+    # Noise models live in pytree aux data, so drop jit caches keyed on the old ones
+    _initial_noise(metamodel)
+    jax.clear_caches()
+    start_mm = copy(metamodel).update(
+        start_pars, metamodel.errs, metamodel.cov, metamodel.chisq
+    )
+    chisq_start = float(joint_objective(start_mm, True, False, False)[0])
+    fitted, iterations, delta_chisq, lmd = run_lmfit(
+        start_mm,
+        eval(str(cfg["fitting"].get("maxiter", "10"))),
+        eval(str(cfg["fitting"].get("chitol", "1e-5"))),
+    )
+    chisq_refit = float(joint_objective(fitted, True, False, False)[0])
+    _save_outputs(cfg, fitted, f"aic{suffix}")
+
+    if comm.Get_rank() == 0:
+        k = int(free.sum())
+        pars, errs = np.array(fitted.parameters), np.array(fitted.errs)
+        result = {
+            "noise": "initial: estimated from the data with no model subtracted",
+            "start": start,
+            "k": k,
+            "chisq_start": chisq_start,
+            "chisq_refit": chisq_refit,
+            "aic": chisq_refit + 2 * k,
+            "lm": {
+                "iterations": int(iterations),
+                "delta_chisq": float(delta_chisq),
+                "lambda": float(lmd),
+            },
+            # A list in parameter order, names alone can repeat across structures
+            "parameters": [
+                {
+                    "index": i,
+                    "name": name,
+                    "start": float(start_pars[i]),
+                    "refit": float(pars[i]),
+                    "err": float(errs[i]),
+                }
+                for i, name in enumerate(fitted.par_names)
+                if free[i]
+            ],
+        }
+        path = _ours(os.path.join(cfg["outdir"], f"aic{suffix}.yaml"))
+        with open(path, "w") as file:
+            yaml.dump(result, file, sort_keys=False)
+        print_once(
+            f"AIC chisq: {chisq_start:.2f} at the start, {chisq_refit:.2f} after "
+            f"{iterations} LM iterations (lambda {float(lmd):.3g}), saved to {path}"
+        )
+
+    # Back to the fit's noise model for the rest of the pipeline
+    metamodel = _reestimate_noise(metamodel)
+    jax.clear_caches()
     return metamodel
 
 
@@ -609,6 +778,11 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
         metamodel = _reestimate_noise(loaded_metamodel)
 
         print_once(f"[resume] Checkpoint OK. Resuming from round {start_round}")
+    elif cfg.get("archive_old_outputs", True):
+        # Starting fresh, so stale rounds and checkpoints from an earlier run would
+        # mix with ours (and a later load_progress: -1 could resume from them)
+        _archive_old_outputs(cfg["outdir"])
+    comm.barrier()
 
     if cfg["sim"]:
         # Remove structs we deliberately want to leave out of model
@@ -638,21 +812,36 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     print_once(
         re.sub(r"^Round 1.*\n?", "Starting pars:\n", str(metamodel), flags=re.MULTILINE)
     )
-    consecutive_single_iteration_rounds = 0
+    # A round counts as converged if it took a single iteration, or if it ended
+    # undamped (lambda = 0) with every free parameter moving by less than partol
+    # times its error. Stop after converged_rounds converged rounds in a row.
+    partol = float(eval(str(cfg["fitting"].get("partol", "0.1"))))
+    converged_rounds = int(cfg["fitting"].get("converged_rounds", 2))
+    consecutive_converged_rounds = 0
     # mcmc.lm: False skips LM and samples from the starting parameters
     run_lm = cfg.get("mcmc", {}).get("lm", True)
     for r in range(start_round, metamodel.n_rounds if run_lm else 0):
-        metamodel, iterations = _run_fit(
+        pars_before = np.array(metamodel.parameters)
+        metamodel, iterations, lmd = _run_fit(
             cfg,
             metamodel,
             r,
             nonpara,
         )
-        single_iteration_round = comm.allreduce(int(iterations == 1), op=MPI.MIN) == 1
-        if single_iteration_round:
-            consecutive_single_iteration_rounds += 1
+        pars_after = np.array(metamodel.parameters)
+        errs = np.array(metamodel.errs)
+        free = np.array(metamodel.to_fit) & (errs > 0)
+        shift = np.max(np.abs(pars_after - pars_before)[free] / errs[free], initial=0.0)
+        converged = iterations == 1 or (lmd == 0 and shift < partol)
+        converged = comm.allreduce(int(converged), op=MPI.MIN) == 1
+        if converged:
+            consecutive_converged_rounds += 1
         else:
-            consecutive_single_iteration_rounds = 0
+            consecutive_converged_rounds = 0
+        print_once(
+            f"Largest parameter shift this round: {shift:.3g} sigma "
+            f"({consecutive_converged_rounds}/{converged_rounds} converged rounds)"
+        )
         mpi4jax.barrier(comm=comm)
 
         # Checkpoint after each round
@@ -665,19 +854,26 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             round_num=r,
         )
         print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
-        if consecutive_single_iteration_rounds >= 2:
+        if consecutive_converged_rounds >= converged_rounds:
             print_once(
-                "Stopping fitting after two consecutive rounds completed in one iteration"
+                f"Stopping fitting after {converged_rounds} consecutive converged rounds"
             )
             break
 
-    if "mcmc" in cfg and cfg["mcmc"].get("run", True):
+    ran_mcmc = "mcmc" in cfg and cfg["mcmc"].get("run", True)
+    if ran_mcmc:
         metamodel = _run_mcmc(
             cfg,
             metamodel,
             nonpara,
         )
         mpi4jax.barrier(comm=comm)
+
+    # Chi-squared under a noise model shared by every fit of this data, for model comparison
+    metamodel = aic_refit(
+        cfg, metamodel, "mcmc_median" if ran_mcmc else "lm_best_fit", nonpara
+    )
+    mpi4jax.barrier(comm=comm)
 
     # Save final pars
     _save_model(cfg, metamodel, "final_fit", nonpara)
