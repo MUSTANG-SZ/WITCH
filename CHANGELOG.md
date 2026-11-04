@@ -1,3 +1,9 @@
+## 11.4.0 (2026-11-04)
+
+### Feat
+
+- write aic.yaml at the end of every fit, read it for model comparison
+
 ## 11.3.1 (2026-10-30)
 
 ### Fix
