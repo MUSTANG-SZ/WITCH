@@ -1,0 +1,21 @@
+# M2-only gNFW_rs + subcluster fit with the full gNFW shape free: P0, r_s, gamma, alpha, and beta.
+# Same as MOOJ1142_gNFW_rs_peak_subcluster.yaml (P0, r_s, beta free) with gamma and alpha also freed,
+# starting from the X-ray values.
+base: "MOOJ1142_gNFW_rs_peak_subcluster.yaml"
+
+paths:
+  # The 2026-10-08 run with the same free parameters already lives in xray_peak_rs, don't mix with it
+  subdir: "xray_peak_rs_all_free"
+
+cluster_model:
+  structures:
+    gnfw_rs:
+      parameters:
+        gamma:
+          value: 0.465
+          to_fit: True
+          priors: [-1.0, 3.0] # Earlier unconstrained fits wandered to gamma < 0
+        alpha:
+          value: 2.26
+          to_fit: True
+          priors: [0.1, 10.0]

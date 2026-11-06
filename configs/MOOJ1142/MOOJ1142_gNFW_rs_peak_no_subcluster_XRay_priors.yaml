@@ -40,7 +40,7 @@ cluster_model:
           value: 1.63 
           to_fit: True
         r_s:
-          value: 4.5
+          value: 4.33
           to_fit: True
         gamma:
           value: 0.465
