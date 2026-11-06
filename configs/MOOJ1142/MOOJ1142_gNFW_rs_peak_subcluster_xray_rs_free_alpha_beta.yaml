@@ -1,0 +1,20 @@
+# M2-only gNFW_rs + subcluster fit with r_s fixed to the X-ray value (4.33") and P0, alpha, and
+# beta free, gamma fixed to the X-ray value. Tests whether the X-ray r_s is compatible with the
+# SZ data once the shape is free: a small alpha spreads the transition over the scales M2 sees.
+# Same k as MOOJ1142_gNFW_rs_peak_subcluster.yaml (r_s, beta free), nested between
+# MOOJ1142_gNFW_rs_peak_subcluster_xray_rs.yaml and ..._free_alpha.yaml.
+# Unlike MOOJ1142_gNFW_rs_peak_subcluster_xray_rs_alpha.yaml (the M2-only reference for the joint
+# fits, on the joint 7' grid) this uses the default grid, so it is comparable with the other M2 fits.
+base: "MOOJ1142_gNFW_rs_peak_subcluster_xray_rs.yaml"
+
+paths:
+  subdir: "xray_peak_rs_xray_rs_free_alpha_beta"
+
+cluster_model:
+  structures:
+    gnfw_rs:
+      parameters:
+        alpha:
+          value: 2.26
+          to_fit: True
+          priors: [0.1, 10.0]

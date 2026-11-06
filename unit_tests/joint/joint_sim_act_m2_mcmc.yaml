@@ -1,0 +1,16 @@
+# MCMC version of the joint ACT + MUSTANG2 sim.
+# LM runs first and the chain is started from its best fit with a covariance proposal.
+# Not run by the test suite, submit as a batch job: srun -n 9 witcher joint_sim_act_m2_mcmc.yaml
+base: "joint_sim_act_m2.yaml"
+
+paths:
+  subdir: "joint_sim_act_m2_mcmc"
+
+mcmc:
+  run: True
+  method: mh
+  num_steps: 2000
+  num_chains: 2
+  burn_in: 0.2
+  prior_type: uniform
+  proposal: cov

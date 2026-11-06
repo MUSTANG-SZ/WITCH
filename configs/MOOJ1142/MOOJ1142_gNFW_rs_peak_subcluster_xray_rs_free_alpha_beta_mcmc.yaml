@@ -1,0 +1,12 @@
+# MH settings as the other alpha free fits (40000 steps), since small alpha and large beta are
+# strongly degenerate with each other and with P0.
+base: "MOOJ1142_gNFW_rs_peak_subcluster_xray_rs_free_alpha_beta.yaml"
+
+mcmc:
+  run: true
+  method: mh
+  num_steps: 40000
+  num_chains: 4
+  burn_in: 0.2
+  prior_type: uniform
+  proposal: cov
