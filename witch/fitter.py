@@ -718,6 +718,64 @@ def aic_refit(cfg, metamodel, start, nonpara=False):
     return metamodel
 
 
+def _round_masks(metamodel) -> list[np.ndarray]:
+    """
+    Get which parameters are free in every round.
+
+    Parameters
+    ----------
+    metamodel : MetaModel
+        The metamodel, its current round is restored afterwards.
+
+    Returns
+    -------
+    masks : list[np.ndarray]
+        The boolean `to_fit` mask of each round, indexed by round.
+    """
+    cur_round = int(metamodel.cur_round)
+    masks = []
+    for r in range(int(metamodel.n_rounds)):
+        metamodel.set_round(r)
+        masks.append(np.array(metamodel.to_fit))
+    metamodel.set_round(cur_round)
+    return masks
+
+
+def _next_round(
+    masks: list[np.ndarray], r: int, n_converged: int, converged_rounds: int
+) -> int | None:
+    """
+    Pick the round to fit after round `r`.
+
+    Consecutive rounds with the same free parameters form a block. A block ends when it
+    has converged (`converged_rounds` converged rounds in a row) or runs out of rounds,
+    and the fit then goes on to the first round of the next block, which frees different
+    parameters. A converged block therefore skips its remaining rounds but not the
+    blocks after it.
+
+    Parameters
+    ----------
+    masks : list[np.ndarray]
+        The free parameter mask of every round, see `_round_masks`.
+    r : int
+        The round that just finished.
+    n_converged : int
+        Converged rounds in a row so far in the current block.
+    converged_rounds : int
+        Converged rounds in a row needed to end a block early.
+
+    Returns
+    -------
+    next_round : int or None
+        The next round to run, or None if there is nothing left to fit.
+    """
+    nxt = r + 1
+    if n_converged >= converged_rounds:
+        while nxt < len(masks) and np.array_equal(masks[nxt], masks[r]):
+            nxt += 1
+    return nxt if nxt < len(masks) else None
+
+
 def fit_loop(metamodel, cfg, comm, nonpara=False):
     if metamodel is None:
         raise ValueError("Can't fit without metamodel defined!")
@@ -814,13 +872,22 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     )
     # A round counts as converged if it took a single iteration, or if it ended
     # undamped (lambda = 0) with every free parameter moving by less than partol
-    # times its error. Stop after converged_rounds converged rounds in a row.
+    # times its error. The free parameters can change from round to round: rounds that
+    # free the same parameters form a block, and once a block has had converged_rounds
+    # converged rounds in a row we move on to the next block.
     partol = float(eval(str(cfg["fitting"].get("partol", "0.1"))))
     converged_rounds = int(cfg["fitting"].get("converged_rounds", 2))
+    masks = _round_masks(metamodel)
     consecutive_converged_rounds = 0
+    block_mask = None
     # mcmc.lm: False skips LM and samples from the starting parameters
     run_lm = cfg.get("mcmc", {}).get("lm", True)
-    for r in range(start_round, metamodel.n_rounds if run_lm else 0):
+    r = start_round if run_lm and start_round < len(masks) else None
+    while r is not None:
+        if block_mask is None or not np.array_equal(masks[r], block_mask):
+            # A new block, converged rounds of the last one don't count for this one
+            block_mask = masks[r]
+            consecutive_converged_rounds = 0
         pars_before = np.array(metamodel.parameters)
         metamodel, iterations, lmd = _run_fit(
             cfg,
@@ -854,11 +921,18 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             round_num=r,
         )
         print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
+        nxt = _next_round(masks, r, consecutive_converged_rounds, converged_rounds)
         if consecutive_converged_rounds >= converged_rounds:
-            print_once(
-                f"Stopping fitting after {converged_rounds} consecutive converged rounds"
-            )
-            break
+            if nxt is None:
+                print_once(
+                    f"Stopping fitting after {converged_rounds} consecutive converged rounds"
+                )
+            else:
+                print_once(
+                    f"Block converged after {converged_rounds} consecutive converged rounds, "
+                    f"moving to the next block of free parameters at round {nxt}"
+                )
+        r = nxt
 
     ran_mcmc = "mcmc" in cfg and cfg["mcmc"].get("run", True)
     if ran_mcmc:
