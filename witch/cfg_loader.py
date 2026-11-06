@@ -202,7 +202,13 @@ def load_cfg(cfg, args=None):
         if dataset.mode == "tod":
             dataset.data.datavec = process_tods(cfg, dataset, metamodel)
         elif dataset.mode == "map":
-            dataset.data.datavec = process_maps(cfg, dataset, metamodel)
+            # Evaluated here, like the noise kwargs, so it can use the config imports
+            sim_noise_kwargs = eval(
+                str(cfg["datasets"][dataset.name].get("sim_noise_kwargs", "{}"))
+            )
+            dataset.data.datavec = process_maps(
+                cfg, dataset, metamodel, sim_noise_kwargs
+            )
         comm.barrier()
         dataset = jax.block_until_ready(dataset)
         dataset.postproc(dataset, cfg, metamodel)

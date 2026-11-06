@@ -218,7 +218,28 @@ def resolve_noise_args(imap, args: tuple, kwargs: dict) -> tuple[list, dict]:
     return [ev(a) for a in args], {k: ev(v) for k, v in kwargs.items()}
 
 
-def process_maps(cfg, dataset, metamodel):
+def process_maps(cfg, dataset, metamodel, sim_noise_kwargs=None):
+    """
+    Prepare the maps of a dataset: simulate them if requested and compute the noise model.
+
+    Parameters
+    ----------
+    cfg : dict
+        The config.
+    dataset : DataSet
+        The map dataset.
+    metamodel : MetaModel
+        The model, only needed when simulating.
+    sim_noise_kwargs : dict, optional
+        Overrides for the noise kwargs when drawing the simulated noise, so a sim can use a
+        different noise model than the fit (e.g. another CMB cosmology through `dl`).
+        Only used for noise models with a `sample` method when `wnoise` is False.
+
+    Returns
+    -------
+    mapset : SolutionSet
+        The maps with their noise models computed.
+    """
     mapset = dataset.datavec
     info = dataset.info
     sim = cfg.get("sim", False)
@@ -254,7 +275,7 @@ def process_maps(cfg, dataset, metamodel):
                     imap, dataset.noise_args, dataset.noise_kwargs
                 )
                 # Lets a sim use a different noise model than the fit, to test a mismatch
-                kwargs |= cfg["datasets"][dataset.name].get("sim_noise_kwargs", {})
+                kwargs |= sim_noise_kwargs or {}
                 key = jax.random.key(cfg.get("sim_seed", 0))
                 imap.data = sample(key, imap.data, *args, **kwargs)
             else:

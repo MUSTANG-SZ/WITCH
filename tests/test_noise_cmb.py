@@ -132,3 +132,52 @@ def test_other_cosmology_changes_the_spectrum() -> None:
     base = generate_lensed_dl(500)
     other = generate_lensed_dl(500, H0=75.0)
     assert not np.allclose(base[100:], other[100:], rtol=1e-2)
+
+
+def _sim_map(sim_noise_kwargs: dict | None) -> np.ndarray:
+    """Simulate a small map with `process_maps` and return its data."""
+    from types import SimpleNamespace
+
+    from astropy.wcs import WCS
+    from jitkasi.solutions import maps
+    from jitkasi.wcs import JAXWCS
+    from mpi4py import MPI
+
+    from witch import fitter
+
+    wcs = WCS(naxis=2)
+    wcs.wcs.ctype = ["RA---CAR", "DEC--CAR"]
+    wcs.wcs.crval = [44.6, 13.3]
+    wcs.wcs.crpix = [4.5, 4.5]
+    wcs.wcs.cdelt = [-0.5 / 60, 0.5 / 60]
+    shape = (8, 8)
+    imap = maps.WCSMap(
+        "t",
+        jnp.zeros(shape),
+        MPI.COMM_WORLD,
+        JAXWCS.from_astropy(wcs),
+        ivar=jnp.full(shape, 0.0053),
+    )
+    dataset = SimpleNamespace(
+        name="act",
+        datavec=[imap],
+        info={},
+        noise_class=NoiseCMBMap,
+        noise_args=("self.ivar", "self.wcs.cdelt[0]"),
+        noise_kwargs={"fwhm_arcmin": 1.6},
+    )
+    metamodel = SimpleNamespace(
+        get_dataset_ind=lambda name: 0,
+        model_proj=lambda ind, i: jnp.zeros(shape),
+    )
+    cfg = {"sim": True, "wnoise": False, "sim_seed": 3}
+    out = fitter.process_maps(cfg, dataset, metamodel, sim_noise_kwargs)
+    return np.asarray(out[0].data)
+
+
+def test_sim_noise_kwargs_override_the_sim_only() -> None:
+    """`sim_noise_kwargs` changes the simulated noise, an empty one leaves it as it was."""
+    base = _sim_map(None)
+    assert np.array_equal(base, _sim_map({}))
+    loud = _sim_map({"dl": 100 * noise._lensed_dl()})
+    assert loud.std() > 3 * base.std()
