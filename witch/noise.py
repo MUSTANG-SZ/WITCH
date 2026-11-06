@@ -1,19 +1,28 @@
 """
 Noise models for maps where the CMB is a significant noise source.
 
+The CMB power spectrum is the lensed TT spectrum of the Planck 2018 cosmology, stored in
+`witch/data/lensed_tt_planck2018.npz`, so CAMB is not needed by default. To use another
+cosmology generate a spectrum with `generate_lensed_dl` (needs the optional `camb` extra) and
+pass it as `dl` to `cmb_cl`, `cmb_covariance` or `NoiseCMBMap`, see `scripts/make_lensed_dl.py`
+to store one. CAMB also covers the scales above the patch size that a covariance measured
+from a map cannot.
+
 Note
 ----
 This is an interim model that is expected to be replaced by the multi-frequency
 `NoiseMapCov` model, which takes cross-covariance files for every pair of datasets.
 See the PR that added this module for what the replacement has to keep or change
-(the `sample` hook in `fitter.process_maps`, `resolve_noise_args`, `sim_seed`,
-`sim_noise_kwargs` and the `camb` extra).
+(the `sample` hook in `fitter.process_maps`, `resolve_noise_args`, `sim_seed` and
+`sim_noise_kwargs`). The stored CMB spectrum is still useful there for the scales
+above the patch size.
 """
 
 import warnings
 from collections.abc import Sequence
 from functools import lru_cache
-from typing import Self
+from pathlib import Path
+from typing import Any, Self
 
 import jax
 import jax.numpy as jnp
@@ -22,37 +31,96 @@ from jax import jit
 from jax.tree_util import register_pytree_node_class
 from scipy.special import j0
 
+LENSED_TT_FILE = Path(__file__).parent / "data" / "lensed_tt_planck2018.npz"
+# Planck 2018 TT,TE,EE+lowE+lensing parameters used for the stored spectrum
+PLANCK2018 = {
+    "H0": 67.36,
+    "ombh2": 0.02237,
+    "omch2": 0.1200,
+    "tau": 0.0544,
+    "As": 2.1e-9,
+    "ns": 0.9649,
+}
 
-@lru_cache(maxsize=1)
-def _lensed_dl(lmax: int = 10000) -> np.ndarray:
+
+def generate_lensed_dl(lmax: int = 10000, **cosmology: float) -> np.ndarray:
     """
-    Lensed LCDM TT spectrum from CAMB with Planck 2018 parameters.
+    Lensed LCDM TT spectrum from CAMB.
+
+    Needs the optional `camb` dependency. The stored default spectrum was made with this
+    function and the Planck 2018 parameters, see `scripts/make_lensed_dl.py`.
 
     Parameters
     ----------
     lmax : int, default: 10000
         Maximum multipole.
+    **cosmology
+        Parameters passed to `camb.set_params`, overriding the Planck 2018 values in
+        `PLANCK2018`, e.g. `H0=70.0`.
 
     Returns
     -------
     dl : np.ndarray
         D_l = l(l+1)C_l/2pi in uK_CMB^2, indexed by l.
+
+    Raises
+    ------
+    ImportError
+        If `camb` is not installed.
     """
-    import camb
+    try:
+        import camb
+    except ImportError as e:
+        raise ImportError(
+            "Generating a CMB spectrum needs the optional `camb` dependency, "
+            "install it with `pip install camb`."
+        ) from e
 
     pars = camb.set_params(
-        H0=67.36, ombh2=0.02237, omch2=0.1200, tau=0.0544, As=2.1e-9, ns=0.9649,
-        lmax=lmax, lens_potential_accuracy=1,
-    )  # fmt: skip
+        **{**PLANCK2018, **cosmology}, lmax=lmax, lens_potential_accuracy=1
+    )
     res = camb.get_results(pars)
     return res.get_lensed_scalar_cls(lmax=lmax, CMB_unit="muK", raw_cl=False)[:, 0]
 
 
+@lru_cache(maxsize=1)
+def _lensed_dl(lmax: int = 10000) -> np.ndarray:
+    """
+    Stored lensed LCDM TT spectrum for the Planck 2018 cosmology.
+
+    Parameters
+    ----------
+    lmax : int, default: 10000
+        Maximum multipole, at most the `lmax` of the stored spectrum.
+
+    Returns
+    -------
+    dl : np.ndarray
+        D_l = l(l+1)C_l/2pi in uK_CMB^2, indexed by l.
+
+    Raises
+    ------
+    ValueError
+        If `lmax` is above the stored range, use `generate_lensed_dl` instead.
+    """
+    with np.load(LENSED_TT_FILE) as f:
+        dl = f["dl"]
+    if lmax >= len(dl):
+        raise ValueError(
+            f"The stored CMB spectrum only goes to l={len(dl) - 1}, got lmax={lmax}. "
+            "Use generate_lensed_dl for a larger lmax."
+        )
+    return dl[: lmax + 1]
+
+
 def cmb_cl(
-    ell: np.ndarray, fg_dl3000: float = 100.0, fwhm_arcmin: float = 2.0
+    ell: np.ndarray,
+    fg_dl3000: float = 100.0,
+    fwhm_arcmin: float = 2.0,
+    dl: np.ndarray | None = None,
 ) -> np.ndarray:
     """
-    Beam smoothed CAMB CMB plus a crude white foreground power spectrum.
+    Beam smoothed lensed CMB plus a crude white foreground power spectrum.
 
     Parameters
     ----------
@@ -62,19 +130,24 @@ def cmb_cl(
         Foreground D_l at l=3000 in uK^2, scaled as l^2 (white in C_l).
     fwhm_arcmin : float, default: 2.0
         FWHM of the Gaussian beam the map was smoothed with.
+    dl : np.ndarray, optional
+        Lensed CMB D_l in uK_CMB^2 indexed by l, from `generate_lensed_dl`.
+        Defaults to the stored Planck 2018 spectrum.
 
     Returns
     -------
     cl : np.ndarray
         C_l in uK^2 sr, including the beam window squared.
     """
-    dl = _lensed_dl()[ell.astype(int)] + fg_dl3000 * (ell / 3000.0) ** 2
+    if dl is None:
+        dl = _lensed_dl()
+    dl = dl[ell.astype(int)] + fg_dl3000 * (ell / 3000.0) ** 2
     sigma = np.deg2rad(fwhm_arcmin / 60.0) / np.sqrt(8 * np.log(2))
     return dl * 2 * np.pi / (ell * (ell + 1)) * np.exp(-((ell * sigma) ** 2))
 
 
 def cmb_covariance(
-    shape: tuple[int, int], pix_arcmin: float, **kwargs: float
+    shape: tuple[int, int], pix_arcmin: float, **kwargs: Any
 ) -> np.ndarray:
     """
     Pixel-pixel covariance of the beam smoothed CMB on a flat patch.
@@ -109,6 +182,7 @@ def cmb_covariance_multiband(
     pix_arcmin: float,
     fwhms: Sequence[float],
     fg_dl3000: float = 100.0,
+    dl: np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Joint covariance of the primary CMB in several bands on the same flat patch.
@@ -128,6 +202,8 @@ def cmb_covariance_multiband(
         Beam FWHM of each band in arcmin.
     fg_dl3000 : float, default: 100.0
         Foreground D_l at l=3000 in uK^2 for the auto blocks, see `cmb_cl`.
+    dl : np.ndarray, optional
+        Lensed CMB D_l indexed by l, see `cmb_cl`.
 
     Returns
     -------
@@ -146,7 +222,7 @@ def cmb_covariance_multiband(
     for i in range(nb):
         for j in range(i, nb):
             fwhm = np.sqrt((fwhms[i] ** 2 + fwhms[j] ** 2) / 2)
-            cl = cmb_cl(ell, fg_dl3000 * (i == j), fwhm)
+            cl = cmb_cl(ell, fg_dl3000 * (i == j), fwhm, dl)
             block = np.interp(dist, rgrid, jell @ cl)
             cov[i * npix : (i + 1) * npix, j * npix : (j + 1) * npix] = block
             cov[j * npix : (j + 1) * npix, i * npix : (i + 1) * npix] = block.T
@@ -257,7 +333,7 @@ class NoiseCMBMap:
         pix_deg: float,
         cmb_scale: float = 1.0,
         mean_sigma: float = 1e3,
-        **kwargs: float,
+        **kwargs: Any,
     ) -> Self:
         """
         Build the noise model.
@@ -275,7 +351,7 @@ class NoiseCMBMap:
         mean_sigma : float, default: 1e3
             Prior width on the map offset in uK.
         **kwargs
-            Passed to `cmb_covariance`, e.g. `fwhm_arcmin`.
+            Passed to `cmb_covariance`, e.g. `fwhm_arcmin` or `dl`.
 
         Returns
         -------
@@ -298,7 +374,7 @@ class NoiseCMBMap:
         ivar: jnp.ndarray,
         pix_deg: float,
         cmb_scale: float = 1.0,
-        **kwargs: float,
+        **kwargs: Any,
     ) -> jnp.ndarray:
         """
         Draw a noise realisation from the same model `compute` uses, minus the mean prior.
@@ -317,7 +393,7 @@ class NoiseCMBMap:
         cmb_scale : float, default: 1.0
             Multiplier on the CMB covariance.
         **kwargs
-            Passed to `cmb_covariance`, e.g. `fwhm_arcmin`.
+            Passed to `cmb_covariance`, e.g. `fwhm_arcmin` or `dl`.
 
         Returns
         -------

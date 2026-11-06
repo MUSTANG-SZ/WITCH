@@ -1,15 +1,20 @@
 """Tests for the CMB + white noise map model."""
 
+import sys
+
 import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
 
+from witch import noise
 from witch.noise import (
     NoiseCMBMap,
     NoiseSpectrum,
+    cmb_cl,
     cmb_covariance,
     cmb_covariance_multiband,
+    generate_lensed_dl,
 )
 
 
@@ -66,7 +71,6 @@ def test_noise_spectrum_warns_interim(tmp_path) -> None:
 
 def test_cmb_sample_properties() -> None:
     """The CMB sample has more variance than white noise (on a small patch, after mean removal), zero weighted mean and no noise in empty pixels."""
-    pytest.importorskip("camb")
     from witch.noise import NoiseCMBMap
 
     shape = (12, 12)
@@ -78,3 +82,53 @@ def test_cmb_sample_properties() -> None:
     assert np.all(noise[0] == 0)
     assert abs(np.sum(noise * np.asarray(ivar)) / np.sum(ivar)) < 1e-3
     assert noise[1:].std() > 1.2 * np.sqrt(1 / 0.0053)
+
+
+def test_stored_spectrum_is_planck_lcdm() -> None:
+    """The stored lensed TT spectrum covers l=0..10000 with the right peak and amplitude."""
+    dl = noise._lensed_dl()
+    assert dl.shape == (10001,)
+    assert 215 <= np.argmax(dl) <= 225
+    assert 5500 < dl.max() < 6000
+    assert 900 < dl[2] < 1100
+    assert np.all(dl >= 0)
+
+
+def test_default_spectrum_does_not_need_camb(monkeypatch: pytest.MonkeyPatch) -> None:
+    """With CAMB missing the default spectrum still loads, and generating one explains why."""
+    monkeypatch.setitem(sys.modules, "camb", None)
+    noise._lensed_dl.cache_clear()
+    cl = cmb_cl(np.arange(2.0, 100.0))
+    assert np.all(np.isfinite(cl)) and np.all(cl > 0)
+    with pytest.raises(ImportError, match="camb"):
+        generate_lensed_dl(100)
+
+
+def test_lmax_above_stored_range_raises() -> None:
+    """Asking for more multipoles than are stored points to `generate_lensed_dl`."""
+    noise._lensed_dl.cache_clear()
+    with pytest.raises(ValueError, match="generate_lensed_dl"):
+        noise._lensed_dl(20000)
+
+
+def test_custom_spectrum_is_used() -> None:
+    """A spectrum passed as `dl` replaces the stored one in `cmb_cl`."""
+    ell = np.arange(2.0, 50.0)
+    default = cmb_cl(ell, fg_dl3000=0.0, fwhm_arcmin=0.0)
+    scaled = cmb_cl(ell, fg_dl3000=0.0, fwhm_arcmin=0.0, dl=2 * noise._lensed_dl())
+    np.testing.assert_allclose(scaled, 2 * default)
+
+
+def test_stored_spectrum_matches_camb() -> None:
+    """The stored table is what CAMB gives for the Planck 2018 parameters."""
+    pytest.importorskip("camb")
+    fresh = generate_lensed_dl(10000)
+    np.testing.assert_allclose(noise._lensed_dl(), fresh, rtol=1e-3, atol=1e-6)
+
+
+def test_other_cosmology_changes_the_spectrum() -> None:
+    """Generating with a different cosmology gives a different spectrum."""
+    pytest.importorskip("camb")
+    base = generate_lensed_dl(500)
+    other = generate_lensed_dl(500, H0=75.0)
+    assert not np.allclose(base[100:], other[100:], rtol=1e-2)

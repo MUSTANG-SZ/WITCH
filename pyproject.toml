@@ -20,7 +20,8 @@ dependencies = ["numpy", "astropy", "jax>=0.11.2", "jaxlib>=0.11.2", "dill", "ji
 
 [project.optional-dependencies]
 minkasi = ["minkasi"]
-act=["pixell", "camb"]
+act=["pixell"]
+camb=["camb"]
 profile = ["tensorflow", "gitpython"]
 docs = [
     "mkdocs",
@@ -37,6 +38,9 @@ witcher = "witch.fitter:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["witch"]
+
+[tool.setuptools.package-data]
+witch = ["data/*.npz"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
