@@ -60,6 +60,28 @@ These are defined in the `WITCH/external` submodule. `beam` defines the beam par
 which can be left to their defaults. If you are only working with MUSTANG-2 data, all these values can be left at their defaults
 from `base_config.yaml`.
 
+#### CMB noise for ACT maps
+
+For maps where the CMB is a significant noise source (e.g. ACT) use `wn.NoiseCMBMap` (with `witch.noise: wn` in `imports`):
+```yaml
+datasets:
+  act:
+    noise:
+      class: "wn.NoiseCMBMap"
+      args: "['self.ivar', 'self.wcs.cdelt[0]']"  # ivar weights and the pixel size in degrees
+      kwargs: "{'fwhm_arcmin': 1.6}"
+```
+The covariance is the Planck 2018 lensed CMB, beam smoothed and with a crude white foreground (`fg_dl3000`, the foreground
+D_l at l=3000 in uK^2), plus the white noise from the ivar map. The lensed TT spectrum is stored in `witch/data/lensed_tt_planck2018.npz`
+so CAMB is not needed. For another cosmology make a spectrum with the optional `camb` extra (`pip install .[camb]`):
+```
+python scripts/make_lensed_dl.py --out lensed_tt_h70.npz --H0 70.0
+```
+and pass it as `dl`, e.g. `kwargs: "{'fwhm_arcmin': 1.6, 'dl': np.load('lensed_tt_h70.npz')['dl']}"` (with `numpy: np` in `imports`).
+`dl` is D_l in uK_CMB^2 indexed by l and needs entries up to l=10000. When simulating a map (`sim: True`, `wnoise: False`) the noise is
+drawn from the same model. To simulate with a different noise model than the one used to fit, set `sim_noise_kwargs` in the dataset;
+it is evaluated like `kwargs` and overrides them for the simulation only, e.g. `sim_noise_kwargs: "{'dl': np.load('other.npz')['dl']}"`.
+
 `fitter` sets hyper-parameters for the fitting routine, specifically the maximum number of interations to take per step
 and the `chitol` which sets delta-chi-squared minimum for a step to be considered converged. Finally, `imports` defines additional
 packages to be loaded into the script at runtime. Again, these can all be left at their default values.
@@ -113,6 +135,8 @@ To install the `WITCH` library first clone this repository and from within it ru
 pip install .
 ```
 If you are going to be actively working on the `WITCH` library you probably want to include the `-e` flag.
+
+Optional extras: `pip install .[act]` for the ACT map tools (`pixell`), `.[camb]` to generate CMB spectra with CAMB, and `.[minkasi]`.
 
 All the dependencies should be installed by `pip` with the one exception being `minkasi` itself (only needed for `fitter.py`).
 Instructions on installing `minkasi` can be found [here](https://github.com/sievers/minkasi#installation).
