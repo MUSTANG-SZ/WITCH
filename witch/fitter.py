@@ -4,8 +4,10 @@ You typically want to run the `witcher` command instead of this.
 """
 
 import argparse as argp
+import glob
 import os
 import re
+import shutil
 import sys
 import time
 from copy import copy, deepcopy
@@ -31,6 +33,31 @@ from .nonparametric import para_to_non_para
 from .objective import joint_objective
 
 comm = MPI.COMM_WORLD.Clone()
+_RUN_START = time.time()
+
+# Fit outputs written by this process, so _archive_old_outputs never moves them.
+# Tracked by path because file mtimes are too coarse (and on network filesystems
+# too skewed) to tell them apart from the previous run's by time.
+_written = set()
+
+
+def _ours(path):
+    """Record `path` as written by this run and return it."""
+    _written.add(os.path.abspath(path))
+    return path
+
+
+# Files written by fit_loop and _run_mcmc, relative to the output directory
+_FIT_OUTPUTS = (
+    "results_*.dill",
+    "results_*.yaml",
+    "par_results_*.dill",
+    "aic*.yaml",
+    "samples_mcmc.npz",
+    "corner.png",
+    "checkpoints/round_*.pkl",
+    "checkpoints/mcmc_step_*.pkl",
+)
 
 
 def print_once(*args: Unpack[tuple[Any, ...]]):
@@ -257,7 +284,10 @@ def get_outdir(cfg, metamodel, nonpara=False):
                 for model in metamodel.models
             ]
         ) + ("_ns" * (not cfg["sub"]))
-    outdir = os.path.join(outroot, cfg["name"], name)
+    # Keep fits to different data (e.g. M2 only vs M2+ACT) apart.
+    # Use the config rather than metamodel.datasets, which only has this rank's datasets.
+    dsets = "+".join(cfg.get("datasets", {}).keys())
+    outdir = os.path.join(outroot, cfg["name"], dsets, name)
 
     if "subdir" in cfg["paths"]:
         outdir = os.path.join(outdir, cfg["paths"]["subdir"])
@@ -314,7 +344,7 @@ def _save_outputs(cfg, metamodel, desc_str):
     outdir = cfg["outdir"]
     if comm.Get_rank() != 0:
         return
-    res_path = os.path.join(outdir, f"par_results_{desc_str}.dill")
+    res_path = _ours(os.path.join(outdir, f"par_results_{desc_str}.dill"))
     par_dict = {
         "par_names": np.asarray(metamodel.par_names),
         "parameters": np.asarray(metamodel.parameters),
@@ -330,7 +360,7 @@ def _save_model(cfg, metamodel, desc_str, nonpara=False):
     outdir = cfg["outdir"]
     if comm.Get_rank() != 0:
         return
-    res_path = os.path.join(outdir, f"results_{desc_str}.dill")
+    res_path = _ours(os.path.join(outdir, f"results_{desc_str}.dill"))
     print_once("Saving results to", res_path)
     metamodel.save(res_path)
 
@@ -350,7 +380,7 @@ def _save_model(cfg, metamodel, desc_str, nonpara=False):
                 final[model.name]["structures"][model_struct.name]["parameters"][
                     par_name
                 ]["value"] = [float(cur_par) for cur_par in par.val]
-    with open(os.path.join(outdir, f"results_{desc_str}.yaml"), "w") as file:
+    with open(_ours(os.path.join(outdir, f"results_{desc_str}.yaml")), "w") as file:
         yaml.dump(final, file, sort_keys=False)
 
 
@@ -382,7 +412,7 @@ def _save_checkpoint(
         "step": step_num,
     }
 
-    metamodel.save(ckpt_path, state)
+    metamodel.save(_ours(ckpt_path), state)
 
 
 def _read_checkpoint(ckpt_path):
@@ -400,6 +430,33 @@ def _read_checkpoint(ckpt_path):
     cfg = state.get("cfg", None)
 
     return metamodel, start_round, stage, cfg
+
+
+def _archive_old_outputs(outdir):
+    """
+    Move fit outputs left over from a previous run into `outdir/old_runs/<timestamp>`
+    so they can't be mistaken for (or resumed from as) part of this run.
+    Files this process wrote (e.g. the parametric fit, when the nonparametric fit shares
+    its outdir) are never moved. Maps and other dataset outputs are left alone.
+    """
+    if comm.Get_rank() != 0:
+        return
+    stale = [
+        path
+        for pattern in _FIT_OUTPUTS
+        for path in glob.glob(os.path.join(outdir, pattern))
+        if os.path.abspath(path) not in _written
+    ]
+    if len(stale) == 0:
+        return
+    archive = os.path.join(
+        outdir, "old_runs", time.strftime("%Y%m%d-%H%M%S", time.localtime(_RUN_START))
+    )
+    for path in stale:
+        dest = os.path.join(archive, os.path.relpath(path, outdir))
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        shutil.move(path, dest)
+    print_once(f"[resume] Moved {len(stale)} outputs from a previous run to {archive}")
 
 
 def _run_fit(
@@ -422,12 +479,17 @@ def _run_fit(
     print_once(
         f"Took {t2 - t1} s to fit with {i} iterations and final delta chisq of {delta_chisq}, final lambda: {lmd}"
     )
+    if float(lmd) > 0:
+        print_once(
+            "WARNING: final lambda > 0, this round's fit has likely not converged. "
+            "The errors below are from the damped curvature and are underestimated."
+        )
 
     print_once(metamodel)
     _save_model(cfg, metamodel, f"fit{r}", nonpara)
 
     metamodel = _reestimate_noise(metamodel)
-    return metamodel, i
+    return metamodel, i, float(lmd)
 
 
 def _mcmc_checkpoint_callback(
@@ -527,7 +589,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
     _save_model(cfg, metamodel, "mcmc", nonpara)
     if comm.Get_rank() == 0:
         samples = np.array(samples)
-        samps_path = os.path.join(cfg["outdir"], "samples_mcmc.npz")
+        samps_path = _ours(os.path.join(cfg["outdir"], "samples_mcmc.npz"))
         print_once("Saving samples to", samps_path)
         np.savez_compressed(samps_path, samples=samples, **extras)
         try:
@@ -538,7 +600,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
                 labels=np.array(metamodel.par_names)[to_fit],
                 truths=init_pars[to_fit],
             )
-            plt.savefig(os.path.join(cfg["outdir"], "corner.png"))
+            plt.savefig(_ours(os.path.join(cfg["outdir"], "corner.png")))
         except Exception as e:
             print_once(f"Failed to make corner plot with error: {str(e)}")
     else:
@@ -642,7 +704,7 @@ def aic_refit(cfg, metamodel, start, nonpara=False):
                 if free[i]
             ],
         }
-        path = os.path.join(cfg["outdir"], f"aic{suffix}.yaml")
+        path = _ours(os.path.join(cfg["outdir"], f"aic{suffix}.yaml"))
         with open(path, "w") as file:
             yaml.dump(result, file, sort_keys=False)
         print_once(
@@ -654,6 +716,64 @@ def aic_refit(cfg, metamodel, start, nonpara=False):
     metamodel = _reestimate_noise(metamodel)
     jax.clear_caches()
     return metamodel
+
+
+def _round_masks(metamodel) -> list[np.ndarray]:
+    """
+    Get which parameters are free in every round.
+
+    Parameters
+    ----------
+    metamodel : MetaModel
+        The metamodel, its current round is restored afterwards.
+
+    Returns
+    -------
+    masks : list[np.ndarray]
+        The boolean `to_fit` mask of each round, indexed by round.
+    """
+    cur_round = int(metamodel.cur_round)
+    masks = []
+    for r in range(int(metamodel.n_rounds)):
+        metamodel.set_round(r)
+        masks.append(np.array(metamodel.to_fit))
+    metamodel.set_round(cur_round)
+    return masks
+
+
+def _next_round(
+    masks: list[np.ndarray], r: int, n_converged: int, converged_rounds: int
+) -> int | None:
+    """
+    Pick the round to fit after round `r`.
+
+    Consecutive rounds with the same free parameters form a block. A block ends when it
+    has converged (`converged_rounds` converged rounds in a row) or runs out of rounds,
+    and the fit then goes on to the first round of the next block, which frees different
+    parameters. A converged block therefore skips its remaining rounds but not the
+    blocks after it.
+
+    Parameters
+    ----------
+    masks : list[np.ndarray]
+        The free parameter mask of every round, see `_round_masks`.
+    r : int
+        The round that just finished.
+    n_converged : int
+        Converged rounds in a row so far in the current block.
+    converged_rounds : int
+        Converged rounds in a row needed to end a block early.
+
+    Returns
+    -------
+    next_round : int or None
+        The next round to run, or None if there is nothing left to fit.
+    """
+    nxt = r + 1
+    if n_converged >= converged_rounds:
+        while nxt < len(masks) and np.array_equal(masks[nxt], masks[r]):
+            nxt += 1
+    return nxt if nxt < len(masks) else None
 
 
 def fit_loop(metamodel, cfg, comm, nonpara=False):
@@ -716,6 +836,11 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
         metamodel = _reestimate_noise(loaded_metamodel)
 
         print_once(f"[resume] Checkpoint OK. Resuming from round {start_round}")
+    elif cfg.get("archive_old_outputs", True):
+        # Starting fresh, so stale rounds and checkpoints from an earlier run would
+        # mix with ours (and a later load_progress: -1 could resume from them)
+        _archive_old_outputs(cfg["outdir"])
+    comm.barrier()
 
     if cfg["sim"]:
         # Remove structs we deliberately want to leave out of model
@@ -745,21 +870,45 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
     print_once(
         re.sub(r"^Round 1.*\n?", "Starting pars:\n", str(metamodel), flags=re.MULTILINE)
     )
-    consecutive_single_iteration_rounds = 0
+    # A round counts as converged if it took a single iteration, or if it ended
+    # undamped (lambda = 0) with every free parameter moving by less than partol
+    # times its error. The free parameters can change from round to round: rounds that
+    # free the same parameters form a block, and once a block has had converged_rounds
+    # converged rounds in a row we move on to the next block.
+    partol = float(eval(str(cfg["fitting"].get("partol", "0.1"))))
+    converged_rounds = int(cfg["fitting"].get("converged_rounds", 2))
+    masks = _round_masks(metamodel)
+    consecutive_converged_rounds = 0
+    block_mask = None
     # mcmc.lm: False skips LM and samples from the starting parameters
     run_lm = cfg.get("mcmc", {}).get("lm", True)
-    for r in range(start_round, metamodel.n_rounds if run_lm else 0):
-        metamodel, iterations = _run_fit(
+    r = start_round if run_lm and start_round < len(masks) else None
+    while r is not None:
+        if block_mask is None or not np.array_equal(masks[r], block_mask):
+            # A new block, converged rounds of the last one don't count for this one
+            block_mask = masks[r]
+            consecutive_converged_rounds = 0
+        pars_before = np.array(metamodel.parameters)
+        metamodel, iterations, lmd = _run_fit(
             cfg,
             metamodel,
             r,
             nonpara,
         )
-        single_iteration_round = comm.allreduce(int(iterations == 1), op=MPI.MIN) == 1
-        if single_iteration_round:
-            consecutive_single_iteration_rounds += 1
+        pars_after = np.array(metamodel.parameters)
+        errs = np.array(metamodel.errs)
+        free = np.array(metamodel.to_fit) & (errs > 0)
+        shift = np.max(np.abs(pars_after - pars_before)[free] / errs[free], initial=0.0)
+        converged = iterations == 1 or (lmd == 0 and shift < partol)
+        converged = comm.allreduce(int(converged), op=MPI.MIN) == 1
+        if converged:
+            consecutive_converged_rounds += 1
         else:
-            consecutive_single_iteration_rounds = 0
+            consecutive_converged_rounds = 0
+        print_once(
+            f"Largest parameter shift this round: {shift:.3g} sigma "
+            f"({consecutive_converged_rounds}/{converged_rounds} converged rounds)"
+        )
         mpi4jax.barrier(comm=comm)
 
         # Checkpoint after each round
@@ -772,11 +921,18 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
             round_num=r,
         )
         print_once(f"[checkpoint] Saved LM state after round {r} -> {ckpt_path}")
-        if consecutive_single_iteration_rounds >= 2:
-            print_once(
-                "Stopping fitting after two consecutive rounds completed in one iteration"
-            )
-            break
+        nxt = _next_round(masks, r, consecutive_converged_rounds, converged_rounds)
+        if consecutive_converged_rounds >= converged_rounds:
+            if nxt is None:
+                print_once(
+                    f"Stopping fitting after {converged_rounds} consecutive converged rounds"
+                )
+            else:
+                print_once(
+                    f"Block converged after {converged_rounds} consecutive converged rounds, "
+                    f"moving to the next block of free parameters at round {nxt}"
+                )
+        r = nxt
 
     ran_mcmc = "mcmc" in cfg and cfg["mcmc"].get("run", True)
     if ran_mcmc:
