@@ -195,6 +195,14 @@ def resolve_noise_args(imap, args: tuple, kwargs: dict) -> tuple[list, dict]:
     """
     Evaluate noise arguments that refer to the map, like `compute_noise` does.
 
+    Note
+    ----
+    This is a temporary copy of the `self...` evaluation inside jitkasi's
+    `WCSMap.compute_noise`, needed because the sim calls a noise model's `sample` directly.
+    Once jitkasi exposes that evaluation as a public helper, import it from there and delete
+    this function (and its use in `process_maps`). Until then keep the two in step: a string
+    argument that starts with `self` is evaluated with `self` set to the map.
+
     Parameters
     ----------
     imap : WCSMap
