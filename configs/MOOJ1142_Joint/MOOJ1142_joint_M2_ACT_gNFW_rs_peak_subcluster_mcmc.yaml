@@ -1,0 +1,11 @@
+# Same MCMC settings as MOOJ1142/MOOJ1142_gNFW_rs_peak_subcluster_mcmc.yaml
+base: "MOOJ1142_joint_M2_ACT_gNFW_rs_peak_subcluster.yaml"
+
+mcmc:
+  run: true
+  method: mh
+  num_steps: 10000
+  num_chains: 4
+  burn_in: 0.2
+  prior_type: uniform
+  proposal: cov

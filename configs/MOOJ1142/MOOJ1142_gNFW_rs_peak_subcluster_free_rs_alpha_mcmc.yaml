@@ -1,0 +1,12 @@
+# MH settings as MOOJ1142_gNFW_rs_peak_subcluster_mcmc.yaml but 4x longer chains, since freeing
+# another shape parameter makes the posterior more degenerate (all_free needed ~1700 step autocorrelation times).
+base: "MOOJ1142_gNFW_rs_peak_subcluster_free_rs_alpha.yaml"
+
+mcmc:
+  run: true
+  method: mh
+  num_steps: 40000
+  num_chains: 4
+  burn_in: 0.2
+  prior_type: uniform
+  proposal: cov

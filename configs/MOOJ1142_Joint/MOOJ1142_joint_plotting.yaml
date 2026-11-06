@@ -29,19 +29,19 @@ cluster_model:
         dz_1:
           value: 0.0
         P0:
-          value: 0.373
+          value: 1.63
           to_fit: True
         r_s:
-          value: 26
+          value: 4.33
           to_fit: True
         gamma:
-          value: -0.717
+          value: 0.465
           to_fit: True
         alpha:
-          value: 1.233
+          value: 2.26
           to_fit: True
         beta:
-          value: 3.377
+          value: 2.05
           to_fit: True
         z:
           value: 1.19

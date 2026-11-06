@@ -1,0 +1,17 @@
+# M2-only gNFW_rs + subcluster fit with r_s fixed to the X-ray value and alpha free.
+# M2-only reference for MOOJ1142_Joint/MOOJ1142_joint_M2_ACT_gNFW_rs_peak_subcluster_xray_rs_alpha.yaml,
+# to measure how much ACT tightens alpha.
+base: "MOOJ1142_gNFW_rs_peak_subcluster_xray_rs.yaml"
+
+# Same grid as the joint fit so ACT is the only difference
+coords:
+  r_map: "7.0*60"
+
+cluster_model:
+  structures:
+    gnfw_rs:
+      parameters:
+        alpha:
+          value: 2.26
+          to_fit: True
+          priors: [0.1, 10.0]
