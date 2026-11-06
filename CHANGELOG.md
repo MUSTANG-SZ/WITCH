@@ -1,3 +1,11 @@
+## 11.5.0 (2026-11-06)
+
+### Feat
+
+- add act loading using JAXWCS and ACT map mean subtraction. Mean subtraction is useful since the ACT frequency maps near clusters tend not to be 0-mean while the M2 maps are, which leads to difficulty fitting. Note with the JAXWCS loading there is an awkwardness, jitkasi's WCSMap now takes a JAXWCS. Load map and ivar transposed so x is the first axis, transpose back when writing residual/truth maps
+- move on to the next block of free parameters when a block converges
+- add some checks on fit loop behavior
+
 ## 11.4.0 (2026-11-04)
 
 ### Feat
