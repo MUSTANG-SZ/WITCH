@@ -304,6 +304,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Writing Config Files">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cmb-noise-for-act-maps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CMB noise for ACT maps
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1516,6 +1533,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Writing Config Files">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cmb-noise-for-act-maps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CMB noise for ACT maps
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1669,6 +1703,24 @@ to use when fitting. <code>funcs</code> defines the experiment-specific function
 These are defined in the <code>WITCH/external</code> submodule. <code>beam</code> defines the beam parameters, while <code>dograd</code> and <code>npass</code> are options for mapmakting
 which can be left to their defaults. If you are only working with MUSTANG-2 data, all these values can be left at their defaults
 from <code>base_config.yaml</code>.</p>
+<h4 id="cmb-noise-for-act-maps">CMB noise for ACT maps</h4>
+<p>For maps where the CMB is a significant noise source (e.g. ACT) use <code>wn.NoiseCMBMap</code> (with <code>witch.noise: wn</code> in <code>imports</code>):
+<div class="highlight"><pre><span></span><code><span class="nt">datasets</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">act</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">noise</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">class</span><span class="p">:</span><span class="w"> </span><span class="s">"wn.NoiseCMBMap"</span>
+<span class="w">      </span><span class="nt">args</span><span class="p">:</span><span class="w"> </span><span class="s">"['self.ivar',</span><span class="nv"> </span><span class="s">'self.wcs.cdelt[0]']"</span><span class="w">  </span><span class="c1"># ivar weights and the pixel size in degrees</span>
+<span class="w">      </span><span class="nt">kwargs</span><span class="p">:</span><span class="w"> </span><span class="s">"{'fwhm_arcmin':</span><span class="nv"> </span><span class="s">1.6}"</span>
+</code></pre></div>
+The covariance is the Planck 2018 lensed CMB, beam smoothed and with a crude white foreground (<code>fg_dl3000</code>, the foreground
+D_l at l=3000 in uK^2), plus the white noise from the ivar map. The lensed TT spectrum is stored in <code>witch/data/lensed_tt_planck2018.npz</code>
+so CAMB is not needed. For another cosmology make a spectrum with the optional <code>camb</code> extra (<code>pip install .[camb]</code>):
+<div class="highlight"><pre><span></span><code>python scripts/make_lensed_dl.py --out lensed_tt_h70.npz --H0 70.0
+</code></pre></div>
+and pass it as <code>dl</code>, e.g. <code>kwargs: "{'fwhm_arcmin': 1.6, 'dl': np.load('lensed_tt_h70.npz')['dl']}"</code> (with <code>numpy: np</code> in <code>imports</code>).
+<code>dl</code> is D_l in uK_CMB^2 indexed by l and needs entries up to l=10000. When simulating a map (<code>sim: True</code>, <code>wnoise: False</code>) the noise is
+drawn from the same model. To simulate with a different noise model than the one used to fit, set <code>sim_noise_kwargs</code> in the dataset;
+it is evaluated like <code>kwargs</code> and overrides them for the simulation only, e.g. <code>sim_noise_kwargs: "{'dl': np.load('other.npz')['dl']}"</code>.</p>
 <p><code>fitter</code> sets hyper-parameters for the fitting routine, specifically the maximum number of interations to take per step
 and the <code>chitol</code> which sets delta-chi-squared minimum for a step to be considered converged. Finally, <code>imports</code> defines additional
 packages to be loaded into the script at runtime. Again, these can all be left at their default values.</p>
@@ -1713,6 +1765,7 @@ the component are specified. Note that the order of structures is unimportant; t
 <div class="highlight"><pre><span></span><code>pip install .
 </code></pre></div>
 If you are going to be actively working on the <code>WITCH</code> library you probably want to include the <code>-e</code> flag.</p>
+<p>Optional extras: <code>pip install .[act]</code> for the ACT map tools (<code>pixell</code>), <code>.[camb]</code> to generate CMB spectra with CAMB, and <code>.[minkasi]</code>.</p>
 <p>All the dependencies should be installed by <code>pip</code> with the one exception being <code>minkasi</code> itself (only needed for <code>fitter.py</code>).
 Instructions on installing <code>minkasi</code> can be found <a href="https://github.com/sievers/minkasi#installation">here</a>.</p>
 <h2 id="contributing">Contributing</h2>
