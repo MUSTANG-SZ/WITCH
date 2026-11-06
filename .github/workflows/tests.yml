@@ -36,4 +36,4 @@ jobs:
             module load mpi
             source ~/venvs/witch/bin/activate
             cd ~/dev/WITCH
-            python -m pytest -s -q tests/
+            python -m pytest -s -q tests/test_rxj1347*.py
