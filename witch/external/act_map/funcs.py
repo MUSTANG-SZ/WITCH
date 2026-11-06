@@ -2,6 +2,7 @@ import glob
 import os
 
 import jax.numpy as jnp
+import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
 from jitkasi.solutions import SolutionSet, maps
@@ -43,6 +44,26 @@ def get_files(dset_name: str, cfg: dict) -> list:
 def load_maps(
     dset_name: str, cfg: dict, fnames: list, comm: MPI.Intracomm
 ) -> SolutionSet:
+    """
+    Load the ACT maps and ivar maps.
+
+    Parameters
+    ----------
+    dset_name : str
+        Name of the dataset in the config.
+    cfg : dict
+        The config. If `datasets.<dset_name>.zero_mean` is True (default) the
+        ivar weighted mean is subtracted from each map.
+    fnames : list
+        `(map, ivar)` file name pairs from `get_files`.
+    comm : MPI.Intracomm
+        Communicator for the maps.
+
+    Returns
+    -------
+    SolutionSet
+        The loaded maps.
+    """
     map_names = [f[0] for f in fnames]
     ivar_names = [f[1] for f in fnames]
     map_glob = cfg["datasets"][dset_name].get("glob", "*_map.fits")
@@ -53,19 +74,18 @@ def load_maps(
         # The actual map
         f: fits.HDUList = fits.open(fname)
         wcs = WCS(f[0].header)  # type: ignore
-        # Keep the FITS (y, x) layout: `WCSMap.xy` flattens its meshgrid in (y, x) order, so a
-        # transposed map would be fit against a transposed model.
-        dat = jnp.array(f[0].data.astype(float))  # type: ignore
+        # `WCSMap.xy` puts x along the first axis, so transpose the FITS (y, x) layout.
+        dat = jnp.array(f[0].data.astype(float)).T  # type: ignore
         f.close()
-        if dat.shape[0] != dat.shape[1]:
-            raise ValueError(f"WCSMap.xy only supports square maps, got {dat.shape}")
         # The ivar map
         f: fits.HDUList = fits.open(iname)
-        ivar = jnp.array(f[0].data.astype(float))  # type: ignore
+        ivar = jnp.array(f[0].data.astype(float)).T  # type: ignore
         f.close()
-        imaps += [
-            maps.WCSMap(name, dat, comm, JAXWCS.from_astropy(wcs), "nn", ivar=ivar)
-        ]
+        if cfg["datasets"][dset_name].get("zero_mean", True):
+            # Match the zero-mean convention of the other datasets, this is a cutout
+            # so its mean is not zero. The mean is ivar weighted and ignores empty pixels.
+            dat = dat - jnp.sum(dat * ivar) / jnp.sum(ivar)
+        imaps += [maps.WCSMap(name, dat, comm, JAXWCS.from_astropy(wcs), ivar=ivar)]
     mapset = SolutionSet(imaps, comm)
 
     return mapset
@@ -124,7 +144,9 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
 
             if res_map:
                 imap.data = imap.data - pred
-                hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
+                hdu = fits.PrimaryHDU(
+                    data=np.asarray(imap.data).T, header=imap.wcs.to_header()
+                )
                 hdul = fits.HDUList([hdu])
                 hdul.writeto(
                     os.path.join(outdir, dset.name, f"{imap.name}_residual.fits"),
@@ -133,7 +155,9 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
 
             if mod_map:
                 imap.data = pred
-                hdu = fits.PrimaryHDU(data=imap.data, header=imap.wcs.to_header())
+                hdu = fits.PrimaryHDU(
+                    data=np.asarray(imap.data).T, header=imap.wcs.to_header()
+                )
                 hdul = fits.HDUList([hdu])
                 hdul.writeto(
                     os.path.join(outdir, dset.name, f"{imap.name}_truth.fits"),
