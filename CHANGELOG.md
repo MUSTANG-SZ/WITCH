@@ -1,3 +1,17 @@
+## 11.6.0 (2026-11-06)
+
+### Feat
+
+- add a benchmark for MPI layouts of joint fits
+- MOOJ1142 r_s fixed + alpha and beta free config
+- store the Planck 2018 lensed TT spectrum, make CAMB optional, evaluate sim_noise_kwargs
+- store the Planck 2018 lensed TT spectrum, make CAMB optional
+- temporary ACT noise estimator
+
+### Fix
+
+- use self.wcs.cdelt in the sim base config, JAXWCS has no .wcs
+
 ## 11.5.0 (2026-11-06)
 
 ### Feat
