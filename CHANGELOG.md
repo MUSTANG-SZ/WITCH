@@ -1,3 +1,9 @@
+## 11.7.0 (2026-11-06)
+
+### Feat
+
+- add the MOOJ1142 joint fitting configs, X-ray default parameters and the A399-401 corner plot demo
+
 ## 11.6.0 (2026-11-06)
 
 ### Feat
