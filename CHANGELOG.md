@@ -1,3 +1,13 @@
+## 11.8.0 (2026-11-13)
+
+### Feat
+
+- load calibrated NIKA2 TODs
+
+### Fix
+
+- give each TOD its own white noise realization in wnoise sims
+
 ## 11.7.1 (2026-11-13)
 
 ### Fix
