@@ -1,3 +1,11 @@
+## 11.7.1 (2026-11-13)
+
+### Fix
+
+- use a single 2.1' gaussian for the ACT beam in all configs
+- stop beam_double_gauss truncating the secondary gaussian
+- give each TOD its own white noise realization in wnoise sims
+
 ## 11.7.0 (2026-11-06)
 
 ### Feat
