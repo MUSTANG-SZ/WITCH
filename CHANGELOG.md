@@ -1,3 +1,9 @@
+## 11.10.0 (2026-11-13)
+
+### Feat
+
+- add htmlcov to gitignore
+
 ## 11.9.0 (2026-11-13)
 
 ### Feat
