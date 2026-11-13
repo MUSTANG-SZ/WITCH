@@ -201,10 +201,13 @@ def process_tods(cfg, dataset, metamodel):
                     jnp.diff(tod.data, axis=-1), jnp.array([33.0, 68.0]), axis=-1
                 )
                 scale = (temp[1] - temp[0]) / jnp.sqrt(8)
+                # Each TOD needs its own key, otherwise TODs with the same shape
+                # get identical noise realizations
+                key = jax.random.fold_in(
+                    jax.random.key(int(cfg.get("wnoise_seed", 0))), rank + nproc * i
+                )
                 tod.data = (
-                    jax.random.normal(
-                        jax.random.key(0), shape=tod.data.shape, dtype=tod.data.dtype
-                    )
+                    jax.random.normal(key, shape=tod.data.shape, dtype=tod.data.dtype)
                     * scale[..., None]
                 )
             else:
