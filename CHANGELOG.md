@@ -1,3 +1,9 @@
+## 11.9.0 (2026-11-13)
+
+### Feat
+
+- NIKA2 multi-gaussian beam and beam-consistent Jy/beam conversion
+
 ## 11.8.0 (2026-11-13)
 
 ### Feat
