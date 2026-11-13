@@ -1,0 +1,18 @@
+base: "nika2_id34_xdr.yaml"
+name: "id34"
+# Inject a known A10 cluster into the sign-flipped (nulled) id34 TODs and recover it
+# Use an even number of TODs so the real sky cancels in the null
+sim: True
+cluster_model:
+  structures:
+    a10:
+      parameters:
+        dx_1:
+          value: 10.0 # Deliberate offset to check RA sign convention
+          to_fit: True
+        dy_1:
+          value: -5.0 # Deliberate offset to check Dec sign convention
+          to_fit: True
+        m500:
+          value: "5e14"
+          to_fit: True

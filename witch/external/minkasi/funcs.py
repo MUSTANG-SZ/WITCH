@@ -143,7 +143,7 @@ def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
     noise_kwargs = dset.info["minkasi_noise_kwargs"]
     outdir = dset.info["outdir"]
     copy_noise = dset.info["copy_noise"]
-    thresh = cfg["datasets"]["mustang2"].get("mask", None)
+    thresh = cfg["datasets"][dset.name].get("mask", None)
     if thresh and type(thresh) is not int:
         thresh = 20  # TODO: dynamically set threshold
     if not cfg.get("noise_map", False):
@@ -190,7 +190,7 @@ def postproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
     noise_kwargs = dset.info["minkasi_noise_kwargs"]
     outdir = dset.info["outdir"]
     copy_noise = dset.info["copy_noise"]
-    thresh = cfg["datasets"]["mustang2"].get("mask", None)
+    thresh = cfg["datasets"][dset.name].get("mask", None)
     if thresh and type(thresh) is not int:
         thresh = 20  # TODO: dynamically set threshold
     # Make signal maps
@@ -288,7 +288,7 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
     minkasi_noise_class = dset.info["minkasi_noise_class"]
     minkasi_noise_args = dset.info["minkasi_noise_args"]
     minkasi_noise_kwargs = dset.info["minkasi_noise_kwargs"]
-    thresh = cfg["datasets"]["mustang2"].get("mask", None)
+    thresh = cfg["datasets"][dset.name].get("mask", None)
     if thresh and type(thresh) is not int:
         thresh = 20  # TODO: dynamically set threshold
     outdir = dset.info["outdir"]

@@ -1,0 +1,44 @@
+base: "nika2_base.yaml" # Specifies the config this file is based on
+name: "id34" # Name of the cluster
+noise_map: False # Whether to make the noise map
+model_map: True # Whether to make a map of just the model
+# NOTE: z is a placeholder (constants.z in nika2_base.yaml), set it to the id34 cluster redshift
+cluster_model:
+  structures:
+    a10:
+      structure: "a10"
+      parameters:
+        dx_1:
+          value: 0.0 # Units: arcsec, defined as an offset from x0
+          to_fit: True
+          priors: [-30.0, 30.0]
+        dy_1:
+          value: 0.0 # Units: arcsec, defined as an offset from y0
+          to_fit: True
+          priors: [-30.0, 30.0]
+        dz_1:
+          value: 0.0
+        theta:
+          value: 0.0
+        P0:
+          value: 8.403
+        c500:
+          value: 1.177
+        m500:
+          value: "5e14"
+          to_fit: True
+        gamma:
+          value: .3081
+        alpha:
+          value: 1.051
+        beta:
+          value: 5.4905
+        z:
+          value: 0.451
+
+metamodel:
+  models:
+    - cluster_model
+  model_map:
+    nika2:
+      - cluster_model

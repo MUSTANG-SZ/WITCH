@@ -1,0 +1,107 @@
+fit: True # If True fit the cluster, overridden by command line
+sub: True # If True the cluster before mapmaking, overridden by command line
+n_rounds: 20 # How many rounds of fitting to try
+
+# Constants for use in the model and grid construction
+# Can be used as a dict ie: constants['z']
+# All are passed through eval, so expresions like `np.sin(np.pi)` will evaluate
+constants:
+  Te: 5.0
+  freq: "150e9" # NIKA2 2mm band
+  z: 0.451
+
+paths:
+  # Location of TOD files
+  # If an absolute path then that is used directly
+  # If a relative path taken relative to WITCH_DATAROOT
+  tods: "/mnt/welch/NIKA2/id34" # Name of the cluster data directory
+  glob: "stru_scan*_2mm_tot.xdr" # Pattern to search for TODs with, calibrated (Jy/beam) xdr files
+  ndo: False # Ignore, leave set to false 
+  odo: False # Ignore
+  # Directory to use as root for outputs
+  # If an absolute path then that is used directly
+  # If a relative path taken relative to WITCH_OUTROOT
+  outroot: ""
+  subdir: "" # Subdirectory to use
+  # Final outdir will be something like: WITCH_OUTROOT/name/model_name/subdir
+
+# Defines the grid
+# All are passed through eval
+# A word on the grid: the grid is the set of points
+# at which the model is evaluated. This is not the same as
+# the map. The model called anywhere outside the grid will 
+# evaluate to 0, so make sure the grid covers the model
+# where there is significant power. Smaller grids have the
+# advantage of better performance. dr sets the x/y gird
+# size and should not be smaller than 1/2 the pixel size
+# to avoid sub-pixel interpolation errors. dz is the 
+# LoS spacing and only needs to be set small enough
+# to avoid excess uncertainty in the numerical integration.
+# x0/y0 should be set to the center of the cluster (or
+# other feature of interest) and defines the grid center.
+# All pixel space references will be made wrt this point.
+coords:
+  r_map: "3.0*60" # Radial size of grid in arcseconds 
+  dr: "2.0" # Pixel size of grid in x and y in arcseconds
+  dz: 1.0 # Pixel size along the LOS, if not provided dr is used
+  x0: "(136.9192*u.degree).to(u.radian).value" # RA of grid origin in radians
+  y0: "(0.1670*u.degree).to(u.radian).value" # Dec of grid origin in radian 
+
+
+# Settings that define the datasets we are working with 
+# For now you can only have one, but this structure is in prep for the future
+datasets:
+  nika2:
+    # These fields need to be set regardless of the dataset
+    # This can rely on the imports section
+    noise: # Noise to use while fitting
+      class: "jn.NoiseSmoothedSVD"
+      args: "[]"
+      kwargs: "{'fwhm':10}"
+    funcs: # Functions needed to interact with your dataset
+      # All of these need to exist and be importable
+      # If you don't have them in a library add the relevant file to your $PYTHONPATH
+      # Check docs for the needed signatures
+      get_files: "nf.get_files"
+      load_tods: "nf.load_tods"
+      get_info: "nf.get_info"
+      make_metadata: "nf.make_metadata"
+      preproc: "nf.preproc"
+      postproc: "nf.postproc"
+      postfit: "nf.postfit"
+    # The rest are user specified and will depend on your dataset
+    # These should only ever be needed in the function set in "funcs" above
+    # Since they are only called from the specified "funcs" make sure the scope
+    # of things referenced here is based on the module(s) that "funcs" is from.
+    minkasi_noise:
+      class: "minkasi.mapmaking.noise.NoiseSmoothedSVD" # Noise class to use
+      args: "[]" # Arguments to pass to apply_noise
+      kwargs: "{'fwhm':10}" # kwargs to pass to apply_noise
+    # Defines the beam 
+    # All are passed through eval
+    # Note that these define a double gaussian
+    beam:
+      fwhm1: "17.6" # FWHM in arcseconds of the first gaussian (NIKA2 2mm)
+      amp1: 1.0 # Amplitude of the first gaussian
+      fwhm2: "30.0" # FWHM in arcseconds of the second gaussian
+      amp2: 0.0 # Amplitude of the second gaussian
+    max_nan_frac: 0.1 # KIDs with more NaN samples than this are cut
+    downsample: False # If True downsample the TODs (M2 style), xdr files are already ~24Hz
+    copy_noise: False # If true then fitting noise just wraps minkasi noise, may make this automatic later
+    dograd: False # If True then use gradient priors when mapmaking
+    npass: 1 # How many passes of mapmaking to run
+    freq: "float(150e9)"
+    # Converts from model units (integrated pressure) to TOD units (Jy/beam)
+    # y2Jy_beam is monochromatic and assumes a gaussian beam with the given FWHM in arcsec
+    prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2Jy_beam(150e9, cfg['constants']['Te'], 17.6)*wu.XMpc/wu.me)"
+
+# Setting for the fitter
+fitting:
+  maxiter: 20 # Maximum fit iterations per round
+  chitol: 1e-2 # Change in chisq that we consider to be converged
+
+imports:
+  astropy.units: u
+  astropy.coordinates: [Angle]
+  witch.external.nika2.funcs: nf
+  jitkasi.noise: jn
