@@ -37,3 +37,4 @@ plts/
 configs/MOOJ/grid_*.yaml
 configs/MOOJ1142/grid_*.yaml
 reports/
+htmlcov/
