@@ -10,20 +10,76 @@ import os
 from copy import deepcopy
 
 import minkasi
+import numpy as np
 from jitkasi.tod import TODVec
 from mpi4py import MPI
 
+import witch.utils as wu
+from witch.dataset import BeamConvAndPrefac, MetaData
+
 from ..minkasi import mapmaking as mm
-from ..minkasi.funcs import (  # noqa: F401
-    get_info,
-    make_metadata,
-    postfit,
-    postproc,
-    preproc,
-    update_minkasi,
-)
+from ..minkasi.funcs import get_info as _minkasi_get_info
+from ..minkasi.funcs import postfit, postproc, preproc, update_minkasi  # noqa: F401
 from ..minkasi.utils import from_minkasi_tod
 from .io import read_xdr
+
+
+def _beam_pars(dset_name: str, cfg: dict) -> tuple[np.ndarray, np.ndarray, float]:
+    """
+    Get the multi-gaussian beam parameters from the config.
+
+    Returns
+    -------
+    fwhms : np.ndarray
+        FWHM of each gaussian in arcseconds.
+    amps : np.ndarray
+        Relative peak amplitude of each gaussian.
+    extent : float
+        The beam is evaluated out to this many times the largest FWHM.
+    """
+    beam_cfg = cfg["datasets"][dset_name]["beam"]
+    fwhms = np.atleast_1d(np.array(eval(str(beam_cfg["fwhms"])), dtype=float))
+    amps = np.atleast_1d(np.array(eval(str(beam_cfg["amps"])), dtype=float))
+    extent = float(eval(str(beam_cfg.get("extent", 1.5))))
+    return fwhms, amps, extent
+
+
+def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
+    """
+    Same as the minkasi `get_info` but the prefactor can reference
+    `beam_omega` (solid angle in arcsec^2 of the configured beam, normalized to a peak of 1)
+    and `colour_corr` (the dataset's `colour_corr`, default 1).
+    """
+    dset_cfg = cfg["datasets"][dset_name]
+    fwhms, amps, _ = _beam_pars(dset_name, cfg)
+    beam_omega = wu.gauss_solid_angle(fwhms, amps)
+    colour_corr = float(eval(str(dset_cfg.get("colour_corr", 1.0))))
+    prefactor = float(
+        eval(
+            str(dset_cfg["prefactor"]),
+            {"wu": wu, "np": np},
+            {"cfg": cfg, "beam_omega": beam_omega, "colour_corr": colour_corr},
+        )
+    )
+    cfg_local = deepcopy(cfg)
+    cfg_local["datasets"][dset_name]["prefactor"] = repr(prefactor)
+    info = _minkasi_get_info(dset_name, cfg_local, todvec)
+    info["beam_omega"] = beam_omega
+    info["colour_corr"] = colour_corr
+    return info
+
+
+def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]:
+    dr = eval(str(cfg["coords"]["dr"]))
+    r_map = eval(str(cfg["coords"]["r_map"]))
+    fwhms, amps, extent = _beam_pars(dset_name, cfg)
+    beam = wu.beam_multi_gauss(dr, fwhms, amps, extent, max_npix=2 * int(r_map / dr))
+
+    return (
+        BeamConvAndPrefac(
+            beam, info["prefactor"], exclude=tuple(info["point_sources"])
+        ),
+    )
 
 
 def get_files(dset_name: str, cfg: dict) -> list:

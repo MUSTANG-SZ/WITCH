@@ -142,31 +142,53 @@ def y2K_RJ(freq: float, Te: float) -> float:
     return factor * K_CMB2K_RJ(freq)
 
 
-def K_RJ2Jy_beam(freq: float, fwhm: float) -> float:
+def gauss_solid_angle(fwhms: Sequence[float], amps: Sequence[float]) -> float:
     """
-    Convert from K_RJ to Jy/beam for a gaussian beam.
+    Solid angle of a beam made of concentric gaussians, normalized to a peak of 1.
+
+    Parameters
+    ----------
+    fwhms : Sequence[float]
+        FWHM of each gaussian in arcseconds.
+    amps : Sequence[float]
+        Relative peak amplitude of each gaussian.
+
+    Returns
+    -------
+    omega : float
+        The beam solid angle in square arcseconds.
+    """
+    fwhms = np.atleast_1d(np.asarray(fwhms, dtype=float))
+    amps = np.atleast_1d(np.asarray(amps, dtype=float))
+    sigmas = fwhms / np.sqrt(8 * np.log(2))
+    return float(2 * np.pi * np.sum(amps * sigmas**2) / np.sum(amps))
+
+
+def K_RJ2Jy_beam(freq: float, omega: float) -> float:
+    """
+    Convert from K_RJ to Jy/beam.
     This is monochromatic, no bandpass integration is done.
 
     Parameters
     ----------
     freq : float
         The observing frequency in Hz.
-    fwhm : float
-        The beam FWHM in arcseconds.
+    omega : float
+        The beam solid angle in square arcseconds.
+        For a single gaussian beam this is `gauss_solid_angle([fwhm], [1])`.
 
     Returns
     -------
     K_RJ2Jy_beam : float
         Conversion factor from K_RJ to Jy/beam.
     """
-    sigma = fwhm / rad_to_arcsec / np.sqrt(8 * np.log(2))
-    omega = 2 * np.pi * sigma**2
-    return 2 * kb * freq**2 / const.c.value**2 * omega * 1e26
+    omega_sr = omega / rad_to_arcsec**2
+    return 2 * kb * freq**2 / const.c.value**2 * omega_sr * 1e26
 
 
-def y2Jy_beam(freq: float, Te: float, fwhm: float) -> float:
+def y2Jy_beam(freq: float, Te: float, omega: float, colour_corr: float = 1.0) -> float:
     """
-    Convert from compton y to Jy/beam for a gaussian beam.
+    Convert from compton y to Jy/beam.
     This is monochromatic, no bandpass integration is done.
 
     Parameters
@@ -175,15 +197,19 @@ def y2Jy_beam(freq: float, Te: float, fwhm: float) -> float:
         The observing frequency in Hz.
     Te : float
         Electron temperature
-    fwhm : float
-        The beam FWHM in arcseconds.
+    omega : float
+        The beam solid angle in square arcseconds.
+    colour_corr : float, default: 1.0
+        Colour correction C_s defined as S_true = S_measured * C_s,
+        so the measured signal is the true signal divided by this.
+        See eq. 17 of Perotto et al. 2020 for NIKA2.
 
     Returns
     -------
     y2Jy_beam : float
         Conversion factor from compton y to Jy/beam.
     """
-    return float(y2K_RJ(freq, Te)) * K_RJ2Jy_beam(freq, fwhm)
+    return float(y2K_RJ(freq, Te)) * K_RJ2Jy_beam(freq, omega) / colour_corr
 
 
 @partial(jax.jit, static_argnums=(0, 1))
