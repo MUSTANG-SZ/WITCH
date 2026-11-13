@@ -50,9 +50,9 @@ datasets:
       postfit: "amf.postfit"
     # Single gaussian since the beam kernel is truncated at 1.5*fwhm1
     beam:
-      fwhm1: "120"
+      fwhm1: "2.1*60"
       amp1: 1.0
-      fwhm2: "120"
+      fwhm2: "2.1*60"
       amp2: 0.0
     # y -> uK_CMB at 97 GHz
     prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_CMB(97e9, cfg['constants']['Te'])*wu.XMpc/wu.me)*1e6"

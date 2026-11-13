@@ -119,12 +119,14 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
 
 def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]:
     dr = eval(str(cfg["coords"]["dr"]))
+    r_map = eval(str(cfg["coords"]["r_map"]))
     beam = wu.beam_double_gauss(
         dr,
         eval(str(cfg["datasets"][dset_name]["beam"]["fwhm1"])),
         eval(str(cfg["datasets"][dset_name]["beam"]["amp1"])),
         eval(str(cfg["datasets"][dset_name]["beam"]["fwhm2"])),
         eval(str(cfg["datasets"][dset_name]["beam"]["amp2"])),
+        max_npix=2 * int(r_map / dr),
     )
 
     return (

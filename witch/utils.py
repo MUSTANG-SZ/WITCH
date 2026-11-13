@@ -4,6 +4,7 @@ and cosmology as well as some generically useful math functions.
 """
 
 from functools import partial
+from typing import Sequence
 
 import jax
 import jax.numpy as jnp
@@ -417,10 +418,16 @@ def bilinear_interp(
 
 
 def beam_double_gauss(
-    dr: float, fwhm1: float, amp1: float, fwhm2: float, amp2: float
+    dr: float,
+    fwhm1: float,
+    amp1: float,
+    fwhm2: float,
+    amp2: float,
+    max_npix: int | None = None,
 ) -> jax.Array:
     """
     Helper function to generate a double gaussian beam.
+    This is `beam_multi_gauss` with two components.
 
     Parameters
     ----------
@@ -434,17 +441,71 @@ def beam_double_gauss(
         Full width half max of the secondairy gaussian in the same units as `dr`.
     amp2 : float
         Amplitude of the secondairy gaussian.
+    max_npix : int | None, default: None
+        Maximum size of the beam in pixels, usually the size of the model grid.
+        See `beam_multi_gauss`.
 
     Returns
     -------
-        beam: Double gaussian beam.
+        beam: Double gaussian beam, normalized to unit sum.
     """
-    x = jnp.arange(-1.5 * fwhm1 // (dr), 1.5 * fwhm1 // (dr)) * (dr)
+    return beam_multi_gauss(dr, [fwhm1, fwhm2], [amp1, amp2], max_npix=max_npix)
+
+
+def beam_multi_gauss(
+    dr: float,
+    fwhms: Sequence[float],
+    amps: Sequence[float],
+    extent: float = 1.5,
+    max_npix: int | None = None,
+) -> jax.Array:
+    """
+    Generate a beam made of concentric gaussians, normalized to unit sum.
+
+    Parameters
+    ----------
+    dr : float
+        Pixel size.
+    fwhms : Sequence[float]
+        FWHM of each gaussian in the same units as `dr`.
+    amps : Sequence[float]
+        Relative peak amplitude of each gaussian.
+    extent : float, default: 1.5
+        The beam is evaluated out to `extent` times the largest FWHM
+        of the gaussians with non-zero amplitude.
+    max_npix : int | None, default: None
+        Maximum size of the beam in pixels, usually the size of the model grid
+        since `beam_conv` can't use a beam larger than the grid.
+        If the beam would be larger it is cropped to this size (with a warning)
+        and renormalized.
+
+    Returns
+    -------
+    beam : jax.Array
+        The beam, normalized to sum to 1.
+        This has an even shape with the peak at index `shape // 2`,
+        which is where `beam_conv` expects it for (the usual) even sized grids.
+    """
+    fwhms = np.atleast_1d(np.asarray(fwhms, dtype=float))
+    amps = np.atleast_1d(np.asarray(amps, dtype=float))
+    if len(fwhms) != len(amps):
+        raise ValueError("fwhms and amps must have the same length")
+    if not np.any(amps != 0):
+        raise ValueError("At least one beam component needs a non-zero amplitude")
+    half = int(np.ceil(extent * np.max(fwhms[amps != 0]) / dr))
+    if max_npix is not None and 2 * half > max_npix:
+        new_half = int(max_npix) // 2
+        print(
+            f"Warning: beam with FWHMs {fwhms.tolist()} needs {2 * half} pixels "
+            f"but the grid only has {max_npix}, cropping the beam to {2 * new_half} pixels"
+        )
+        half = new_half
+    x = jnp.arange(-half, half) * dr
     beam_xx, beam_yy = jnp.meshgrid(x, x)
-    beam_rr = jnp.sqrt(beam_xx**2 + beam_yy**2)
-    beam = amp1 * jnp.exp(-4 * jnp.log(2) * beam_rr**2 / fwhm1**2) + amp2 * jnp.exp(
-        -4 * jnp.log(2) * beam_rr**2 / fwhm2**2
-    )
+    beam_rr2 = beam_xx**2 + beam_yy**2
+    beam = jnp.zeros_like(beam_rr2)
+    for fwhm, amp in zip(fwhms, amps):
+        beam += amp * jnp.exp(-4 * jnp.log(2) * beam_rr2 / fwhm**2)
     return beam / jnp.sum(beam)
 
 

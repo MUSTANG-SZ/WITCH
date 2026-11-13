@@ -52,9 +52,9 @@ datasets:
     # All are passed through eval
     # Note that these define a double gaussian
     beam:
-      fwhm1: "122" # FWHM in arcseconds of the first gaussian
+      fwhm1: "2.1*60" # FWHM in arcseconds of the first gaussian
       amp1: 1.0 # Amplitude of the first gaussian
-      fwhm2: "90" # FWHM in arcseconds of the second gaussian
+      fwhm2: "2.1*60" # FWHM in arcseconds of the second gaussian
       amp2: 0.0 # Amplitude of the second gaussian
 # Cluster name
 # Used both for the output path as well as to load presets
