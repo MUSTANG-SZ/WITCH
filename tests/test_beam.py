@@ -28,7 +28,7 @@ def test_double_gauss_not_truncated():
     # Peak normalized solid angle matches the analytic value (up to truncation at 1.5 FWHM2)
     c = beam.shape[0] // 2
     omega = beam.sum() / beam[c, c] * dr**2
-    s1, s2 = (np.array([M2[0], M2[2]]) / np.sqrt(8 * np.log(2)))
+    s1, s2 = np.array([M2[0], M2[2]]) / np.sqrt(8 * np.log(2))
     expected = 2 * np.pi * (M2[1] * s1**2 + M2[3] * s2**2) / (M2[1] + M2[3])
     assert omega == pytest.approx(expected, rel=0.01)
 
