@@ -142,6 +142,50 @@ def y2K_RJ(freq: float, Te: float) -> float:
     return factor * K_CMB2K_RJ(freq)
 
 
+def K_RJ2Jy_beam(freq: float, fwhm: float) -> float:
+    """
+    Convert from K_RJ to Jy/beam for a gaussian beam.
+    This is monochromatic, no bandpass integration is done.
+
+    Parameters
+    ----------
+    freq : float
+        The observing frequency in Hz.
+    fwhm : float
+        The beam FWHM in arcseconds.
+
+    Returns
+    -------
+    K_RJ2Jy_beam : float
+        Conversion factor from K_RJ to Jy/beam.
+    """
+    sigma = fwhm / rad_to_arcsec / np.sqrt(8 * np.log(2))
+    omega = 2 * np.pi * sigma**2
+    return 2 * kb * freq**2 / const.c.value**2 * omega * 1e26
+
+
+def y2Jy_beam(freq: float, Te: float, fwhm: float) -> float:
+    """
+    Convert from compton y to Jy/beam for a gaussian beam.
+    This is monochromatic, no bandpass integration is done.
+
+    Parameters
+    ----------
+    freq : float
+        The observing frequency in Hz.
+    Te : float
+        Electron temperature
+    fwhm : float
+        The beam FWHM in arcseconds.
+
+    Returns
+    -------
+    y2Jy_beam : float
+        Conversion factor from compton y to Jy/beam.
+    """
+    return float(y2K_RJ(freq, Te)) * K_RJ2Jy_beam(freq, fwhm)
+
+
 @partial(jax.jit, static_argnums=(0, 1))
 def y2uK_CMB(freq: float, Te: float) -> float:
     """
