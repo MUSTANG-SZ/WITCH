@@ -41,7 +41,9 @@ def test_y2Jy_beam_sign_and_scale():
     # SZ decrement at 150 GHz, of order -8 Jy/beam per unit y for a 17.6" beam
     val = wu.y2Jy_beam(150e9, 5.0, 17.6)
     assert -10 < val < -7
-    assert val == pytest.approx(float(wu.y2K_RJ(150e9, 5.0)) * wu.K_RJ2Jy_beam(150e9, 17.6))
+    assert val == pytest.approx(
+        float(wu.y2K_RJ(150e9, 5.0)) * wu.K_RJ2Jy_beam(150e9, 17.6)
+    )
 
 
 @pytest.mark.skipif(not os.path.exists(XDR), reason="id34 NIKA2 data not available")

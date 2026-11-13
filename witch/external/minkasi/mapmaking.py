@@ -40,7 +40,7 @@ def make_naive(
     todvec: minkasi.tods.TodVec,
     skymap: minkasi.maps.MapType,
     outdir: str,
-    thresh: Optional[int] = None,
+    thresh: int | None = None,
 ) -> tuple[minkasi.maps.MapType, minkasi.maps.MapType, minkasi.maps.Mapset]:
     """
     Make a naive map where we just bin common mode subtracted TODs.
@@ -96,7 +96,7 @@ def make_weights(
     todvec: minkasi.tods.TodVec,
     skymap: minkasi.maps.MapType,
     outdir: str,
-    maskset: Optional[minkasi.maps.Mapset] = None,
+    maskset: minkasi.maps.Mapset | None = None,
 ) -> tuple[minkasi.maps.MapType, minkasi.maps.MapType]:
     """
     Make weights and noise map.
@@ -226,12 +226,12 @@ def solve_map(
     todvec: minkasi.tods.TodVec,
     x0: minkasi.maps.Mapset,
     ihits: minkasi.maps.MapType,
-    prior: Optional[minkasi.mapmaking.pcg.HasPrior],
+    prior: minkasi.mapmaking.pcg.HasPrior | None,
     maxiters: int,
     save_iters: list[int],
     outdir: str,
     desc_str: str,
-    maskset: Optional[minkasi.maps.Mapset] = None,
+    maskset: minkasi.maps.Mapset | None = None,
 ) -> minkasi.maps.Mapset:
     """
     Solve for map with PCG.
@@ -317,7 +317,7 @@ def make_maps(
     outdir: str,
     npass: int,
     dograd: bool,
-    thresh: Optional[int] = None,
+    thresh: int | None = None,
     return_maps: bool = False,
 ):
     """
