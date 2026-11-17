@@ -1,3 +1,13 @@
+## 11.11.0 (2026-11-17)
+
+### Feat
+
+- add make_sim_sky script for minkasi needlet mapmaker simulations
+
+### Refactor
+
+- make_sim_sky uses the stored Planck 2018 lensed spectrum of witch.noise
+
 ## 11.10.0 (2026-11-13)
 
 ### Feat
