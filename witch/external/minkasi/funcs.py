@@ -18,7 +18,13 @@ from witch.fitter import print_once
 
 from ...objective import chisq_objective
 from . import mapmaking as mm
-from .utils import from_minkasi, from_minkasi_noise, from_minkasi_tod, to_minkasi
+from .utils import (
+    from_minkasi,
+    from_minkasi_noise,
+    from_minkasi_tod,
+    to_minkasi,
+    update_minkasi,
+)
 
 
 def get_files(dset_name: str, cfg: dict) -> list:
@@ -49,28 +55,10 @@ def get_files(dset_name: str, cfg: dict) -> list:
     return tod_names
 
 
-def update_minkasi(inst, comm):
-    nproc = comm.Get_size()
-    rank = comm.Get_rank()
-    for attr in dir(inst):
-        if attr == "comm":
-            inst.comm = comm
-        elif attr == "nproc":
-            inst.nproc = nproc
-        elif attr == "myrank":
-            inst.myrank = rank
-        elif attr[0] == "_":
-            continue
-        elif hasattr(inst, "__package__") and "minkasi" in inst.__package__:
-            update_minkasi(getattr(inst, attr), comm)
-    return
-
-
 def load_tods(dset_name: str, cfg: dict, fnames: list, comm: MPI.Intracomm) -> TODVec:
-    # Update the minkasi comm here
+    # Point minkasi at this dataset's comm (mm.minkasi is the same module)
     if minkasi.have_mpi:
         update_minkasi(minkasi, comm)
-        update_minkasi(mm.minkasi, comm)
     # Now load
     tods = []
     for fname in fnames:
@@ -246,7 +234,6 @@ def postproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
             )
 
         if cfg.get("ntods_map", False):
-
             if minkasi.nproc > 1:
                 print(
                     "Warning: running bunched TOD mapmaking with mpi is not reccomeneded. The bundles will be NPROC x NTODS_MAP and may lead to hanging code."
