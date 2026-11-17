@@ -13,7 +13,6 @@ import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
 from minkasi.needlet.act import act_conversion
-from minkasi.needlet.cmb import lensed_cmb_cl
 from scipy.ndimage import gaussian_filter
 
 FWHM2SIGMA = 1 / np.sqrt(8 * np.log(2))
@@ -68,10 +67,11 @@ def witch_components(config: str, ra: np.ndarray, dec: np.ndarray) -> dict:
 
 
 def cmb_realisation(
-    shape: tuple[int, int], pix_arcsec: float, beam_fwhm: float, seed: int, cache: str
+    shape: tuple[int, int], pix_arcsec: float, beam_fwhm: float, seed: int
 ) -> np.ndarray:
     """
-    Flat sky Gaussian realisation of the lensed CMB, in uK_CMB, smoothed with a Gaussian beam.
+    Flat sky Gaussian realisation of the lensed CMB (the stored Planck 2018 spectrum of witch.noise), in uK_CMB,
+    smoothed with a Gaussian beam.
 
     Parameters
     ----------
@@ -83,16 +83,19 @@ def cmb_realisation(
         Beam FWHM in arcsec.
     seed : int
         Random seed.
-    cache : str
-        File caching the CAMB spectrum.
 
     Returns
     -------
     cmb : np.ndarray
         The realisation.
     """
+    from witch.noise import cmb_cl
+
     pix = np.deg2rad(pix_arcsec / 3600)
-    cl = lensed_cmb_cl(cache=cache)
+    cl = np.zeros(
+        10001
+    )  # C_l in uK_CMB^2 sr indexed by l, zero for l < 2; no foreground, the beam is applied below
+    cl[2:] = cmb_cl(np.arange(2, 10001), fg_dl3000=0.0, fwhm_arcmin=0.0)
     ell = (
         2
         * np.pi
@@ -128,7 +131,7 @@ def main(args: argparse.Namespace):
     cmb = (
         args.cmb
         * act_conversion(args.freq, unit="K_RJ")
-        * cmb_realisation((n, n), args.pixsize, args.m2_beam, args.seed, args.cmb_cache)
+        * cmb_realisation((n, n), args.pixsize, args.m2_beam, args.seed)
     )
     total = comps["cluster"] + comps["ps"] + cmb
     hdr = wcs.to_header()
@@ -167,11 +170,6 @@ if __name__ == "__main__":
         "--cmb", type=float, default=1.0, help="Scale of the CMB (0 to leave it out)"
     )
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument(
-        "--cmb-cache",
-        default="/mnt/welch/USERS/jorlo/needlets/all106/cache/cmb_cl.npy",
-        help="CAMB spectrum cache",
-    )
     parser.add_argument("--debug", action="store_true", help="Small map")
     args = parser.parse_args()
     if args.debug:
