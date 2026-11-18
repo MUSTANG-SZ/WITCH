@@ -31,9 +31,10 @@ coords:
   r_map: "5.0*60" # Radial size of grid in arcseconds
   dr: "2.0" # Pixel size of grid in x and y in arcseconds
   dz: 2.0 # Pixel size along the LOS, if not provided dr is used
+  # MS0735 pointing, the sims inject into its TODs
   x0: "Angle('07 41 44.5 hours').to(u.radian).value"
   y0: "Angle('74:14:38.7 degrees').to(u.radian).value"
-    
+
 # Settings that define the datasets we are working with
 # For now you can only have one, but this structure is in prep for the future
 datasets:
@@ -48,9 +49,10 @@ datasets:
       # All of these need to exist and be importable
       # If you don't have them in a library add the relevant file to your $PYTHONPATH
       # Check docs for the needed signatures
+      get_files: "mf.get_files"
       load_tods: "mf.load_tods"
       get_info: "mf.get_info"
-      make_beam: "mf.make_beam"
+      make_metadata: "mf.make_metadata"
       preproc: "mf.preproc"
       postproc: "mf.postproc"
       postfit: "mf.postfit"
@@ -74,6 +76,8 @@ datasets:
     dograd: False # If True then use gradient priors when mapmaking
     npass: 1 # How many passes of mapmaking to run
     ntods: 36
+    prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_RJ(90e9, cfg['constants']['Te'])*wu.XMpc/wu.me)"
+    # Transfer function applied to the simulated signal only, never when fitting
     xfer: "/home/jorlo/dev/minkasi_jax/data/M2/transfer_functions/xfer_Function_3p5_21Aonly_PCA5_0f08Filtering.txt"
 
 # Setting for the fitter

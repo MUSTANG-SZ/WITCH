@@ -5,7 +5,7 @@ base: "cavity_base.yaml"
 
 # Cluster name
 # Used both for the output path as well as to load presets
-name: "MKW3S"
+name: "MKW3S_nocav"
 sim: True # If True use TODs to make noise and add a simulated cluster
 model_map: True
 noise_map: True
@@ -13,8 +13,11 @@ noise_map: True
 constants:
   z: 0.045
 
-model:
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+metamodel:
+  models:
+    - cluster_model
+
+cluster_model:
   structures:
     a10:
       structure: "a10"
@@ -28,7 +31,7 @@ model:
         theta:
           value: 0.0
         P0:
-          value: 3.202 
+          value: 3.202
         c500:
           value: 1.083
         m500:
@@ -63,4 +66,3 @@ model:
         amp:
           value: 0.0
           to_fit: True
-

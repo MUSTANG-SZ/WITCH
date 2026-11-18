@@ -12,7 +12,3 @@ paths:
 coords:
   x0: "(139.525*u.deg).to(u.radian).value"
   y0: "(-12.03333333*u.deg).to(u.radian).value"
-
-
-
-

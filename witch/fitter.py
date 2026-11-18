@@ -25,8 +25,9 @@ import yaml
 from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
-from .containers import Model_xfer
+from .containers import MetaModel, Model_xfer
 from .containers.metamodel import _compute_metadata_map, _compute_par_map_and_pars
+from .dataset import DataSet
 from .fitting import run_lmfit, run_mcmc
 from .metropolis_hastings import run_mh
 from .nonparametric import para_to_non_para
@@ -176,21 +177,47 @@ def _mpi_fsplit(fnames, comm):
     return fnames_local, comm, comms_local
 
 
+def sim_metamodel(cfg: dict, dataset: DataSet, metamodel: MetaModel) -> MetaModel:
+    """
+    Get the metamodel whose signal gets injected into simulated data.
+    If we are simming and the dataset sets a transfer function (`info["xfer"]`)
+    then each model is wrapped in a `Model_xfer` so the injected signal is filtered
+    like the real data. The transfer function is never used when fitting.
+
+    Parameters
+    ----------
+    cfg : dict
+        The loaded config.
+    dataset : DataSet
+        The dataset being simulated.
+    metamodel : MetaModel
+        The metamodel to inject.
+
+    Returns
+    -------
+    metamodel_sim : MetaModel
+        `metamodel` itself if no transfer function is applied,
+        otherwise a shallow copy with filtered models.
+    """
+    xfer = dataset.info.get("xfer", "")
+    if not (cfg.get("sim", False) and xfer):
+        return metamodel
+    print_once(f"Applying transfer function {xfer} to the simulated signal")
+    metamodel_sim = copy(metamodel)
+    metamodel_sim.models = tuple(
+        Model_xfer.from_parent(model, xfer) for model in metamodel.models
+    )
+    return metamodel_sim
+
+
 def process_tods(cfg, dataset, metamodel):
     todvec = dataset.datavec
-    info = dataset.info
     rank = todvec.comm.Get_rank()
     nproc = todvec.comm.Get_size()
     sim = cfg.get("sim", False)
     if metamodel is None and sim:
         raise ValueError("metamodel cannot be None when simming!")
-    metamodel_cur = metamodel
-    xfer = info.get("info", "")
-    if xfer:
-        metamodel_cur = copy(metamodel)
-        metamodel_cur.models = tuple(
-            Model_xfer.from_parent(model, xfer) for model in metamodel_cur.models
-        )
+    metamodel_cur = sim_metamodel(cfg, dataset, metamodel)
 
     dset_ind = metamodel_cur.get_dataset_ind(dataset.name)
     todvec.comm.barrier()
@@ -279,17 +306,10 @@ def process_maps(cfg, dataset, metamodel, sim_noise_kwargs=None):
         The maps with their noise models computed.
     """
     mapset = dataset.datavec
-    info = dataset.info
     sim = cfg.get("sim", False)
     if metamodel is None and sim:
         raise ValueError("metamodel cannot be None when simming!")
-    metamodel_cur = metamodel
-    xfer = info.get("info", "")
-    if xfer:
-        metamodel_cur = deepcopy(metamodel)
-        metamodel_cur.models = tuple(
-            Model_xfer.from_parent(model, xfer) for model in metamodel_cur.models
-        )
+    metamodel_cur = sim_metamodel(cfg, dataset, metamodel)
 
     dset_ind = metamodel_cur.get_dataset_ind(dataset.name)
     for i, imap in enumerate(mapset):
@@ -539,7 +559,7 @@ def _run_fit(
 ):
     metamodel.set_round(r)
     to_fit = np.array(metamodel.to_fit)
-    print_once(f"Starting round {r+1} of fitting with {np.sum(to_fit)} pars free")
+    print_once(f"Starting round {r + 1} of fitting with {np.sum(to_fit)} pars free")
     t1 = time.time()
     metamodel, i, delta_chisq, lmd = run_lmfit(
         metamodel,
@@ -573,7 +593,9 @@ def _mcmc_checkpoint_callback(
     step = callback_state["step"]
 
     if step % checkpoint_interval == 0 and comm.Get_rank() == 0:
-        ckpt_path = os.path.join(ckpt_dir, f"mcmc_step_{step}{'_nonpara'*nonpara}.pkl")
+        ckpt_path = os.path.join(
+            ckpt_dir, f"mcmc_step_{step}{'_nonpara' * nonpara}.pkl"
+        )
         _save_checkpoint(
             ckpt_path,
             updated_metamodel,
@@ -875,7 +897,7 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
 
     elif load > 0:
         # Load specific round number
-        load_path = os.path.join(ckpt_dir, f"round_{load}{'_nonpara'*nonpara}.pkl")
+        load_path = os.path.join(ckpt_dir, f"round_{load}{'_nonpara' * nonpara}.pkl")
 
         if os.path.exists(load_path):
             print_once(f"[resume] Loading checkpoint round {load} -> {load_path}")
@@ -984,7 +1006,7 @@ def fit_loop(metamodel, cfg, comm, nonpara=False):
         mpi4jax.barrier(comm=comm)
 
         # Checkpoint after each round
-        ckpt_path = os.path.join(ckpt_dir, f"round_{r}{'_nonpara'*nonpara}.pkl")
+        ckpt_path = os.path.join(ckpt_dir, f"round_{r}{'_nonpara' * nonpara}.pkl")
         _save_checkpoint(
             ckpt_path,
             metamodel,

@@ -13,7 +13,6 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from jax.tree_util import register_pytree_node_class
-from scipy import interpolate
 from typing_extensions import Self
 
 from .. import core
@@ -21,25 +20,31 @@ from .. import grid as wg
 from .base import Parameter, Structure
 
 
-def load_xfer(xfer_str) -> jax.Array:
+def load_xfer(xfer_str: str) -> jax.Array:
+    """
+    Load a tabulated transfer function and extend it to high k.
+    The high k half of the table is fit with a line which is used to
+    append points out to 32 times the largest tabulated k.
+
+    Parameters
+    ----------
+    xfer_str : str
+        Path to the transfer function table.
+        Columns should be k (in 1/arcsec), transmission, and optionally the uncertainty.
+
+    Returns
+    -------
+    xfer : jax.Array
+        The extended table with shape `(ncol, nk)`.
+    """
     # Code from Charles
     tab = np.loadtxt(xfer_str).T
-    tdim = tab.shape
-    # import pdb;pdb.set_trace()
-    pfit = np.polyfit(tab[0, tdim[1] // 2 :], tab[1, tdim[1] // 2 :], 1)
-    addt = np.max(tab[0, :]) * np.array([2.0, 4.0, 8.0, 16.0, 32.0])
-    extt = np.polyval(pfit, addt)
-    ### For better backwards compatability I've editted to np.vstack instead of np.stack
-    if tdim[0] == 2:
-        foo = np.vstack((addt, extt))  # Mar 5, 2018
-    else:
-        pfit2 = np.polyfit(tab[0, tdim[1] // 2 :], tab[2, tdim[1] // 2 :], 1)
-        extt2 = np.polyval(pfit2, addt)
-        foo = np.vstack((addt, extt, extt2))  # Mar 5, 2018
-
-    # print(tab.shape, foo.shape)
-    tab = np.concatenate((tab, foo), axis=1)
-    return jnp.array(tab)
+    half = tab.shape[1] // 2
+    addt = np.max(tab[0]) * np.array([2.0, 4.0, 8.0, 16.0, 32.0])
+    ext = [addt] + [
+        np.polyval(np.polyfit(tab[0, half:], col[half:], 1), addt) for col in tab[1:]
+    ]
+    return jnp.array(np.concatenate((tab, np.vstack(ext)), axis=1))
 
 
 @register_pytree_node_class
@@ -698,81 +703,92 @@ class Model:
         )
 
 
+@register_pytree_node_class
 @dataclass
 class Model_xfer(Model):
+    """
+    A `Model` whose evaluated map is filtered by a tabulated transfer function.
+    This is only meant for injecting signal into simulations,
+    so gradients are not supported.
+    Use `from_parent` to construct.
 
-    ks: jax.Array = field(default_factory=jnp.array([0]).copy)  # scalar float array
-    xfer_vals: jax.Array = field(
-        default_factory=jnp.array([1]).copy
-    )  # scalar float array
+    Attributes
+    ----------
+    filt : jax.Array
+        The transfer function evaluated on the 2D Fourier grid of `xyz`.
+    """
 
-    def __post_init__(self):
-        pass
+    filt: jax.Array = field(default_factory=jnp.array(1.0).copy)
 
     @classmethod
-    def from_parent(cls, parent, xfer_str) -> Self:
-        xfer = load_xfer(xfer_str)
-
-        pixsize = np.abs(parent.xyz[1][0][1] - parent.xyz[1][0][0])
-        ks = xfer[0, 0:] * pixsize  # This picks up an extra dim?
-        xfer_vals = xfer[1, 0:]
-
-        my_dict = {}
-        for key in parent.__dataclass_fields__.keys():
-            if parent.__dataclass_fields__[key].init:
-                my_dict[key] = deepcopy(parent.__dict__[key])
-
-        return cls(**my_dict, ks=ks.ravel(), xfer_vals=xfer_vals)
-
-    @cached_property
-    def model(self) -> jax.Array:
-        cur_map = core.model(
-            self.xyz,
-            tuple(self.n_struct),
-            tuple(self.n_rbins),
-            self.dz,
-            *self.pars,
-        )
-        # Code from JMP, whoever that is, by way of Charles
-        farr = np.fft.fft2(cur_map)
-        nx, ny = cur_map.shape
-        kx = np.outer(np.fft.fftfreq(nx), np.zeros(ny).T + 1.0)
-        ky = np.outer(np.zeros(nx).T + 1.0, np.fft.fftfreq(ny))
-        k = np.sqrt(kx * kx + ky * ky)
-
-        filt = self.table_filter_2d(k)
-        farr *= filt
-
-        return np.real(np.fft.ifft2(farr))
-
-    def table_filter_2d(self, k) -> jax.Array:
-        f = interpolate.interp1d(self.ks, self.xfer_vals)
-        kbin_min = self.ks.min()
-        kbin_max = self.ks.max()
-
-        filt = k * 0.0
-        filt[(k >= kbin_min) & (k <= kbin_max)] = f(
-            k[(k >= kbin_min) & (k <= kbin_max)]
-        )
-        filt[(k < kbin_min)] = self.xfer_vals[self.ks == kbin_min]
-        filt[(k > kbin_max)] = self.xfer_vals[self.ks == kbin_max]
-
-        return filt
-
-    @cached_property
-    def model_grad(self) -> None:
+    def from_parent(cls, parent: Model, xfer_str: str) -> Self:
         """
-        The evaluated model and its gradient, see `core.model_grad` for details.
-        Note that this is cached, but is automatically reset whenever
-        `update` is called or `cur_round` changes. Currently computing
-        grad for models with transfer function is not supported.
+        Make a copy of a model that applies a transfer function.
+
+        Parameters
+        ----------
+        parent : Model
+            The model to copy.
+        xfer_str : str
+            Path to the transfer function table, see `load_xfer`.
 
         Returns
         -------
-        None
+        model_xfer : Model_xfer
+            Copy of `parent` with the transfer function applied to its model.
         """
-
-        raise TypeError(
-            "Error; Grad cannot currently be computed on Models with transfer function"
+        xfer = np.asarray(load_xfer(xfer_str))
+        x, y = (np.ravel(parent.xyz[i]) for i in range(2))
+        # The RA grid is spaced by dr/cos(dec), so convert back to arcsec on the sky
+        cos_dec = np.cos(np.deg2rad(parent.xyz[4] / 3600.0))
+        k = np.hypot(
+            *np.meshgrid(
+                np.fft.fftfreq(len(x), np.abs(x[1] - x[0]) * cos_dec),
+                np.fft.fftfreq(len(y), np.abs(y[1] - y[0])),
+                indexing="ij",
+            )
         )
-        return None  # Shouldnt get here
+        # np.interp holds the end values outside the table
+        filt = jnp.array(np.interp(k, xfer[0], xfer[1]))
+        fields = {
+            key: deepcopy(getattr(parent, key))
+            for key, f in parent.__dataclass_fields__.items()
+            if f.init
+        }
+        return cls(**fields, filt=filt)
+
+    @cached_property
+    def model(self) -> jax.Array:
+        """
+        The evaluated model filtered by the transfer function.
+        See `Model.model` for details on caching.
+
+        Returns
+        -------
+        model : jax.Array
+            The filtered model evaluated on `xyz` with the current values of `pars`.
+        """
+        return jnp.real(jnp.fft.ifft2(jnp.fft.fft2(Model.model.func(self)) * self.filt))
+
+    @cached_property
+    def model_grad(self) -> tuple[jax.Array, jax.Array]:
+        """
+        Not supported for models with a transfer function.
+
+        Raises
+        ------
+        TypeError
+            Always.
+        """
+        raise TypeError("Grad cannot be computed on Models with a transfer function")
+
+    def tree_flatten(self) -> tuple[tuple, tuple]:
+        children, aux_data = super().tree_flatten()
+        return (*children, self.filt), aux_data
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children) -> Self:
+        *children, filt = children
+        model = super().tree_unflatten(aux_data, tuple(children))
+        model.filt = filt
+        return model

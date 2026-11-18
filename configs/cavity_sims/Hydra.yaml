@@ -1,39 +1,51 @@
-# Base config to merge into
-# If an absolute path is given then it is used
-# Otherwise it is assumed to me reative to the directory of this file
-base: "cavity_base.yaml"
+# Hydra A (Abell 780) cavity sim injected into the real Abell780 TODs (E and F fields)
+# The TODs, pointing, beam, and grid all come from the Abell780 data config
+# so the sim matches what we expect to see in those maps
+base: "../Abell780/Abell780_total.yaml"
 
 # Cluster name
 # Used both for the output path as well as to load presets
 name: "Hydra"
 sim: True # If True use TODs to make noise and add a simulated cluster
-model_map: True
 noise_map: True
 
 constants:
   z: 0.05
+  # Offset in arcsec of the Hydra A core (09:18:05.651 -12:05:43.99) from the map center (x0, y0)
+  # dx is along +RA (east) on the sky, dy along +Dec
+  # The structure offsets below are relative to the core (Wise 2007) plus this offset
+  dx_c: 9.5
+  dy_c: -71.5
 
-model:
-  unit_conversion: "float(wu.get_da(constants['z'])*wu.y2K_RJ(constants['freq'], constants['Te'])*wu.XMpc/wu.me)"
+datasets:
+  mustang2:
+    # Transfer function applied to the simulated signal only, never when fitting
+    xfer: "/home/jorlo/dev/minkasi_jax/data/M2/transfer_functions/xfer_Function_3p5_21Aonly_PCA5_0f08Filtering.txt"
+
+metamodel:
+  models:
+    - cluster_model
+
+cluster_model:
   structures:
     a10:
       structure: "a10"
       parameters:
         dx_1:
-          value: 0.0
+          value: "constants['dx_c']"
         dy_1:
-          value: 0.0
+          value: "constants['dy_c']"
         dz_1:
           value: 0.0
         theta:
           value: 0.0
         P0:
-          value: 3.202 
+          value: 3.202
         c500:
           value: 1.083
         m500:
           value: "5.6e14"
-          to_fit: False 
+          to_fit: False
         gamma:
           value: 0.3798
           to_fit: False
@@ -47,19 +59,19 @@ model:
       structure: "uniform"
       parameters:
         dx:
-          value: 17. #From Wise 2007
+          value: "17.0 + constants['dx_c']" # From Wise 2007
         dy:
-          value: 17.
+          value: "17.0 + constants['dy_c']"
         dz:
-          value: 0.
+          value: 0.0
         r_1:
-          value: 20.
+          value: 20.0
         r_2:
-          value: 12.
+          value: 12.0
         r_3:
-          value: 16.
+          value: 16.0
         theta:
-          value: eval("np.deg2rad(-130)")
+          value: "np.deg2rad(-130)"
         amp:
           value: -1.0
           to_fit: True
@@ -67,19 +79,19 @@ model:
       structure: "uniform"
       parameters:
         dx:
-          value: -17. #From Wise 2007
+          value: "-17.0 + constants['dx_c']" # From Wise 2007
         dy:
-          value: -17.
+          value: "-17.0 + constants['dy_c']"
         dz:
-          value: 0.
+          value: 0.0
         r_1:
-          value: 21.
+          value: 21.0
         r_2:
-          value: 12.
+          value: 12.0
         r_3:
-          value: 16.
+          value: 16.0
         theta:
-          value: eval("np.deg2rad(-135)")
+          value: "np.deg2rad(-135)"
         amp:
           value: -1.0
           to_fit: True
@@ -87,19 +99,19 @@ model:
       structure: "uniform"
       parameters:
         dx:
-          value: 70. #From Wise 2007
+          value: "70.0 + constants['dx_c']" # From Wise 2007
         dy:
-          value: 70.
+          value: "70.0 + constants['dy_c']"
         dz:
-          value: 0.
+          value: 0.0
         r_1:
-          value: 47.
+          value: 47.0
         r_2:
-          value: 31.
+          value: 31.0
         r_3:
-          value: 39.
+          value: 39.0
         theta:
-          value: eval("np.deg2rad(135)")
+          value: "np.deg2rad(135)"
         amp:
           value: -1.0
           to_fit: True
@@ -107,19 +119,19 @@ model:
       structure: "uniform"
       parameters:
         dx:
-          value: -42. #From Wise 2007
+          value: "-42.0 + constants['dx_c']" # From Wise 2007
         dy:
-          value: -42.
+          value: "-42.0 + constants['dy_c']"
         dz:
-          value: 0.
+          value: 0.0
         r_1:
-          value: 29.
+          value: 29.0
         r_2:
-          value: 20.
+          value: 20.0
         r_3:
-          value: 25.
+          value: 25.0
         theta:
-          value: eval("np.deg2rad(135)")
+          value: "np.deg2rad(135)"
         amp:
           value: -1.0
           to_fit: True
@@ -127,39 +139,39 @@ model:
       structure: "uniform"
       parameters:
         dx:
-          value: 20. #From Wise 2007
+          value: "20.0 + constants['dx_c']" # From Wise 2007
         dy:
-          value: 205.
+          value: "205.0 + constants['dy_c']"
         dz:
-          value: 0.
+          value: 0.0
         r_1:
-          value: 105.
+          value: 105.0
         r_2:
-          value: 100.
+          value: 100.0
         r_3:
-          value: 102.
+          value: 102.0
         theta:
-          value: 0.
+          value: 0.0
         amp:
           value: -1.0
-          to_fit: True   
+          to_fit: True
     bubbleF:
       structure: "uniform"
       parameters:
         dx:
-          value: -10. #From Wise 2007
+          value: "-10.0 + constants['dx_c']" # From Wise 2007
         dy:
-          value: -100.
+          value: "-100.0 + constants['dy_c']"
         dz:
-          value: 0.
+          value: 0.0
         r_1:
-          value: 68.
+          value: 68.0
         r_2:
-          value: 50.
+          value: 50.0
         r_3:
-          value: 59.
+          value: 59.0
         theta:
-          value: eval("np.deg2rad(45)")
+          value: "np.deg2rad(45)"
         amp:
           value: -1.0
           to_fit: True
