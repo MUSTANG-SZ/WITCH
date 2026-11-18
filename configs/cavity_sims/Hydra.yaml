@@ -20,7 +20,7 @@ constants:
 
 datasets:
   mustang2:
-    ntods: 60 # Number of unique Abell780 TODs (E and F share 17)
+    ntods: 60 # Number of Abell780 TODs (41 E + 19 F)
 
 metamodel:
   models:
