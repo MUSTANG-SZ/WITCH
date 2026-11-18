@@ -1,0 +1,25 @@
+# Hydra A cavity sim at the MOOJ1142 pointing, M2 only.
+# The M2 half of Hydra_MOO1142_joint.yaml, as its comparison: run it with the same number
+# of M2 tasks as the joint fit (mpirun -n 8 for the joint -n 9) so the TODs, their sign flips,
+# and so the simulated M2 data are identical.
+# The core keeps its offset from the Abell780 total pointing (see Hydra.yaml).
+base: "Hydra.yaml"
+
+# Cluster name
+# Used both for the output path as well as to load presets
+# The output path also has the datasets so this doesn't clash with the joint fit
+name: "Hydra_MOO1142"
+
+paths:
+  tods: "MOOJ1142"
+  glob: "Signal_TOD*.fits"
+
+# The grid has to hold 3*fwhm1 of the ACT beam inside 2*r_map,
+# and Hydra A is nearby so it should cover the whole 20 arcmin ACT map
+# Kept for the M2 only fit so the two fits use the same model grid
+coords:
+  r_map: "10.0*60"
+  dr: "3.0"
+  dz: 3.0
+  x0: "(175.69766238*u.deg).to(u.radian).value" # MOOJ1142 pointing
+  y0: "(15.45364413*u.deg).to(u.radian).value"

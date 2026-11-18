@@ -1,27 +1,12 @@
 # Joint ACT + M2 fit of the Hydra A cavity sim, placed at the MOOJ1142 pointing since
 # neither Hydra A nor MS0735 is in the ACT DR6 footprint. The M2 sim is injected into
 # MOOJ1142 TODs and the ACT sim into the ACT MOOJ1142 cutout (noise drawn from its ivar plus the CMB).
-# The core keeps its offset from the Abell780 total pointing (see Hydra.yaml).
+# Compare with the M2 only fit Hydra_MOO1142_M2.yaml.
 # Needs at least one MPI task per dataset, e.g. mpirun --bind-to none -n 9 (8 for M2, 1 for ACT).
-base: "Hydra.yaml"
-
-# Cluster name
-# Used both for the output path as well as to load presets
-name: "Hydra_MOO1142"
+base: "Hydra_MOO1142_M2.yaml"
 
 paths:
-  tods: "MOOJ1142"
   maps: "MOOJ1142" # ACT maps live in WITCH_DATROOT/MOOJ1142/act
-  glob: "Signal_TOD*.fits"
-
-# The grid has to hold 3*fwhm1 of the ACT beam inside 2*r_map,
-# and Hydra A is nearby so it should cover the whole 20 arcmin ACT map
-coords:
-  r_map: "10.0*60"
-  dr: "3.0"
-  dz: 3.0
-  x0: "(175.69766238*u.deg).to(u.radian).value" # MOOJ1142 pointing
-  y0: "(15.45364413*u.deg).to(u.radian).value"
 
 datasets:
   # mustang2 is inherited, the transfer function is only applied to its simulated signal
@@ -47,15 +32,6 @@ datasets:
       amp2: 0.0
     # y -> uK_CMB at 97 GHz
     prefactor: "float(wu.get_da(cfg['constants']['z'])*wu.y2K_CMB(97e9, cfg['constants']['Te'])*wu.XMpc/wu.me)*1e6"
-
-metamodel:
-  models:
-    - cluster_model
-  model_map:
-    mustang2:
-      - cluster_model
-    act:
-      - cluster_model
 
 imports:
   jitkasi.solutions.maps: jm
