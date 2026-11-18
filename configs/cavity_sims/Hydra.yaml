@@ -74,7 +74,7 @@ cluster_model:
           value: "np.deg2rad(-130)"
         amp:
           value: -1.0
-          to_fit: True
+          to_fit: False # Unrecoverable with M2, only E and F are fit
     bubbleB:
       structure: "uniform"
       parameters:
@@ -94,7 +94,7 @@ cluster_model:
           value: "np.deg2rad(-135)"
         amp:
           value: -1.0
-          to_fit: True
+          to_fit: False # Unrecoverable with M2, only E and F are fit
     bubbleC:
       structure: "uniform"
       parameters:
@@ -114,7 +114,7 @@ cluster_model:
           value: "np.deg2rad(135)"
         amp:
           value: -1.0
-          to_fit: True
+          to_fit: False # Unrecoverable with M2, only E and F are fit
     bubbleD:
       structure: "uniform"
       parameters:
@@ -134,7 +134,7 @@ cluster_model:
           value: "np.deg2rad(135)"
         amp:
           value: -1.0
-          to_fit: True
+          to_fit: False # Unrecoverable with M2, only E and F are fit
     bubbleE:
       structure: "uniform"
       parameters:
