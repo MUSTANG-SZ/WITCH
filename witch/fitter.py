@@ -182,7 +182,8 @@ def sim_metamodel(cfg: dict, dataset: DataSet, metamodel: MetaModel) -> MetaMode
     Get the metamodel whose signal gets injected into simulated data.
     If we are simming and the dataset sets a transfer function (`info["xfer"]`)
     then each model is wrapped in a `Model_xfer` so the injected signal is filtered
-    like the real data. The transfer function is never used when fitting.
+    like the real data. This is only needed when the transfer function is not part of
+    the forward model (`info["xfer_fit"]`), otherwise the dataset metadata already applies it.
 
     Parameters
     ----------
@@ -200,7 +201,7 @@ def sim_metamodel(cfg: dict, dataset: DataSet, metamodel: MetaModel) -> MetaMode
         otherwise a shallow copy with filtered models.
     """
     xfer = dataset.info.get("xfer", "")
-    if not (cfg.get("sim", False) and xfer):
+    if not (cfg.get("sim", False) and xfer) or dataset.info.get("xfer_fit", False):
         return metamodel
     print_once(f"Applying transfer function {xfer} to the simulated signal")
     metamodel_sim = copy(metamodel)

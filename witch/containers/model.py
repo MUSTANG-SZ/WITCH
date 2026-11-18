@@ -17,34 +17,8 @@ from typing_extensions import Self
 
 from .. import core
 from .. import grid as wg
+from .. import utils as wu
 from .base import Parameter, Structure
-
-
-def load_xfer(xfer_str: str) -> jax.Array:
-    """
-    Load a tabulated transfer function and extend it to high k.
-    The high k half of the table is fit with a line which is used to
-    append points out to 32 times the largest tabulated k.
-
-    Parameters
-    ----------
-    xfer_str : str
-        Path to the transfer function table.
-        Columns should be k (in 1/arcsec), transmission, and optionally the uncertainty.
-
-    Returns
-    -------
-    xfer : jax.Array
-        The extended table with shape `(ncol, nk)`.
-    """
-    # Code from Charles
-    tab = np.loadtxt(xfer_str).T
-    half = tab.shape[1] // 2
-    addt = np.max(tab[0]) * np.array([2.0, 4.0, 8.0, 16.0, 32.0])
-    ext = [addt] + [
-        np.polyval(np.polyfit(tab[0, half:], col[half:], 1), addt) for col in tab[1:]
-    ]
-    return jnp.array(np.concatenate((tab, np.vstack(ext)), axis=1))
 
 
 @register_pytree_node_class
@@ -730,26 +704,14 @@ class Model_xfer(Model):
         parent : Model
             The model to copy.
         xfer_str : str
-            Path to the transfer function table, see `load_xfer`.
+            Path to the transfer function table, see `witch.utils.load_xfer`.
 
         Returns
         -------
         model_xfer : Model_xfer
             Copy of `parent` with the transfer function applied to its model.
         """
-        xfer = np.asarray(load_xfer(xfer_str))
-        x, y = (np.ravel(parent.xyz[i]) for i in range(2))
-        # The RA grid is spaced by dr/cos(dec), so convert back to arcsec on the sky
-        cos_dec = np.cos(np.deg2rad(parent.xyz[4] / 3600.0))
-        k = np.hypot(
-            *np.meshgrid(
-                np.fft.fftfreq(len(x), np.abs(x[1] - x[0]) * cos_dec),
-                np.fft.fftfreq(len(y), np.abs(y[1] - y[0])),
-                indexing="ij",
-            )
-        )
-        # np.interp holds the end values outside the table
-        filt = jnp.array(np.interp(k, xfer[0], xfer[1]))
+        filt = wu.xfer_filter(xfer_str, parent.xyz)
         fields = {
             key: deepcopy(getattr(parent, key))
             for key, f in parent.__dataclass_fields__.items()
@@ -768,7 +730,7 @@ class Model_xfer(Model):
         model : jax.Array
             The filtered model evaluated on `xyz` with the current values of `pars`.
         """
-        return jnp.real(jnp.fft.ifft2(jnp.fft.fft2(Model.model.func(self)) * self.filt))
+        return wu.apply_filter(Model.model.func(self), self.filt)
 
     @cached_property
     def model_grad(self) -> tuple[jax.Array, jax.Array]:

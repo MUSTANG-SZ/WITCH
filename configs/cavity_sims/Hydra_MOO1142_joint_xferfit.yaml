@@ -1,0 +1,10 @@
+# Hydra_MOO1142_joint.yaml with the M2 transfer function in the forward model of the fit,
+# not just the simulated signal, so the sim and fit models match.
+base: "Hydra_MOO1142_joint.yaml"
+
+paths:
+  subdir: "xferfit"
+
+datasets:
+  mustang2:
+    xfer_fit: True

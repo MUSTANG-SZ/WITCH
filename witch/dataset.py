@@ -212,6 +212,49 @@ class BeamConvAndPrefac(MetaData):
         return cls(*children, include=include, exclude=exclude)
 
 
+@register_pytree_node_class
+@dataclass
+class XferFilter(MetaData):
+    """
+    Filter a model by a transfer function, i.e. the filtering of the data that the
+    rest of the forward model doesn't capture.
+    Only attributes unique to this subclass are listed here.
+    See `MetaData` for the rest.
+
+    Attributes
+    ----------
+    filt : jax.Array
+        The transmission at each 2D Fourier mode of the model grid,
+        see `witch.utils.xfer_filter`.
+    """
+
+    filt: Array
+
+    def apply(self, model: Array) -> Array:
+        """
+        Filter the model.
+        See `MetaData.apply` for details on parameters and returns.
+        """
+        return wu.apply_filter(model, self.filt)
+
+    def apply_grad(self, model_grad: Array) -> Array:
+        """
+        Filter the gradient, the filter is linear so this is the gradient of the filtered model.
+        See `MetaData.apply_grad` for details on parameters and returns.
+        """
+        return wu.apply_filter(model_grad, self.filt)
+
+    # Functions for making this a pytree
+    # Don't call this on your own
+    def tree_flatten(self) -> tuple[tuple, tuple]:
+        return ((self.filt,), (self.include, self.exclude))
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children) -> Self:
+        include, exclude = aux_data
+        return cls(*children, include=include, exclude=exclude)
+
+
 @runtime_checkable
 class GetFiles(Protocol):
     """

@@ -13,7 +13,7 @@ from mpi4py import MPI
 import witch.utils as wu
 from witch import grid
 from witch.containers import MetaModel
-from witch.dataset import BeamConvAndPrefac, DataSet, MetaData
+from witch.dataset import BeamConvAndPrefac, DataSet, MetaData, XferFilter
 from witch.fitter import print_once
 
 from ...objective import chisq_objective
@@ -112,6 +112,7 @@ def get_info(dset_name: str, cfg: dict, todvec: TODVec) -> dict:
         "minkasi_noise_kwargs": noise_kwargs,
         "copy_noise": cfg["datasets"][dset_name]["copy_noise"],
         "xfer": cfg["datasets"][dset_name].get("xfer", ""),
+        "xfer_fit": cfg["datasets"][dset_name].get("xfer_fit", False),
         "prefactor": prefactor,
         "point_sources": cfg["datasets"][dset_name].get("point_sources", []),
     }
@@ -129,11 +130,17 @@ def make_metadata(dset_name: str, cfg: dict, info: dict) -> tuple[MetaData, ...]
         max_npix=2 * int(r_map / dr),
     )
 
-    return (
+    metadata = (
         BeamConvAndPrefac(
             beam, info["prefactor"], exclude=tuple(info["point_sources"])
         ),
     )
+    if info["xfer"] and info["xfer_fit"]:
+        # The filter only depends on the grid spacing and shape, so center it at 0
+        r_map = eval(str(cfg["coords"]["r_map"]))
+        xyz = grid.make_grid(r_map, dr, dr)
+        metadata += (XferFilter(wu.xfer_filter(info["xfer"], xyz)),)
+    return metadata
 
 
 def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
@@ -248,7 +255,6 @@ def postproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
             )
 
         if cfg.get("ntods_map", False):
-
             if minkasi.nproc > 1:
                 print(
                     "Warning: running bunched TOD mapmaking with mpi is not reccomeneded. The bundles will be NPROC x NTODS_MAP and may lead to hanging code."
