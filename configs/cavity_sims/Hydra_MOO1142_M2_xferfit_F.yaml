@@ -1,0 +1,16 @@
+# Hydra_MOO1142_M2_xferfit.yaml centred like the Abell780 F field, which is centred on bubble F:
+# the core keeps its offset from the F pointing, and the number of TODs matches F
+# (19, rounded to 18 so the sign flips cancel the sky exactly).
+base: "Hydra_MOO1142_M2_xferfit.yaml"
+
+paths:
+  subdir: "xferfit_F"
+
+constants:
+  # Offset in arcsec of the Hydra A core from the Abell780 F pointing (139.51666667, -12.11805556)
+  dx_c: 24.2
+  dy_c: 81.0
+
+datasets:
+  mustang2:
+    ntods: 18
