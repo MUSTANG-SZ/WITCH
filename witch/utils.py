@@ -730,3 +730,30 @@ def apply_filter(m: jax.Array, filt: jax.Array) -> jax.Array:
         The filtered map(s).
     """
     return jnp.real(jnp.fft.ifft2(jnp.fft.fft2(m) * filt))
+
+
+def flip_signs(n_tods: int, seed: int = 0) -> np.ndarray:
+    """
+    Signs to flip the TODs by when simulating with the data as noise,
+    so that the sky cancels and only the noise is left.
+    Half the TODs (rounded down) get -1 so an even number of TODs cancels exactly.
+
+    Parameters
+    ----------
+    n_tods : int
+        Total number of TODs across all tasks.
+    seed : int, default: 0
+        0 alternates the signs with the global TOD index,
+        anything else assigns them randomly, giving a different noise realization.
+
+    Returns
+    -------
+    signs : np.ndarray
+        The sign of each TOD, indexed by its global index (`rank + nproc * i`).
+    """
+    idx = (
+        np.arange(n_tods)
+        if seed == 0
+        else np.random.default_rng(seed).permutation(n_tods)
+    )
+    return (-1.0) ** (idx % 2)

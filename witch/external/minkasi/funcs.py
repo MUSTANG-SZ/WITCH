@@ -163,8 +163,12 @@ def preproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
         dset.datavec, copy_noise, False
     )  # We always take a mem hit here...
     noise_skymap = minkasi.maps.SkyMap(lims, pixsize)
+    # Same signs as the sim (see process_tods) so this is the noise of the simulated data
+    signs = wu.flip_signs(
+        dset.datavec.comm.allreduce(len(noise_vec.tods)), int(cfg.get("sim_seed", 0))
+    )
     for i, tod in enumerate(noise_vec.tods):
-        tod.info["dat_calib"] *= (-1) ** ((minkasi.myrank + minkasi.nproc * i) % 2)
+        tod.info["dat_calib"] *= signs[minkasi.myrank + minkasi.nproc * i]
     minkasi.barrier()
     noise_mapset = mm.make_maps(
         noise_vec,

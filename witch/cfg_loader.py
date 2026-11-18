@@ -72,6 +72,8 @@ def load_cfg(cfg, args=None):
             cfg["sub"] = False
         if args.nofit:
             cfg["fit"] = False
+        if getattr(args, "sim_seed", None) is not None:
+            cfg["sim_seed"] = args.sim_seed
 
     # Do imports
     for module, name in cfg.get("imports", {}).items():

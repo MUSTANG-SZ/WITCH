@@ -25,6 +25,7 @@ import yaml
 from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
+from . import utils as wu
 from .containers import MetaModel, Model_xfer
 from .containers.metamodel import _compute_metadata_map, _compute_par_map_and_pars
 from .dataset import DataSet
@@ -99,6 +100,12 @@ def _make_parser() -> argp.ArgumentParser:
         "-wn",
         action="store_true",
         help="Use whitenoise instead of map noise. Only for use with sim",
+    )
+    parser.add_argument(
+        "--sim-seed",
+        type=int,
+        default=None,
+        help="Seed of the simulated noise (TOD sign flips, white noise, map noise), overrides sim_seed in the config. Nonzero seeds get their own output directory",
     )
     parser.add_argument(
         "--cpu",
@@ -222,6 +229,8 @@ def process_tods(cfg, dataset, metamodel):
 
     dset_ind = metamodel_cur.get_dataset_ind(dataset.name)
     todvec.comm.barrier()
+    seed = int(cfg.get("sim_seed", 0))
+    signs = wu.flip_signs(todvec.comm.allreduce(len(todvec.tods)), seed)
     for i, tod in enumerate(todvec.tods):
         if sim:
             if cfg["wnoise"]:
@@ -232,14 +241,14 @@ def process_tods(cfg, dataset, metamodel):
                 # Each TOD needs its own key, otherwise TODs with the same shape
                 # get identical noise realizations
                 key = jax.random.fold_in(
-                    jax.random.key(int(cfg.get("wnoise_seed", 0))), rank + nproc * i
+                    jax.random.key(int(cfg.get("wnoise_seed", seed))), rank + nproc * i
                 )
                 tod.data = (
                     jax.random.normal(key, shape=tod.data.shape, dtype=tod.data.dtype)
                     * scale[..., None]
                 )
             else:
-                tod.data *= (-1) ** ((rank + nproc * i) % 2)
+                tod.data *= signs[rank + nproc * i]
 
             pred = metamodel_cur.model_proj(dset_ind, i)
             tod.data += pred
@@ -403,6 +412,8 @@ def get_outdir(cfg, metamodel, nonpara=False):
             outdir = os.path.join(outdir, "not_fit")
     if cfg["sim"] and metamodel is not None:
         outdir += "-sim"
+        if cfg.get("sim_seed", 0):
+            outdir += f"_s{cfg['sim_seed']}"
     if nonpara:
         outdir += "-nonpara"
 
