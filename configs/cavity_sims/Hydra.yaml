@@ -1,7 +1,7 @@
-# Hydra A (Abell 780) cavity sim injected into the real Abell780 TODs (E and F fields)
-# The TODs, pointing, beam, and grid all come from the Abell780 data config
-# so the sim matches what we expect to see in those maps
-base: "../Abell780/Abell780_total.yaml"
+# Hydra A (Abell 780) cavity sim injected into MS0735 TODs
+# Mimics the Abell780 total (E + F) data: same number of TODs and the same
+# core offset from the map center as the Abell780 total pointing
+base: "cavity_base.yaml"
 
 # Cluster name
 # Used both for the output path as well as to load presets
@@ -11,7 +11,8 @@ noise_map: True
 
 constants:
   z: 0.05
-  # Offset in arcsec of the Hydra A core (09:18:05.651 -12:05:43.99) from the map center (x0, y0)
+  # Offset in arcsec of the Hydra A core (09:18:05.651 -12:05:43.99) from the Abell780 total
+  # pointing (see ../Abell780/Abell780_total.yaml), applied here relative to the map center (x0, y0)
   # dx is along +RA (east) on the sky, dy along +Dec
   # The structure offsets below are relative to the core (Wise 2007) plus this offset
   dx_c: 9.5
@@ -19,8 +20,7 @@ constants:
 
 datasets:
   mustang2:
-    # Transfer function applied to the simulated signal only, never when fitting
-    xfer: "/home/jorlo/dev/minkasi_jax/data/M2/transfer_functions/xfer_Function_3p5_21Aonly_PCA5_0f08Filtering.txt"
+    ntods: 60 # Number of unique Abell780 TODs (E and F share 17)
 
 metamodel:
   models:

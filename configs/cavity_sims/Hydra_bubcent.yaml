@@ -1,4 +1,4 @@
-# Same Hydra A sim as Hydra.yaml but on the Abell780 E field only,
+# Same Hydra A sim as Hydra.yaml but mimicking the Abell780 E field only,
 # which is centered on the outer cavity (bubbleE)
 base: "Hydra.yaml"
 
@@ -7,15 +7,10 @@ base: "Hydra.yaml"
 name: "Hydra_bubcent"
 
 constants:
-  # Offset in arcsec of the Hydra A core from the E field center, see Hydra.yaml
+  # Offset in arcsec of the Hydra A core from the Abell780 E field center, see Hydra.yaml
   dx_c: -5.1
   dy_c: -224.0
 
-paths:
-  maps: "Abell780/Abell780E"
-  tods: "Abell780/Abell780E"
-  subdir: "Abell780E"
-
-coords:
-  x0: "(139.525*u.deg).to(u.radian).value"
-  y0: "(-12.03333333*u.deg).to(u.radian).value"
+datasets:
+  mustang2:
+    ntods: 41 # Number of Abell780 E field TODs
