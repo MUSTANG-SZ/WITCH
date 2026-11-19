@@ -1,0 +1,10 @@
+base: "nika2_base.yaml"
+name: "ID48"
+
+
+paths:
+  tods: "ID48" # Raw IMBFITS, needs the NIKA2 calibration pipeline (not yet implemented)
+  glob: "iram30m-NIKA-*-imb.fits"
+coords:
+  x0: "(206.8776*u.degree).to(u.radian).value"
+  y0: "(-11.7528*u.degree).to(u.radian).value"
