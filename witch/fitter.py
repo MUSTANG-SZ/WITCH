@@ -25,7 +25,7 @@ import yaml
 from mpi4py import MPI
 from typing_extensions import Any, Unpack
 
-from .containers import Model_xfer
+from .containers import MetaModel, Model_xfer
 from .containers.metamodel import _compute_metadata_map, _compute_par_map_and_pars
 from .fitting import run_lmfit, run_mcmc
 from .metropolis_hastings import run_mh
@@ -1059,6 +1059,36 @@ def load_config(start_cfg, cfg_path):
     return cfg
 
 
+def _postfit(datasets: list, metamodel: MetaModel, cfg: dict, outdir: str):
+    """
+    Post-fit products: sync the datasets with the fitted metamodel, make the joint (multi-dataset) maps if the
+    config has a joint_map block, then run each dataset's own postfit. The joint maps go first because some
+    per-dataset postfits (act_map) overwrite their data with the residual and the model. Collective: every rank
+    of `comm` must call this.
+
+    Parameters
+    ----------
+    datasets : list
+        This rank's DataSet objects; their data is replaced by the metamodel's.
+    metamodel : MetaModel
+        The fitted metamodel; its datasets are replaced by the post-postfit data.
+    cfg : dict
+        The config.
+    outdir : str
+        Output directory.
+    """
+    for dataset, mdata in zip(datasets, metamodel.datasets):
+        dataset.data = mdata
+    if cfg.get("joint_map"):
+        # Imported here: it pulls in minkasi's needlet code and witch.external.minkasi, which imports this module
+        from .external.joint.funcs import joint_post_fit
+
+        joint_post_fit(tuple(datasets), cfg, metamodel, comm, outdir)
+    for dataset in datasets:
+        dataset.postfit(dataset, cfg, metamodel)
+    metamodel.datasets = tuple(dataset.data for dataset in datasets)
+
+
 def main():
     parser = _make_parser()
     args = parser.parse_args()
@@ -1077,10 +1107,7 @@ def main():
     resample = cfg.get("resample", False)
     if to_fit and outdir is not None:
         metamodel = fit_loop(metamodel, cfg, comm)
-        for dataset, mdata in zip(datasets, metamodel.datasets):
-            dataset.data = mdata
-            dataset.postfit(dataset, cfg, metamodel)
-        metamodel.datasets = tuple(dataset.data for dataset in datasets)
+        _postfit(datasets, metamodel, cfg, outdir)
         if "nonpara" in cfg and cfg["nonpara"]["convert"]:
             print_once("Setting up nonparametric model")
             n_rounds = cfg["nonpara"].get("n_rounds", None)
@@ -1128,15 +1155,10 @@ def main():
                 dataset.info["outdir"] = outdir
 
             nonparametamodel = fit_loop(nonparametamodel, cfg, comm, True)
-            for dataset, mdata in zip(datasets, nonparametamodel.datasets):
-                dataset.data = mdata
-                dataset.postfit(dataset, cfg, metamodel)
-            nonparametamodel.datasets = tuple(dataset.data for dataset in datasets)
+            # The nonpara residuals use the nonpara model (this used to pass the parametric metamodel)
+            _postfit(datasets, nonparametamodel, cfg, outdir)
 
     else:
-        for dataset, mdata in zip(datasets, metamodel.datasets):
-            dataset.data = mdata
-            dataset.postfit(dataset, cfg, metamodel)
-        metamodel.datasets = tuple(dataset.data for dataset in datasets)
+        _postfit(datasets, metamodel, cfg, outdir)
 
     print_once("Outputs can be found in", outdir)

@@ -368,22 +368,48 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
             cfg["datasets"][dset.name]["dograd"],
             thresh=thresh,
         )
-        xyz = grid.make_grid_from_wcs(
-            model_skymap.wcs,
-            model_skymap.map.shape[0],
-            model_skymap.map.shape[1],
-            0.00116355,
-            0.00000969,
-            # Model structures are offsets from the fit grid origin, not the map center
-            x0=float(metamodel.models[0].xyz[3]) / wu.rad_to_arcsec,
-            y0=float(metamodel.models[0].xyz[4]) / wu.rad_to_arcsec,
-        )
-        orig_grids = []
-        for tm in metamodel.models:
-            orig_grids += [deepcopy(tm.xyz)]
-            tm.xyz = xyz
-        model_skymap.map = metamodel.model_grid(dataset_ind)
+        model_skymap.map = model_on_skymap(metamodel, dataset_ind, model_skymap)
         if minkasi.myrank == 0:
             model_skymap.write(os.path.join(outdir, "model/truth.fits"))
+
+
+def model_on_skymap(
+    metamodel: MetaModel, dataset_ind: int, skymap: minkasi.maps.SkyMap
+) -> np.ndarray:
+    """
+    The model as a dataset sees it (with its metadata: beam and prefactor) evaluated on the pixels of a minkasi
+    skymap, without any mapmaking filtering ("truth" map). The beam is sampled at the fit grid's pixel size
+    (coords.dr), so the skymap's pixels should have that size too.
+
+    Parameters
+    ----------
+    metamodel : MetaModel
+        The metamodel; its models' grids are swapped for the skymap's and restored.
+    dataset_ind : int
+        Index of the dataset whose metadata to apply.
+    skymap : minkasi.maps.SkyMap
+        Map whose WCS and shape to use.
+
+    Returns
+    -------
+    np.ndarray
+        The model on the skymap pixels, shape skymap.map.shape.
+    """
+    xyz = grid.make_grid_from_wcs(
+        skymap.wcs,
+        skymap.map.shape[0],
+        skymap.map.shape[1],
+        0.00116355,
+        0.00000969,
+        # Model structures are offsets from the fit grid origin, not the map center
+        x0=float(metamodel.models[0].xyz[3]) / wu.rad_to_arcsec,
+        y0=float(metamodel.models[0].xyz[4]) / wu.rad_to_arcsec,
+    )
+    orig_grids = [deepcopy(tm.xyz) for tm in metamodel.models]
+    try:
+        for tm in metamodel.models:
+            tm.xyz = xyz
+        return np.asarray(metamodel.model_grid(dataset_ind))
+    finally:
         for tm, og in zip(metamodel.models, orig_grids):
             tm.xyz = og

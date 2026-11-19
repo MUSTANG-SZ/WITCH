@@ -1,0 +1,26 @@
+# Smoke test of the joint_map plumbing: no fit, 2 M2 TODs + the ACT map, debug-size needlets (6" pixels, 6 bands), 5 CG
+# iterations. Takes a few minutes on 2 ranks: mpirun --bind-to none -n 2 witcher <this> --cpu True
+base: "MOOJ1142_joint_needlet.yaml"
+fit: False
+sub: False
+map: False
+res_map: False
+model_map: False
+noise_map: False
+
+paths:
+  subdir: "joint_needlet_smoke"
+
+coords:
+  dr: "6.0" # the debug needlet pixel, so the truth map is made
+
+datasets:
+  mustang2:
+    ntods: 2
+
+joint_map:
+  options:
+    debug: True
+    cg: 5
+    cg_tol: 1.0e-3
+    lattice_tol: null
