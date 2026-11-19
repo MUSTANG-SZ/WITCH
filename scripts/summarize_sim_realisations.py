@@ -222,6 +222,9 @@ def main():
         required=True,
         help="label=glob of the output directories, can be repeated",
     )
+    parser.add_argument(
+        "--params", nargs="+", help="Only these parameters (structure.parameter)"
+    )
     parser.add_argument("--truth", type=float, default=-1.0)
     parser.add_argument("--title", default="Sim recovery over noise realisations")
     parser.add_argument("--notes", default="", help="HTML shown above the results")
@@ -232,6 +235,8 @@ def main():
     for spec in args.run:
         label, pattern = spec.split("=", 1)
         runs[label] = collect(pattern, args.debug)
+        if args.params:
+            runs[label] = {p: v for p, v in runs[label].items() if p in args.params}
         print(label, {p: len(v) for p, v in runs[label].items()})
     with open(args.out, "w") as f:
         f.write(html(args.title, runs, args.truth, args.notes))
