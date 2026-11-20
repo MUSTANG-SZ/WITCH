@@ -42,12 +42,11 @@ Steps:
    -85 uK, is the ACT cutout's mean that WITCH removes, `zero_mean`).
 5. Report as in "Deliverables", replacing the 4" maps.
 
-ACT cutout: the 3" check above used a 36' cut of the same ACT+Planck map; the production cutout in `WITCH_DATROOT`
-(`MOOJ1142/act/`, 20' across) does not cover the whole 24' needlet grid. A 3" run with the 20' cutout was still going on
-psd when this was written. Use the 20' cutout (the configs do); if step 4 gives clearly more than ~1.5x the ACT noise or a
-tilt above ~30 uK, stop and ask the user for the 36' cutout (psd: `/mnt/welch/USERS/jorlo/needlets/witch_check/data/
-MOOJ1142/act/`, cut with pixell `enmap.read_map(..., box=...)` 18' around the old cutout's centre from
-`/mnt/welch/ACT/20240323_simple/act_planck_s08_s22_f090_daynight_{map,ivar}.fits`) and point `paths.maps` at it.
+ACT cutout: keep the production 20' cutout in `WITCH_DATROOT` (`MOOJ1142/act/`), as the configs do. On psd the
+production config at 3" with it (signal map, all TODs, CG 600) gave 1.02x the ACT noise against DR6 with a 14 uK tilt
+(1.07x and 6 uK against the ACT+Planck map it was solved with), within 19 uK rms of the minkasi reference at 30" scales,
+and the same map as a 36' cutout to 0.1 uK rms where the hits are high (they differ by ~15 uK at the low-hit edge). If
+step 4 gives clearly more than ~1.5x the ACT noise or a tilt above ~30 uK, something else is wrong: stop and ask.
 
 ## Goal
 
