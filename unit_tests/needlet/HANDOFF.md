@@ -4,6 +4,51 @@ Written 2026-11-19 on `psd` (8 cores, 251 GB, one A6000). Everything here was de
 production run is too big for it and is yours. Read this whole file before starting. Ask the user when something here
 does not match what you find (paths, branches, data); do not guess.
 
+## 2026-11-20 update: remake the joint maps at 3" (do this first)
+
+The joint MCMC fit you ran (`MOOJ1142_joint_needlet_trillium_mcmc.yaml`, outputs in
+`Reductions/MOOJ1142/mustang2+act/.../joint_needlet_mcmc/`) is fine. Its joint needlet maps (`needlet/`) are not: the
+config used 4" needlet pixels, and minkasi's ACT term models every ACT pixel as `ACT_OSAMP` = 10 needlet pixels, which is
+only right at 3" for ACT's 30" pixels. At 4" ACT was sampled, averaged and weighted on 40" blocks without any error. The
+maps came out 4.1x the ACT noise off ACT (DR6) with a ~120 uK Dec tilt and a bright ring at the edge of the M2 region.
+Remade on psd at 3" (signal map, all TODs, CG 600): 1.20x the ACT noise and a 17 uK tilt, against 1.15x and 11 uK for
+the minkasi reference map (`all106_nomask/run600_wcs`), and 7.7 uK rms from it at 30" scales.
+
+Fixed since (both need to be on the remote before you start; if they are not, stop and ask the user to push):
+- minkasi `needlet-joint-api` >= `59979ee`: `JointMapper` refuses ACT maps whose pixels are not `ACT_OSAMP` needlet
+  pixels across (raises in `read()`, so also in a dry run).
+- WITCH `needlet-maps` >= the commit that adds this section (on top of `188d077b`): WITCH sets the needlet pixel itself
+  (ACT pixel / `ACT_OSAMP` = 3"; a `pixsize` in `joint_map.options` is overridden), the truth map is evaluated at
+  `coords.dr` (4") and interpolated onto the 3" pixels, `load_tods` truncates as minkasi does (every MOOJ1142 TOD had 4
+  extra samples), the joint block detrends the TODs as minkasi does (`joint_map.detrend`, default True), and `freq` is
+  M2's 90 GHz (was 97). With these WITCH's joint map reproduces standalone minkasi to 3e-8.
+
+Steps:
+1. Pull both branches, reinstall minkasi if needed, check `python -c "from minkasi.needlet.act import check_act_pixels"`.
+2. Dry run with the layout you will use:
+   `mpirun --bind-to none -n <N> witcher configs/MOOJ1142_Joint/MOOJ1142_joint_needlet_trillium_maps_dryrun.yaml`.
+   Expect `map 480 x 480 pixels of 3"` (psd: 3" lattice of the 106 TODs, as the minkasi reference). The per-rank memory
+   is larger than the 4" numbers below; size N and nodes from what it prints.
+3. Maps: `mpirun --bind-to none -n <N> witcher configs/MOOJ1142_Joint/MOOJ1142_joint_needlet_trillium_maps.yaml`.
+   No fit (the parameters are the MCMC medians from that run's `results_final_fit.yaml`, copied into the config), all
+   four maps, outputs under `.../not_fit/joint_needlet_maps_3as/needlet/`. Its cache directory is new on purpose: the
+   response caches are keyed on the name and lattice tolerance, not on the pixel size, and a cache made at 4" would be
+   loaded silently. Do not point it at an existing cache directory.
+4. Check: `python unit_tests/needlet/plot_joint_maps.py <outdir>/needlet --figdir <figdir>` (`max |model - (signal -
+   residual)|` 0, the truth map present), and if the minkasi `analysis/` scripts and ACT maps are available,
+   `act_consistency.py --root <outdir>/needlet/signal` (with `_final`/`_hits` names linked) should give ~1.2x the ACT
+   noise and a tilt below ~20 uK. A display map: `analysis/multiscale_map.py --smooth 10 --show-hits 120
+   --feather-hits 300 --smooth-ref-hits 3000 --outline` (the reference display; the WITCH map's offset from ACT, about
+   -85 uK, is the ACT cutout's mean that WITCH removes, `zero_mean`).
+5. Report as in "Deliverables", replacing the 4" maps.
+
+ACT cutout: the 3" check above used a 36' cut of the same ACT+Planck map; the production cutout in `WITCH_DATROOT`
+(`MOOJ1142/act/`, 20' across) does not cover the whole 24' needlet grid. A 3" run with the 20' cutout was still going on
+psd when this was written. Use the 20' cutout (the configs do); if step 4 gives clearly more than ~1.5x the ACT noise or a
+tilt above ~30 uK, stop and ask the user for the 36' cutout (psd: `/mnt/welch/USERS/jorlo/needlets/witch_check/data/
+MOOJ1142/act/`, cut with pixell `enmap.read_map(..., box=...)` 18' around the old cutout's centre from
+`/mnt/welch/ACT/20240323_simple/act_planck_s08_s22_f090_daynight_{map,ivar}.fits`) and point `paths.maps` at it.
+
 ## Goal
 
 1. Run the joint MUSTANG-2 (TODs) + ACT (map) fit of MOOJ1142 with WITCH.
@@ -38,7 +83,7 @@ does not match what you find (paths, branches, data); do not guess.
 | repo | branch | needed commits |
 |---|---|---|
 | WITCH (`git@github.com:MUSTANG-SZ/WITCH.git`) | `needlet-maps` | the commit that adds this file, plus `4f85820` (minkasi comm, HasPrior fix) |
-| minkasi (`git@github.com:sievers/minkasi.git`) | `needlet/joint-api` | `f917b85`, `c6e759d` (`JointMapper.remap`), `f6abdc1` (`tests/check_remap.py`) |
+| minkasi (`git@github.com:sievers/minkasi.git`) | `needlet-joint-api` | `f917b85`, `c6e759d` (`JointMapper.remap`), `f6abdc1` (`tests/check_remap.py`), `59979ee` (ACT pixel guard) |
 | jitkasi | release | >= 3.1.1 (TAN WCS fix) |
 
 If those branches are not on the remote, stop and ask the user to push them. Versions on psd: jax 0.11.2, numpy 2.5.3,
@@ -91,7 +136,8 @@ On psd these are under `/mnt/welch/MUSTANG/M2-TODs/MOOJ1142/`. Set `WITCH_OUTROO
    `mpirun --bind-to none -n <N> witcher configs/MOOJ1142_Joint/MOOJ1142_joint_needlet_dryrun.yaml`. It prints each
    band's lattice and "per rank: resident X GB, peak while probing ~Y GB, plus the TODs". On psd (2 ranks, all ~106
    TODs after the blacklist) it gave a 360 x 360 map of 4" pixels, 10 bands, 0.15 G matrix entries: resident 1.8 GB,
-   peak while probing ~5.2 GB per rank; the result does not depend on N, check that you get the same lattice.
+   peak while probing ~5.2 GB per rank; the result does not depend on N, check that you get the same lattice. (These are
+   4" numbers, superseded: the needlet pixel is now 3", see the 2026-11-20 update; rerun the dry run.)
    Pick N and nodes so that every rank has Y + its TODs (~0.1 GB per TOD) + the WITCH fit's own memory, with margin.
    Do not run two probing jobs at once on a node.
 3. **Production run:** `mpirun --bind-to none -n <N> witcher configs/MOOJ1142_Joint/MOOJ1142_joint_needlet.yaml`.
