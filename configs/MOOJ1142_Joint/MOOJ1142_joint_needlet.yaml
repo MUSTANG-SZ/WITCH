@@ -1,6 +1,7 @@
 # Joint M2 + ACT fit of MOOJ1142 (gNFW r_s, peak, subcluster, ACT point source, ACT CMB noise), then joint needlet maps
 # (signal, residual, model, truth). The needlet settings are the minkasi baseline (minkasi reports/HANDOFF.md, 2026-11-10):
-# --direct --cg 600 --lattice-tol 1e-3 --min-hits 0, except pixsize 4" (baseline 3") to equal coords.dr, so the truth map is made.
+# --direct --cg 600 --lattice-tol 1e-3 --min-hits 0. The needlet pixel is not set here: WITCH takes it from the ACT maps
+# (ACT pixel / minkasi's ACT_OSAMP = 3" for 30" ACT pixels); the truth map is evaluated at coords.dr and interpolated.
 base: "MOOJ1142_joint_M2_ACT_gNFW_rs_peak_subcluster.yaml"
 name: "MOOJ1142"
 
@@ -16,6 +17,5 @@ joint_map:
     cg_tol: 0.0 # run all 600 iterations, as in the minkasi baseline
     lattice_tol: 1.0e-3
     min_hits: 0
-    pixsize: 4.0 # arcsec, = coords.dr (MOOJ1142_base.yaml)
-    freq: 9.7e+10 # 97 GHz, matches the ACT prefactor (uK_CMB -> K_RJ conversion)
+    freq: 9.0e+10 # M2's frequency: converts ACT's uK_CMB to M2's K_RJ (not ACT's 97 GHz SZ band centre)
     cache: "needlet_cache" # response matrix cache; set an absolute path on scratch
