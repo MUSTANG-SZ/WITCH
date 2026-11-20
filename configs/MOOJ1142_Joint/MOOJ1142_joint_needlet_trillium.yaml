@@ -1,6 +1,6 @@
 # MOOJ1142_joint_needlet.yaml (joint M2 + ACT fit, then joint needlet maps) on Trillium: only the needlet response
 # matrix cache moves to an absolute path on scratch (several GB, reused by reruns with the same TODs and noise;
-# use a new directory or `redo: True` if the TODs, noise or fit change, see unit_tests/needlet/HANDOFF.md).
+# use a new directory or `redo: True` if the TODs, noise, pixel size or fit change: the caches are keyed on the name only).
 # Run with /scratch/jorlo/moo1142_joint_needlet.sh (dry run first: /scratch/jorlo/moo1142_joint_needlet_dryrun.sh).
 base: "MOOJ1142_joint_needlet.yaml"
 
