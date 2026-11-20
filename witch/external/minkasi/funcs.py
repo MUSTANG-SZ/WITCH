@@ -1,14 +1,17 @@
 import glob
 import os
 from copy import deepcopy
+from types import SimpleNamespace
 
 import jax.numpy as jnp
 import minkasi
 import numpy as np
 from astropy.convolution import Gaussian2DKernel, convolve
+from astropy.wcs import WCS
 from jitkasi.tod import TODVec
 from minkasi.tools import presets_by_source as pbs
 from mpi4py import MPI
+from scipy.ndimage import map_coordinates
 
 import witch.utils as wu
 from witch import grid
@@ -65,6 +68,8 @@ def load_tods(dset_name: str, cfg: dict, fnames: list, comm: MPI.Intracomm) -> T
         dat = minkasi.tods.io.read_tod_from_fits(fname)
         minkasi.tods.processing.truncate_tod(dat)
         minkasi.tods.processing.downsample_tod(dat)
+        # Downsampling breaks the FFT friendly length, cut again as minkasi.tods.io.read_tods does
+        minkasi.tods.processing.truncate_tod(dat)
         tod = minkasi.tods.Tod(dat)
 
         tods += [from_minkasi_tod(deepcopy(tod))]
@@ -371,13 +376,52 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
             model_skymap.write(os.path.join(outdir, "model/truth.fits"))
 
 
+def resampled_wcs(
+    wcs: WCS, shape: tuple[int, int], pix: float, margin: int = 4
+) -> tuple[WCS, tuple[int, int]]:
+    """
+    A grid with pixels of another size covering a map's footprint (plus a margin), with the same projection and
+    reference point.
+
+    Parameters
+    ----------
+    wcs : WCS
+        The map's WCS (minkasi layout: map[i, j] is FITS pixel (i, j), i along RA).
+    shape : tuple[int, int]
+        The map's shape.
+    pix : float
+        Pixel size of the new grid, arcsec.
+    margin : int, default: 4
+        Extra pixels of the new grid on each side.
+
+    Returns
+    -------
+    new : WCS
+        WCS of the new grid.
+    new_shape : tuple[int, int]
+        Its shape, same layout as the map.
+    """
+    scale = np.abs(np.diag(wcs.celestial.pixel_scale_matrix)) * 3600 / pix
+    new = wcs.deepcopy()
+    new.wcs.cdelt = np.asarray(wcs.wcs.cdelt) / scale
+    # FITS: intermediate coordinate (p + 1 - crpix) cdelt for 0-based pixel p. Put the map's lower edge (its pixel
+    # -0.5) at the new grid's pixel margin - 0.5
+    new.wcs.crpix = 0.5 + margin - (0.5 - np.asarray(wcs.wcs.crpix)) * scale
+    new_shape = tuple(int(np.ceil(n * s)) + 2 * margin for n, s in zip(shape, scale))
+    return new, new_shape
+
+
 def model_on_skymap(
-    metamodel: MetaModel, dataset_ind: int, skymap: minkasi.maps.SkyMap
+    metamodel: MetaModel,
+    dataset_ind: int,
+    skymap: minkasi.maps.SkyMap,
+    dr: float | None = None,
 ) -> np.ndarray:
     """
     The model as a dataset sees it (with its metadata: beam and prefactor) evaluated on the pixels of a minkasi
     skymap, without any mapmaking filtering ("truth" map). The beam is sampled at the fit grid's pixel size
-    (coords.dr), so the skymap's pixels should have that size too.
+    (coords.dr), so if the skymap's pixels differ from `dr` the model is evaluated on a dr grid covering the skymap
+    and interpolated onto its pixels (cubic spline; the beamed model is smooth on the scale of dr).
 
     Parameters
     ----------
@@ -387,12 +431,24 @@ def model_on_skymap(
         Index of the dataset whose metadata to apply.
     skymap : minkasi.maps.SkyMap
         Map whose WCS and shape to use.
+    dr : float | None, default: None
+        The fit grid's pixel size (coords.dr) in arcsec. None: the skymap's pixels are taken to be that size.
 
     Returns
     -------
     np.ndarray
         The model on the skymap pixels, shape skymap.map.shape.
     """
+    pix = float(np.abs(skymap.wcs.celestial.pixel_scale_matrix[0, 0])) * 3600
+    if dr is not None and not np.isclose(pix, dr, rtol=1e-6):
+        wcs, shape = resampled_wcs(skymap.wcs, skymap.map.shape, dr)
+        fine = model_on_skymap(
+            metamodel, dataset_ind, SimpleNamespace(wcs=wcs, map=np.empty(shape))
+        )
+        ii, jj = np.indices(skymap.map.shape)
+        ra, dec = skymap.wcs.wcs_pix2world(ii, jj, 0)
+        pi, pj = wcs.wcs_world2pix(ra, dec, 0)
+        return map_coordinates(fine, [pi, pj], order=3, mode="nearest")
     xyz = grid.make_grid_from_wcs(
         skymap.wcs,
         skymap.map.shape[0],

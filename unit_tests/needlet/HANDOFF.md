@@ -23,7 +23,10 @@ does not match what you find (paths, branches, data); do not guess.
   signal map. A finite PCG/CG is not additive (the Krylov coefficients depend on the data), which is why the model map
   is not the model mapped on its own.
 - `model_truth.fits` is the fitted model with the M2 beam and prefactor evaluated on the needlet pixels, no filtering.
-  It is only made if the needlet pixel equals `coords.dr` (the beam is sampled at `dr`); the config sets both to 4".
+  The needlet pixel is not a free choice: minkasi models each ACT pixel as `ACT_OSAMP` = 10 needlet pixels, so WITCH
+  sets it to the ACT pixel / 10 (3" for ACT's 30"). The beam is sampled at `coords.dr` (4"), so the truth map is
+  evaluated on a `dr` grid and cubic-spline interpolated onto the 3" pixels (against a direct `dr: 3` evaluation:
+  0.55% of the extreme at most, 0.06% rms over the cluster, flux to 7e-5).
   model / truth is the mapmaker's transfer for this model.
 - MPI: each WITCH rank holds one dataset (M2 TODs split over the M2 ranks, ACT on one rank). minkasi has no comm
   argument; `witch.external.minkasi.utils.minkasi_comm` points it at the WITCH comm for the joint block. Every rank,
@@ -57,7 +60,9 @@ On psd these are under `/mnt/welch/MUSTANG/M2-TODs/MOOJ1142/`. Set `WITCH_OUTROO
 - `MOOJ1142_joint_needlet.yaml`: the production run. Base: `MOOJ1142_joint_M2_ACT_gNFW_rs_peak_subcluster.yaml`
   (gNFW r_s + peak + subcluster + point sources, ACT with CMB noise and its own point source, `n_rounds: 40`).
   Needlet options: the minkasi baseline `cg: 600, cg_tol: 0, lattice_tol: 1e-3, min_hits: 0` (CG implies `direct`),
-  `pixsize: 4` (= `dr`), `freq: 9.7e+10` (write it with a signed exponent: PyYAML reads `97.0e9` as a string).
+  `freq: 9.0e+10` (M2's frequency, for ACT's uK_CMB -> K_RJ; write floats with a signed exponent: PyYAML reads
+  `90.0e9` as a string). No `pixsize`: WITCH forces the ACT pixel / 10 = 3" (a 4" run on 2026-11-19 sampled ACT on
+  40" blocks and gave a joint map 4-6x ACT noise off ACT, with a ~120 uK tilt).
 - `MOOJ1142_joint_needlet_dryrun.yaml`: no fit, no maps, `dry_run`: prints the needlet lattice and memory per rank.
 - `MOOJ1142_joint_needlet_smoke.yaml`: no fit, 2 TODs, debug-size needlets; checks the plumbing in minutes.
 
@@ -120,6 +125,6 @@ On psd these are under `/mnt/welch/MUSTANG/M2-TODs/MOOJ1142/`. Set `WITCH_OUTROO
   the TODs, the noise or the fit between runs, use a new cache directory or `redo: True`.
 - `options` in `joint_map` take any `minkasi.needlet.joint.parse_args` option by its dest name (`cg_tol`, `act_cmb`, ...);
   unknown keys raise. `sim_sky` is not usable from WITCH (simulations are done on the WITCH side).
-- The truth map is computed on the first rank holding the M2 dataset and broadcast; it is skipped with a warning if the
-  needlet pixel differs from `coords.dr`.
+- The truth map is computed on the first rank holding the M2 dataset and broadcast (interpolated from the `dr` grid
+  when the needlet pixel differs from `coords.dr`).
 - Do not push to `main`, open PRs, or change the minkasi `--sim-sky` path; ask the user first.
