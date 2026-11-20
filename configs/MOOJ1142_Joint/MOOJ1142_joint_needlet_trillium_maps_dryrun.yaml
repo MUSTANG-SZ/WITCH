@@ -1,0 +1,7 @@
+# Dry run of MOOJ1142_joint_needlet_trillium_maps.yaml: JointMapper prints the 3" lattice and the response matrix memory per
+# MPI rank, then stops. Run it with the layout of the real job and check the memory first (3" has ~1.8x the pixels of 4").
+base: MOOJ1142_joint_needlet_trillium_maps.yaml
+
+joint_map:
+  options:
+    dry_run: True

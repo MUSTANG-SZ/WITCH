@@ -1,0 +1,77 @@
+# Joint needlet maps (signal, residual, model, truth) of the MOOJ1142 joint MCMC fit (MOOJ1142_joint_needlet_trillium_mcmc.yaml,
+# Reductions/MOOJ1142/mustang2+act/.../joint_needlet_mcmc), remade at the needlet pixel ACT allows (3", set by WITCH): the first
+# maps used 4" and are wrong (see unit_tests/needlet/HANDOFF.md). Mapmaking only, no fit: the parameters are that run's
+# results_final_fit.yaml (MCMC medians). New cache directory: the response caches are not keyed on the pixel size.
+base: MOOJ1142_joint_needlet_trillium_mcmc.yaml
+fit: False
+map: False
+res_map: False
+model_map: False
+noise_map: False
+paths:
+  subdir: joint_needlet_maps_3as
+joint_map:
+  options:
+    cache: /scratch/jorlo/MUSTANG/needlet_cache/MOOJ1142_maps_3as
+cluster_model:
+  structures:
+    gnfw_rs:
+      parameters:
+        dx_1:
+          value: 0.0
+        dy_1:
+          value: 0.0
+        dz_1:
+          value: 0.0
+        P0:
+          value: 0.062234801698384974
+        r_s:
+          value: 26.045659775199873
+        gamma:
+          value: 0.465
+        alpha:
+          value: 2.26
+        beta:
+          value: 3.381569825925765
+        z:
+          value: 1.19
+    sph_isobeta:
+      parameters:
+        x0:
+          value: -33.423264
+        y0:
+          value: 7.26858
+        z0:
+          value: 0.0
+        r:
+          value: 21.12011092554386
+        theta:
+          value: 0.0
+        beta:
+          value: 0.8887609938716239
+        amp:
+          value: 0.08039479945942113
+ps_model:
+  structures:
+    ps_gauss:
+      parameters:
+        dx_g:
+          value: 1.5727601255141352
+        dy_g:
+          value: -3.8609482872154226
+        sigma:
+          value: 4.863319428456227
+        amp_g:
+          value: 0.0014293741630682169
+ps_act:
+  structures:
+    ps_gauss:
+      parameters:
+        dx_g:
+          value: 1.5727601255141352
+        dy_g:
+          value: -3.8609482872154226
+        sigma:
+          value: 50.95974180397486
+        amp_g:
+          value: 34.79753526661389
