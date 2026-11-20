@@ -1,6 +1,7 @@
 # Joint needlet maps (signal, residual, model, truth) of the MOOJ1142 joint MCMC fit (MOOJ1142_joint_needlet_trillium_mcmc.yaml,
 # Reductions/MOOJ1142/mustang2+act/.../joint_needlet_mcmc), remade at the needlet pixel ACT allows (3", set by WITCH): the first
-# maps used 4" and are wrong (see unit_tests/needlet/HANDOFF.md). Mapmaking only, no fit: the parameters are that run's
+# maps used 4" and are wrong (minkasi models each 30" ACT pixel as 10 needlet pixels, right only at 3"). Mapmaking only,
+# no fit: the parameters are that run's
 # results_final_fit.yaml (MCMC medians). New cache directory: the response caches are not keyed on the pixel size.
 base: MOOJ1142_joint_needlet_trillium_mcmc.yaml
 fit: False
