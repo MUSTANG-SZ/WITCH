@@ -271,7 +271,6 @@ class MetaModel:
         model_grid : jax.Array
             The model on the computed grid.
         """
-        dataset_ind = 0
         m_map = self.model_map[dataset_ind]
         md_map = self.metadata_map[dataset_ind]
         dset = self.datasets[dataset_ind]
