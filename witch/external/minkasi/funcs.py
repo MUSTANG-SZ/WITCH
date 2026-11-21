@@ -373,9 +373,11 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
             cfg["datasets"][dset.name]["dograd"],
             thresh=thresh,
         )
-        model_skymap.map = model_on_skymap(metamodel, dataset_ind, model_skymap)
+        # The beam is sampled at coords.dr, so evaluate there and interpolate onto the map pixels (see model_on_skymap)
+        dr = float(eval(str(cfg["coords"]["dr"])))
+        model_skymap.map = model_on_skymap(metamodel, dataset_ind, model_skymap, dr)
         if minkasi.myrank == 0:
-            model_skymap.write(os.path.join(outdir, "model/truth.fits"))
+            model_skymap.write(os.path.join(outdir, dset.name, "model", "truth.fits"))
 
 
 def resampled_wcs(
@@ -451,20 +453,22 @@ def model_on_skymap(
         ra, dec = skymap.wcs.wcs_pix2world(ii, jj, 0)
         pi, pj = wcs.wcs_world2pix(ra, dec, 0)
         return map_coordinates(fine, [pi, pj], order=3, mode="nearest")
-    xyz = grid.make_grid_from_wcs(
+    x, y, _, x0, y0 = grid.make_grid_from_wcs(
         skymap.wcs,
         skymap.map.shape[0],
         skymap.map.shape[1],
-        0.00116355,
-        0.00000969,
+        1.0,  # placeholder LOS axis (2 samples), replaced by the fit grid's below
+        1.0,
         # Model structures are offsets from the fit grid origin, not the map center
         x0=float(metamodel.models[0].xyz[3]) / wu.rad_to_arcsec,
         y0=float(metamodel.models[0].xyz[4]) / wu.rad_to_arcsec,
     )
     orig_grids = [deepcopy(tm.xyz) for tm in metamodel.models]
     try:
-        for tm in metamodel.models:
-            tm.xyz = xyz
+        # Keep each model's own LOS axis: the LOS integral weights its samples by the model's dz (coords.dz), so any
+        # other z sampling scales the model (a fixed 2" axis made the truth 2x too deep for dz = 4")
+        for tm, og in zip(metamodel.models, orig_grids):
+            tm.xyz = (x, y, og[2], x0, y0)
         return np.asarray(metamodel.model_grid(dataset_ind))
     finally:
         for tm, og in zip(metamodel.models, orig_grids):
