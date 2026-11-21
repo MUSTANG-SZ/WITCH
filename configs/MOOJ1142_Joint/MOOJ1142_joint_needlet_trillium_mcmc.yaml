@@ -8,11 +8,16 @@
 #  - MH after LM, settings as the M2-only alpha/beta fits.
 #  - its own needlet cache: the M2 noise is re-estimated from the fit's residuals, so the response
 #    matrices of a different fit can't be reused.
+# 2026-11-20: rerun at the 3" needlet pixel WITCH now sets (the ACT pixel / ACT_OSAMP; the 4" maps of the first run, in
+# subdir joint_needlet_mcmc, are wrong), with M2 TODs truncated and detrended as minkasi does (see the 2026-11-20 update in
+# unit_tests/needlet/HANDOFF.md). New subdir, and a new cache since the caches aren't keyed on the pixel size or TOD prep.
+# Detrending (joint_map.detrend, default True) only applies to the TODs the joint maps are made from; the fit's TODs are not
+# detrended. OPEN: whether the fit should use detrended TODs too, to be settled by comparing fits with and without.
 # Run with /scratch/jorlo/moo1142_joint_needlet_mcmc.sh.
 
 base: MOOJ1142_joint_needlet_trillium.yaml
 paths:
-  subdir: joint_needlet_mcmc
+  subdir: joint_needlet_mcmc_3as
 mcmc:
   run: true
   method: mh
@@ -61,4 +66,4 @@ ps_act:
           value: -3.887530996200616
 joint_map:
   options:
-    cache: /scratch/jorlo/MUSTANG/needlet_cache/MOOJ1142_mcmc
+    cache: /scratch/jorlo/MUSTANG/needlet_cache/MOOJ1142_mcmc_3as

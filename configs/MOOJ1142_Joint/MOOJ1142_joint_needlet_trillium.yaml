@@ -2,8 +2,15 @@
 # matrix cache moves to an absolute path on scratch (several GB, reused by reruns with the same TODs and noise;
 # use a new directory or `redo: True` if the TODs, noise, pixel size or fit change: the caches are keyed on the name only).
 # Run with /scratch/jorlo/moo1142_joint_needlet.sh (dry run first: /scratch/jorlo/moo1142_joint_needlet_dryrun.sh).
+# The cache is the 3" one: WITCH now sets the needlet pixel to 3" (the ACT pixel / ACT_OSAMP) and the caches aren't keyed
+# on the pixel size, so the 4" caches in needlet_cache/MOOJ1142 would be loaded silently.
+# The ACT map is the 36' cutout (welch: needlets/witch_check/data/MOOJ1142/act/), which covers the whole 24' needlet grid;
+# the 20' one in MOOJ1142/act/ does not. Only the maps path changes, the M2 TODs still come from MOOJ1142/mustang2/.
 base: "MOOJ1142_joint_needlet.yaml"
+
+paths:
+  maps: "MOOJ1142_act36" # WITCH_DATROOT/MOOJ1142_act36/act/*_{map,ivar}.fits
 
 joint_map:
   options:
-    cache: "/scratch/jorlo/MUSTANG/needlet_cache/MOOJ1142"
+    cache: "/scratch/jorlo/MUSTANG/needlet_cache/MOOJ1142_3as"
