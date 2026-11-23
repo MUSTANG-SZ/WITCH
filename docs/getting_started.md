@@ -213,6 +213,10 @@ datasets:
       preproc: "mf.preproc"
       postproc: "mf.postproc"
       postfit: "mf.postfit"
+    # Optional, default True. False leaves this dataset out of the fit (it adds nothing to the likelihood) but keeps
+    # it loaded with its models, so its post-fit and joint maps still get the fitted model, e.g. an M2 only fit with
+    # a joint M2 + ACT needlet map. Free parameters that only this dataset would constrain are refused at load time.
+    fit: True
     # The rest are user specified and will depend on your dataset
     # These should only ever be needed in the function set in "funcs" above
     # Since they are only called from the specified "funcs" make sure the scope
