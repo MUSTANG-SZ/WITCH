@@ -286,6 +286,118 @@ def _accept(key, state, logpost, candidate, candidate_logpost):
     )
 
 
+MH_BLOCK = 64  # MH steps per compiled block, see `_mh_block`
+
+
+def _mh_step(
+    metamodel,
+    carry,
+    calc_like_func,
+    dataset_ind,
+    prior_args,
+    prior_type,
+    bound,
+    err_scale,
+    parameter_scale,
+    proposal,
+):
+    """
+    One Metropolis-Hastings step: propose with ``draw_samp``, evaluate, accept or reject.
+    Used both eagerly, one step at a time, and traced inside ``_mh_block``.
+
+    Parameters
+    ----------
+    metamodel : witch.containers.MetaModel
+        Model used to evaluate the likelihood.
+    carry : tuple[jax.Array, jax.Array, jax.Array]
+        ``(key, state, logpost)`` of the chain.
+    calc_like_func : callable
+        Function returning the log likelihood for a parameter vector.
+    dataset_ind : int
+        Dataset index passed to ``calc_like_func``.
+    prior_args : tuple[jax.Array, ...]
+        ``(lower, upper, center, errs)`` for ``_log_prior``.
+    prior_type : {"uniform", "normal"}
+        Prior and proposal type.
+    bound, err_scale, parameter_scale, proposal
+        Passed to ``draw_samp``.
+
+    Returns
+    -------
+    carry : tuple[jax.Array, jax.Array, jax.Array]
+        Updated ``(key, state, logpost)``.
+    accept : jax.Array
+        Whether the candidate was accepted.
+    """
+    key, state, logpost = carry
+    # Propose a candidate state using a symmetric random walk.
+    key, sample_key, accept_key = jax.random.split(key, 3)
+    candidate = draw_samp(
+        metamodel=metamodel,
+        key=sample_key,
+        bound=bound,
+        prior_type=prior_type,
+        err_scale=err_scale,
+        parameter_scale=parameter_scale,
+        proposal=proposal,
+        pars=state,
+    )
+    # Compare log posteriors to avoid exponentiating likelihoods.
+    candidate_logpost = calc_like_func(
+        metamodel=metamodel,
+        pars=candidate,
+        dataset_ind=dataset_ind,
+    ) + _log_prior(candidate, *prior_args, prior_type=prior_type)
+    state, logpost, accept = _accept(
+        accept_key, state, logpost, candidate, candidate_logpost
+    )
+    return (key, state, logpost), accept
+
+
+@partial(
+    jax.jit,
+    static_argnames=(
+        "nsteps",
+        "calc_like_func",
+        "dataset_ind",
+        "prior_type",
+        "proposal",
+    ),
+)
+def _mh_block(metamodel, carry, nsteps, **step_args):
+    """
+    ``nsteps`` Metropolis-Hastings steps as one compiled ``lax.scan``.
+    The steps are the same as ``_mh_step``, but the host dispatches once per block
+    instead of several times per step. MPI collectives in the likelihood run once per
+    step on every rank, as in the step by step loop.
+
+    Parameters
+    ----------
+    metamodel : witch.containers.MetaModel
+        Model used to evaluate the likelihood.
+    carry : tuple[jax.Array, jax.Array, jax.Array]
+        ``(key, state, logpost)`` of the chain.
+    nsteps : int
+        Number of steps.
+    **step_args
+        Passed to ``_mh_step``.
+
+    Returns
+    -------
+    carry : tuple[jax.Array, jax.Array, jax.Array]
+        ``(key, state, logpost)`` after the block.
+    (states, accepted) : tuple[jax.Array, jax.Array]
+        The chain state and whether the candidate was accepted at each step,
+        with shapes ``(nsteps, npar)`` and ``(nsteps,)``.
+    """
+
+    def body(carry, _):
+        carry, accept = _mh_step(metamodel, carry, **step_args)
+        return carry, (carry[1], accept)
+
+    return jax.lax.scan(body, carry, None, length=nsteps)
+
+
 def metropolis_hastings(
     metamodel,
     num_samples,
@@ -352,52 +464,69 @@ def metropolis_hastings(
         current_state,
         jnp.asarray(metamodel.errs) * prior_err_scale,
     )
-
-    def log_prior(pars):
-        return _log_prior(pars, *prior_args, prior_type=prior_type)
+    step_args = dict(
+        calc_like_func=calc_like_func,
+        dataset_ind=dataset_ind,
+        prior_args=prior_args,
+        prior_type=prior_type,
+        bound=bound,
+        err_scale=prior_err_scale,
+        parameter_scale=parameter_scale,
+        proposal=proposal,
+    )
 
     # Compute current log-posterior (log likelihood + log prior)
     p_current = calc_like_func(
         metamodel=metamodel,
         pars=current_state,
         dataset_ind=dataset_ind,
-    ) + log_prior(current_state)
+    ) + _log_prior(current_state, *prior_args, prior_type=prior_type)
+    carry = (key, current_state, p_current)
+    desc = f"Chain {chain_id + 1}"
+
+    if isinstance(metamodel, MetaModel) and calc_like_func in (
+        calc_like_joint,
+        calc_like_dataset,
+    ):
+        # Run blocks of steps as one compiled scan, the host only dispatches once per block.
+        # Block outputs are committed to a device, commit the initial carry as well so
+        # that every block reuses the same compiled executable.
+        carry = jax.device_put(carry, next(iter(current_state.devices())))
+        states = []
+        accepted = []
+        with tqdm(
+            total=num_samples, desc=desc, unit="step", disable=not progress
+        ) as pbar:
+            done = 0
+            while done < num_samples:
+                nsteps = min(MH_BLOCK, num_samples - done)
+                carry, (block_states, block_accepted) = _mh_block(
+                    metamodel, carry, nsteps=nsteps, **step_args
+                )
+                states.append(block_states)
+                accepted.append(block_accepted)
+                done += nsteps
+                if progress:
+                    carry[2].block_until_ready()
+                pbar.update(nsteps)
+        samples = np.asarray(jnp.concatenate(states))
+        accepted_count = int(jnp.sum(jnp.concatenate(accepted)))
+        return samples, accepted_count / num_samples
 
     states = []
     accepted = []
     for i in tqdm(
         range(num_samples),
-        desc=f"Chain {chain_id + 1}",
+        desc=desc,
         unit="step",
         disable=not progress,
     ):
-        # Propose a candidate state using a symmetric random walk.
-        key, sample_key, accept_key = jax.random.split(key, 3)
-        candidate = draw_samp(
-            metamodel=metamodel,
-            key=sample_key,
-            bound=bound,
-            prior_type=prior_type,
-            err_scale=prior_err_scale,
-            parameter_scale=parameter_scale,
-            proposal=proposal,
-            pars=current_state,
-        )
-
-        # Compare log posteriors to avoid exponentiating likelihoods.
-        p_candidate = calc_like_func(
-            metamodel=metamodel,
-            pars=candidate,
-            dataset_ind=dataset_ind,
-        ) + log_prior(candidate)
-        current_state, p_current, accept = _accept(
-            accept_key, current_state, p_current, candidate, p_candidate
-        )
-        states.append(current_state)
+        carry, accept = _mh_step(metamodel, carry, **step_args)
+        states.append(carry[1])
         accepted.append(accept)
         # Dispatch is async, sync now and then so the progress bar is honest
-        if i % 64 == 63:
-            p_current.block_until_ready()
+        if i % MH_BLOCK == MH_BLOCK - 1:
+            carry[2].block_until_ready()
 
     samples = np.asarray(jnp.stack(states))
     accepted_count = int(jnp.sum(jnp.stack(accepted)))

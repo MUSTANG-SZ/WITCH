@@ -75,22 +75,23 @@ def time_mh(metamodel, nsteps):
     metamodel : MetaModel
         The metamodel to sample.
     nsteps : int
-        Number of timed MH steps.
+        Number of timed MH steps, best a multiple of `MH_BLOCK`.
 
     Returns
     -------
     compile_time : float
-        Seconds for a 2 step warmup chain, dominated by compilation.
+        Seconds for a one block warmup chain, dominated by compilation.
     steps_per_s : float
         MH steps per second over `nsteps` steps.
     acceptance : float
         Acceptance rate of the timed chain.
     """
-    from witch.metropolis_hastings import calc_like_joint, metropolis_hastings
+    from witch.metropolis_hastings import MH_BLOCK, calc_like_joint, metropolis_hastings
 
     kwargs = dict(calc_like_func=calc_like_joint, progress=False, proposal="diag")
     t0 = time.time()
-    metropolis_hastings(metamodel, 2, **kwargs)
+    # One full block compiles the scanned steps, time a multiple of it
+    metropolis_hastings(metamodel, MH_BLOCK, **kwargs)
     compile_time = time.time() - t0
     t0 = time.time()
     _, acc = metropolis_hastings(metamodel, nsteps, **kwargs)

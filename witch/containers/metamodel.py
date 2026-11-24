@@ -726,7 +726,8 @@ def _compute_par_map_and_pars(
         pars = pars.at[_par_map].set(model.pars)
         errs = errs.at[_par_map].set(model.errs)
         cov = cov.at[_par_map[:, None], _par_map].set(model.cov)
-        par_map += [tuple(_par_map)]
+        # Plain ints: this is pytree aux data, which must not hold arrays
+        par_map += [tuple(int(i) for i in _par_map)]
         n += npar
     par_map = tuple(par_map)
 

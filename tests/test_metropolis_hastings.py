@@ -1,8 +1,11 @@
 import jax
 import jax.numpy as jnp
 import numpy as np
+import pytest
+from mpi4py import MPI
 
 from witch import metropolis_hastings as mh
+from witch.objective import with_noise_sqrt
 
 
 class _Dataset:
@@ -191,3 +194,40 @@ def test_chain_samples_target_distribution(monkeypatch):
 
     assert abs(np.mean(samples[500:])) < 0.2
     assert abs(np.std(samples[500:]) - 1.0) < 0.2
+
+
+@pytest.mark.parametrize("joint", [False, True])
+def test_scanned_chain_matches_step_loop(tod_metamodel, joint):
+    # A real MetaModel runs in compiled blocks of steps, wrapping the likelihood in a
+    # lambda forces the step by step loop. Both must give the same chain.
+    metamodel = with_noise_sqrt(tod_metamodel(ntod=2, comm=MPI.COMM_WORLD))
+    pars = metamodel.parameters
+    metamodel = metamodel.update(
+        pars, 0.01 * jnp.abs(pars) * metamodel.to_fit, metamodel.cov, metamodel.chisq
+    )
+    like = mh.calc_like_joint if joint else mh.calc_like_dataset
+    nsteps = mh.MH_BLOCK + 6  # a full block and a partial one
+    kwargs = dict(seed=4, progress=False, proposal="diag")
+    scanned, scanned_acc = mh.metropolis_hastings(
+        metamodel, nsteps, calc_like_func=like, **kwargs
+    )
+    looped, looped_acc = mh.metropolis_hastings(
+        metamodel, nsteps, calc_like_func=lambda **kw: like(**kw), **kwargs
+    )
+    assert scanned.shape == (nsteps, len(pars))
+    assert 0 < scanned_acc < 1
+    assert scanned_acc == looped_acc
+    np.testing.assert_allclose(scanned, looped, rtol=1e-12)
+
+
+def test_scanned_chain_compiles_once(tod_metamodel):
+    metamodel = with_noise_sqrt(tod_metamodel(ntod=1))
+    pars = metamodel.parameters
+    metamodel = metamodel.update(
+        pars, 0.01 * jnp.abs(pars) * metamodel.to_fit, metamodel.cov, metamodel.chisq
+    )
+    mh._mh_block.clear_cache()
+    mh.metropolis_hastings(
+        metamodel, 3 * mh.MH_BLOCK, calc_like_func=mh.calc_like_dataset, progress=False
+    )
+    assert mh._mh_block._cache_size() == 1
