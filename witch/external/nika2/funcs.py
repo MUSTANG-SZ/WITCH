@@ -127,9 +127,10 @@ def load_tods(dset_name: str, cfg: dict, fnames: list, comm: MPI.Intracomm) -> T
             raise ValueError(f"Unrecognized NIKA2 file type: {fname}")
         if dat is None:
             continue
-        minkasi.tods.processing.truncate_tod(dat)
+        # Truncate after downsampling, see `witch.external.minkasi.funcs.load_tods`
         if dset_cfg.get("downsample", False):
             minkasi.tods.processing.downsample_tod(dat)
+        minkasi.tods.processing.truncate_tod(dat)
         tod = minkasi.tods.Tod(dat)
 
         tods += [from_minkasi_tod(deepcopy(tod))]

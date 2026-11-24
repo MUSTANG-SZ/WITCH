@@ -75,8 +75,11 @@ def load_tods(dset_name: str, cfg: dict, fnames: list, comm: MPI.Intracomm) -> T
     tods = []
     for fname in fnames:
         dat = minkasi.tods.io.read_tod_from_fits(fname)
-        minkasi.tods.processing.truncate_tod(dat)
+        # Truncate after downsampling so the fitted TOD has a good FFT length: the noise
+        # model's DCT is an FFT of length 2(n - 1). Truncating before instead gives
+        # 23626 -> 2362 samples, and 2 * 2361 = 2 * 3 * 787 needs a slow Bluestein FFT.
         minkasi.tods.processing.downsample_tod(dat)
+        minkasi.tods.processing.truncate_tod(dat)
         tod = minkasi.tods.Tod(dat)
 
         tods += [from_minkasi_tod(deepcopy(tod))]
