@@ -1,0 +1,34 @@
+# M2-only fit of MOOJ1142 then the joint M2 + ACT needlet maps (signal, residual, model, truth), in one run on Trillium.
+# The fit is the M2-only gNFW_rs + subcluster + point source fit (as MOOJ1142_gNFW_rs_peak_subcluster_mcmc.yaml: LM, then
+# MH 4 x 10000 steps). It starts from the M2-only fit's MH posterior medians, as the joint MCMC config does (its base, see
+# there), since from the X-ray values the LM only crept along the P0-r_s degeneracy. ACT is loaded with its models but left
+# out of the fit (datasets.act.fit: False), so the joint maps and ACT's own post-fit maps get the M2-only model; the AIC
+# refit's chi2 is M2 only too.
+# Only ACT constrains the ACT point source amplitude, so it is fixed to the joint MCMC median (joint_needlet_mcmc_3as,
+# 33.5 +- 12.2 uK_CMB); its position is tied to the M2 point source, which is fit. Own subdir, and its own needlet cache
+# since the M2 noise is re-estimated from this fit's residuals (the caches are keyed on the name only).
+# The grid is the joint one (r_map 7', for the ACT beam), the M2-only fits used 3': expect small shifts at large radii.
+# Run with /scratch/jorlo/moo1142_m2fit_joint_needlet.sh.
+base: MOOJ1142_joint_needlet_trillium_mcmc.yaml
+
+paths:
+  subdir: m2fit_joint_needlet_3as
+
+datasets:
+  act:
+    fit: False
+
+ps_act:
+  structures:
+    ps_gauss:
+      parameters:
+        amp_g:
+          value: 33.46
+          to_fit: False
+
+mcmc:
+  num_steps: 10000 # as the M2-only fit; the rest of the MH settings are the base's
+
+joint_map:
+  options:
+    cache: /scratch/jorlo/MUSTANG/needlet_cache/MOOJ1142_m2fit_3as

@@ -100,6 +100,44 @@ class ObjectiveFunc(Protocol):
 
 
 @partial(jax.jit, static_argnames=("dataset_ind", "do_loglike", "do_grad", "do_curve"))
+def null_objective(
+    metamodel: "MetaModel",
+    dataset_ind: int,
+    do_loglike: bool = True,
+    do_grad: bool = True,
+    do_curve: bool = True,
+) -> tuple[jax.Array, jax.Array, jax.Array]:
+    """
+    Objective of a dataset left out of the fit (`datasets.<name>.fit: False`): it contributes nothing to the
+    likelihood, gradient or curvature, but stays in the metamodel for the post-fit maps.
+
+    Parameters
+    ----------
+    metamodel : MetaModel
+        The `MetaModel` being fit, only used for the number of parameters.
+    dataset_ind : int
+        Index of the dataset in `metamodel.datasets` (unused).
+    do_loglike : bool, default: True
+        Unused, the log-likelihood is always zero.
+    do_grad : bool, default: True
+        Unused, the gradient is always zero.
+    do_curve : bool, default: True
+        Unused, the curvature is always zero.
+
+    Returns
+    -------
+    chisq : jax.Array
+        `jnp.array(0.0)`.
+    grad : jax.Array
+        Zeros, shape `(npar,)`.
+    curve : jax.Array
+        Zeros, shape `(npar, npar)`.
+    """
+    npar = len(metamodel.parameters)
+    return jnp.array(0.0), jnp.zeros(npar), jnp.zeros((npar, npar))
+
+
+@partial(jax.jit, static_argnames=("dataset_ind", "do_loglike", "do_grad", "do_curve"))
 def chisq_objective(
     metamodel: "MetaModel",
     dataset_ind: int,

@@ -1,14 +1,17 @@
 import glob
 import os
 from copy import deepcopy
+from types import SimpleNamespace
 
 import jax.numpy as jnp
 import minkasi
 import numpy as np
 from astropy.convolution import Gaussian2DKernel, convolve
+from astropy.wcs import WCS
 from jitkasi.tod import TODVec
 from minkasi.tools import presets_by_source as pbs
 from mpi4py import MPI
+from scipy.ndimage import map_coordinates
 
 import witch.utils as wu
 from witch import grid
@@ -18,7 +21,13 @@ from witch.fitter import print_once
 
 from ...objective import chisq_objective
 from . import mapmaking as mm
-from .utils import from_minkasi, from_minkasi_noise, from_minkasi_tod, to_minkasi
+from .utils import (
+    from_minkasi,
+    from_minkasi_noise,
+    from_minkasi_tod,
+    to_minkasi,
+    update_minkasi,
+)
 
 
 def get_files(dset_name: str, cfg: dict) -> list:
@@ -49,34 +58,18 @@ def get_files(dset_name: str, cfg: dict) -> list:
     return tod_names
 
 
-def update_minkasi(inst, comm):
-    nproc = comm.Get_size()
-    rank = comm.Get_rank()
-    for attr in dir(inst):
-        if attr == "comm":
-            inst.comm = comm
-        elif attr == "nproc":
-            inst.nproc = nproc
-        elif attr == "myrank":
-            inst.myrank = rank
-        elif attr[0] == "_":
-            continue
-        elif hasattr(inst, "__package__") and "minkasi" in inst.__package__:
-            update_minkasi(getattr(inst, attr), comm)
-    return
-
-
 def load_tods(dset_name: str, cfg: dict, fnames: list, comm: MPI.Intracomm) -> TODVec:
-    # Update the minkasi comm here
+    # Point minkasi at this dataset's comm (mm.minkasi is the same module)
     if minkasi.have_mpi:
         update_minkasi(minkasi, comm)
-        update_minkasi(mm.minkasi, comm)
     # Now load
     tods = []
     for fname in fnames:
         dat = minkasi.tods.io.read_tod_from_fits(fname)
         minkasi.tods.processing.truncate_tod(dat)
         minkasi.tods.processing.downsample_tod(dat)
+        # Downsampling breaks the FFT friendly length, cut again as minkasi.tods.io.read_tods does
+        minkasi.tods.processing.truncate_tod(dat)
         tod = minkasi.tods.Tod(dat)
 
         tods += [from_minkasi_tod(deepcopy(tod))]
@@ -248,7 +241,6 @@ def postproc(dset: DataSet, cfg: dict, metamodel: MetaModel):
             )
 
         if cfg.get("ntods_map", False):
-
             if minkasi.nproc > 1:
                 print(
                     "Warning: running bunched TOD mapmaking with mpi is not reccomeneded. The bundles will be NPROC x NTODS_MAP and may lead to hanging code."
@@ -381,22 +373,103 @@ def postfit(dset: DataSet, cfg: dict, metamodel: MetaModel):
             cfg["datasets"][dset.name]["dograd"],
             thresh=thresh,
         )
-        xyz = grid.make_grid_from_wcs(
-            model_skymap.wcs,
-            model_skymap.map.shape[0],
-            model_skymap.map.shape[1],
-            0.00116355,
-            0.00000969,
-            # Model structures are offsets from the fit grid origin, not the map center
-            x0=float(metamodel.models[0].xyz[3]) / wu.rad_to_arcsec,
-            y0=float(metamodel.models[0].xyz[4]) / wu.rad_to_arcsec,
-        )
-        orig_grids = []
-        for tm in metamodel.models:
-            orig_grids += [deepcopy(tm.xyz)]
-            tm.xyz = xyz
-        model_skymap.map = metamodel.model_grid(dataset_ind)
+        # The beam is sampled at coords.dr, so evaluate there and interpolate onto the map pixels (see model_on_skymap)
+        dr = float(eval(str(cfg["coords"]["dr"])))
+        model_skymap.map = model_on_skymap(metamodel, dataset_ind, model_skymap, dr)
         if minkasi.myrank == 0:
-            model_skymap.write(os.path.join(outdir, "model/truth.fits"))
+            model_skymap.write(os.path.join(outdir, dset.name, "model", "truth.fits"))
+
+
+def resampled_wcs(
+    wcs: WCS, shape: tuple[int, int], pix: float, margin: int = 4
+) -> tuple[WCS, tuple[int, int]]:
+    """
+    A grid with pixels of another size covering a map's footprint (plus a margin), with the same projection and
+    reference point.
+
+    Parameters
+    ----------
+    wcs : WCS
+        The map's WCS (minkasi layout: map[i, j] is FITS pixel (i, j), i along RA).
+    shape : tuple[int, int]
+        The map's shape.
+    pix : float
+        Pixel size of the new grid, arcsec.
+    margin : int, default: 4
+        Extra pixels of the new grid on each side.
+
+    Returns
+    -------
+    new : WCS
+        WCS of the new grid.
+    new_shape : tuple[int, int]
+        Its shape, same layout as the map.
+    """
+    scale = np.abs(np.diag(wcs.celestial.pixel_scale_matrix)) * 3600 / pix
+    new = wcs.deepcopy()
+    new.wcs.cdelt = np.asarray(wcs.wcs.cdelt) / scale
+    # FITS: intermediate coordinate (p + 1 - crpix) cdelt for 0-based pixel p. Put the map's lower edge (its pixel
+    # -0.5) at the new grid's pixel margin - 0.5
+    new.wcs.crpix = 0.5 + margin - (0.5 - np.asarray(wcs.wcs.crpix)) * scale
+    new_shape = tuple(int(np.ceil(n * s)) + 2 * margin for n, s in zip(shape, scale))
+    return new, new_shape
+
+
+def model_on_skymap(
+    metamodel: MetaModel,
+    dataset_ind: int,
+    skymap: minkasi.maps.SkyMap,
+    dr: float | None = None,
+) -> np.ndarray:
+    """
+    The model as a dataset sees it (with its metadata: beam and prefactor) evaluated on the pixels of a minkasi
+    skymap, without any mapmaking filtering ("truth" map). The beam is sampled at the fit grid's pixel size
+    (coords.dr), so if the skymap's pixels differ from `dr` the model is evaluated on a dr grid covering the skymap
+    and interpolated onto its pixels (cubic spline; the beamed model is smooth on the scale of dr).
+
+    Parameters
+    ----------
+    metamodel : MetaModel
+        The metamodel; its models' grids are swapped for the skymap's and restored.
+    dataset_ind : int
+        Index of the dataset whose metadata to apply.
+    skymap : minkasi.maps.SkyMap
+        Map whose WCS and shape to use.
+    dr : float | None, default: None
+        The fit grid's pixel size (coords.dr) in arcsec. None: the skymap's pixels are taken to be that size.
+
+    Returns
+    -------
+    np.ndarray
+        The model on the skymap pixels, shape skymap.map.shape.
+    """
+    pix = float(np.abs(skymap.wcs.celestial.pixel_scale_matrix[0, 0])) * 3600
+    if dr is not None and not np.isclose(pix, dr, rtol=1e-6):
+        wcs, shape = resampled_wcs(skymap.wcs, skymap.map.shape, dr)
+        fine = model_on_skymap(
+            metamodel, dataset_ind, SimpleNamespace(wcs=wcs, map=np.empty(shape))
+        )
+        ii, jj = np.indices(skymap.map.shape)
+        ra, dec = skymap.wcs.wcs_pix2world(ii, jj, 0)
+        pi, pj = wcs.wcs_world2pix(ra, dec, 0)
+        return map_coordinates(fine, [pi, pj], order=3, mode="nearest")
+    x, y, _, x0, y0 = grid.make_grid_from_wcs(
+        skymap.wcs,
+        skymap.map.shape[0],
+        skymap.map.shape[1],
+        1.0,  # placeholder LOS axis (2 samples), replaced by the fit grid's below
+        1.0,
+        # Model structures are offsets from the fit grid origin, not the map center
+        x0=float(metamodel.models[0].xyz[3]) / wu.rad_to_arcsec,
+        y0=float(metamodel.models[0].xyz[4]) / wu.rad_to_arcsec,
+    )
+    orig_grids = [deepcopy(tm.xyz) for tm in metamodel.models]
+    try:
+        # Keep each model's own LOS axis: the LOS integral weights its samples by the model's dz (coords.dz), so any
+        # other z sampling scales the model (a fixed 2" axis made the truth 2x too deep for dz = 4")
+        for tm, og in zip(metamodel.models, orig_grids):
+            tm.xyz = (x, y, og[2], x0, y0)
+        return np.asarray(metamodel.model_grid(dataset_ind))
+    finally:
         for tm, og in zip(metamodel.models, orig_grids):
             tm.xyz = og

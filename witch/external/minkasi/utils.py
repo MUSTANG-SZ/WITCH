@@ -1,4 +1,7 @@
+from collections.abc import Iterator
+from contextlib import contextmanager
 from copy import deepcopy
+from typing import Any
 
 import jax
 import jax.numpy as jnp
@@ -7,6 +10,63 @@ import numpy as np
 from jitkasi import noise as jn
 from jitkasi.tod import TOD, TODVec
 from mpi4py import MPI
+
+
+def update_minkasi(inst: Any, comm: MPI.Intracomm):
+    """
+    Point minkasi at a communicator. minkasi has no comm argument: each of its modules holds its own copy of
+    `comm`, `myrank` and `nproc` (imported from minkasi.parallel), so this walks the minkasi modules reachable
+    from `inst` and overwrites those attributes. Modules imported later pick up the patched minkasi.parallel.
+    `have_mpi` is not changed.
+
+    Parameters
+    ----------
+    inst : Any
+        Module (or object) to patch, usually the `minkasi` package itself.
+    comm : MPI.Intracomm
+        Communicator minkasi should reduce over.
+    """
+    nproc = comm.Get_size()
+    rank = comm.Get_rank()
+    for attr in dir(inst):
+        if attr == "comm":
+            inst.comm = comm
+        elif attr == "nproc":
+            inst.nproc = nproc
+        elif attr == "myrank":
+            inst.myrank = rank
+        elif attr[0] == "_":
+            continue
+        elif "minkasi" in (getattr(inst, "__package__", None) or ""):
+            update_minkasi(getattr(inst, attr), comm)
+
+
+@contextmanager
+def minkasi_comm(comm: MPI.Intracomm) -> Iterator[None]:
+    """
+    Temporarily point minkasi at `comm` (see update_minkasi), restoring the previous communicator on exit, even
+    on an exception. WITCH points minkasi at each dataset's sub-communicator when loading TODs, so anything that
+    needs minkasi collectives across datasets (e.g. the joint needlet mapmaker) must run inside this, on every
+    rank of `comm`.
+
+    Parameters
+    ----------
+    comm : MPI.Intracomm
+        Communicator for the duration of the block, e.g. `witch.fitter.comm`.
+
+    Yields
+    ------
+    None
+    """
+    if not minkasi.have_mpi:
+        yield
+        return
+    old = minkasi.parallel.comm
+    update_minkasi(minkasi, comm)
+    try:
+        yield
+    finally:
+        update_minkasi(minkasi, old)
 
 
 def to_minkasi(

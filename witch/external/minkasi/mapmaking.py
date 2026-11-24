@@ -10,6 +10,7 @@ from typing import Optional
 
 import minkasi
 import numpy as np
+from minkasi.mapmaking.pcg import HasPrior  # minkasi.mapmaking.pcg is also a function
 from typing_extensions import Unpack
 
 
@@ -226,7 +227,7 @@ def solve_map(
     todvec: minkasi.tods.TodVec,
     x0: minkasi.maps.Mapset,
     ihits: minkasi.maps.MapType,
-    prior: minkasi.mapmaking.pcg.HasPrior | None,
+    prior: HasPrior | None,
     maxiters: int,
     save_iters: list[int],
     outdir: str,
@@ -410,7 +411,7 @@ def make_maps(
             maxiter,
             iters,
             outdir,
-            f"niter_{niter+1}",
+            f"niter_{niter + 1}",
             maskset=maskset,
         )
 

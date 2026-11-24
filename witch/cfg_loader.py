@@ -3,12 +3,61 @@ from importlib import import_module
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 import witch.fitter as fitter
 from witch.containers import MetaModel
 from witch.dataset import DataSet, DataSetData
 from witch.fitter import *
 from witch.fitter import _mpi_fsplit
+from witch.objective import null_objective
+
+
+def check_fit_datasets(cfg: dict, metamodel: MetaModel) -> None:
+    """
+    Check the datasets left out of the fit (`datasets.<name>.fit: False`): at least one dataset must be fit, and
+    every free parameter must be constrained by a fitted dataset (through the models `metamodel.model_map` gives it,
+    tied parameters included), since nothing else would constrain it. Only reads the config and the metamodel's
+    parameter bookkeeping, which every rank has, so all ranks raise together.
+
+    Parameters
+    ----------
+    cfg : dict
+        The loaded config.
+    metamodel : MetaModel
+        The metamodel built from it.
+
+    Raises
+    ------
+    ValueError
+        If no dataset is fit, or a free parameter only enters datasets that are not.
+    """
+    fitted = [name for name, d in cfg["datasets"].items() if d.get("fit", True)]
+    if len(fitted) == len(cfg["datasets"]):
+        return
+    if not fitted:
+        raise ValueError(
+            "Every dataset has fit: False, set the top level fit: False to skip fitting"
+        )
+    metacfg = cfg.get("metamodel", {})
+    mlist = metacfg.get("models", ["model"])
+    mmap = metacfg.get("model_map", {name: mlist for name in cfg["datasets"]})
+    used = {
+        int(i)
+        for name in fitted
+        for model in mmap[name]
+        for i in metamodel.parameter_map[mlist.index(model)]
+    }
+    names = {}
+    for model, par_map in zip(metamodel.models, metamodel.parameter_map):
+        for i, s, p in zip(par_map, model.par_struct_names, model.par_names):
+            names.setdefault(int(i), f"{model.name}.{s}.{p}")
+    free = np.flatnonzero(np.asarray(metamodel.to_fit_ever))
+    if unconstrained := [names[int(i)] for i in free if int(i) not in used]:
+        raise ValueError(
+            f"Free parameters {unconstrained} only enter datasets with fit: False "
+            f"(fitted: {fitted}), fix them (to_fit: False) or fit those datasets"
+        )
 
 
 def load_cfg(cfg, args=None):
@@ -142,11 +191,13 @@ def load_cfg(cfg, args=None):
             info,
         )
 
-        # Init the data container
+        # Init the data container. A dataset with fit: False stays in the metamodel (post-fit and joint maps) but
+        # adds nothing to the objective
+        fit_dset = cfg["datasets"][dset_name].get("fit", True)
         dataset.data = DataSetData(
             dset_name,
             info["mode"],
-            info["objective"],
+            info["objective"] if fit_dset else null_objective,
             datavec,
             metadata,
             noise_class,
@@ -189,6 +240,8 @@ def load_cfg(cfg, args=None):
         cfg["fit"] = False
         cfg["sim"] = False
         cfg["sub"] = False
+    if cfg["fit"]:
+        check_fit_datasets(cfg, metamodel)
     outdir = get_outdir(cfg, metamodel)
     cfg["outdir"] = outdir
 

@@ -1,0 +1,69 @@
+# Joint M2 + ACT fit of MOOJ1142 with MCMC, then the joint needlet maps, on Trillium.
+# Same as MOOJ1142_joint_needlet_trillium.yaml, but
+#  - every free parameter the M2-only fit shares starts from that fit's MH posterior medians
+#    (/scratch/jorlo/MUSTANG/Reductions/MOOJ1142/cluster_model_sph_isobeta-gnfw_rs+ps_model_ps_gauss/xray_peak_rs/r-beta-amp-P0-r_s-beta-dx_g-dy_g-sigma-amp_g/results_mcmc.yaml; P0, r_s, beta free, gamma and alpha fixed to the X-ray values),
+#    since starting from the X-ray values the LM only crept along the P0-r_s degeneracy in 40 rounds
+#    (job 2894498: r_s 4 -> 11.5" and still moving). The ACT point source's position, tied to the M2 one,
+#    starts there too; its amplitude keeps its config value.
+#  - MH after LM, settings as the M2-only alpha/beta fits.
+#  - its own needlet cache: the M2 noise is re-estimated from the fit's residuals, so the response
+#    matrices of a different fit can't be reused.
+# 2026-11-20: rerun at the 3" needlet pixel WITCH now sets (the ACT pixel / ACT_OSAMP; the 4" maps of the first run, in
+# subdir joint_needlet_mcmc, are wrong), with M2 TODs truncated and detrended as minkasi does. New subdir, and a new cache
+# since the caches aren't keyed on the pixel size or TOD prep.
+# Detrending (joint_map.detrend, default True) only applies to the TODs the joint maps are made from; the fit's TODs are not
+# detrended. OPEN: whether the fit should use detrended TODs too, to be settled by comparing fits with and without.
+# Run with /scratch/jorlo/moo1142_joint_needlet_mcmc.sh.
+
+base: MOOJ1142_joint_needlet_trillium.yaml
+paths:
+  subdir: joint_needlet_mcmc_3as
+mcmc:
+  run: true
+  method: mh
+  num_steps: 40000
+  num_chains: 4
+  burn_in: 0.2
+  prior_type: uniform
+  proposal: cov
+cluster_model:
+  structures:
+    gnfw_rs:
+      parameters:
+        P0:
+          value: 0.059535164294723684
+        r_s:
+          value: 26.90647055868157
+        beta:
+          value: 3.3790340804742
+    sph_isobeta:
+      parameters:
+        r:
+          value: 24.583331073763006
+        beta:
+          value: 1.0234200830100997
+        amp:
+          value: 0.0750124937930705
+ps_model:
+  structures:
+    ps_gauss:
+      parameters:
+        dx_g:
+          value: 1.5679752134004228
+        dy_g:
+          value: -3.887530996200616
+        sigma:
+          value: 4.841388567265127
+        amp_g:
+          value: 0.0014246690198702768
+ps_act:
+  structures:
+    ps_gauss:
+      parameters:
+        dx_g:
+          value: 1.5679752134004228
+        dy_g:
+          value: -3.887530996200616
+joint_map:
+  options:
+    cache: /scratch/jorlo/MUSTANG/needlet_cache/MOOJ1142_mcmc_3as

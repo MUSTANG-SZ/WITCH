@@ -1,0 +1,11 @@
+# MOOJ1142_gNFW_rs_peak_subcluster_control_rmap7.yaml on a 10' grid (r_map 10'). With rmap3/rmap7 it shows whether the
+# M2-only fit has settled by 7': from 3' to 7' the subcluster flattened by ~3.3 sigma, while the joint M2 + ACT fit moved
+# <= 0.2 sigma from 7' to 10' (joint_needlet_mcmc_3as vs joint_mcmc_rmap10, 2026-11-23).
+# Run with /scratch/jorlo/moo1142_m2_control.sh <this config>.
+base: "MOOJ1142_gNFW_rs_peak_subcluster_control_rmap7.yaml"
+
+paths:
+  subdir: "xray_peak_rs_control_rmap10"
+
+coords:
+  r_map: "10.0*60"
