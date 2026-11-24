@@ -1,0 +1,3526 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://mustang-sz.github.io/WITCH/reference/external/joint/funcs/">
+      
+      
+        <link rel="prev" href="../../act_map/funcs/">
+      
+      
+        <link rel="next" href="../../minkasi/funcs/">
+      
+      
+        
+      
+      
+      
+      
+        
+        
+        
+          <link rel="icon" href="../../../../assets/images/favicon.png">
+        
+      
+      <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-materialx-10.2.1">
+    
+    
+      
+        <title>funcs - WITCH</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.f07c159f.min.css">
+      
+    
+    
+
+    
+
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+  
+  
+    <body dir="ltr" data-mx-topbar="glass">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="toc" type="checkbox" id="__toc" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <label class="md-overlay" for="__toc"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#witch.external.joint.funcs" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="WITCH" class="md-header__button md-logo" aria-label="WITCH" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            WITCH
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              funcs
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10.25 2a8.25 8.25 0 0 1 6.34 13.53l5.69 5.69a.749.749 0 0 1-.326 1.275.75.75 0 0 1-.734-.215l-5.69-5.69A8.25 8.25 0 1 1 10.25 2M3.5 10.25a6.75 6.75 0 1 0 13.5 0 6.75 6.75 0 0 0-13.5 0"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10.25 2a8.25 8.25 0 0 1 6.34 13.53l5.69 5.69a.749.749 0 0 1-.326 1.275.75.75 0 0 1-.734-.215l-5.69-5.69A8.25 8.25 0 1 1 10.25 2M3.5 10.25a6.75 6.75 0 1 0 13.5 0 6.75 6.75 0 0 0-13.5 0"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0">
+        <div class="md-search-result md-search-result--pagefind" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="WITCH" class="md-nav__button md-logo" aria-label="WITCH" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    WITCH
+  </label>
+  
+  <ul class="md-nav__list">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../getting_started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../cfg_loader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    cfg_loader
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    containers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    containers
+  
+
+          </label>
+          <ul class="md-nav__list">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../containers/base/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    base
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../containers/metamodel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    metamodel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../containers/model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dataset/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    dataset
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    external
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    external
+  
+
+          </label>
+          <ul class="md-nav__list">
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_1" id="__nav_3_5_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    act_map
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    act_map
+  
+
+          </label>
+          <ul class="md-nav__list">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../act_map/funcs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    funcs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_2" id="__nav_3_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    joint
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    joint
+  
+
+          </label>
+          <ul class="md-nav__list">
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    funcs
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    funcs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc">
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        funcs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs.act_pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        act_pairs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs.joint_post_fit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        joint_post_fit
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs.m2_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        m2_data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs.m2_todvec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        m2_todvec
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs.needlet_pixsize" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        needlet_pixsize
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs.reduce_ds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reduce_ds
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs.truth_map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        truth_map
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_3" id="__nav_3_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    minkasi
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    minkasi
+  
+
+          </label>
+          <ul class="md-nav__list">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../minkasi/funcs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    funcs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../minkasi/mapmaking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    mapmaking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../minkasi/utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_4" id="__nav_3_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nika2
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    nika2
+  
+
+          </label>
+          <ul class="md-nav__list">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nika2/funcs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    funcs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nika2/io/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    io
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_5" id="__nav_3_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    xray
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    xray
+  
+
+          </label>
+          <ul class="md-nav__list">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../xray/funcs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    funcs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../fitter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    fitter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../fitting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    fitting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../forward_modeling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    forward_modeling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../grid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    grid
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../metropolis_hastings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    metropolis_hastings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../model_comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    model_comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../noise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    noise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../nonparametric/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nonparametric
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../objective/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    objective
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../plotting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    plotting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../powerlaw/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    powerlaw
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../resampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    resampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc">
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        funcs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs.act_pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        act_pairs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs.joint_post_fit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        joint_post_fit
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs.m2_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        m2_data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs.m2_todvec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        m2_todvec
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs.needlet_pixsize" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        needlet_pixsize
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs.reduce_ds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reduce_ds
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#witch.external.joint.funcs.truth_map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        truth_map
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              
+              
+              <article class="md-content__inner md-typeset" data-pagefind-body>
+                
+                  
+
+  <h1>funcs</h1>
+
+<div class="doc doc-object doc-module">
+
+
+
+<a id="witch.external.joint.funcs"></a>
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="witch.external.joint.funcs.act_pairs" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">act_pairs</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">comm</span><span class="p">,</span> <span class="n">kind</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>(map, ivar) of every map dataset on every rank, holding what <code>kind</code> maps (see _project), gathered to all ranks
+(the ACT term is computed on each).</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>datasets</code>
+            </td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="DataSet
+
+
+  
+      dataclass
+   (witch.dataset.DataSet)" href="../../../dataset/#witch.dataset.DataSet">DataSet</a>, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The datasets of this rank.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>metamodel</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="MetaModel
+
+
+  
+      dataclass
+   (witch.containers.MetaModel)" href="../../../containers/metamodel/#witch.containers.metamodel.MetaModel">MetaModel</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The fitted metamodel.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>comm</code>
+            </td>
+            <td>
+                  <code><span title="mpi4py.MPI.Intracomm">Intracomm</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Communicator spanning all datasets.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>kind</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>"signal", "residual" or "model".</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="list">list</span>[<span title="tuple">tuple</span>[<span title="pixell.enmap.ndmap">ndmap</span>, <span title="pixell.enmap.ndmap">ndmap</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>(map, ivar) per map, in pixell (dec, ra) layout and the dataset units (uK_CMB for act_map).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>witch/external/joint/funcs.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">act_pairs</span><span class="p">(</span>
+    <span class="n">datasets</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DataSet</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">metamodel</span><span class="p">:</span> <span class="n">MetaModel</span><span class="p">,</span> <span class="n">comm</span><span class="p">:</span> <span class="n">MPI</span><span class="o">.</span><span class="n">Intracomm</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">enmap</span><span class="o">.</span><span class="n">ndmap</span><span class="p">,</span> <span class="n">enmap</span><span class="o">.</span><span class="n">ndmap</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    (map, ivar) of every map dataset on every rank, holding what `kind` maps (see _project), gathered to all ranks</span>
+<span class="sd">    (the ACT term is computed on each).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    datasets : tuple[DataSet, ...]</span>
+<span class="sd">        The datasets of this rank.</span>
+<span class="sd">    metamodel : MetaModel</span>
+<span class="sd">        The fitted metamodel.</span>
+<span class="sd">    comm : MPI.Intracomm</span>
+<span class="sd">        Communicator spanning all datasets.</span>
+<span class="sd">    kind : str</span>
+<span class="sd">        "signal", "residual" or "model".</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list[tuple[enmap.ndmap, enmap.ndmap]]</span>
+<span class="sd">        (map, ivar) per map, in pixell (dec, ra) layout and the dataset units (uK_CMB for act_map).</span>
+<span class="sd">    """</span>
+    <span class="n">local</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">ds</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">ds</span><span class="o">.</span><span class="n">mode</span> <span class="o">!=</span> <span class="s2">"map"</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">imap</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">datavec</span><span class="p">):</span>
+            <span class="n">dat</span> <span class="o">=</span> <span class="n">_project</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">imap</span><span class="o">.</span><span class="n">data</span><span class="p">),</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">kind</span><span class="p">)</span>
+            <span class="c1"># WITCH maps are (x, y) = FITS transposed; send plain arrays and the header string</span>
+            <span class="n">local</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">dat</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">imap</span><span class="o">.</span><span class="n">ivar</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">imap</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">to_header</span><span class="p">()</span><span class="o">.</span><span class="n">tostring</span><span class="p">())</span>
+            <span class="p">)</span>
+    <span class="n">pairs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">dat</span><span class="p">,</span> <span class="n">ivar</span><span class="p">,</span> <span class="n">hdr</span> <span class="ow">in</span> <span class="p">(</span><span class="n">p</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">comm</span><span class="o">.</span><span class="n">allgather</span><span class="p">(</span><span class="n">local</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">part</span><span class="p">):</span>
+        <span class="n">wcs</span> <span class="o">=</span> <span class="n">WCS</span><span class="p">(</span><span class="n">fits</span><span class="o">.</span><span class="n">Header</span><span class="o">.</span><span class="n">fromstring</span><span class="p">(</span><span class="n">hdr</span><span class="p">))</span><span class="o">.</span><span class="n">celestial</span>
+        <span class="n">pairs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">enmap</span><span class="o">.</span><span class="n">ndmap</span><span class="p">(</span><span class="n">dat</span><span class="p">,</span> <span class="n">wcs</span><span class="p">),</span> <span class="n">enmap</span><span class="o">.</span><span class="n">ndmap</span><span class="p">(</span><span class="n">ivar</span><span class="p">,</span> <span class="n">wcs</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">pairs</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="witch.external.joint.funcs.joint_post_fit" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">joint_post_fit</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">comm</span><span class="p">,</span> <span class="n">outdir</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Post-fit function for multi-scale mapmaking, configured by cfg["joint_map"]. Currently only supports the needlet
+method. Called by witch.fitter when the config has a joint_map block.</p>
+<p>Collective: must be called on every rank of <code>comm</code>, whatever datasets the rank holds, and before the per-dataset
+postfit (act_map's postfit overwrites its map data with the residual and the model). The config checks below
+only read cfg, so all ranks raise together rather than some hanging in a collective.</p>
+<p>joint_map.maps lists the kinds to make: "signal" (the data), "residual" (data minus model, the default) and
+"model". All kinds share one mapper (the residual goes through the signal's with JointMapper.remap), and the
+model map is signal - residual: the model as it sits in the signal map. With "model", the unfiltered model on
+the same pixels is also written (model_truth.fits, returned as "truth"; evaluated at coords.dr and interpolated
+onto the joint map's pixels if they differ). joint_map.detrend (default True) removes the per-detector
+polynomial drifts from what is mapped from TODs, as the standalone mapper does (see _tod_input). With ACT maps
+the needlet pixel is set from them (needlet_pixsize, overriding joint_map.options.pixsize): it only sets the
+joint map's resolution.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>datasets</code>
+            </td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="DataSet
+
+
+  
+      dataclass
+   (witch.dataset.DataSet)" href="../../../dataset/#witch.dataset.DataSet">DataSet</a>, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>This rank's DataSet objects; those named in joint_map.datasets are combined in the joint mapmaking.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>cfg</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>WITCH config dictionary.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>metamodel</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="MetaModel
+
+
+  
+      dataclass
+   (witch.containers.MetaModel)" href="../../../containers/metamodel/#witch.containers.metamodel.MetaModel">MetaModel</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>WITCH metamodel object.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>comm</code>
+            </td>
+            <td>
+                  <code><span title="mpi4py.MPI.Comm">Comm</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Communicator spanning all datasets (witch.fitter.comm).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>outdir</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Output directory; maps go to <outdir>/<method>/<kind>_*.fits.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="numpy.typing.NDArray">NDArray</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Final real space map per map kind, on every rank.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="KeyError">KeyError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If joint_map.method or joint_map.datasets is not set, or datasets names an unknown dataset.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If joint_map.maps has an unknown kind, or asks for "model" without a model.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="NotImplementedError">NotImplementedError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the specified method is not "needlet".</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>witch/external/joint/funcs.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span>
+<span class="normal">355</span>
+<span class="normal">356</span>
+<span class="normal">357</span>
+<span class="normal">358</span>
+<span class="normal">359</span>
+<span class="normal">360</span>
+<span class="normal">361</span>
+<span class="normal">362</span>
+<span class="normal">363</span>
+<span class="normal">364</span>
+<span class="normal">365</span>
+<span class="normal">366</span>
+<span class="normal">367</span>
+<span class="normal">368</span>
+<span class="normal">369</span>
+<span class="normal">370</span>
+<span class="normal">371</span>
+<span class="normal">372</span>
+<span class="normal">373</span>
+<span class="normal">374</span>
+<span class="normal">375</span>
+<span class="normal">376</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span>
+<span class="normal">387</span>
+<span class="normal">388</span>
+<span class="normal">389</span>
+<span class="normal">390</span>
+<span class="normal">391</span>
+<span class="normal">392</span>
+<span class="normal">393</span>
+<span class="normal">394</span>
+<span class="normal">395</span>
+<span class="normal">396</span>
+<span class="normal">397</span>
+<span class="normal">398</span>
+<span class="normal">399</span>
+<span class="normal">400</span>
+<span class="normal">401</span>
+<span class="normal">402</span>
+<span class="normal">403</span>
+<span class="normal">404</span>
+<span class="normal">405</span>
+<span class="normal">406</span>
+<span class="normal">407</span>
+<span class="normal">408</span>
+<span class="normal">409</span>
+<span class="normal">410</span>
+<span class="normal">411</span>
+<span class="normal">412</span>
+<span class="normal">413</span>
+<span class="normal">414</span>
+<span class="normal">415</span>
+<span class="normal">416</span>
+<span class="normal">417</span>
+<span class="normal">418</span>
+<span class="normal">419</span>
+<span class="normal">420</span>
+<span class="normal">421</span>
+<span class="normal">422</span>
+<span class="normal">423</span>
+<span class="normal">424</span>
+<span class="normal">425</span>
+<span class="normal">426</span>
+<span class="normal">427</span>
+<span class="normal">428</span>
+<span class="normal">429</span>
+<span class="normal">430</span>
+<span class="normal">431</span>
+<span class="normal">432</span>
+<span class="normal">433</span>
+<span class="normal">434</span>
+<span class="normal">435</span>
+<span class="normal">436</span>
+<span class="normal">437</span>
+<span class="normal">438</span>
+<span class="normal">439</span>
+<span class="normal">440</span>
+<span class="normal">441</span>
+<span class="normal">442</span>
+<span class="normal">443</span>
+<span class="normal">444</span>
+<span class="normal">445</span>
+<span class="normal">446</span>
+<span class="normal">447</span>
+<span class="normal">448</span>
+<span class="normal">449</span>
+<span class="normal">450</span>
+<span class="normal">451</span>
+<span class="normal">452</span>
+<span class="normal">453</span>
+<span class="normal">454</span>
+<span class="normal">455</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">joint_post_fit</span><span class="p">(</span>
+    <span class="n">datasets</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DataSet</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+    <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">metamodel</span><span class="p">:</span> <span class="n">MetaModel</span><span class="p">,</span>
+    <span class="n">comm</span><span class="p">:</span> <span class="n">MPI</span><span class="o">.</span><span class="n">Comm</span><span class="p">,</span>
+    <span class="n">outdir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Post-fit function for multi-scale mapmaking, configured by cfg["joint_map"]. Currently only supports the needlet</span>
+<span class="sd">    method. Called by witch.fitter when the config has a joint_map block.</span>
+
+<span class="sd">    Collective: must be called on every rank of `comm`, whatever datasets the rank holds, and before the per-dataset</span>
+<span class="sd">    postfit (act_map's postfit overwrites its map data with the residual and the model). The config checks below</span>
+<span class="sd">    only read cfg, so all ranks raise together rather than some hanging in a collective.</span>
+
+<span class="sd">    joint_map.maps lists the kinds to make: "signal" (the data), "residual" (data minus model, the default) and</span>
+<span class="sd">    "model". All kinds share one mapper (the residual goes through the signal's with JointMapper.remap), and the</span>
+<span class="sd">    model map is signal - residual: the model as it sits in the signal map. With "model", the unfiltered model on</span>
+<span class="sd">    the same pixels is also written (model_truth.fits, returned as "truth"; evaluated at coords.dr and interpolated</span>
+<span class="sd">    onto the joint map's pixels if they differ). joint_map.detrend (default True) removes the per-detector</span>
+<span class="sd">    polynomial drifts from what is mapped from TODs, as the standalone mapper does (see _tod_input). With ACT maps</span>
+<span class="sd">    the needlet pixel is set from them (needlet_pixsize, overriding joint_map.options.pixsize): it only sets the</span>
+<span class="sd">    joint map's resolution.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    datasets : tuple[DataSet, ...]</span>
+<span class="sd">        This rank's DataSet objects; those named in joint_map.datasets are combined in the joint mapmaking.</span>
+<span class="sd">    cfg : dict</span>
+<span class="sd">        WITCH config dictionary.</span>
+<span class="sd">    metamodel : MetaModel</span>
+<span class="sd">        WITCH metamodel object.</span>
+<span class="sd">    comm : MPI.Comm</span>
+<span class="sd">        Communicator spanning all datasets (witch.fitter.comm).</span>
+<span class="sd">    outdir : str</span>
+<span class="sd">        Output directory; maps go to &lt;outdir&gt;/&lt;method&gt;/&lt;kind&gt;_*.fits.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict[str, NDArray]</span>
+<span class="sd">        Final real space map per map kind, on every rank.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    KeyError</span>
+<span class="sd">        If joint_map.method or joint_map.datasets is not set, or datasets names an unknown dataset.</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If joint_map.maps has an unknown kind, or asks for "model" without a model.</span>
+<span class="sd">    NotImplementedError</span>
+<span class="sd">        If the specified method is not "needlet".</span>
+<span class="sd">    """</span>
+    <span class="n">jcfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">"joint_map"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s2">"method"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">jcfg</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"joint_map.method must be set, one of </span><span class="si">{</span><span class="n">VALID_METHODS</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">method</span> <span class="o">=</span> <span class="n">jcfg</span><span class="p">[</span><span class="s2">"method"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">VALID_METHODS</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Method '</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">' is not implemented, only </span><span class="si">{</span><span class="n">VALID_METHODS</span><span class="si">}</span><span class="s2"> are supported."</span>
+        <span class="p">)</span>
+    <span class="n">targets</span> <span class="o">=</span> <span class="n">jcfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"datasets"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">targets</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s2">"joint_map.datasets must be a non-empty list of dataset names"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">unknown</span> <span class="o">:=</span> <span class="nb">set</span><span class="p">(</span><span class="n">targets</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"datasets"</span><span class="p">]):</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"joint_map.datasets has unknown datasets </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">unknown</span><span class="p">)</span><span class="si">}</span><span class="s2">, known: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s1">'datasets'</span><span class="p">])</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+    <span class="n">kinds</span> <span class="o">=</span> <span class="n">jcfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"maps"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"residual"</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">bad</span> <span class="o">:=</span> <span class="nb">set</span><span class="p">(</span><span class="n">kinds</span><span class="p">)</span> <span class="o">-</span> <span class="p">{</span><span class="s2">"residual"</span><span class="p">,</span> <span class="s2">"signal"</span><span class="p">,</span> <span class="s2">"model"</span><span class="p">}:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"joint_map.maps has unknown kinds </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">bad</span><span class="p">)</span><span class="si">}</span><span class="s2">, use residual, signal and/or model"</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="s2">"model"</span> <span class="ow">in</span> <span class="n">kinds</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">metamodel</span><span class="o">.</span><span class="n">models</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"joint_map.maps has model but there is no model"</span><span class="p">)</span>
+
+    <span class="n">detrend</span> <span class="o">=</span> <span class="n">jcfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"detrend"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>  <span class="c1"># as minkasi.tods.io.read_tods, see _tod_input</span>
+
+    <span class="n">datasets</span> <span class="o">=</span> <span class="n">reduce_ds</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">targets</span><span class="o">=</span><span class="n">targets</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">odir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">odir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">"needlet"</span><span class="p">:</span>
+        <span class="c1"># One mapper for all kinds: it maps the signal (or the residual if that is all that is asked for), and the</span>
+        <span class="c1"># residual goes through the same mapper. model = signal - residual is then the model as it sits in the</span>
+        <span class="c1"># signal map, whatever the (data dependent) filtering of the finite PCG/CG.</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="s2">"residual"</span> <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">kinds</span><span class="p">)</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"residual"</span><span class="p">}</span> <span class="k">else</span> <span class="s2">"signal"</span>
+        <span class="n">pairs</span> <span class="o">=</span> <span class="n">act_pairs</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">comm</span><span class="p">,</span> <span class="n">first</span><span class="p">)</span>
+        <span class="n">over</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">jcfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"options"</span><span class="p">,</span> <span class="p">{}))</span>
+        <span class="k">if</span> <span class="n">pairs</span><span class="p">:</span>  <span class="c1"># the ACT pixels set the needlet pixel (see needlet_pixsize)</span>
+            <span class="n">pixsize</span> <span class="o">=</span> <span class="n">needlet_pixsize</span><span class="p">(</span><span class="n">pairs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s2">"pixsize"</span> <span class="ow">in</span> <span class="n">over</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">over</span><span class="p">[</span><span class="s2">"pixsize"</span><span class="p">],</span> <span class="n">pixsize</span><span class="p">):</span>
+                <span class="n">print_once</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">'joint_map.options.pixsize </span><span class="si">{</span><span class="n">over</span><span class="p">[</span><span class="s2">"pixsize"</span><span class="p">]</span><span class="si">:</span><span class="s1">g</span><span class="si">}</span><span class="s1">" replaced by </span><span class="si">{</span><span class="n">pixsize</span><span class="si">:</span><span class="s1">g</span><span class="si">}</span><span class="s1">" (ACT pixel / </span><span class="si">{</span><span class="n">ACT_OSAMP</span><span class="si">}</span><span class="s1">)'</span>
+                <span class="p">)</span>
+            <span class="n">over</span><span class="p">[</span><span class="s2">"pixsize"</span><span class="p">]</span> <span class="o">=</span> <span class="n">pixsize</span>
+        <span class="k">with</span> <span class="n">minkasi_comm</span><span class="p">(</span><span class="n">comm</span><span class="p">):</span>
+            <span class="n">opts</span> <span class="o">=</span> <span class="n">options</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">"name"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">cfg</span><span class="p">[</span><span class="s1">'name'</span><span class="p">]</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">first</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>  <span class="c1"># the response caches depend on the noise, so on the data</span>
+                    <span class="s2">"outroot"</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">odir</span><span class="p">,</span> <span class="n">first</span><span class="p">),</span>
+                    <span class="o">**</span><span class="n">over</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+            <span class="n">mapper</span> <span class="o">=</span> <span class="n">JointMapper</span><span class="p">(</span>
+                <span class="n">opts</span><span class="p">,</span>
+                <span class="n">todvec</span><span class="o">=</span><span class="n">m2_todvec</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="n">detrend</span><span class="p">),</span>
+                <span class="n">act_maps</span><span class="o">=</span><span class="n">pairs</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">out</span><span class="p">[</span><span class="n">first</span><span class="p">]</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">mapper</span><span class="o">.</span><span class="n">solved</span><span class="p">:</span>  <span class="c1"># dry_run / symcheck</span>
+                <span class="k">return</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="n">first</span> <span class="o">==</span> <span class="s2">"signal"</span> <span class="ow">and</span> <span class="p">{</span><span class="s2">"residual"</span><span class="p">,</span> <span class="s2">"model"</span><span class="p">}</span> <span class="o">&amp;</span> <span class="nb">set</span><span class="p">(</span><span class="n">kinds</span><span class="p">):</span>
+                <span class="n">out</span><span class="p">[</span><span class="s2">"residual"</span><span class="p">]</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">remap</span><span class="p">(</span>
+                    <span class="n">m2_data</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">metamodel</span><span class="p">,</span> <span class="s2">"residual"</span><span class="p">,</span> <span class="n">detrend</span><span class="p">),</span>
+                    <span class="n">act_pairs</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">comm</span><span class="p">,</span> <span class="s2">"residual"</span><span class="p">),</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">odir</span><span class="p">,</span> <span class="s2">"residual"</span><span class="p">),</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="s2">"model"</span> <span class="ow">in</span> <span class="n">kinds</span><span class="p">:</span>
+                <span class="n">skymap</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">wmap</span><span class="o">.</span><span class="n">real_map</span>
+                <span class="n">out</span><span class="p">[</span><span class="s2">"model"</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">"signal"</span><span class="p">]</span> <span class="o">-</span> <span class="n">out</span><span class="p">[</span><span class="s2">"residual"</span><span class="p">]</span>
+                <span class="n">_write</span><span class="p">(</span>
+                    <span class="n">skymap</span><span class="p">,</span> <span class="n">out</span><span class="p">[</span><span class="s2">"model"</span><span class="p">],</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">odir</span><span class="p">,</span> <span class="s2">"model_final.fits"</span><span class="p">),</span> <span class="n">comm</span>
+                <span class="p">)</span>
+                <span class="n">truth</span> <span class="o">=</span> <span class="n">truth_map</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">comm</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">skymap</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">truth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">out</span><span class="p">[</span><span class="s2">"truth"</span><span class="p">]</span> <span class="o">=</span> <span class="n">truth</span>
+                    <span class="n">_write</span><span class="p">(</span><span class="n">skymap</span><span class="p">,</span> <span class="n">truth</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">odir</span><span class="p">,</span> <span class="s2">"model_truth.fits"</span><span class="p">),</span> <span class="n">comm</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">{</span><span class="n">kind</span><span class="p">:</span> <span class="n">m</span> <span class="k">for</span> <span class="n">kind</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">out</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">kind</span> <span class="ow">in</span> <span class="n">kinds</span> <span class="ow">or</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"truth"</span><span class="p">}</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Method '</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">' is not implemented. Not sure how you got here TBH."</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">out</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="witch.external.joint.funcs.m2_data" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">m2_data</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">detrend</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>What <code>kind</code> maps (see _tod_input) for every TOD of this rank, in the order of m2_todvec (for JointMapper.remap).</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>datasets</code>
+            </td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="DataSet
+
+
+  
+      dataclass
+   (witch.dataset.DataSet)" href="../../../dataset/#witch.dataset.DataSet">DataSet</a>, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The datasets of this rank.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>metamodel</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="MetaModel
+
+
+  
+      dataclass
+   (witch.containers.MetaModel)" href="../../../containers/metamodel/#witch.containers.metamodel.MetaModel">MetaModel</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The fitted metamodel.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>kind</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>"signal", "residual" or "model".</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>detrend</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Remove the per-detector polynomial drifts (fit_cm_plus_poly).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="list">list</span>[<span title="numpy.typing.NDArray">NDArray</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One array per TOD of this rank (empty on ranks without TODs).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>witch/external/joint/funcs.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">m2_data</span><span class="p">(</span>
+    <span class="n">datasets</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DataSet</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">metamodel</span><span class="p">:</span> <span class="n">MetaModel</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">detrend</span><span class="p">:</span> <span class="nb">bool</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    What `kind` maps (see _tod_input) for every TOD of this rank, in the order of m2_todvec (for JointMapper.remap).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    datasets : tuple[DataSet, ...]</span>
+<span class="sd">        The datasets of this rank.</span>
+<span class="sd">    metamodel : MetaModel</span>
+<span class="sd">        The fitted metamodel.</span>
+<span class="sd">    kind : str</span>
+<span class="sd">        "signal", "residual" or "model".</span>
+<span class="sd">    detrend : bool</span>
+<span class="sd">        Remove the per-detector polynomial drifts (fit_cm_plus_poly).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list[NDArray]</span>
+<span class="sd">        One array per TOD of this rank (empty on ranks without TODs).</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="p">[</span>
+        <span class="n">_tod_input</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tod</span><span class="o">.</span><span class="n">data</span><span class="p">),</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">detrend</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ds</span> <span class="ow">in</span> <span class="n">datasets</span>
+        <span class="k">if</span> <span class="n">ds</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">"tod"</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">tod</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">datavec</span><span class="p">)</span>
+    <span class="p">]</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="witch.external.joint.funcs.m2_todvec" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">m2_todvec</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">detrend</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The TOD datasets of this rank as one minkasi TodVec holding what <code>kind</code> maps (see _tod_input). Ranks without TOD
+datasets get an empty TodVec, which still takes part in the collectives.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>datasets</code>
+            </td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="DataSet
+
+
+  
+      dataclass
+   (witch.dataset.DataSet)" href="../../../dataset/#witch.dataset.DataSet">DataSet</a>, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The datasets of this rank.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>metamodel</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="MetaModel
+
+
+  
+      dataclass
+   (witch.containers.MetaModel)" href="../../../containers/metamodel/#witch.containers.metamodel.MetaModel">MetaModel</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The fitted metamodel.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>kind</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>"signal", "residual" or "model".</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>detrend</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Remove the per-detector polynomial drifts (fit_cm_plus_poly).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="minkasi.tods.TodVec">TodVec</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>TODs of this rank. Noise is not copied: JointMapper sets its own noise model.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>witch/external/joint/funcs.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">m2_todvec</span><span class="p">(</span>
+    <span class="n">datasets</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DataSet</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">metamodel</span><span class="p">:</span> <span class="n">MetaModel</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">detrend</span><span class="p">:</span> <span class="nb">bool</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">tods</span><span class="o">.</span><span class="n">TodVec</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    The TOD datasets of this rank as one minkasi TodVec holding what `kind` maps (see _tod_input). Ranks without TOD</span>
+<span class="sd">    datasets get an empty TodVec, which still takes part in the collectives.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    datasets : tuple[DataSet, ...]</span>
+<span class="sd">        The datasets of this rank.</span>
+<span class="sd">    metamodel : MetaModel</span>
+<span class="sd">        The fitted metamodel.</span>
+<span class="sd">    kind : str</span>
+<span class="sd">        "signal", "residual" or "model".</span>
+<span class="sd">    detrend : bool</span>
+<span class="sd">        Remove the per-detector polynomial drifts (fit_cm_plus_poly).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    minkasi.tods.TodVec</span>
+<span class="sd">        TODs of this rank. Noise is not copied: JointMapper sets its own noise model.</span>
+<span class="sd">    """</span>
+    <span class="n">todvec</span> <span class="o">=</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">tods</span><span class="o">.</span><span class="n">TodVec</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">ds</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">ds</span><span class="o">.</span><span class="n">mode</span> <span class="o">!=</span> <span class="s2">"tod"</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">tod</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">to_minkasi</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">datavec</span><span class="p">,</span> <span class="n">copy_noise</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">tods</span><span class="p">):</span>
+            <span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"dat_calib"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_tod_input</span><span class="p">(</span>
+                <span class="n">ds</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">tod</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">"dat_calib"</span><span class="p">],</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">detrend</span>
+            <span class="p">)</span>
+            <span class="n">todvec</span><span class="o">.</span><span class="n">add_tod</span><span class="p">(</span><span class="n">tod</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">todvec</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="witch.external.joint.funcs.needlet_pixsize" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">needlet_pixsize</span><span class="p">(</span><span class="n">pairs</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The needlet map pixel the ACT maps force. minkasi's ACT term models every ACT pixel as ACT_OSAMP x ACT_OSAMP
+needlet pixels (and refuses anything else), so the needlet pixel is the ACT pixel / ACT_OSAMP: 3" for 30" ACT
+maps. It only sets the joint map's resolution, not the fit.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>pairs</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="tuple">tuple</span>[<span title="pixell.enmap.ndmap">ndmap</span>, <span title="pixell.enmap.ndmap">ndmap</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>(map, ivar) of the ACT maps (act_pairs).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Needlet pixel size in arcsec.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the ACT maps do not all have the same square pixels.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>witch/external/joint/funcs.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">needlet_pixsize</span><span class="p">(</span><span class="n">pairs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">enmap</span><span class="o">.</span><span class="n">ndmap</span><span class="p">,</span> <span class="n">enmap</span><span class="o">.</span><span class="n">ndmap</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    The needlet map pixel the ACT maps force. minkasi's ACT term models every ACT pixel as ACT_OSAMP x ACT_OSAMP</span>
+<span class="sd">    needlet pixels (and refuses anything else), so the needlet pixel is the ACT pixel / ACT_OSAMP: 3" for 30" ACT</span>
+<span class="sd">    maps. It only sets the joint map's resolution, not the fit.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pairs : list[tuple[enmap.ndmap, enmap.ndmap]]</span>
+<span class="sd">        (map, ivar) of the ACT maps (act_pairs).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        Needlet pixel size in arcsec.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the ACT maps do not all have the same square pixels.</span>
+<span class="sd">    """</span>
+    <span class="n">sizes</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">ivar</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">celestial</span><span class="o">.</span><span class="n">pixel_scale_matrix</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">ivar</span> <span class="ow">in</span> <span class="n">pairs</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+        <span class="o">*</span> <span class="mi">3600</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">sizes</span><span class="p">,</span> <span class="n">sizes</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"The joint map needs ACT maps with the same square pixels, got </span><span class="si">{</span><span class="n">sizes</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2"> arcsec"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">sizes</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="n">ACT_OSAMP</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="witch.external.joint.funcs.reduce_ds" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">reduce_ds</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Reduce datasets to only those that are relevant for the joint mapmaking process. Currently only supports the needlet method.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>datasets</code>
+            </td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="DataSet
+
+
+  
+      dataclass
+   (witch.dataset.DataSet)" href="../../../dataset/#witch.dataset.DataSet">DataSet</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A tuple of DataSet objects, each representing a different dataset to be combined in the joint mapmaking.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>targets</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A list of dataset names that are relevant for the joint mapmaking process.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="DataSet
+
+
+  
+      dataclass
+   (witch.dataset.DataSet)" href="../../../dataset/#witch.dataset.DataSet">DataSet</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A tuple of DataSet objects that are relevant for the joint mapmaking process.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>witch/external/joint/funcs.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">reduce_ds</span><span class="p">(</span><span class="n">datasets</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DataSet</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">targets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DataSet</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Reduce datasets to only those that are relevant for the joint mapmaking process. Currently only supports the needlet method.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    datasets : tuple[DataSet]</span>
+<span class="sd">        A tuple of DataSet objects, each representing a different dataset to be combined in the joint mapmaking.</span>
+<span class="sd">    targets : list[str]</span>
+<span class="sd">        A list of dataset names that are relevant for the joint mapmaking process.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple[DataSet]</span>
+<span class="sd">        A tuple of DataSet objects that are relevant for the joint mapmaking process.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">ds</span> <span class="k">for</span> <span class="n">ds</span> <span class="ow">in</span> <span class="n">datasets</span> <span class="k">if</span> <span class="n">ds</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">targets</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="witch.external.joint.funcs.truth_map" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">truth_map</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">metamodel</span><span class="p">,</span> <span class="n">comm</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">skymap</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The unfiltered model on the joint map's pixels, as the first TOD dataset of <code>targets</code> sees it (its beam and
+prefactor), computed on the first rank holding that dataset and broadcast. Collective.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>datasets</code>
+            </td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="DataSet
+
+
+  
+      dataclass
+   (witch.dataset.DataSet)" href="../../../dataset/#witch.dataset.DataSet">DataSet</a>, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The datasets of this rank.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>cfg</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>WITCH config.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>metamodel</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="MetaModel
+
+
+  
+      dataclass
+   (witch.containers.MetaModel)" href="../../../containers/metamodel/#witch.containers.metamodel.MetaModel">MetaModel</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The fitted metamodel.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>comm</code>
+            </td>
+            <td>
+                  <code><span title="mpi4py.MPI.Intracomm">Intracomm</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Communicator spanning all datasets.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>targets</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The joint map's datasets.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>skymap</code>
+            </td>
+            <td>
+                  <code><span title="minkasi.maps.SkyMap">SkyMap</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The joint map's pixelization.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="numpy.typing.NDArray">NDArray</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The model on the skymap pixels on every rank (evaluated on the fit grid's pixel size coords.dr, at which the
+beam is sampled, and interpolated if the joint map's pixels differ); None (with a warning) if no target is a
+TOD dataset.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>witch/external/joint/funcs.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">truth_map</span><span class="p">(</span>
+    <span class="n">datasets</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DataSet</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+    <span class="n">cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">metamodel</span><span class="p">:</span> <span class="n">MetaModel</span><span class="p">,</span>
+    <span class="n">comm</span><span class="p">:</span> <span class="n">MPI</span><span class="o">.</span><span class="n">Intracomm</span><span class="p">,</span>
+    <span class="n">targets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">skymap</span><span class="p">:</span> <span class="n">minkasi</span><span class="o">.</span><span class="n">maps</span><span class="o">.</span><span class="n">SkyMap</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    The unfiltered model on the joint map's pixels, as the first TOD dataset of `targets` sees it (its beam and</span>
+<span class="sd">    prefactor), computed on the first rank holding that dataset and broadcast. Collective.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    datasets : tuple[DataSet, ...]</span>
+<span class="sd">        The datasets of this rank.</span>
+<span class="sd">    cfg : dict</span>
+<span class="sd">        WITCH config.</span>
+<span class="sd">    metamodel : MetaModel</span>
+<span class="sd">        The fitted metamodel.</span>
+<span class="sd">    comm : MPI.Intracomm</span>
+<span class="sd">        Communicator spanning all datasets.</span>
+<span class="sd">    targets : list[str]</span>
+<span class="sd">        The joint map's datasets.</span>
+<span class="sd">    skymap : minkasi.maps.SkyMap</span>
+<span class="sd">        The joint map's pixelization.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    NDArray | None</span>
+<span class="sd">        The model on the skymap pixels on every rank (evaluated on the fit grid's pixel size coords.dr, at which the</span>
+<span class="sd">        beam is sampled, and interpolated if the joint map's pixels differ); None (with a warning) if no target is a</span>
+<span class="sd">        TOD dataset.</span>
+<span class="sd">    """</span>
+    <span class="n">tod_names</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">targets</span> <span class="k">if</span> <span class="s2">"load_tods"</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">"datasets"</span><span class="p">][</span><span class="n">name</span><span class="p">][</span><span class="s2">"funcs"</span><span class="p">]</span>
+    <span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">tod_names</span><span class="p">:</span>
+        <span class="n">print_once</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Not making the truth map: no TOD dataset in </span><span class="si">{</span><span class="n">targets</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">"coords"</span><span class="p">][</span><span class="s2">"dr"</span><span class="p">])))</span>
+    <span class="n">held</span> <span class="o">=</span> <span class="p">[</span><span class="n">ds</span> <span class="k">for</span> <span class="n">ds</span> <span class="ow">in</span> <span class="n">datasets</span> <span class="k">if</span> <span class="n">ds</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">tod_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+    <span class="n">root</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">allgather</span><span class="p">(</span><span class="nb">bool</span><span class="p">(</span><span class="n">held</span><span class="p">))</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">truth</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">held</span><span class="p">:</span>
+        <span class="n">truth</span> <span class="o">=</span> <span class="n">model_on_skymap</span><span class="p">(</span>
+            <span class="n">metamodel</span><span class="p">,</span> <span class="n">metamodel</span><span class="o">.</span><span class="n">get_dataset_ind</span><span class="p">(</span><span class="n">tod_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">skymap</span><span class="p">,</span> <span class="n">dr</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">comm</span><span class="o">.</span><span class="n">bcast</span><span class="p">(</span><span class="n">truth</span><span class="p">,</span> <span class="n">root</span><span class="o">=</span><span class="n">root</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+          <div class="md-top" data-md-component="top" hidden>
+  <div class="md-top__center">
+    <button type="button" class="md-top__button md-top__button--main" data-md-action="top">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+      <span>Back to top</span>
+    </button>
+    
+      
+      
+      <label class="md-top__button md-top__side md-top__side--nav" for="__drawer" >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-panel-left" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+      </label>
+    
+    
+      
+      
+      <label class="md-top__button md-top__side md-top__side--toc" for="__toc" >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-panel-right" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg>
+      </label>
+    
+  </div>
+</div>
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://jaywhj.github.io/mkdocs-materialx/" target="_blank" rel="noopener">
+      MaterialX
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+          
+          
+        
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "code": null, "features": [], "search": {"options": {"baseUrl": "../../../..", "bundleUrl": "../../../../search/", "highlight": false, "searchOptions": {}}, "provider": "pagefind"}, "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "code.collapse": "Collapse", "code.download": "Download", "code.expand": "Expand remaining # lines", "code.select": "Toggle line selection", "search.offline": "Switch to Lunr for offline search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.d66651fd.min.js"></script>
+      
+        <script src="../../../../javascripts/mathjax.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
