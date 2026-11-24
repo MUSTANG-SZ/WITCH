@@ -38,3 +38,6 @@ configs/MOOJ/grid_*.yaml
 configs/MOOJ1142/grid_*.yaml
 reports/
 htmlcov/
+
+# Unit test and simulation outputs (data products belong on the CI dev machine, not in git)
+unit_tests/unit_sim_results/
