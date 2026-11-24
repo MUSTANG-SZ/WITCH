@@ -8,6 +8,7 @@ Note that everything in done in analogy to chi-squared so there is a factor of -
 applied as needed to the non chi-squared distributions.
 """
 
+from copy import copy
 from functools import partial
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
@@ -17,8 +18,81 @@ import mpi4jax
 from jax.scipy.special import factorial
 from mpi4py import MPI
 
+from .noise import has_noise_sqrt, noise_sqrt
+
 if TYPE_CHECKING:
     from .containers import MetaModel
+
+
+def with_noise_sqrt(metamodel: "MetaModel") -> "MetaModel":
+    """
+    Copy of `metamodel` whose datasets carry `L d`, the data with a square root `L` of the
+    noise model applied (`N = LᵀL`, see `witch.noise.noise_sqrt`).
+    `chisq_objective` then computes chi-squared as `|L d - L m|²`, which is the same value as
+    `(d - m)ᵀ N (d - m)` but only applies `L` (one rotation and one transform) to the model.
+    Datasets with a noise model that has no square root are left on the full filter.
+
+    `L d` is only valid for the data and noise it was computed from, so only use the copy for
+    the duration of one fit or sampler run and strip it with `without_noise_sqrt` before
+    returning a metamodel. Call this outside of `jax.jit`.
+
+    Parameters
+    ----------
+    metamodel : MetaModel
+        The metamodel to copy.
+
+    Returns
+    -------
+    metamodel_sqrt : MetaModel
+        Shallow copy of `metamodel` with `ldata` set on the datasets that support it.
+    """
+    datasets = []
+    for dataset in getattr(metamodel, "datasets", ()):
+        # Only `DataSetData` has `ldata`, leave anything else alone
+        if hasattr(dataset, "ldata"):
+            dataset = copy(dataset)
+            items = list(dataset.datavec)
+            dataset.ldata = None
+            if len(items) and all(has_noise_sqrt(item.noise) for item in items):
+                dataset.ldata = tuple(
+                    _noise_sqrt_jit(item.noise, item.data) for item in items
+                )
+        datasets.append(dataset)
+    if not datasets:
+        return metamodel
+    metamodel = copy(metamodel)
+    metamodel.datasets = tuple(datasets)
+    return metamodel
+
+
+def without_noise_sqrt(metamodel: "MetaModel") -> "MetaModel":
+    """
+    Copy of `metamodel` with the `L d` added by `with_noise_sqrt` removed.
+
+    Parameters
+    ----------
+    metamodel : MetaModel
+        The metamodel to copy.
+
+    Returns
+    -------
+    metamodel_full : MetaModel
+        Shallow copy of `metamodel` whose datasets have `ldata` set to None.
+    """
+    datasets = []
+    for dataset in getattr(metamodel, "datasets", ()):
+        if hasattr(dataset, "ldata"):
+            dataset = copy(dataset)
+            dataset.ldata = None
+        datasets.append(dataset)
+    if not datasets:
+        return metamodel
+    metamodel = copy(metamodel)
+    metamodel.datasets = tuple(datasets)
+    return metamodel
+
+
+_noise_sqrt_jit = jax.jit(noise_sqrt)
 
 
 @partial(jax.jit, static_argnames=("do_loglike", "do_grad", "do_curve"))
@@ -158,6 +232,27 @@ def chisq_objective(
             grad_dat = zero
         else:
             grad_dat = metamodel.model_grad_proj(dataset_ind, i)
+
+        if dataset.ldata is not None:
+            # Square-root form, see `with_noise_sqrt`: with N = LᵀL
+            # chisq = |Lr|², grad = (LJ)ᵀLr and curve = (LJ)ᵀLJ
+            lresid = dataset.ldata[i] - noise_sqrt(data.noise, pred_dat)
+            if do_loglike:
+                chisq += jnp.sum(lresid**2)
+            if only_chisq:
+                continue
+            idx = metamodel.to_fit_idx
+            nfit = len(idx)
+            lgrad = jnp.reshape(
+                jax.vmap(partial(noise_sqrt, data.noise))(grad_dat[idx]), (nfit, -1)
+            )
+            if do_grad:
+                grad = grad.at[idx].add(jnp.dot(lgrad, lresid.ravel()))
+            if do_curve:
+                curve = curve.at[idx[:, None], idx[None, :]].add(
+                    jnp.dot(lgrad, lgrad.T)
+                )
+            continue
 
         resid = data.data - pred_dat
         # if dataset.mode == "tod":

@@ -460,6 +460,11 @@ class DataSetData:
         Positional arguments used when computing the noise model.
     noise_kwargs : dict
         Keyword arguments used when computing the noise model.
+    ldata : tuple[Array, ...] | None, default: None
+        The data with a square root of its noise model applied (`L d` with `N = LᵀL`,
+        see `witch.noise.noise_sqrt`), one entry per element of `datavec`.
+        When set, `chisq_objective` computes chi-squared as `|L d - L m|²`.
+        Only set for the duration of a fit or sampler run, see `objective.with_noise_sqrt`.
     """
 
     name: str
@@ -470,11 +475,12 @@ class DataSetData:
     noise_class: NoiseModel
     noise_args: tuple
     noise_kwargs: dict
+    ldata: tuple[Array, ...] | None = None
 
     # Functions for making this a pytree
     # Don't call this on your own
     def tree_flatten(self) -> tuple[tuple, tuple]:
-        children = (self.datavec, self.metadata)
+        children = (self.datavec, self.metadata, self.ldata)
         aux_data = (
             self.name,
             self.mode,
@@ -488,7 +494,7 @@ class DataSetData:
 
     @classmethod
     def tree_unflatten(cls, aux_data, children) -> Self:
-        datavec, metadata = children
+        datavec, metadata, ldata = children
         name, mode, objective, noise_class, noise_args, noise_kwargs = aux_data
         return cls(
             name,
@@ -499,6 +505,7 @@ class DataSetData:
             noise_class,
             noise_args,
             noise_kwargs,
+            ldata,
         )
 
 

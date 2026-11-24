@@ -26,9 +26,11 @@ from typing import Any, Self
 
 import jax
 import jax.numpy as jnp
+import jitkasi.noise as jn
 import numpy as np
 from jax import jit
 from jax.tree_util import register_pytree_node_class
+from jitkasi.math import dct_i
 from scipy.special import j0
 
 LENSED_TT_FILE = Path(__file__).parent / "data" / "lensed_tt_planck2018.npz"
@@ -483,3 +485,76 @@ class NoiseSpectrum(NoiseCMBMap):
 
     # Cannot draw noise, so map sims fall back to white noise rather than using the CMB model
     sample = None
+
+
+# Square-root noise filters
+# -----------------------------------------------------------
+# For a noise model whose `apply_noise` is a symmetric non-negative operator `N` (the inverse noise
+# covariance), `noise_sqrt` applies an `L` with `N = LᵀL`. Then `sum(L(r) ** 2)` equals
+# `sum(r * noise.apply_noise(r))`, so the chi-squared can be computed as `|L d - L m|²` with `L d`
+# computed once. The noise model itself, including all of its detector and time correlations, is
+# unchanged: `L` is the first half of `apply_noise`.
+
+
+def _svd_sqrt_scale(noise: jn.NoiseSmoothedSVD, n: int) -> jax.Array:
+    # `apply_noise` is `½ W Vᵀ A W F A W V` along time, where `dct_i = A W` with `A` the symmetric
+    # cosine matrix, `W = diag(1, 2, ..., 2, 1)` and the endpoint halving is `W / 2`.
+    # So it is `LᵀL` with `L x = sqrt(w F / 2) * dct_i(V x)`.
+    w = jnp.full(n, 2.0).at[0].set(1.0).at[-1].set(1.0)
+    return jnp.sqrt(w * noise.filt_spectrum[:, :n] / 2)
+
+
+def has_noise_sqrt(noise: Any) -> bool:
+    """
+    Check if `noise_sqrt` supports a noise model.
+    This needs concrete arrays, call it outside of `jax.jit`.
+
+    Parameters
+    ----------
+    noise : Any
+        The noise model.
+
+    Returns
+    -------
+    supported : bool
+        True if `noise_sqrt` can apply a square root of this noise model.
+        Models with negative filter weights (only possible through rounding) are not supported
+        since their filter has no real square root.
+    """
+    if isinstance(noise, jn.NoiseSmoothedSVD):
+        return bool(jnp.all(noise.filt_spectrum >= 0))
+    if isinstance(noise, jn.NoiseWhite):
+        return bool(jnp.all(noise.weights >= 0))
+    return isinstance(noise, jn.NoiseI)
+
+
+def noise_sqrt(noise: Any, dat: jax.Array) -> jax.Array:
+    """
+    Apply a square root `L` of a noise model, so that `noise.apply_noise` is `LᵀL`.
+    Check support with `has_noise_sqrt` first.
+
+    Parameters
+    ----------
+    noise : Any
+        The noise model, one of `jitkasi.noise.NoiseSmoothedSVD`, `NoiseWhite` or `NoiseI`.
+    dat : jax.Array
+        The data to apply `L` to, with the shape `noise.apply_noise` expects.
+
+    Returns
+    -------
+    ldat : jax.Array
+        `L dat`, same shape as `dat`.
+        For `NoiseSmoothedSVD` this is in the rotated, cosine transformed basis.
+
+    Raises
+    ------
+    TypeError
+        If the noise model is not supported.
+    """
+    if isinstance(noise, jn.NoiseSmoothedSVD):
+        return _svd_sqrt_scale(noise, dat.shape[-1]) * dct_i(jnp.dot(noise.v, dat))
+    if isinstance(noise, jn.NoiseWhite):
+        return dat * jnp.sqrt(noise.weights)[..., None]
+    if isinstance(noise, jn.NoiseI):
+        return dat
+    raise TypeError(f"No square root filter for noise model {type(noise)}")

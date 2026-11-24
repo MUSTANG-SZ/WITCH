@@ -503,15 +503,19 @@ class MetaModel:
             Dictionary of metadata to understand the state when we are saving.
         """
         datavecs = []
+        ldatas = []
         gcomm = self.global_comm
         for dataset in self.datasets:
             datavecs += [dataset.datavec]
+            ldatas += [dataset.ldata]
             dataset.datavec = None
+            dataset.ldata = None
         self.global_comm = wu.NullComm()
         with open(path, "wb") as f:
             dill.dump((self, state), f)
-        for dataset, datavec in zip(self.datasets, datavecs):
+        for dataset, datavec, ldata in zip(self.datasets, datavecs, ldatas):
             dataset.datavec = datavec
+            dataset.ldata = ldata
         self.global_comm = gcomm
 
     @classmethod

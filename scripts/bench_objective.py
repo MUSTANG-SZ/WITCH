@@ -115,17 +115,24 @@ def main():
     parser.add_argument(
         "--profile", default=None, help="Write a jax.profiler trace to this directory"
     )
+    parser.add_argument(
+        "--full-filter",
+        action="store_true",
+        help="Apply the full noise filter, not the square-root form the fitters use",
+    )
     args = parser.parse_args()
     if args.debug:
         args.nrep = 2
 
     from witch import fitter
     from witch.cfg_loader import load_cfg
-    from witch.objective import joint_objective
+    from witch.objective import joint_objective, with_noise_sqrt
 
     cfg = fitter.load_config({}, args.config)
     cli = fitter._make_parser().parse_args([args.config])
     _, _, _, mm = load_cfg(cfg, cli)
+    if not args.full_filter:
+        mm = with_noise_sqrt(mm)
 
     datas = [d for ds in mm.datasets for d in ds.datavec]
     meta = {
@@ -136,6 +143,7 @@ def main():
         "ntod": len(datas),
         "nsamp": int(sum(np.prod(d.data.shape) for d in datas)),
         "nfit": len(mm.to_fit_idx),
+        "noise_sqrt": not args.full_filter,
     }
     print(meta)
 

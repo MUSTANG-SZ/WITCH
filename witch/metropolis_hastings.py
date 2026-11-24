@@ -16,7 +16,7 @@ import numpy as np
 from tqdm import tqdm
 
 from .containers import MetaModel
-from .objective import joint_objective
+from .objective import joint_objective, with_noise_sqrt
 
 
 def _updated_metamodel(metamodel: MetaModel, pars: np.ndarray):
@@ -571,9 +571,12 @@ def run_mh(
     acceptance_rates : np.ndarray
         Acceptance rate of each chain.
     """
+    # Sample with the square-root noise filter, `L d` is only valid for the current noise.
+    # The summary below uses `metamodel` itself.
+    metamodel_sqrt = with_noise_sqrt(metamodel)
     if joint:
         results = run_chains_serial(
-            metamodel,
+            metamodel_sqrt,
             num_samples,
             num_chains,
             bound,
@@ -585,7 +588,7 @@ def run_mh(
         )
     else:
         results = run_chains_parallel(
-            metamodel,
+            metamodel_sqrt,
             num_samples,
             num_chains,
             bound,

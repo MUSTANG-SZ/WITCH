@@ -12,7 +12,7 @@ from mpi4py import MPI
 from tqdm import tqdm
 
 from .containers import MetaModel
-from .objective import joint_objective
+from .objective import joint_objective, with_noise_sqrt, without_noise_sqrt
 from .utils import NullComm
 
 
@@ -147,9 +147,10 @@ def _success(
     return new_metamodel, new_grad, new_curve, new_delta_chisq, lmd
 
 
-def _metamodel_for_tod(metamodel: MetaModel, dataset_ind: int, tod):
+def _metamodel_for_tod(metamodel: MetaModel, dataset_ind: int, tod, tod_ind: int):
     """
-    Copy of `metamodel` whose datasets only contain `tod` (a TOD or a map).
+    Copy of `metamodel` whose datasets only contain `tod` (a TOD or a map),
+    the `tod_ind`th element of dataset `dataset_ind`.
     TODVecs store their elements in `tods` and SolutionSets in `solutions`.
     """
     datasets = []
@@ -162,6 +163,9 @@ def _metamodel_for_tod(metamodel: MetaModel, dataset_ind: int, tod):
         else:
             datavec.solutions = items
         dataset_copy.datavec = datavec
+        if getattr(dataset, "ldata", None) is not None:
+            ldata = (dataset.ldata[tod_ind],) if index == dataset_ind else None
+            dataset_copy.ldata = ldata
         datasets.append(dataset_copy)
 
     chunk_metamodel = copy(metamodel)
@@ -173,7 +177,7 @@ def _make_tod_objectives(metamodel: MetaModel):
     objectives = []
     for dataset_ind, dataset in enumerate(metamodel.datasets):
         objective = getattr(dataset.objective, "__wrapped__", dataset.objective)
-        for tod in dataset.datavec:
+        for tod_ind, tod in enumerate(dataset.datavec):
             # `WCSMap.xy` is a cached_property and `tod` is closed over as a constant,
             # so if it is first evaluated inside jit a tracer gets cached on the map
             # and leaks on the next trace. Populate the cache eagerly instead.
@@ -184,10 +188,11 @@ def _make_tod_objectives(metamodel: MetaModel):
                 current_metamodel,
                 dataset_ind=dataset_ind,
                 tod=tod,
+                tod_ind=tod_ind,
                 objective=objective,
             ):
                 chunk_metamodel = _metamodel_for_tod(
-                    current_metamodel, dataset_ind, tod
+                    current_metamodel, dataset_ind, tod, tod_ind
                 )
                 return objective(chunk_metamodel, dataset_ind, True, True, True)
 
@@ -346,8 +351,13 @@ def run_lmfit(
         use_tod_chunks = (
             metamodel.global_comm.allreduce(int(local_multiple_tods), op=MPI.MAX) > 0
         )
+    # Use the square-root noise filter for this fit, `L d` is only valid for the current noise
+    metamodel = with_noise_sqrt(metamodel)
     if use_tod_chunks:
-        return _run_lmfit_tod_chunks(metamodel, maxiter, chitol)
+        fitted, iteration, delta_chisq, lmd = _run_lmfit_tod_chunks(
+            metamodel, maxiter, chitol
+        )
+        return without_noise_sqrt(fitted), iteration, delta_chisq, lmd
 
     @jax.jit
     def _cond_func(val):
@@ -422,7 +432,7 @@ def run_lmfit(
         (0, jnp.astype(jnp.inf, jnp.float32), zero.copy(), metamodel, curve, grad),
     )
 
-    return metamodel, i, delta_chisq, lmd
+    return without_noise_sqrt(metamodel), i, delta_chisq, lmd
 
 
 @partial(jax.jit, donate_argnums=(0, 1))
@@ -649,8 +659,11 @@ def run_mcmc(
     scale = jnp.where(scale == 0, 1, scale)
     init_pars = init_pars.at[:].multiply(1.0 / scale)
 
+    # Use the square-root noise filter while sampling, `L d` is only valid for the current noise
     @jax.jit
-    def _log_prob_and_grad(pars, metamodel=metamodel, init_pars=init_pars):
+    def _log_prob_and_grad(
+        pars, metamodel=with_noise_sqrt(metamodel), init_pars=init_pars
+    ):
         full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)
         _, in_bounds = _prior_pars_fit(
