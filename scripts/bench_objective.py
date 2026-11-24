@@ -117,6 +117,11 @@ def main():
         "--profile", default=None, help="Write a jax.profiler trace to this directory"
     )
     parser.add_argument(
+        "--mixed-precision",
+        action="store_true",
+        help="Apply the noise filter to the model in float32",
+    )
+    parser.add_argument(
         "--full-filter",
         action="store_true",
         help="Apply the full noise filter, not the square-root form the fitters use",
@@ -133,7 +138,7 @@ def main():
     cli = fitter._make_parser().parse_args([args.config])
     _, _, _, mm = load_cfg(cfg, cli)
     if not args.full_filter:
-        mm = with_noise_sqrt(mm)
+        mm = with_noise_sqrt(mm, args.mixed_precision)
 
     datas = [d for ds in mm.datasets for d in ds.datavec]
     meta = {
@@ -145,6 +150,7 @@ def main():
         "nsamp": int(sum(np.prod(d.data.shape) for d in datas)),
         "nfit": len(mm.to_fit_idx),
         "noise_sqrt": not args.full_filter,
+        "mixed_precision": args.mixed_precision and not args.full_filter,
     }
     print(meta)
 

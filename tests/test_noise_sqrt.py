@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 from witch.fitting import _tod_chunked_objective
-from witch.noise import has_noise_sqrt, noise_sqrt
+from witch.noise import has_noise_sqrt, noise_astype, noise_sqrt
 from witch.objective import chisq_objective, with_noise_sqrt, without_noise_sqrt
 
 from .conftest import correlated_noise
@@ -103,3 +103,33 @@ def test_chunked_objective_uses_each_tods_ldata(tod_metamodel):
     _assert_objectives_match(
         _tod_chunked_objective(mm), _tod_chunked_objective(with_noise_sqrt(mm))
     )
+
+
+def test_float32_sqrt():
+    rng = np.random.default_rng(5)
+    dat = jnp.asarray(correlated_noise(rng, 12, 301))
+    noise = jn.NoiseSmoothedSVD.compute(dat, 10.0)
+    noise32 = noise_astype(noise, jnp.float32)
+    assert noise32.v.dtype == jnp.float32
+    model = jnp.asarray(rng.standard_normal((12, 301)))
+    lm = noise_sqrt(noise, model)
+    lm32 = noise_sqrt(noise32, model.astype(jnp.float32))
+    assert lm32.dtype == jnp.float32
+    np.testing.assert_allclose(lm32, lm, rtol=0, atol=1e-5 * abs(lm).max())
+
+
+def test_mixed_precision_objective(tod_metamodel):
+    # Only the model term goes through float32, so the chisq error scales with |Lm|²
+    mm = tod_metamodel()
+    full = chisq_objective(with_noise_sqrt(mm), 0, True, True, True)
+    mixed = chisq_objective(with_noise_sqrt(mm, True), 0, True, True, True)
+    assert mixed[0].dtype == full[0].dtype == jnp.float64
+    model_term = sum(
+        float(jnp.sum(noise_sqrt(tod.noise, mm.model_proj(0, i)) ** 2))
+        for i, tod in enumerate(mm.datasets[0].datavec)
+    )
+    assert abs(float(mixed[0] - full[0])) < 1e-6 * model_term
+    np.testing.assert_allclose(
+        mixed[1], full[1], rtol=0, atol=1e-6 * abs(full[1]).max()
+    )
+    np.testing.assert_allclose(mixed[2], full[2], rtol=1e-6)

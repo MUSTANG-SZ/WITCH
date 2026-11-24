@@ -500,7 +500,8 @@ def _svd_sqrt_scale(noise: jn.NoiseSmoothedSVD, n: int) -> jax.Array:
     # `apply_noise` is `½ W Vᵀ A W F A W V` along time, where `dct_i = A W` with `A` the symmetric
     # cosine matrix, `W = diag(1, 2, ..., 2, 1)` and the endpoint halving is `W / 2`.
     # So it is `LᵀL` with `L x = sqrt(w F / 2) * dct_i(V x)`.
-    w = jnp.full(n, 2.0).at[0].set(1.0).at[-1].set(1.0)
+    dtype = noise.filt_spectrum.dtype
+    w = jnp.full(n, 2.0, dtype).at[0].set(1.0).at[-1].set(1.0)
     return jnp.sqrt(w * noise.filt_spectrum[:, :n] / 2)
 
 
@@ -552,9 +553,34 @@ def noise_sqrt(noise: Any, dat: jax.Array) -> jax.Array:
         If the noise model is not supported.
     """
     if isinstance(noise, jn.NoiseSmoothedSVD):
-        return _svd_sqrt_scale(noise, dat.shape[-1]) * dct_i(jnp.dot(noise.v, dat))
+        # HIGHEST so that a float32 rotation is not done in TF32 on GPUs that have it
+        rot = jnp.dot(noise.v, dat, precision=jax.lax.Precision.HIGHEST)
+        return _svd_sqrt_scale(noise, dat.shape[-1]) * dct_i(rot)
     if isinstance(noise, jn.NoiseWhite):
         return dat * jnp.sqrt(noise.weights)[..., None]
     if isinstance(noise, jn.NoiseI):
         return dat
     raise TypeError(f"No square root filter for noise model {type(noise)}")
+
+
+def noise_astype(noise: Any, dtype: Any) -> Any:
+    """
+    Copy of a noise model with its floating point arrays cast to `dtype`.
+    `noise_sqrt` of the copy computes in that precision.
+
+    Parameters
+    ----------
+    noise : Any
+        The noise model, a pytree whose leaves are arrays.
+    dtype : Any
+        The floating point dtype to cast to.
+
+    Returns
+    -------
+    noise_cast : Any
+        The noise model with cast arrays.
+    """
+    return jax.tree.map(
+        lambda x: x.astype(dtype) if jnp.issubdtype(x.dtype, jnp.floating) else x,
+        noise,
+    )

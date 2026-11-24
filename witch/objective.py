@@ -18,13 +18,15 @@ import mpi4jax
 from jax.scipy.special import factorial
 from mpi4py import MPI
 
-from .noise import has_noise_sqrt, noise_sqrt
+from .noise import has_noise_sqrt, noise_astype, noise_sqrt
 
 if TYPE_CHECKING:
     from .containers import MetaModel
 
 
-def with_noise_sqrt(metamodel: "MetaModel") -> "MetaModel":
+def with_noise_sqrt(
+    metamodel: "MetaModel", mixed_precision: bool = False
+) -> "MetaModel":
     """
     Copy of `metamodel` whose datasets carry `L d`, the data with a square root `L` of the
     noise model applied (`N = LᵀL`, see `witch.noise.noise_sqrt`).
@@ -36,10 +38,20 @@ def with_noise_sqrt(metamodel: "MetaModel") -> "MetaModel":
     the duration of one fit or sampler run and strip it with `without_noise_sqrt` before
     returning a metamodel. Call this outside of `jax.jit`.
 
+    With `mixed_precision` the model and its gradients go through `L` in float32
+    (the detector rotation and the DCT, the bulk of the work), while `L d`, the
+    model itself and all sums stay in float64. Since `L d` is computed once in
+    float64 only the model term is rounded, so the error scales with the model
+    rather than with the data. This is meant for the samplers: chi-squared
+    differences stay accurate, but the float32 rounding in `L J` puts a noise floor
+    under the gradient that stalls LM fits near the minimum.
+
     Parameters
     ----------
     metamodel : MetaModel
         The metamodel to copy.
+    mixed_precision : bool, default: False
+        Apply `L` to the model in float32.
 
     Returns
     -------
@@ -55,7 +67,15 @@ def with_noise_sqrt(metamodel: "MetaModel") -> "MetaModel":
             dataset.ldata = None
             if len(items) and all(has_noise_sqrt(item.noise) for item in items):
                 dataset.ldata = tuple(
-                    _noise_sqrt_jit(item.noise, item.data) for item in items
+                    (
+                        _noise_sqrt_jit(item.noise, item.data),
+                        (
+                            noise_astype(item.noise, jnp.float32)
+                            if mixed_precision
+                            else None
+                        ),
+                    )
+                    for item in items
                 )
         datasets.append(dataset)
     if not datasets:
@@ -236,16 +256,22 @@ def chisq_objective(
         if dataset.ldata is not None:
             # Square-root form, see `with_noise_sqrt`: with N = LᵀL
             # chisq = |Lr|², grad = (LJ)ᵀLr and curve = (LJ)ᵀLJ
-            lresid = dataset.ldata[i] - noise_sqrt(data.noise, pred_dat)
+            ldat, noise_lo = dataset.ldata[i]
+            if noise_lo is None:
+                lsqrt = partial(noise_sqrt, data.noise)
+            else:
+                # Mixed precision, see `with_noise_sqrt`
+                def lsqrt(x, noise_lo=noise_lo, dtype=ldat.dtype):
+                    return noise_sqrt(noise_lo, x.astype(jnp.float32)).astype(dtype)
+
+            lresid = ldat - lsqrt(pred_dat)
             if do_loglike:
                 chisq += jnp.sum(lresid**2)
             if only_chisq:
                 continue
             idx = metamodel.to_fit_idx
             nfit = len(idx)
-            lgrad = jnp.reshape(
-                jax.vmap(partial(noise_sqrt, data.noise))(grad_dat[idx]), (nfit, -1)
-            )
+            lgrad = jnp.reshape(jax.vmap(lsqrt)(grad_dat[idx]), (nfit, -1))
             if do_grad:
                 grad = grad.at[idx].add(jnp.dot(lgrad, lresid.ravel()))
             if do_curve:

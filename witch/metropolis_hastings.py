@@ -652,6 +652,7 @@ def run_mh(
     dataset_ind=0,
     progress=True,
     proposal="cov",
+    mixed_precision=False,
 ):
     """
     Run Metropolis-Hastings chains and summarize them into the metamodel.
@@ -688,6 +689,9 @@ def run_mh(
     proposal : {"cov", "diag"}, default="cov"
         ``cov`` proposes steps from the LM covariance in ``metamodel.cov``
         (falls back to ``diag`` with the chosen prior_type if unusable); ``diag`` uses independent steps.
+    mixed_precision : bool, default=False
+        Apply the noise filter to the model in float32 while sampling,
+        see ``witch.objective.with_noise_sqrt``.
 
     Returns
     -------
@@ -702,7 +706,7 @@ def run_mh(
     """
     # Sample with the square-root noise filter, `L d` is only valid for the current noise.
     # The summary below uses `metamodel` itself.
-    metamodel_sqrt = with_noise_sqrt(metamodel)
+    metamodel_sqrt = with_noise_sqrt(metamodel, mixed_precision)
     if joint:
         results = run_chains_serial(
             metamodel_sqrt,

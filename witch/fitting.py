@@ -580,6 +580,7 @@ def run_mcmc(
     sample_which: int = -1,
     burn_in: float = 0.1,
     max_tries: int = 20,
+    mixed_precision: bool = False,
 ) -> tuple[MetaModel, jax.Array]:
     """
     Run Hamilonian Monte Carlo to estimate the posterior for our model.
@@ -615,6 +616,9 @@ def run_mcmc(
     max_tries : int, default: 10
         Number of tries to tune step size that will be attemted.
         If 0 no tuning will be run.
+    mixed_precision : bool, default: False
+        Apply the noise filter to the model in float32,
+        see `objective.with_noise_sqrt`.
 
     Returns
     -------
@@ -662,7 +666,9 @@ def run_mcmc(
     # Use the square-root noise filter while sampling, `L d` is only valid for the current noise
     @jax.jit
     def _log_prob_and_grad(
-        pars, metamodel=with_noise_sqrt(metamodel), init_pars=init_pars
+        pars,
+        metamodel=with_noise_sqrt(metamodel, mixed_precision),
+        init_pars=init_pars,
     ):
         full_pars = init_pars.at[to_fit].set(pars)
         full_pars = full_pars.at[:].multiply(scale)

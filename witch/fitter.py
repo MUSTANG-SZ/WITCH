@@ -106,7 +106,26 @@ def _make_parser() -> argp.ArgumentParser:
         type=bool,
         help="If True, then run on CPU. Otherwise and by default run GPU.",
     )
+    parser.add_argument(
+        "--mixed-precision",
+        "-mp",
+        action="store_true",
+        help="Apply the noise filter to the model in float32 when running MCMC, "
+        "same as setting mcmc.mixed_precision in the config",
+    )
     return parser
+
+
+def _mixed_precision(cfg: dict) -> bool:
+    """
+    Whether the MCMC samplers apply the noise filter to the model in float32,
+    see `witch.objective.with_noise_sqrt`. Set with `mcmc.mixed_precision`
+    in the config or `--mixed-precision`, defaults to False.
+    LM fits always use float64: float32 rounding in the gradients puts a noise floor
+    under them, so near the minimum LM keeps rejecting steps and can stop with
+    lambda > 0, which shrinks the reported errors.
+    """
+    return bool(cfg.get("mcmc", {}).get("mixed_precision", False))
 
 
 def _mpi_fsplit(fnames, comm):
@@ -629,6 +648,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
             dataset_ind=int(mcfg.get("dataset_index", 0)),
             progress=comm.Get_rank() == 0,
             proposal=str(mcfg.get("proposal", "cov")),
+            mixed_precision=_mixed_precision(cfg),
         )
         print_once(f"MH acceptance rates: {acc}")
         extras = dict(
@@ -646,6 +666,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
             sample_which=int(mcfg.get("sample_which", -1)),
             burn_in=float(mcfg.get("burn_in", 0.1)),
             max_tries=int(mcfg.get("max_tries", 20)),
+            mixed_precision=_mixed_precision(cfg),
             # callback=callback, # Disabling for now, impure callbacks in a jax loop are dangerous
         )
     mpi4jax.barrier(comm=comm)

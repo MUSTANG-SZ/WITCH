@@ -72,6 +72,9 @@ def load_cfg(cfg, args=None):
             cfg["sub"] = False
         if args.nofit:
             cfg["fit"] = False
+        # Only set it for an existing mcmc section, a new one would turn MCMC on
+        if getattr(args, "mixed_precision", False) and "mcmc" in cfg:
+            cfg["mcmc"]["mixed_precision"] = True
 
     # Do imports
     for module, name in cfg.get("imports", {}).items():
