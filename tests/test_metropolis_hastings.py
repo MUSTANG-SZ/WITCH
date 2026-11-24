@@ -231,3 +231,26 @@ def test_scanned_chain_compiles_once(tod_metamodel):
         metamodel, 3 * mh.MH_BLOCK, calc_like_func=mh.calc_like_dataset, progress=False
     )
     assert mh._mh_block._cache_size() == 1
+
+
+@pytest.mark.parametrize("proposal", ["diag", "cov"])
+def test_vectorized_chains_match_serial(tod_metamodel, proposal):
+    metamodel = with_noise_sqrt(tod_metamodel(ntod=2, comm=MPI.COMM_WORLD))
+    pars = metamodel.parameters
+    errs = 0.01 * jnp.abs(pars) * metamodel.to_fit
+    metamodel = metamodel.update(pars, errs, jnp.diag(errs**2), metamodel.chisq)
+    args = (metamodel, mh.MH_BLOCK + 6, 3)
+    kwargs = dict(seed=7, progress=False, proposal=proposal)
+    serial = mh.run_chains_serial(*args, **kwargs)
+    vectorized = mh.run_chains_vectorized(*args, **kwargs)
+    for (s_samples, s_acc), (v_samples, v_acc) in zip(serial, vectorized):
+        assert v_samples.shape == s_samples.shape
+        assert v_acc == s_acc
+        np.testing.assert_allclose(v_samples, s_samples, rtol=1e-12)
+    # The chains are independent, not copies of one chain
+    assert not np.allclose(vectorized[0][0], vectorized[1][0])
+
+
+def test_run_mh_rejects_unknown_chain_mode():
+    with pytest.raises(ValueError):
+        mh.run_mh(_MetaModel([0.0]), 10, 2, chain_mode="threads")

@@ -649,6 +649,7 @@ def _run_mcmc(cfg, metamodel, nonpara=False):
             progress=comm.Get_rank() == 0,
             proposal=str(mcfg.get("proposal", "cov")),
             mixed_precision=_mixed_precision(cfg),
+            chain_mode=str(mcfg.get("chain_mode", "serial")),
         )
         print_once(f"MH acceptance rates: {acc}")
         extras = dict(

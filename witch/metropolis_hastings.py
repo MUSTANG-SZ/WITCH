@@ -12,11 +12,13 @@ from functools import partial
 
 import jax
 import jax.numpy as jnp
+import mpi4jax
 import numpy as np
+from mpi4py import MPI
 from tqdm import tqdm
 
 from .containers import MetaModel
-from .objective import joint_objective, with_noise_sqrt
+from .objective import joint_objective, local_objective, with_noise_sqrt
 
 
 def _updated_metamodel(metamodel: MetaModel, pars: np.ndarray):
@@ -102,6 +104,36 @@ def calc_like_dataset(metamodel, pars, dataset_ind=0):
     )
 
     return -0.5 * chisq
+
+
+@jax.jit
+def calc_like_joint_batched(metamodel: MetaModel, pars: jax.Array):
+    """
+    Joint log likelihood of several parameter vectors at once, for chains run in lockstep.
+    The likelihood on this MPI task is vmapped over the rows of ``pars`` and then summed
+    over tasks with a single allreduce.
+
+    Parameters
+    ----------
+    metamodel : witch.containers.MetaModel
+        Metamodel to compute likelihoods for.
+    pars : jax.Array
+        Parameter vectors, ``(nchain, npar)``.
+
+    Returns
+    -------
+    loglike : jax.Array
+        The log likelihood of each parameter vector, ``(nchain,)``.
+    """
+
+    def local(p):
+        chisq, _, _ = local_objective(
+            _updated_metamodel(metamodel, p), True, False, False
+        )
+        return -0.5 * chisq
+
+    loglike = jax.vmap(local)(pars)
+    return mpi4jax.allreduce(loglike, MPI.SUM, comm=metamodel.global_comm)
 
 
 @partial(jax.jit, static_argnames=("prior_type", "proposal"))
@@ -398,6 +430,113 @@ def _mh_block(metamodel, carry, nsteps, **step_args):
     return jax.lax.scan(body, carry, None, length=nsteps)
 
 
+def _mh_step_batched(
+    metamodel,
+    carry,
+    prior_args,
+    prior_type,
+    bound,
+    err_scale,
+    parameter_scale,
+    proposal,
+):
+    """
+    One Metropolis-Hastings step of several chains in lockstep, with the joint likelihood.
+    Each chain does what ``_mh_step`` does with its own key, so a chain gives the same
+    samples as when it is run on its own.
+
+    Parameters
+    ----------
+    metamodel : witch.containers.MetaModel
+        Model used to evaluate the likelihood.
+    carry : tuple[jax.Array, jax.Array, jax.Array]
+        ``(keys, states, logposts)`` of the chains, with a leading chain axis.
+    prior_args, prior_type, bound, err_scale, parameter_scale, proposal
+        See ``_mh_step``.
+
+    Returns
+    -------
+    carry : tuple[jax.Array, jax.Array, jax.Array]
+        Updated ``(keys, states, logposts)``.
+    accept : jax.Array
+        Whether each chain accepted its candidate.
+    """
+    keys, states, logposts = carry
+    split = jax.vmap(partial(jax.random.split, num=3))(keys)
+    keys, sample_keys, accept_keys = split[:, 0], split[:, 1], split[:, 2]
+
+    def propose(key, pars):
+        return draw_samp(
+            metamodel=metamodel,
+            key=key,
+            bound=bound,
+            prior_type=prior_type,
+            err_scale=err_scale,
+            parameter_scale=parameter_scale,
+            proposal=proposal,
+            pars=pars,
+        )
+
+    candidates = jax.vmap(propose)(sample_keys, states)
+    candidate_logposts = calc_like_joint_batched(metamodel, candidates) + jax.vmap(
+        partial(_log_prior, prior_type=prior_type), in_axes=(0, None, None, None, None)
+    )(candidates, *prior_args)
+    states, logposts, accept = jax.vmap(_accept)(
+        accept_keys, states, logposts, candidates, candidate_logposts
+    )
+    return (keys, states, logposts), accept
+
+
+@partial(jax.jit, static_argnames=("nsteps", "prior_type", "proposal"))
+def _mh_block_batched(metamodel, carry, nsteps, **step_args):
+    """
+    ``nsteps`` steps of chains in lockstep as one compiled ``lax.scan``,
+    see ``_mh_block`` and ``_mh_step_batched``.
+
+    Returns
+    -------
+    carry : tuple[jax.Array, jax.Array, jax.Array]
+        ``(keys, states, logposts)`` after the block.
+    (states, accepted) : tuple[jax.Array, jax.Array]
+        Chain states and accepts at each step, ``(nsteps, nchain, npar)`` and ``(nsteps, nchain)``.
+    """
+
+    def body(carry, _):
+        carry, accept = _mh_step_batched(metamodel, carry, **step_args)
+        return carry, (carry[1], accept)
+
+    return jax.lax.scan(body, carry, None, length=nsteps)
+
+
+def _chain_setup(metamodel, prior_err_scale):
+    """
+    Starting state, proposal scale and prior arguments shared by every chain.
+
+    Returns
+    -------
+    current_state : jax.Array
+        The starting parameters, ``metamodel.parameters``.
+    parameter_scale : jax.Array
+        Scale of each parameter for ``draw_samp``.
+    prior_args : tuple[jax.Array, ...]
+        ``(lower, upper, center, errs)`` for ``_log_prior``.
+    """
+    current_state = jnp.asarray(metamodel.parameters)
+    initial_errs = jnp.abs(jnp.asarray(metamodel.errs))
+    parameter_scale = jnp.where(
+        current_state != 0,
+        jnp.abs(current_state),
+        jnp.where(initial_errs > 0, initial_errs, jnp.ones_like(current_state)),
+    )
+    prior_args = (
+        jnp.asarray(metamodel.priors[0]),
+        jnp.asarray(metamodel.priors[1]),
+        current_state,
+        jnp.asarray(metamodel.errs) * prior_err_scale,
+    )
+    return current_state, parameter_scale, prior_args
+
+
 def metropolis_hastings(
     metamodel,
     num_samples,
@@ -450,20 +589,10 @@ def metropolis_hastings(
     acceptance_rate : float
         Fraction of proposals accepted.
     """
-    current_state = jnp.asarray(metamodel.parameters)
-    initial_errs = jnp.abs(jnp.asarray(metamodel.errs))
-    parameter_scale = jnp.where(
-        current_state != 0,
-        jnp.abs(current_state),
-        jnp.where(initial_errs > 0, initial_errs, jnp.ones_like(current_state)),
+    current_state, parameter_scale, prior_args = _chain_setup(
+        metamodel, prior_err_scale
     )
     key = jax.random.key(seed)
-    prior_args = (
-        jnp.asarray(metamodel.priors[0]),
-        jnp.asarray(metamodel.priors[1]),
-        current_state,
-        jnp.asarray(metamodel.errs) * prior_err_scale,
-    )
     step_args = dict(
         calc_like_func=calc_like_func,
         dataset_ind=dataset_ind,
@@ -639,6 +768,78 @@ def run_chains_parallel(
     return chains
 
 
+def run_chains_vectorized(
+    metamodel,
+    num_samples,
+    num_chains,
+    bound=2,
+    seed=0,
+    prior_type="uniform",
+    prior_err_scale=1.0,
+    progress=True,
+    proposal="diag",
+):
+    """
+    Run multiple chains in lockstep with the MPI-aware joint likelihood.
+
+    All chains take a step together: the likelihood is vmapped over the chains and
+    summed over MPI tasks with one collective per step, so the ranks stay in step as in
+    ``run_chains_serial``. Chain ``i`` uses seed ``seed + i`` like there, and gives the
+    same samples up to rounding. On a GPU the batched likelihood uses the device better
+    than one chain at a time.
+    See ``run_chains_serial`` for the parameters.
+
+    Returns
+    -------
+    chains : list[tuple[numpy.ndarray, float]]
+        ``(samples, acceptance_rate)`` of each chain, samples are ``(num_samples, npar)``.
+    """
+    current_state, parameter_scale, prior_args = _chain_setup(
+        metamodel, prior_err_scale
+    )
+    step_args = dict(
+        prior_args=prior_args,
+        prior_type=prior_type,
+        bound=bound,
+        err_scale=prior_err_scale,
+        parameter_scale=parameter_scale,
+        proposal=proposal,
+    )
+    states = jnp.tile(current_state, (num_chains, 1))
+    keys = jax.vmap(jax.random.key)(seed + jnp.arange(num_chains))
+    logposts = calc_like_joint_batched(metamodel, states) + jax.vmap(
+        partial(_log_prior, prior_type=prior_type), in_axes=(0, None, None, None, None)
+    )(states, *prior_args)
+    # Commit the carry like the block outputs so every block reuses one executable
+    carry = jax.device_put(
+        (keys, states, logposts), next(iter(current_state.devices()))
+    )
+
+    block_states = []
+    block_accepted = []
+    with tqdm(
+        total=num_samples,
+        desc=f"{num_chains} chains",
+        unit="step",
+        disable=not progress,
+    ) as pbar:
+        done = 0
+        while done < num_samples:
+            nsteps = min(MH_BLOCK, num_samples - done)
+            carry, (states, accepted) = _mh_block_batched(
+                metamodel, carry, nsteps=nsteps, **step_args
+            )
+            block_states.append(states)
+            block_accepted.append(accepted)
+            done += nsteps
+            if progress:
+                carry[2].block_until_ready()
+            pbar.update(nsteps)
+    samples = np.asarray(jnp.concatenate(block_states))
+    accepted = np.asarray(jnp.concatenate(block_accepted))
+    return [(samples[:, i], float(accepted[:, i].mean())) for i in range(num_chains)]
+
+
 def run_mh(
     metamodel,
     num_samples=10000,
@@ -653,6 +854,7 @@ def run_mh(
     progress=True,
     proposal="cov",
     mixed_precision=False,
+    chain_mode="serial",
 ):
     """
     Run Metropolis-Hastings chains and summarize them into the metamodel.
@@ -692,6 +894,10 @@ def run_mh(
     mixed_precision : bool, default=False
         Apply the noise filter to the model in float32 while sampling,
         see ``witch.objective.with_noise_sqrt``.
+    chain_mode : {"serial", "vmap"}, default="serial"
+        How chains run with the joint likelihood: one after the other, or all in
+        lockstep with a vmapped likelihood (``run_chains_vectorized``), which gives the
+        same chains and is faster on GPUs. Ignored when ``joint`` is False.
 
     Returns
     -------
@@ -706,8 +912,22 @@ def run_mh(
     """
     # Sample with the square-root noise filter, `L d` is only valid for the current noise.
     # The summary below uses `metamodel` itself.
+    if chain_mode not in ("serial", "vmap"):
+        raise ValueError(f"Unknown chain_mode {chain_mode}, must be 'serial' or 'vmap'")
     metamodel_sqrt = with_noise_sqrt(metamodel, mixed_precision)
-    if joint:
+    if joint and chain_mode == "vmap":
+        results = run_chains_vectorized(
+            metamodel_sqrt,
+            num_samples,
+            num_chains,
+            bound,
+            seed,
+            prior_type,
+            prior_err_scale,
+            progress,
+            proposal,
+        )
+    elif joint:
         results = run_chains_serial(
             metamodel_sqrt,
             num_samples,

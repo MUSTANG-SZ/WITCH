@@ -155,6 +155,31 @@ def joint_objective(
         This is a `(npar, npar)` array.
     """
     global_comm = metamodel.global_comm
+    loglike, grad, curve = local_objective(metamodel, do_loglike, do_grad, do_curve)
+    mpi4jax.barrier(comm=global_comm)
+    if do_loglike:
+        loglike = mpi4jax.allreduce(loglike, MPI.SUM, comm=global_comm)
+    if do_grad:
+        grad = mpi4jax.allreduce(grad, MPI.SUM, comm=global_comm)
+    if do_curve:
+        curve = mpi4jax.allreduce(curve, MPI.SUM, comm=global_comm)
+
+    return loglike, grad, curve
+
+
+@partial(jax.jit, static_argnames=("do_loglike", "do_grad", "do_curve"))
+def local_objective(
+    metamodel: "MetaModel",
+    do_loglike: bool = True,
+    do_grad: bool = True,
+    do_curve: bool = True,
+) -> tuple[jax.Array, jax.Array, jax.Array]:
+    """
+    The objective summed over the datasets on this MPI task only.
+    `joint_objective` is this summed over all tasks. Having no MPI calls this can be
+    `vmap`ed, for example over the parameters of several MCMC chains.
+    See `joint_objective` for the parameters and returns.
+    """
     npar = len(metamodel.parameters)
     loglike = jnp.array(0)
     grad = jnp.zeros(npar)
@@ -170,13 +195,6 @@ def joint_objective(
         loglike += _loglike
         grad = grad.at[:].add(_grad)
         curve = curve.at[:].add(_curve)
-    mpi4jax.barrier(comm=global_comm)
-    if do_loglike:
-        loglike = mpi4jax.allreduce(loglike, MPI.SUM, comm=global_comm)
-    if do_grad:
-        grad = mpi4jax.allreduce(grad, MPI.SUM, comm=global_comm)
-    if do_curve:
-        curve = mpi4jax.allreduce(curve, MPI.SUM, comm=global_comm)
 
     return loglike, grad, curve
 

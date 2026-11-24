@@ -98,6 +98,46 @@ def time_mh(metamodel, nsteps):
     return compile_time, nsteps / (time.time() - t0), acc
 
 
+def time_chains(metamodel, nsteps, nchains):
+    """
+    Time `nchains` MH chains run serially and in lockstep (`run_chains_vectorized`).
+
+    Parameters
+    ----------
+    metamodel : MetaModel
+        The metamodel to sample.
+    nsteps : int
+        Number of timed MH steps per chain, best a multiple of `MH_BLOCK`.
+    nchains : int
+        Number of chains.
+
+    Returns
+    -------
+    res : dict
+        Warmup seconds and chain-steps per second for each mode.
+    """
+    from witch.metropolis_hastings import (
+        MH_BLOCK,
+        run_chains_serial,
+        run_chains_vectorized,
+    )
+
+    res = {}
+    kwargs = dict(progress=False, proposal="diag")
+    for name, run in [("serial", run_chains_serial), ("vmap", run_chains_vectorized)]:
+        t0 = time.time()
+        run(metamodel, MH_BLOCK, nchains, **kwargs)
+        compile_time = time.time() - t0
+        t0 = time.time()
+        run(metamodel, nsteps, nchains, **kwargs)
+        rate = nsteps * nchains / (time.time() - t0)
+        res[name] = {"compile_s": compile_time, "chain_steps_per_s": rate}
+        print(
+            f"{nchains} chains {name}: warmup {compile_time:.2f}s {rate:.1f} chain-steps/s"
+        )
+    return res
+
+
 def main():
     """Run the benchmark, write timings and reference outputs."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -112,6 +152,12 @@ def main():
     )
     parser.add_argument(
         "--mh-steps", type=int, default=0, help="Also time this many MH loop steps"
+    )
+    parser.add_argument(
+        "--mh-chains",
+        type=int,
+        default=0,
+        help="Also time this many chains, serial and in lockstep, for --mh-steps steps",
     )
     parser.add_argument(
         "--profile", default=None, help="Write a jax.profiler trace to this directory"
@@ -167,6 +213,8 @@ def main():
         ct, sps, acc = time_mh(with_mh_errs(mm), args.mh_steps)
         res["mh_loop"] = {"compile_s": ct, "steps_per_s": sps, "acceptance": acc}
         print(f"mh loop: warmup {ct:.2f}s {sps:.1f} steps/s (acceptance {acc:.2f})")
+    if args.mh_steps and args.mh_chains:
+        res["chains"] = time_chains(with_mh_errs(mm), args.mh_steps, args.mh_chains)
     if args.profile:
         with jax.profiler.trace(args.profile, create_perfetto_trace=True):
             for ll, g, c in modes.values():
