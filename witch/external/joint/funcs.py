@@ -333,6 +333,15 @@ def joint_post_fit(
     postfit (act_map's postfit overwrites its map data with the residual and the model). The config checks below
     only read cfg, so all ranks raise together rather than some hanging in a collective.
 
+    joint_map.maps lists the kinds to make: "signal" (the data), "residual" (data minus model, the default) and
+    "model". All kinds share one mapper (the residual goes through the signal's with JointMapper.remap), and the
+    model map is signal - residual: the model as it sits in the signal map. With "model", the unfiltered model on
+    the same pixels is also written (model_truth.fits, returned as "truth"; evaluated at coords.dr and interpolated
+    onto the joint map's pixels if they differ). joint_map.detrend (default True) removes the per-detector
+    polynomial drifts from what is mapped from TODs, as the standalone mapper does (see _tod_input). With ACT maps
+    the needlet pixel is set from them (needlet_pixsize, overriding joint_map.options.pixsize): it only sets the
+    joint map's resolution.
+
     Parameters
     ----------
     datasets : tuple[DataSet, ...]
@@ -345,14 +354,6 @@ def joint_post_fit(
         Communicator spanning all datasets (witch.fitter.comm).
     outdir : str
         Output directory; maps go to <outdir>/<method>/<kind>_*.fits.
-
-    joint_map.maps lists the kinds to make: "signal" (the data), "residual" (data minus model, the default) and
-    "model". All kinds share one mapper (the residual goes through the signal's with JointMapper.remap), and the
-    model map is signal - residual: the model as it sits in the signal map. With "model", the unfiltered model on
-    the same pixels is also written (model_truth.fits, returned as "truth"; evaluated at coords.dr and interpolated
-    onto the joint map's pixels if they differ). joint_map.detrend (default True) removes the per-detector polynomial drifts from what is mapped from
-    TODs, as the standalone mapper does (see _tod_input). With ACT maps the needlet pixel is set from them
-    (needlet_pixsize, overriding joint_map.options.pixsize): it only sets the joint map's resolution.
 
     Returns
     -------
