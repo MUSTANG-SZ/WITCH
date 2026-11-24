@@ -6,6 +6,9 @@ under one noise model shared by every fit of the same data, the one estimated fr
 data before any model subtraction, so the chi-squared of different models are comparable.
 Runs from before it was added have no `aic.yaml` and need refitting to be compared.
 
+For a joint fit, `reload_run`, `profile_linear`, `n_eff` and `q_dmap` support checking that the datasets
+are consistent (`scripts/joint_consistency.py`, `notebooks/joint_consistency.ipynb`).
+
 Two levels of checks guard the comparisons:
 * comparable (`check_comparable`, needed for the AIC): same data and likelihood configuration,
   same structures and parameter ties, and parameters fixed in both runs have the same value.
@@ -666,3 +669,193 @@ def chisq_order_warnings(runs: list[Run], chisqs: list[float]) -> list[str]:
         for s, b in nested_pairs(runs)
         if chisq[b.label] > chisq[s.label]
     ]
+
+
+# Consistency of the datasets of a joint fit, see scripts/joint_consistency.py
+
+
+def reload_run(outdir: str, debug: bool = False) -> tuple[dict, MetaModel]:
+    """
+    Reload a finished run's data as the current code loads it, with the run's saved metamodel on it.
+    Collective: call on every MPI rank. The data is loaded with fitting and mapmaking off and outputs go to a
+    temporary directory, so the run's own outputs are left alone.
+
+    Parameters
+    ----------
+    outdir : str
+        Output directory of the finished run.
+    debug : bool, default: False
+        Only load 4 TODs per dataset.
+
+    Returns
+    -------
+    cfg : dict
+        The run's config, with fitting and mapmaking turned off.
+    metamodel : MetaModel
+        The saved metamodel (MCMC medians, or the LM best fit without MCMC) on the reloaded data.
+
+    Raises
+    ------
+    ValueError
+        If the reloaded models or parameter ties differ from the saved ones.
+    """
+    import tempfile
+    from functools import cached_property
+    from types import SimpleNamespace
+
+    from mpi4py import MPI
+
+    from .cfg_loader import load_cfg
+
+    with open(os.path.join(outdir, "config.yaml")) as f:
+        cfg = yaml.safe_load(f)
+    saved = os.path.join(outdir, "results_mcmc.dill")
+    if not os.path.isfile(saved):
+        saved = os.path.join(outdir, "results_final_fit.dill")
+    metamodel, _ = MetaModel.load(saved)
+    # Pickled models keep their cached properties, which can be stale with the current code, so drop them all
+    for obj in (metamodel, *metamodel.models):
+        for name, attr in vars(type(obj)).items():
+            if isinstance(attr, cached_property):
+                obj.__dict__.pop(name, None)
+
+    cfg.update(
+        fit=False,
+        map=False,
+        sig_map=False,
+        res_map=False,
+        model_map=False,
+        noise_map=False,
+    )
+    if debug:
+        for dset in cfg["datasets"].values():
+            dset["ntods"] = 4
+    world = MPI.COMM_WORLD
+    tmp = world.bcast(
+        tempfile.mkdtemp(prefix="witch_reload_") if world.Get_rank() == 0 else None,
+        root=0,
+    )
+    os.environ["WITCH_OUTROOT"] = tmp
+    _, _, _, loaded = load_cfg(
+        cfg, SimpleNamespace(wnoise=False, nosub=False, nofit=True)
+    )
+
+    # The saved metamodel holds the saving rank's datasets and the maps indexed by them, which in a joint fit
+    # differ between ranks (TOD ranks vs map ranks), so take this rank's from the reload. The models and
+    # their parameters are global and must match.
+    if [m.name for m in loaded.models] != [m.name for m in metamodel.models]:
+        raise ValueError("Reloaded models differ from the ones the fit used")
+    if loaded.parameter_map != metamodel.parameter_map:
+        raise ValueError("Parameter ties differ from the fit's")
+    metamodel.datasets = loaded.datasets
+    metamodel.model_map = loaded.model_map
+    metamodel.metadata_map = loaded.metadata_map
+    metamodel.global_comm = loaded.global_comm
+    cfg["outdir"] = tmp if debug else outdir
+    return cfg, metamodel
+
+
+def profile_linear(
+    chisq: float,
+    grad: np.ndarray,
+    curve: np.ndarray,
+    pars: np.ndarray,
+    ind: int,
+    lo: float = -np.inf,
+    hi: float = np.inf,
+) -> tuple[float, float]:
+    """
+    Minimise the chi-squared over a parameter the model is linear in, within its prior.
+    The chi-squared is exactly quadratic in such a parameter, so one Newton step from `pars` is exact.
+
+    Parameters
+    ----------
+    chisq : float
+        Chi-squared at `pars`.
+    grad : np.ndarray
+        `J^T N^-1 r` at `pars` (minus half the chi-squared gradient), as the WITCH objectives return it.
+    curve : np.ndarray
+        `J^T N^-1 J` at `pars`, as the WITCH objectives return it.
+    pars : np.ndarray
+        Current parameters.
+    ind : int
+        Index of the linear parameter.
+    lo : float, default: -inf
+        Lower prior bound.
+    hi : float, default: inf
+        Upper prior bound.
+
+    Returns
+    -------
+    chisq : float
+        The minimum chi-squared.
+    value : float
+        The best value of the parameter.
+    """
+    a0, g, c = pars[ind], grad[ind], curve[ind, ind]
+    a = float(np.clip(a0 + g / c, lo, hi))
+    return float(chisq - 2 * g * (a - a0) + c * (a - a0) ** 2), a
+
+
+def n_eff(
+    fisher: np.ndarray, mask: np.ndarray, lower: np.ndarray, upper: np.ndarray
+) -> float:
+    """
+    Number of parameters the data constrain beyond the prior, tr(F (F + C_prior^-1)^-1) (Raveri & Hu 2019).
+
+    Parameters
+    ----------
+    fisher : np.ndarray
+        `(npar, npar)` Fisher matrix.
+    mask : np.ndarray
+        Parameters fit to these data. Those the data don't touch (zero Fisher) are dropped.
+    lower : np.ndarray
+        Lower flat prior bounds.
+    upper : np.ndarray
+        Upper flat prior bounds. Each flat prior is taken as a Gaussian of the same variance, `(upper - lower)^2 / 12`,
+        and an infinite one as no prior.
+
+    Returns
+    -------
+    float
+        The effective number of constrained parameters.
+    """
+    idx = np.flatnonzero(np.asarray(mask) & (np.diag(fisher) > 0))
+    f = fisher[np.ix_(idx, idx)]
+    width = (upper - lower)[idx]
+    finite = np.isfinite(width)
+    prec = np.where(finite, 12 / np.where(finite, width, 1.0) ** 2, 0.0)
+    return float(np.trace(f @ np.linalg.pinv(f + np.diag(prec))))
+
+
+def q_dmap(
+    cost_a: float, cost_b: float, n_a: float, n_b: float, n_joint: float
+) -> dict:
+    """
+    Tension between two datasets from the difference of maximum posteriors (Raveri & Hu 2019):
+    Q = chi2_joint,min - chi2_a,min - chi2_b,min, chi2 distributed with N_eff(a) + N_eff(b) - N_eff(joint) dof.
+
+    Parameters
+    ----------
+    cost_a : float
+        What the joint fit costs dataset a, chi2_a(joint min) - chi2_a,min.
+    cost_b : float
+        Same for dataset b.
+    n_a : float
+        Effective number of parameters dataset a constrains (`n_eff`).
+    n_b : float
+        Same for dataset b.
+    n_joint : float
+        Same for the joint fit.
+
+    Returns
+    -------
+    dict
+        `Q`, `dof`, `p` (chi2 survival function), and `sigma` (two sided Gaussian equivalent), the last two
+        NaN if there are no degrees of freedom.
+    """
+    q = float(cost_a + cost_b)
+    dof = float(n_a + n_b - n_joint)
+    p = float(stats.chi2.sf(q, dof)) if dof > 0 else float("nan")
+    sigma = float(stats.norm.isf(p / 2)) if dof > 0 else float("nan")
+    return {"Q": q, "dof": dof, "p": p, "sigma": sigma}
