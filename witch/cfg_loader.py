@@ -8,9 +8,9 @@ import numpy as np
 import witch.fitter as fitter
 from witch.containers import MetaModel
 from witch.dataset import DataSet, DataSetData
-from witch.objective import null_objective
 from witch.fitter import *
 from witch.fitter import _mpi_fsplit
+from witch.objective import null_objective
 
 
 def check_fit_datasets(cfg: dict, metamodel: MetaModel) -> None:

@@ -203,7 +203,10 @@ def main() -> None:
         "--ndraws", type=int, default=300, help="Draws from each posterior"
     )
     parser.add_argument(
-        "--maxiter", type=int, default=40, help="LM iterations per minimisation (as fitting.maxiter)"
+        "--maxiter",
+        type=int,
+        default=40,
+        help="LM iterations per minimisation (as fitting.maxiter)",
     )
     parser.add_argument(
         "--noise",
