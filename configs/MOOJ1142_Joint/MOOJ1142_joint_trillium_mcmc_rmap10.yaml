@@ -1,0 +1,18 @@
+# Joint M2 + ACT MCMC fit of MOOJ1142 on a larger grid (r_map 10' instead of 7'), fit only (no needlet maps: the signal
+# map doesn't depend on the fit and the needlet memory would come on top of the larger model).
+# Same data, starting point (the M2-only MH medians) and MH settings as MOOJ1142_joint_needlet_trillium_mcmc.yaml
+# (joint_needlet_mcmc_3as, 7' grid), so the two compare directly. Why: the M2-only fits depend on the grid (controls
+# xray_peak_rs_control_rmap3/rmap7, 2026-11-23): from 3' to 7' the subcluster went from r 24.8", beta 1.04 to 15.7", 0.70,
+# a shallow component whose LOS integral the grid truncates, and the gNFW chains stopped converging. With ACT constraining
+# the large scales the joint fit may settle; if the subcluster still flattens from 7' to 10', it is fitting a large-scale
+# mode rather than a subcluster. The grid holds the ACT beam with room to spare; the 36' ACT cutout covers it.
+# Run with /scratch/jorlo/moo1142_joint_mcmc_rmap10.sh.
+base: MOOJ1142_joint_needlet_trillium_mcmc.yaml
+
+paths:
+  subdir: joint_mcmc_rmap10
+
+coords:
+  r_map: "10.0*60"
+
+joint_map: null # fit only

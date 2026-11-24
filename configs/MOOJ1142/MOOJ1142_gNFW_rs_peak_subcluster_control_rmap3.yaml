@@ -1,0 +1,11 @@
+# MOOJ1142_gNFW_rs_peak_subcluster_control_rmap7.yaml on the reference grid (r_map 3', as xray_peak_rs) with the current
+# code (M2 TODs truncated again after downsampling since 188d077): against rmap7 it gives the grid's effect, against
+# xray_peak_rs the effect of the TOD truncation and starting point.
+# Run with /scratch/jorlo/moo1142_m2_control.sh <this config>.
+base: "MOOJ1142_gNFW_rs_peak_subcluster_control_rmap7.yaml"
+
+paths:
+  subdir: "xray_peak_rs_control_rmap3"
+
+coords:
+  r_map: "3.0*60"

@@ -1,0 +1,44 @@
+# Control for the M2-only fit inside MOOJ1142_Joint/MOOJ1142_m2fit_joint_needlet_trillium.yaml (ACT loaded, fit: False):
+# the same M2-only fit without ACT. Same grid (r_map 7', the joint one), starting point (the M2-only xray_peak_rs MH
+# medians, as there) and MH settings and seed, so it should reproduce that run's LM rounds (and very nearly its chains)
+# if datasets.<name>.fit: False leaves the fit M2-only. With MOOJ1142_gNFW_rs_peak_subcluster_control_rmap3.yaml
+# (the reference 3' grid) it also isolates the grid's effect on the subcluster.
+# Run with /scratch/jorlo/moo1142_m2_control.sh <this config>.
+base: "MOOJ1142_gNFW_rs_peak_subcluster_mcmc.yaml"
+
+paths:
+  subdir: "xray_peak_rs_control_rmap7"
+
+coords:
+  r_map: "7.0*60"
+
+cluster_model:
+  structures:
+    gnfw_rs:
+      parameters:
+        P0:
+          value: 0.059535164294723684
+        r_s:
+          value: 26.90647055868157
+        beta:
+          value: 3.3790340804742
+    sph_isobeta:
+      parameters:
+        r:
+          value: 24.583331073763006
+        beta:
+          value: 1.0234200830100997
+        amp:
+          value: 0.0750124937930705
+ps_model:
+  structures:
+    ps_gauss:
+      parameters:
+        dx_g:
+          value: 1.5679752134004228
+        dy_g:
+          value: -3.887530996200616
+        sigma:
+          value: 4.841388567265127
+        amp_g:
+          value: 0.0014246690198702768
